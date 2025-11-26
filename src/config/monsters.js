@@ -20,6 +20,22 @@ export const monsters = {
     // Liste des sorts que ce monstre peut utiliser en combat
     spells: ["coup_de_bec"],
 
+    // Butin basique de test
+    loot: [
+      {
+        itemId: "plume_corbeau",
+        min: 1,
+        max: 2,
+        dropRate: 1.0, // 100 % de chance pour les tests
+      },
+      {
+        itemId: "patte_corbeau",
+        min: 1,
+        max: 1,
+        dropRate: 1.0,
+      },
+    ],
+
     xpReward: 20,
   },
 };

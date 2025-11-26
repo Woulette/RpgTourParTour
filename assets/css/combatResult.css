@@ -65,6 +65,50 @@
   color: #444;
 }
 
+/* Liste du butin */
+.combat-result-loot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.combat-result-loot-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.combat-result-loot-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: #222;
+  flex-shrink: 0;
+}
+
+.combat-result-loot-label {
+  font-size: 12px;
+  color: #333;
+}
+
+.combat-result-loot-qty {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+}
+
+.combat-result-loot-empty {
+  font-size: 13px;
+  color: #555;
+}
+
 .combat-result-actions {
   display: flex;
   justify-content: center;
@@ -104,4 +148,3 @@
     flex-direction: column;
   }
 }
-

@@ -3,6 +3,11 @@ import { classes } from "../config/classes.js";
 import { PLAYER_SPEED } from "../config/constants.js";
 import { createStats, applyBonuses } from "../core/stats.js";
 import { createLevelState, ajouterXp } from "../core/level.js";
+import { createPlayerInventory } from "../inventory/inventoryContainers.js";
+import {
+  createEmptyEquipment,
+  recomputePlayerStatsWithEquipment,
+} from "../inventory/equipmentCore.js";
 import {
   startPrep,
   limitPathForCombat,
@@ -72,6 +77,7 @@ export function createPlayer(scene, x, y, classId) {
 
   // État de niveau / XP
   player.levelState = createLevelState();
+  player.inventory = createPlayerInventory();
 
   player.currentTileX = null;
   player.currentTileY = null;
@@ -478,4 +484,3 @@ function isValidTile(map, tileX, tileY) {
     tileY < map.height
   );
 }
-

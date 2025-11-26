@@ -24,17 +24,21 @@
   <link rel="stylesheet" href="assets/css/combat.css" />
   <link rel="stylesheet" href="assets/css/combatResult.css" />
   <link rel="stylesheet" href="assets/css/spellBook.css" />
+  <link rel="stylesheet" href="assets/css/inventory.css" />
 </head>
 <body>
   <!-- HUD HTML en overlay par-dessus le canvas Phaser -->
   <div id="hud-root">
     <!-- Barre HUD en bas de l'écran -->
     <div id="hud-bar">
+      <button id="hud-spells-button" aria-label="Ouvrir les sorts">
+        SORTS
+      </button>
       <button id="hud-stats-button" aria-label="Ouvrir les statistiques">
         STATS
       </button>
-      <button id="hud-spells-button" aria-label="Ouvrir les sorts">
-        SORTS
+      <button id="hud-inventory-button" aria-label="Ouvrir l'inventaire">
+        INV
       </button>
 
       <!-- Conteneur barre de sorts + petits slots Sorts/Obj. -->
@@ -270,8 +274,62 @@
     </div>
   </div>
 
+  <!-- Fenêtre d'inventaire (ajoutée en bas pour l'instant) -->
+  <aside id="hud-inventory-panel" aria-label="Inventaire du personnage">
+      <header class="inventory-header">
+        <h2 class="inventory-title">Inventaire</h2>
+        <div class="inventory-filters">
+          <button class="inventory-filter-btn inventory-filter-active" data-filter="all">Tout</button>
+          <button class="inventory-filter-btn" data-filter="equipement">Equip.</button>
+          <button class="inventory-filter-btn" data-filter="consommable">Consom.</button>
+          <button class="inventory-filter-btn" data-filter="ressource">Ress.</button>
+          <button class="inventory-filter-btn" data-filter="quete">Quête</button>
+        </div>
+      </header>
+      <section class="inventory-body">
+      <!-- Colonne gauche : équipement + fiche de détails -->
+      <div class="inventory-left">
+        <div class="inventory-equip">
+          <div class="equip-character"></div>
+          <div class="equip-grid">
+              <!-- Ligne 1 : coiffe / cape -->
+              <div class="equip-slot equip-head"  data-equip="head"  title="Coiffe"></div>
+              <div class="equip-slot equip-cape"  data-equip="cape"  title="Cape"></div>
+  
+              <!-- Ligne 2 : amulette / arme -->
+              <div class="equip-slot equip-amulet" data-equip="amulet" title="Amulette"></div>
+              <div class="equip-slot equip-weapon" data-equip="weapon" title="Arme"></div>
+  
+              <!-- Ligne 3 : anneau 1 / anneau 2 -->
+              <div class="equip-slot equip-ring1" data-equip="ring1" title="Anneau 1"></div>
+              <div class="equip-slot equip-ring2" data-equip="ring2" title="Anneau 2"></div>
+  
+              <!-- Ligne 4 : ceinture / bottes -->
+              <div class="equip-slot equip-belt"  data-equip="belt"  title="Ceinture"></div>
+              <div class="equip-slot equip-boots" data-equip="boots" title="Bottes"></div>
+            </div>
+          </div>
+  
+          <div class="inventory-detail">
+            <h3 id="inventory-item-name">-</h3>
+            <p id="inventory-item-type"></p>
+            <p id="inventory-item-desc">
+              Sélectionne un objet pour voir ses détails.
+            </p>
+          </div>
+        </div>
+  
+        <!-- Colonne droite : grille d'inventaire (50 slots) -->
+        <div class="inventory-right">
+          <div id="inventory-grid" class="inventory-grid">
+            <!-- rempli dynamiquement par domInventory.js -->
+          </div>
+        </div>
+      </section>
+    
+  </aside>
+
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>
-

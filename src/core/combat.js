@@ -203,6 +203,7 @@ export function endCombat(scene) {
     durationMs,
     xpGagne: state.xpGagne || 0,
     goldGagne: state.goldGagne || 0,
+    loot: state.loot || [],
     playerLevel: state.joueur?.levelState?.niveau ?? 1,
     playerXpTotal: state.joueur?.levelState?.xp ?? 0,
     playerXpNext: state.joueur?.levelState?.xpProchain ?? 0,
@@ -373,4 +374,3 @@ export function passerTour(scene) {
 
   return state.tour;
 }
-

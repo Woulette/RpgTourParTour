@@ -80,3 +80,40 @@
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Bouton inventaire : encore �� gauche du bouton SORTS */
+#hud-inventory-button {
+  position: absolute;
+  right: 3.4%;
+  bottom: 70%;
+  transform: translateX(-220%);
+
+  pointer-events: auto;
+
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0.4em 0.8em;
+
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  background: rgba(10, 22, 40, 0.9);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: clamp(10px, 1.2vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.1s ease, box-shadow 0.1s ease;
+}
+
+#hud-inventory-button:hover {
+  background: rgba(20, 40, 80, 0.95);
+  transform: translate(-220%, -1px);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+#hud-inventory-button:active {
+  transform: translate(-220%, 1px);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}

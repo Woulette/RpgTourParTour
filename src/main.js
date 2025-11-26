@@ -8,8 +8,10 @@ import { initDomHud } from "./ui/domHud.js";
 import { initDomCombat } from "./ui/domCombat.js";
 import { initDomSpells } from "./ui/domSpells.js";
 import { initDomCombatResult } from "./ui/domCombatResult.js";
+import { initDomInventory } from "./ui/domInventory.js";
 import { preloadMonsters, spawnInitialMonsters } from "./monsters/index.js";
 import { defaultClassId } from "./config/classes.js";
+import { attachCombatPreview } from "./ui/combatPreview.js";
 import {
   getActiveSpell,
   getSpellDamageRange,
@@ -108,9 +110,12 @@ class MainScene extends Phaser.Scene {
     initDomSpells(this.player);
     // Initialisation de la popup de fin de combat
     initDomCombatResult(this, this.player);
+    // Initialisation de l'inventaire (fenêtre INV)
+    initDomInventory(this.player);
 
-    // --- PRÉVISU DES DÉGÂTS SURVOL MONSTRE ---
+    // --- PREVIEW_BLOCK_START
     this.damagePreviewText = null;
+    this.damagePreviewBg = null;
 
     this.showDamagePreview = (monster) => {
       const state = this.combatState;
@@ -162,23 +167,50 @@ class MainScene extends Phaser.Scene {
       if (this.damagePreviewText) {
         this.damagePreviewText.destroy();
       }
+      if (this.damagePreviewBg) {
+        this.damagePreviewBg.destroy();
+      }
 
-      const dmgText = this.add.text(
-        cx,
-        cy - mapForCombat.tileHeight / 2 - 10,
-        text,
-        {
-          fontFamily: "Arial",
-          fontSize: 14,
-          color: "#ffff66",
-          stroke: "#000000",
-          strokeThickness: 2,
-        }
-      );
+      // Texte centré au-dessus du monstre
+      // Position du centre de la bulle (un peu au-dessus du monstre)
+      const bubbleCenterX = cx;
+      const bubbleCenterY = cy - mapForCombat.tileHeight * 1.2;
+
+      const dmgText = this.add.text(bubbleCenterX, bubbleCenterY, text, {
+        fontFamily: "Arial",
+        fontSize: 14,
+        color: "#000000",
+        stroke: "#ffffff",
+        strokeThickness: 1,
+        align: "center",
+      });
+      // On centre le texte sur ses coordonn�es
+      dmgText.setOrigin(0.5, 0.5);
+
+      // Petit fond arrondi derri�re le texte
+      const paddingX = 6;
+      const paddingY = 2;
+      const bgWidth = dmgText.width + paddingX * 2;
+      const bgHeight = dmgText.height + paddingY * 2;
+
+      const bg = this.add.graphics();
+      bg.fillStyle(0xffffff, 0.85);
+      bg.lineStyle(1, 0x000000, 0.6);
+      const radius = 6;
+      const bgX = bubbleCenterX - bgWidth / 2;
+      const bgY = bubbleCenterY - bgHeight / 2;
+
+      bg.fillRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+      bg.strokeRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+
       if (this.hudCamera) {
+        this.hudCamera.ignore(bg);
         this.hudCamera.ignore(dmgText);
       }
+      bg.setDepth(9);
       dmgText.setDepth(10);
+
+      this.damagePreviewBg = bg;
       this.damagePreviewText = dmgText;
     };
 
@@ -186,6 +218,10 @@ class MainScene extends Phaser.Scene {
       if (this.damagePreviewText) {
         this.damagePreviewText.destroy();
         this.damagePreviewText = null;
+      }
+      if (this.damagePreviewBg) {
+        this.damagePreviewBg.destroy();
+        this.damagePreviewBg = null;
       }
     };
 

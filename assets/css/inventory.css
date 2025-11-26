@@ -1,0 +1,288 @@
+/* Fenêtre d'inventaire, dans le style stats/spells */
+
+#hud-inventory-panel {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+
+  width: min(900px, 90vw);
+  height: min(700px, 75vh);
+
+  padding: 1.2rem;
+  box-sizing: border-box;
+
+  background: rgba(8, 20, 40, 0.96);
+  border-radius: 16px;
+  border: 3px solid rgb(255, 255, 255);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+
+  display: none;
+  flex-direction: column;
+  gap: 0.8rem;
+
+  color: #f5f7ff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  pointer-events: auto;
+}
+
+body.hud-inventory-open #hud-inventory-panel {
+  display: flex;
+}
+
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(200, 200, 200, 0.6);
+  padding-bottom: 0.4rem;
+}
+
+.inventory-title {
+  margin: 0;
+  font-size: clamp(16px, 1.6vw, 20px);
+}
+
+.inventory-capacity {
+  font-size: clamp(11px, 1.1vw, 13px);
+  opacity: 0.85;
+}
+
+/* Barre de filtres à droite du titre dans l'inventaire */
+.inventory-filters {
+  display: inline-flex;
+  gap: 0.1rem;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.inventory-filter-btn {
+  width: 60px;
+  height: 24px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid rgb(172, 172, 172);
+  background: #000000;
+  color: #f5f7ff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inventory-filter-btn.inventory-filter-active {
+  background: #f5f7ff;
+  color: #081428;
+}
+
+/* Corps de la fenêtre : 2 colonnes (gauche large, droite plus étroite) */
+.inventory-body {
+  flex: 1;
+  display: grid;
+  /* gauche : équipement + fiche, droite : grille */
+  grid-template-columns:  3fr 1.2fr;
+  gap: 1rem;
+  min-height: 0;
+}
+
+/* Colonne gauche : équipement + fiche de détails */
+.inventory-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Zone équipement (haut gauche) */
+.inventory-equip {
+  flex: 1;
+  border-radius: 10px;
+  border: 1px solid rgba(200, 200, 200, 0.6);
+  background: rgba(5, 15, 30, 0.9);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+}
+
+/* Visuel provisoire du personnage dans l'inventaire */
+.equip-character {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  width: 200px;   /* plus large */
+  height: 200px;  /* plus haut */
+
+  background-image: url("../aventurier.png");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+
+/* Colonne droite : seulement la grille d’inventaire */
+.inventory-right {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* Grille d'équipement à l'intérieur du bloc de gauche */
+.equip-grid {
+  width: 100%;
+  height: 100%;
+  
+  padding: 0.6rem;
+  box-sizing: border-box;
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(50px, 1fr));
+  grid-auto-rows: minmax(50px, 1fr);
+  gap: 0.4rem;
+
+  justify-items: center;
+  align-items: center;
+}
+
+.equip-slot {
+  width: 100%;
+  height: 100%;
+  max-width: 60px;
+  max-height: 60px;
+
+  border-radius: 6px;
+  border: 2px solid rgba(200, 200, 200, 0.6);
+  background: rgba(121, 121, 121, 0.6);
+
+  box-sizing: border-box;
+}
+
+/* Grille d’inventaire : étroite, verticale (4 colonnes x 10 lignes = 40 slots) */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(60px, 1fr));
+  grid-auto-rows: minmax(60px, 1fr);
+  gap: 0.1rem;
+}
+
+.inventory-slot {
+  border-radius: 6px;
+  border: 2px solid rgb(255, 255, 255);
+  background: rgba(200, 200, 200, 0.6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.3rem;
+  cursor: pointer;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.inventory-slot.empty {
+  opacity: 0.5;
+  border-style: solid; /* plus de pointillés, bordure pleine */
+}
+
+.inventory-slot.filled:hover {
+  background: rgba(25, 45, 80, 0.98);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+.inventory-slot-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Icône principale dans un slot d'inventaire */
+.inventory-slot-icon {
+  position: absolute;
+  inset: 4px;
+  border-radius: 4px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Badge de quantité en bas à droite */
+.inventory-slot-qty {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #f5f5f5;
+}
+
+.inventory-detail {
+  border-radius: 10px;
+  border: 1px solid rgba(200, 200, 200, 0.6);
+  background: rgba(121, 121, 121, 0.6);
+  padding: 0.6rem 0.8rem;
+  font-size: clamp(11px, 1.1vw, 13px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  
+  /* Hauteur minimale de la fiche de détails */
+  min-height: 180px;
+}
+  
+.inventory-detail h3 {
+  margin: 0;
+  font-size: clamp(14px, 1.4vw, 18px);
+  order: 0;
+}
+  
+.inventory-detail p {
+  margin: 0;
+  order: 2;
+}
+
+/* Icône de l'objet sélectionné dans la fiche de détails */
+  .inventory-item-icon {
+    width: 130px;
+    height: 130px;
+    border-radius: 8px;
+    margin-bottom: 0.4rem;
+    border-radius: 6px;
+
+    border: 1px solid rgb(185, 185, 185);
+    background-color: rgba(0, 0, 0, 0.123);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    order: 1;
+  }
+
+  @media (max-width: 1200px) {
+    #hud-inventory-panel {
+      width: min(560px, 92vw);
+      height: min(380px, 78vh);
+    }
+}
+
+/* Ajustements supplémentaires pour la fiche de détails :
+   - type aligné en haut à droite
+   - icône sous le nom */
+.inventory-detail {
+  position: relative;
+}
+
+#inventory-item-type {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.8rem;
+}
+
+.inventory-item-icon {
+  margin-top: 0.4rem;
+}
