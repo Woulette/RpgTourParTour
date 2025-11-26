@@ -1,0 +1,107 @@
+/* Overlay plein écran pour le récap de combat */
+#combat-result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+#combat-result-overlay.combat-result-hidden {
+  display: none;
+}
+
+.combat-result-panel {
+  width: 90%;
+  max-width: 720px;
+  background: #f7f7fb;
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  padding: 24px 28px;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+.combat-result-title {
+  margin: 0 0 12px;
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.combat-result-title.victoire {
+  color: #1b9c48;
+}
+
+.combat-result-title.defaite {
+  color: #c0392b;
+}
+
+.combat-result-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.combat-result-section {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.combat-result-section h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.combat-result-section p {
+  margin: 2px 0;
+  font-size: 14px;
+  color: #444;
+}
+
+.combat-result-actions {
+  display: flex;
+  justify-content: center;
+}
+
+#combat-result-continue-button {
+  min-width: 160px;
+  padding: 10px 18px;
+  font-size: 15px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: #2c3e50;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s ease, transform 0.1s ease,
+    box-shadow 0.15s ease;
+}
+
+#combat-result-continue-button:hover {
+  background: #34495e;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+
+#combat-result-continue-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 600px) {
+  .combat-result-panel {
+    padding: 18px 16px;
+  }
+
+  .combat-result-body {
+    flex-direction: column;
+  }
+}
+

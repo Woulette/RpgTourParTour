@@ -1,0 +1,125 @@
+/* Fenêtre de grimoire de sorts */
+
+#hud-spells-panel {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+
+  /* Taille de la fenêtre */
+  width: 790px;
+  height: 600px;
+
+  padding: 1.2rem;
+  box-sizing: border-box;
+
+  background: rgba(8, 20, 40, 0.95);
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+
+  display: none;
+  flex-direction: column;
+  gap: 1.2rem;
+
+  color: #f5f7ff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+
+  pointer-events: auto;
+
+  position: absolute;
+}
+
+/* Ligne verticale rouge au centre */
+#hud-spells-panel::before {
+  content: "";
+  position: absolute;
+  top: 0.8rem;
+  bottom: 0.8rem;
+  left: 50%;
+  width: 2px;
+  /* Ligne plus discrète, adaptée au fond */
+  background: rgba(120, 150, 190, 0.25);
+  pointer-events: none;
+}
+
+/* Ouverture quand le body a la classe .hud-spells-open */
+body.hud-spells-open #hud-spells-panel {
+  display: flex;
+}
+
+.spells-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 0.6rem;
+}
+
+.spells-title {
+  margin: 0;
+  font-size: clamp(16px, 1.6vw, 20px);
+  font-weight: 700;
+}
+
+.spells-class-name {
+  margin-top: 0.3rem;
+  font-size: clamp(12px, 1.2vw, 14px);
+  opacity: 0.9;
+}
+
+.spells-section {
+  flex: 1;
+  position: relative;
+  margin-top: 0.4rem;
+}
+
+.spells-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  /* Colonne gauche uniquement (avant la ligne rouge) */
+  width: 50%;
+}
+
+.spellbook-item {
+  padding: 0.4rem 0.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+
+.spellbook-item-main {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+
+.spellbook-name {
+  font-weight: 600;
+}
+
+.spellbook-level {
+  opacity: 0.8;
+}
+
+.spellbook-item-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  opacity: 0.9;
+  font-size: 0.9em;
+}
+
+.spellbook-item.locked {
+  opacity: 0.5;
+}
+
+@media (max-width: 800px) {
+  #hud-spells-panel {
+    left: 1rem;
+    width: min(260px, 80vw);
+    height: min(520px, 80vh);
+  }
+}

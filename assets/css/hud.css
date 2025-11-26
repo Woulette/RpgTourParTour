@@ -1,0 +1,82 @@
+/* Conteneur HUD global (overlay au-dessus du canvas) */
+#hud-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* la souris passe au travers, sauf sur les éléments interactifs */
+}
+
+/* Bouton stats : dans la zone HUD (dans la barre bleue) */
+#hud-stats-button {
+  position: absolute;
+  right: 0.5%;
+  bottom: 70%;
+
+  pointer-events: auto;
+
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0.4em 0.8em;
+
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  background: rgba(10, 22, 40, 0.9);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: clamp(10px, 1.2vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.1s ease, box-shadow 0.1s ease;
+}
+
+#hud-stats-button:hover {
+  background: rgba(20, 40, 80, 0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+#hud-stats-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Bouton sorts : même style que STATS, collé à sa gauche */
+#hud-spells-button {
+  position: absolute;
+  right: 0%;                 /* même ancre que STATS */
+  bottom: 70%;
+  transform: translateX(-110%); /* décale d'un peu plus d'une largeur de bouton vers la gauche */
+
+  pointer-events: auto;
+
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0.4em 0.8em;
+
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  background: rgba(10, 22, 40, 0.9);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: clamp(10px, 1.2vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.1s ease, box-shadow 0.1s ease;
+}
+
+#hud-spells-button:hover {
+  background: rgba(20, 40, 80, 0.95);
+  transform: translate(-110%, -1px);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+#hud-spells-button:active {
+  transform: translate(-110%, 1px);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+

@@ -1,0 +1,219 @@
+/* HUD d'interface : informations toujours visibles (PA / PM, etc.) */
+
+/* Barre HUD principale en bas de l'écran */
+/* Barre HUD principale en bas de l'écran, alignée sur la zone de jeu */
+#hud-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+
+  /* même ratio que la zone de jeu : 1280x900 */
+  width: calc(100vh * 1282 / 900);
+  max-width: 100vw;         /* ne dépasse jamais l'écran */
+
+  height: 21.3vh;           /* ta hauteur actuelle, tu peux la retoucher */
+  transform: translateX(-50%);
+  background: #0b3059;
+  pointer-events: none;     /* on réactive sur les enfants seulement */
+}
+
+#hud-bar > * {
+  pointer-events: auto;
+}
+
+/* Affichage PA / PM dans la zone HUD (partie haute de la barre bleue) */
+#hud-ap-mp {
+  position: absolute;
+  left: 50%;
+  bottom: 65%;
+
+  pointer-events: none; /* purement visuel : pas cliquable */
+
+  padding: 0.3em 0.7em;
+  border-radius: 999px;
+  background: rgba(5, 15, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: clamp(10px, 1.1vw, 14px);
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+
+  transform: translateX(-50%); /* centre horizontalement dans le HUD */
+}
+
+#hud-ap-mp .hud-ap-label,
+#hud-ap-mp .hud-mp-label {
+  opacity: 0.8;
+}
+
+#hud-ap-mp #hud-ap-value,
+#hud-ap-mp #hud-mp-value {
+  font-weight: 600;
+}
+
+#hud-ap-mp .hud-hp-label {
+  opacity: 0.8;
+}
+
+#hud-ap-mp #hud-hp-value {
+  font-weight: 600;
+}
+
+/* Infos de la cible (monstre) dans le HUD bas */
+#hud-target-info {
+  position: absolute;
+  right: 4%;
+  bottom: 65%;
+
+  padding: 0.3em 0.7em;
+  border-radius: 8px;
+  background: rgba(5, 15, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: clamp(10px, 1.1vw, 14px);
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+body.hud-target-visible #hud-target-info {
+  opacity: 1;
+}
+
+#hud-target-info .hud-target-label {
+  opacity: 0.85;
+  font-weight: 500;
+}
+
+#hud-target-info .hud-target-stat-label {
+  opacity: 0.8;
+}
+
+#hud-target-info .hud-target-stat-value {
+  font-weight: 600;
+}
+
+/* Conteneur global : barre de sorts + petits onglets Sorts/Obj. */
+#hud-spell-container {
+  position: absolute;
+  left: 82.5%;
+  bottom: 5%;
+  transform: translateX(-50%);
+
+  display: flex;
+  align-items: stretch;
+  pointer-events: auto;
+
+  /* Cadre principal de la barre (fond + bordure + arrondis) */
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  background: rgba(5, 15, 30, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+}
+
+/* Barre de sorts en bas du HUD (visuelle + cliquable) */
+#hud-spell-bar {
+  /* Grille des slots à l'intérieur du conteneur, sans fond propre */
+  display: grid;
+  grid-template-columns: repeat(8, minmax(40px, 1fr));
+  grid-auto-rows: 46px;
+  gap: 0.6vw 0.6vw;
+
+  pointer-events: auto;
+}
+
+.hud-spell-slot {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0.1em 0.2em;
+
+  border-radius: 4px;
+  border: 2px solid rgba(200, 200, 200, 0.9);
+  background: rgba(15, 30, 55, 0.95);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: clamp(10px, 1.1vw, 14px);
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.1s ease,
+    border-color 0.1s ease;
+}
+
+.hud-spell-slot.empty {
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+.hud-spell-slot:hover {
+  transform: translateY(-1px);
+  background: rgba(20, 40, 80, 0.98);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.9);
+}
+
+.hud-spell-slot:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.6);
+}
+
+.hud-spell-slot.selected {
+  border-color: #ffd34d;
+  box-shadow: 0 0 12px rgba(255, 211, 77, 0.9);
+}
+
+.hud-spell-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 7vw;
+}
+
+/* Colonne à droite : petits slots Sorts / Obj. */
+#hud-spell-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  margin-left: 0.4rem;
+  position: relative; /* pour la ligne de séparation centrale */
+}
+
+/* Ligne centrale entre Sorts et Obj. */
+#hud-spell-toggle::before {
+  content: "";
+  position: absolute;
+  left: 15%;
+  right: 0%;
+  top: 49.5%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.hud-spell-toggle-slot {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 0.4rem 0.3rem;
+
+  font-size: clamp(10px, 1vw, 12px);
+  font-family: system-ui, sans-serif;
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  /* décale un peu le texte vers l'intérieur */
+  transform: translateX(2px);
+}

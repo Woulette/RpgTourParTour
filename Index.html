@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>RPG Phaser</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000000;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+  <link rel="stylesheet" href="assets/css/hud.css" />
+  <link rel="stylesheet" href="assets/css/hudInterface.css" />
+  <link rel="stylesheet" href="assets/css/stats.css" />
+  <link rel="stylesheet" href="assets/css/combat.css" />
+  <link rel="stylesheet" href="assets/css/combatResult.css" />
+  <link rel="stylesheet" href="assets/css/spellBook.css" />
+</head>
+<body>
+  <!-- HUD HTML en overlay par-dessus le canvas Phaser -->
+  <div id="hud-root">
+    <!-- Barre HUD en bas de l'écran -->
+    <div id="hud-bar">
+      <button id="hud-stats-button" aria-label="Ouvrir les statistiques">
+        STATS
+      </button>
+      <button id="hud-spells-button" aria-label="Ouvrir les sorts">
+        SORTS
+      </button>
+
+      <!-- Conteneur barre de sorts + petits slots Sorts/Obj. -->
+      <div id="hud-spell-container">
+        <!-- Barre de sorts du HUD (toujours visible, sorts utilisables surtout en combat) -->
+        <div id="hud-spell-bar" aria-label="Barre de sorts">
+          <!-- Ligne 1 -->
+          <div class="hud-spell-slot" data-slot="1">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="2">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="3">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="4">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="5">
+            <span class="hud-spell-name"></span>
+          </div>
+          <!-- Ligne 2 -->
+          <div class="hud-spell-slot empty" data-slot="6">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="7">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="8">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="9">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="10">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="11">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="12">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="13">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="14">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="15">
+            <span class="hud-spell-name"></span>
+          </div>
+          <div class="hud-spell-slot empty" data-slot="16">
+            <span class="hud-spell-name"></span>
+          </div>
+        </div>
+
+        <!-- Petits slots verticaux Sorts / Objets (purement visuel pour l'instant) -->
+        <div id="hud-spell-toggle">
+          <div class="hud-spell-toggle-slot hud-spell-toggle-spells">Sorts</div>
+          <div class="hud-spell-toggle-slot hud-spell-toggle-items">Obj.</div>
+        </div>
+      </div>
+
+      <!-- PA / PM toujours visibles dans le HUD bas -->
+      <div id="hud-ap-mp">
+        <span class="hud-ap-label">PA :</span>
+        <span id="hud-ap-value">6</span>
+        <span class="hud-mp-label">PM :</span>
+        <span id="hud-mp-value">3</span>
+        <span class="hud-hp-label">PV :</span>
+        <span id="hud-hp-value">50</span>
+      </div>
+
+      <!-- Infos de la cible (monstre survolé) -->
+      <div id="hud-target-info">
+        <span class="hud-target-label">Cible :</span>
+        <span id="hud-target-name">-</span>
+        <span class="hud-target-stat-label">PV :</span>
+        <span class="hud-target-stat-value" id="hud-target-hp">-</span>
+        <span class="hud-target-stat-label">PA :</span>
+        <span class="hud-target-stat-value" id="hud-target-pa">-</span>
+        <span class="hud-target-stat-label">PM :</span>
+        <span class="hud-target-stat-value" id="hud-target-pm">-</span>
+      </div>
+    </div>
+
+    <!-- Fenêtre de statistiques (simple, responsive) -->
+    <aside id="hud-stats-panel" aria-label="Fenêtre de statistiques du personnage">
+      <header class="stats-header">
+        <h2 class="stats-title">Statistiques</h2>
+        <div class="stats-player-name">Nom : <span id="stat-player-name">---</span></div>
+        <div class="stats-level-line">
+          Niveau : <span id="stat-level">1</span>
+          &nbsp;-&nbsp;
+          XP : <span id="stat-xp">0</span>
+          / <span id="stat-xp-next">50</span>
+        </div>
+        <div class="stats-hp-init-line">
+          PV max : <span id="stat-hpMax">50</span>
+          &nbsp;-&nbsp;
+          Initiative : <span id="stat-initiative">0</span>
+        </div>
+      </header>
+
+      <section class="stats-section">
+        <h3 class="stats-section-title">Actions</h3>
+        <ul class="stats-list">
+          <li><span class="label">PA</span><span class="value" id="stat-pa">6</span></li>
+          <li><span class="label">PM</span><span class="value" id="stat-pm">3</span></li>
+        </ul>
+      </section>
+
+      <section class="stats-section">
+        <h3 class="stats-section-title">Caractéristiques</h3>
+        <ul class="stats-list">
+          <li class="stat-line" data-stat="force">
+            <span class="label">Force</span>
+            <div class="stat-controls">
+              <button type="button" class="stat-btn stat-btn-minus" data-stat="force">-</button>
+              <input type="number" id="stat-force-input" class="stat-input" min="0" step="1" />
+              <button type="button" class="stat-btn stat-btn-plus" data-stat="force">+</button>
+            </div>
+          </li>
+          <li class="stat-line" data-stat="intelligence">
+            <span class="label">Intelligence</span>
+            <div class="stat-controls">
+              <button type="button" class="stat-btn stat-btn-minus" data-stat="intelligence">-</button>
+              <input type="number" id="stat-intelligence-input" class="stat-input" min="0" step="1" />
+              <button type="button" class="stat-btn stat-btn-plus" data-stat="intelligence">+</button>
+            </div>
+          </li>
+          <li class="stat-line" data-stat="agilite">
+            <span class="label">Agilité</span>
+            <div class="stat-controls">
+              <button type="button" class="stat-btn stat-btn-minus" data-stat="agilite">-</button>
+              <input type="number" id="stat-agilite-input" class="stat-input" min="0" step="1" />
+              <button type="button" class="stat-btn stat-btn-plus" data-stat="agilite">+</button>
+            </div>
+          </li>
+          <li class="stat-line" data-stat="chance">
+            <span class="label">Chance</span>
+            <div class="stat-controls">
+              <button type="button" class="stat-btn stat-btn-minus" data-stat="chance">-</button>
+              <input type="number" id="stat-chance-input" class="stat-input" min="0" step="1" />
+              <button type="button" class="stat-btn stat-btn-plus" data-stat="chance">+</button>
+            </div>
+          </li>
+          <li class="stat-line" data-stat="vitalite">
+            <span class="label">Vitalité</span>
+            <div class="stat-controls">
+              <button type="button" class="stat-btn stat-btn-minus" data-stat="vitalite">-</button>
+              <input type="number" id="stat-vitalite-input" class="stat-input" min="0" step="1" />
+              <button type="button" class="stat-btn stat-btn-plus" data-stat="vitalite">+</button>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="stats-section stats-points-section">
+        <div class="stats-points-line">
+          Points à répartir :
+          <span id="stat-points-libres">0</span>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Fenêtre des sorts de la classe -->
+    <aside id="hud-spells-panel" aria-label="Fenêtre des sorts de la classe">
+      <header class="spells-header">
+        <h2 class="spells-title">Sorts</h2>
+        <div class="spells-class-name">
+          Classe : <span id="spells-class-name">---</span>
+        </div>
+      </header>
+
+      <section class="spells-section">
+        <ul id="hud-spells-list" class="spells-list">
+          <!-- Rempli dynamiquement -->
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <!-- UI de combat (bouton passer le tour, indicateur) -->
+  <div id="combat-ui-root">
+    <div id="combat-turn-indicator">
+      Tour : <span id="combat-turn-label">Joueur</span>
+    </div>
+    <button id="combat-ready-button" type="button">
+      PRÊT
+    </button>
+    <button id="combat-end-turn-button" type="button">
+      FIN DU TOUR
+    </button>
+  </div>
+
+  <!-- Popup de récapitulatif de combat -->
+  <div id="combat-result-overlay" class="combat-result-hidden">
+    <div class="combat-result-panel">
+      <h2 id="combat-result-title" class="combat-result-title">
+        Fin du combat
+      </h2>
+      <div class="combat-result-body">
+        <div class="combat-result-section">
+          <h3>Joueur</h3>
+          <p>Niveau : <span id="combat-result-player-level">1</span></p>
+          <p>XP gagnée : <span id="combat-result-xp-gain">0</span></p>
+          <p>
+            XP totale :
+            <span id="combat-result-xp-total">0</span>
+            /
+            <span id="combat-result-xp-next">0</span>
+          </p>
+        </div>
+        <div class="combat-result-section">
+          <h3>Monstre</h3>
+          <p>Type : <span id="combat-result-monster-name">-</span></p>
+          <p>PV restants : <span id="combat-result-monster-hp">0</span></p>
+        </div>
+        <div class="combat-result-section">
+          <h3>Combat</h3>
+          <p>Durée : <span id="combat-result-duration">0s</span></p>
+          <p>Or gagné : <span id="combat-result-gold">0</span></p>
+        </div>
+      </div>
+      <div class="combat-result-actions">
+        <button id="combat-result-continue-button" type="button">
+          Continuer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
+

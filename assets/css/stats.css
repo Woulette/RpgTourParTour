@@ -1,0 +1,190 @@
+/* Fenêtre de statistiques, responsive */
+
+#hud-stats-panel {
+  position: fixed;
+  left: 76.3%;
+  top: 47.3%;
+  transform: translate(-50%, -50%);
+
+  /* Dimensions de base (écran "confort" type 1920x1080) */
+  width: min(350px, 80vw);
+  height: min(600px, 80vh);
+
+  padding: 1.2rem;
+  box-sizing: border-box;
+
+  background: rgba(8, 20, 40, 0.95);
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+
+  /* Cachée par défaut, affichée quand le body a la classe .hud-stats-open */
+  display: none;
+  flex-direction: column;
+  gap: 1.2rem;
+
+  color: #f5f7ff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  pointer-events: auto; /* cliquable */
+}
+
+/* Quand la fenêtre de stats est ouverte */
+body.hud-stats-open #hud-stats-panel {
+  display: flex;
+}
+
+.stats-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 0.6rem;
+}
+
+.stats-title {
+  margin: 0;
+  font-size: clamp(16px, 1.6vw, 20px);
+  font-weight: 700;
+}
+
+.stats-player-name {
+  margin-top: 0.3rem;
+  font-size: clamp(12px, 1.2vw, 14px);
+  opacity: 0.9;
+}
+
+.stats-player-name span {
+  font-weight: 600;
+}
+
+.stats-level-line {
+  margin-top: 0.3rem;
+  font-size: clamp(12px, 1.2vw, 14px);
+  opacity: 0.9;
+}
+
+.stats-hp-init-line {
+  margin-top: 0.2rem;
+  font-size: clamp(12px, 1.2vw, 14px);
+  opacity: 0.9;
+}
+
+.stats-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.stats-section-title {
+  margin: 0;
+  font-size: clamp(13px, 1.3vw, 15px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a5b4ff;
+}
+
+.stats-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stats-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+
+.stats-list .label {
+  opacity: 0.85;
+}
+
+.stats-list .value {
+  font-weight: 600;
+  padding-left: 0.8rem;
+}
+
+/* Ligne de caractéristique avec contrôles +/- et input */
+.stat-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.stat-btn {
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(10, 22, 40, 0.95);
+  color: #f5f7ff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.stat-input {
+  width: 56px;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(3, 10, 20, 0.9);
+  color: #f5f7ff;
+  font-size: 12px;
+}
+
+.stats-points-section {
+  margin-top: 0.4rem;
+}
+
+.stats-points-line {
+  font-size: clamp(12px, 1.2vw, 14px);
+  opacity: 0.9;
+}
+
+/* Quand l'écran est plus petit, on réduit un peu la fenêtre
+   (par exemple autour de 500 x 400) */
+@media (max-width: 1600px) {
+  #hud-stats-panel {
+    width: min(305px, 80vw);
+    height: min(526px, 80vh);
+
+    top : 44.7%;
+    left : 75%;
+  }
+}
+
+/* Palier supplémentaire pour les résolutions ≤ 1360px */
+@media (max-width: 1360px) {
+  #hud-stats-panel {
+    /* taille spéciale pour cette résolution */
+    width: min(265px, 85vw);
+    height: min(470px, 80vh);
+
+    /* décalage vers le haut uniquement pour ≤ 1360px */
+    top: 42%;
+    left: 74%;              /* un peu plus haut qu'avant, à ajuster */
+    /* ou, variante : transform: translate(-50%, -55%); */
+  }
+}
+
+@media (max-width: 1280px) {
+  #hud-stats-panel {
+    /* à ajuster suivant tes tests */
+    width: min(260px, 90vw);
+    height: min(460px, 80vh);
+
+    top: 40%;
+    left: 73%;
+  }
+}
+
