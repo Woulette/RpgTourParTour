@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="assets/css/combatResult.css" />
   <link rel="stylesheet" href="assets/css/spellBook.css" />
   <link rel="stylesheet" href="assets/css/inventory.css" />
+  <link rel="stylesheet" href="assets/css/map.css" />
 </head>
 <body>
   <!-- HUD HTML en overlay par-dessus le canvas Phaser -->
@@ -34,12 +35,18 @@
       <button id="hud-spells-button" aria-label="Ouvrir les sorts">
         SORTS
       </button>
-      <button id="hud-stats-button" aria-label="Ouvrir les statistiques">
-        STATS
-      </button>
       <button id="hud-inventory-button" aria-label="Ouvrir l'inventaire">
         INV
       </button>
+      <button id="hud-map-button" aria-label="Ouvrir la carte du monde">
+        CARTE
+      </button>
+      <button id="hud-stats-button" aria-label="Ouvrir les statistiques">
+        STATS
+      </button>
+
+      <!-- Mini-carte au centre du HUD -->
+      <div id="hud-minimap" aria-label="Mini-carte de la zone"></div>
 
       <!-- Conteneur barre de sorts + petits slots Sorts/Obj. -->
       <div id="hud-spell-container">
@@ -216,13 +223,25 @@
         </div>
       </header>
 
-      <section class="spells-section">
-        <ul id="hud-spells-list" class="spells-list">
-          <!-- Rempli dynamiquement -->
-        </ul>
-      </section>
-    </aside>
-  </div>
+        <section class="spells-section">
+          <ul id="hud-spells-list" class="spells-list">
+            <!-- Rempli dynamiquement -->
+          </ul>
+        </section>
+      </aside>
+
+      <!-- FenǦtre de carte du monde -->
+      <aside id="hud-map-panel" aria-label="Carte du monde">
+        <header class="map-header">
+          <h2 class="map-title">Carte</h2>
+        </header>
+          <section class="map-body">
+            <div class="map-main">
+              <div class="map-inner"></div>
+            </div>
+          </section>
+      </aside>
+    </div>
 
   <!-- UI de combat (bouton passer le tour, indicateur) -->
   <div id="combat-ui-root">

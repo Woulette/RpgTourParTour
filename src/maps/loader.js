@@ -7,8 +7,17 @@ export function preloadMap(scene, mapDef) {
 
 export function buildMap(scene, mapDef) {
   const map = scene.make.tilemap({ key: mapDef.key });
-  const ts = mapDef.tilesets[0];
-  const tileset = map.addTilesetImage(ts.name, ts.imageKey);
-  const groundLayer = map.createLayer(map.layers[0].name, tileset);
-  return { map, groundLayer };
+  const tilesets = mapDef.tilesets.map((ts) =>
+    map.addTilesetImage(ts.name, ts.imageKey)
+  );
+
+  const createdLayers = map.layers.map((layerData, index) => {
+    const layer = map.createLayer(layerData.name, tilesets);
+    layer.setOrigin(0, 0);
+    layer.setDepth(index);
+    return layer;
+  });
+
+  const groundLayer = createdLayers[0];
+  return { map, groundLayer, layers: createdLayers };
 }

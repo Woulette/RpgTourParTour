@@ -1,9 +1,10 @@
 import { createCharacter } from "./character.js";
 import { classes } from "../config/classes.js";
-import { PLAYER_SPEED } from "../config/constants.js";
 import { createStats, applyBonuses } from "../core/stats.js";
 import { createLevelState, ajouterXp } from "../core/level.js";
 import { createPlayerInventory } from "../inventory/inventoryContainers.js";
+import { maybeHandleMapTransition } from "../maps/world.js";
+import { GAME_WIDTH, PLAYER_SPEED } from "../config/constants.js";
 import {
   createEmptyEquipment,
   recomputePlayerStatsWithEquipment,
@@ -74,6 +75,11 @@ export function createPlayer(scene, x, y, classId) {
     classId,
     stats,
   });
+  // Ajuste l'origine du sprite pour aligner les "pieds"
+  // du personnage sur le centre de la tuile isométrique.
+  if (player.setOrigin) {
+    player.setOrigin(0.5, 0.90);
+  }
 
   // État de niveau / XP
   player.levelState = createLevelState();
@@ -208,15 +214,27 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
   scene.input.on("pointerdown", (pointer) => {
     const activeSpell = getActiveSpell(player);
 
+    const bandWidth = 30; // même valeur que dans exits.js
+    const clickedInRightBand = pointer.x >= GAME_WIDTH - bandWidth;
+
     // Clic sur le HUD : si un sort était sélectionné, on l'annule
     // et on revient en mode déplacement.
     if (pointer.y > hudY) {
+      if (!scene.combatState || !scene.combatState.enCours) {
+        scene.exitIntentRight = clickedInRightBand;
+      }
+
       if (activeSpell) {
         clearActiveSpell(player);
         updateCombatPreview(scene, map, groundLayer, null);
         clearSpellRangePreview(scene);
       }
       return;
+    }
+
+    // Zone de jeu : intention de sortie à droite via la bande
+    if (!scene.combatState || !scene.combatState.enCours) {
+      scene.exitIntentRight = clickedInRightBand;
     }
 
     // Stop mouvement en cours
@@ -235,10 +253,49 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     const t = worldToTile(worldX, worldY);
     if (!t) return;
 
-    const tileX = t.x;
-    const tileY = t.y;
+    let tileX = t.x;
+    let tileY = t.y;
 
     if (!isValidTile(map, tileX, tileY)) return;
+
+    // Sortie de map : intention via la bande + tuile de sortie calculée
+    if (!scene.combatState || !scene.combatState.enCours) {
+      const exits = scene.worldExits && scene.worldExits.right;
+      if (exits) {
+        if (clickedInRightBand) {
+          // Cherche la tuile de sortie la plus proche verticalement
+          let best = null;
+          let bestDy = Infinity;
+          exits.forEach((tile) => {
+            const dy = Math.abs(tile.y - tileY);
+            if (dy < bestDy) {
+              bestDy = dy;
+              best = tile;
+            }
+          });
+
+          if (best) {
+            tileX = best.x;
+            tileY = best.y;
+            scene.pendingExitDirection = "right";
+            scene.pendingExitTile = { x: tileX, y: tileY };
+          }
+        } else {
+          // Ancien comportement : clic directement sur une tuile de sortie
+          const isExitTile = exits.some(
+            (tile) => tile.x === tileX && tile.y === tileY
+          );
+          if (isExitTile) {
+            scene.pendingExitDirection = "right";
+            scene.pendingExitTile = { x: tileX, y: tileY };
+          } else {
+            // Clic ailleurs -> on annule une éventuelle sortie en attente
+            scene.pendingExitDirection = null;
+            scene.pendingExitTile = null;
+          }
+        }
+      }
+    }
 
     // En phase de préparation : déplacement uniquement sur les cases autorisées
     if (scene.prepState && scene.prepState.actif) {
@@ -269,9 +326,7 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
         return;
       }
 
-      // Sort impossible (case indisponible, hors portée, pas assez de PA) :
-      // on annule le sort sélectionné, on nettoie la preview et
-      // on ne bouge pas pour ce clic.
+      // Sort impossible : on annule le sort, on nettoie et on ne bouge pas.
       clearActiveSpell(player);
       updateCombatPreview(scene, map, groundLayer, null);
       clearSpellRangePreview(scene);
@@ -343,6 +398,7 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
 
     movePlayerAlongPath(scene, player, map, groundLayer, path, moveCost);
   });
+
 }
 
 function updatePlayerTilePosition(player, worldToTile) {
@@ -385,6 +441,76 @@ function calculatePath(startX, startY, endX, endY, allowDiagonal = true) {
   return path;
 }
 
+function getDirectionName(dx, dy) {
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+
+  if (absDx < 1e-3 && absDy < 1e-3) {
+    return "south-east";
+  }
+
+  // Si le mouvement est principalement horizontal -> Est / Ouest
+  if (absDx > absDy * 2) {
+    return dx > 0 ? "east" : "west";
+  }
+
+  // Si le mouvement est principalement vertical -> Nord / Sud
+  if (absDy > absDx * 2) {
+    return dy > 0 ? "south" : "north";
+  }
+
+  // Sinon, on est sur une vraie diagonale -> NE / SE / SW / NW
+  if (dx > 0 && dy < 0) return "north-east";
+  if (dx > 0 && dy > 0) return "south-east";
+  if (dx < 0 && dy > 0) return "south-west";
+  return "north-west";
+}
+
+// Déplacement "manuel" vers une tuile cible (hors clic direct).
+// Utilisé notamment pour les sorties de map : on envoie le joueur
+// vers une tuile précise, en réutilisant movePlayerAlongPath.
+export function movePlayerToTile(
+  scene,
+  player,
+  map,
+  groundLayer,
+  tileX,
+  tileY
+) {
+  if (!isValidTile(map, tileX, tileY)) return;
+
+  // Si on ne connaît pas encore la tuile courante, on la recalcule
+  // à partir de la position monde du joueur.
+  if (
+    typeof player.currentTileX !== "number" ||
+    typeof player.currentTileY !== "number"
+  ) {
+    const raw = groundLayer.worldToTileXY(player.x, player.y, false);
+    if (!raw) return;
+    player.currentTileX = Math.floor(raw.x);
+    player.currentTileY = Math.floor(raw.y);
+  }
+
+  const path = calculatePath(
+    player.currentTileX,
+    player.currentTileY,
+    tileX,
+    tileY,
+    true
+  );
+
+  console.log("[EXIT] movePlayerToTile path len =", path && path.length, {
+    fromX: player.currentTileX,
+    fromY: player.currentTileY,
+    toX: tileX,
+    toY: tileY,
+  });
+
+  if (!path || path.length === 0) return;
+
+  movePlayerAlongPath(scene, player, map, groundLayer, path, 0);
+}
+
 function movePlayerAlongPath(
   scene,
   player,
@@ -412,6 +538,18 @@ function movePlayerAlongPath(
 
   const targetX = worldPos.x + map.tileWidth / 2;
   const targetY = worldPos.y + map.tileHeight / 2;
+
+  const dxWorld = targetX - player.x;
+  const dyWorld = targetY - player.y;
+  const dir = getDirectionName(dxWorld, dyWorld);
+  if (
+    player.anims &&
+    scene.anims &&
+    scene.anims.exists &&
+    scene.anims.exists(`player_run_${dir}`)
+  ) {
+    player.anims.play(`player_run_${dir}`, true);
+  }
 
   const distance = Phaser.Math.Distance.Between(
     player.x,
@@ -444,6 +582,21 @@ function movePlayerAlongPath(
         applyMoveCost(scene, player, moveCost);
 
         maybeStartPendingCombat(scene, player, map, groundLayer);
+        if (player.anims && player.anims.currentAnim) {
+          player.anims.stop();
+          player.setTexture("player");
+        }
+                // Sortie de map : si on vient d'atteindre une tuile de sortie,
+        // on laisse world.js gérer la transition.
+        if (
+          scene.pendingExitDirection &&
+          scene.pendingExitTile &&
+          player.currentTileX === scene.pendingExitTile.x &&
+          player.currentTileY === scene.pendingExitTile.y
+        ) {
+          maybeHandleMapTransition(scene);
+        }
+
       }
     },
   });

@@ -158,6 +158,8 @@ body.hud-inventory-open #hud-inventory-panel {
   background: rgba(121, 121, 121, 0.6);
 
   box-sizing: border-box;
+  position: relative;       /* pour que l'icône absolue reste dans le slot */
+  overflow: hidden;
 }
 
 /* Grille d’inventaire : étroite, verticale (4 colonnes x 10 lignes = 40 slots) */
@@ -285,4 +287,59 @@ body.hud-inventory-open #hud-inventory-panel {
 
 .inventory-item-icon {
   margin-top: 0.4rem;
+}
+
+/* --- Surcharge mise en page fiche de détails (bonus à droite) --- */
+.inventory-detail {
+  border-radius: 10px;
+  border: 1px solid rgba(200, 200, 200, 0.6);
+  background: rgba(121, 121, 121, 0.6);
+  padding: 0.6rem 0.8rem;
+  font-size: clamp(11px, 1.1vw, 13px);
+
+  /* grille : icône à gauche, texte à droite */
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "name type"
+    "icon desc";
+  column-gap: 1rem;
+  row-gap: 0.4rem;
+
+  min-height: 180px;
+}
+
+.inventory-detail h3 {
+  margin: 0;
+  font-size: clamp(15px, 1.5vw, 20px);
+  grid-area: name;
+}
+
+.inventory-detail p {
+  margin: 0;
+}
+
+.inventory-item-icon {
+  grid-area: icon;
+  width: 130px;
+  height: 130px;
+  border-radius: 6px;
+
+  border: 1px solid rgb(185, 185, 185);
+  background-color: rgba(0, 0, 0, 0.123);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+#inventory-item-type {
+  position: static; /* annule le absolute plus haut */
+  grid-area: type;
+  text-align: right;
+}
+
+#inventory-item-desc {
+  grid-area: desc;
+  font-size: clamp(12px, 1.2vw, 15px); /* plus visible à droite */
 }

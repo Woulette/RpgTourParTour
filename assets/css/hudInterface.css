@@ -13,7 +13,7 @@
 
   height: 21.3vh;           /* ta hauteur actuelle, tu peux la retoucher */
   transform: translateX(-50%);
-  background: #0b3059;
+  background: #707070;
   pointer-events: none;     /* on réactive sur les enfants seulement */
 }
 
@@ -21,11 +21,34 @@
   pointer-events: auto;
 }
 
+/* Mini-carte au centre du HUD bas */
+#hud-minimap {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  transform: translateX(-50%);
+
+  width: 28vh;
+  height: 15vh;
+
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+
+  background-image: url("../maps/maptest.png");
+  /* affiche l'image un peu réduite (dézoom) */
+  background-size: 30% 35%;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  overflow: hidden;
+}
+
 /* Affichage PA / PM dans la zone HUD (partie haute de la barre bleue) */
 #hud-ap-mp {
   position: absolute;
   left: 50%;
-  bottom: 65%;
+  bottom: 80%;
 
   pointer-events: none; /* purement visuel : pas cliquable */
 

@@ -28,6 +28,12 @@ export function createEmptyEquipment() {
 export function recomputePlayerStatsWithEquipment(player) {
   if (!player) return;
 
+  // Si aucune base n'a encore été mémorisée, on prend un snapshot
+  // des stats actuelles comme "stats de base" (sans équipement).
+  if (!player.baseStats && player.stats) {
+    player.baseStats = { ...player.stats };
+  }
+
   const base = player.baseStats || player.stats || {};
   const bonuses = [];
 
@@ -132,4 +138,3 @@ export function unequipToInventory(player, inventory, equipSlot) {
   recomputePlayerStatsWithEquipment(player);
   return true;
 }
-

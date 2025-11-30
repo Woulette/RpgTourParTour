@@ -1,8 +1,11 @@
-import { defaultMapKey, maps } from "./maps/index.js";
+﻿import { defaultMapKey, maps } from "./maps/index.js";
 import { BACKGROUND_COLOR, GAME_HEIGHT, GAME_WIDTH, SHOW_GRID } from "./config/constants.js";
 import { preloadMap, buildMap } from "./maps/loader.js";
 import { setupCamera } from "./maps/camera.js";
 import { createPlayer, enableClickToMove } from "./entities/player.js";
+import { setupPlayerAnimations } from "./entities/animation.js";
+import { loadMapLikeMain, maybeHandleMapTransition } from "./maps/world.js";
+import { createMapExits } from "./maps/exits.js";
 import { createHud, setupHudCamera } from "./ui/hud.js";
 import { initDomHud } from "./ui/domHud.js";
 import { initDomCombat } from "./ui/domCombat.js";
@@ -24,22 +27,49 @@ class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    preloadMap(this, maps[defaultMapKey]);
-    this.load.image("player", "assets/aventurier.png");
+    // Pr�charge toutes les maps d�finies dans src/maps/index.js
+    Object.values(maps).forEach((mapDef) => {
+      preloadMap(this, mapDef);
+    });
+    this.load.image("player", "assets/rotations/south-east.png");
+
+    const animDirs = [
+      "south",
+      "south-east",
+      "east",
+      "north-east",
+      "north",
+      "north-west",
+      "west",
+      "south-west",
+    ];
+    animDirs.forEach((dir) => {
+      for (let i = 0; i < 6; i += 1) {
+        const index = i.toString().padStart(3, "0");
+        this.load.image(
+          `player_run_${dir}_${i}`,
+          `assets/animations/running-6-frames/${dir}/frame_${index}.png`
+        );
+      }
+    });
     preloadMonsters(this);
   }
 
   create() {
     const mapDef = maps[defaultMapKey];
-    const { map, groundLayer } = buildMap(this, mapDef);
-    // Aligne le layer sur son origine sans décalage manuel
-    groundLayer.setOrigin(0, 0);
+    const { map, groundLayer, layers } = buildMap(this, mapDef);
+    // Aligne le layer sur son origine sans d�calage manuel
+    const mapLayers = layers && layers.length > 0 ? layers : [groundLayer];
+    mapLayers.forEach((layer) => layer.setOrigin(0, 0));
 
     // Sauvegarde la carte sur la scène pour d'autres systèmes (respawn, etc.)
     this.map = map;
     this.groundLayer = groundLayer;
+    this.mapLayers = mapLayers;
+    this.currentMapKey = mapDef.key;
+    this.currentMapDef = mapDef;
 
-    // --- JOUEUR AU CENTRE (coordonnées tuiles) ---
+    // --- JOUEUR AU CENTRE (coordonn�es tuiles) ---
     const centerTileX = Math.floor(map.width /2);
     const centerTileY = Math.floor(map.height /2);
     const centerWorld = map.tileToWorldXY(
@@ -54,6 +84,7 @@ class MainScene extends Phaser.Scene {
     const startY = centerWorld.y + map.tileHeight /2;
 
     this.player = createPlayer(this, startX, startY, defaultClassId);
+    setupPlayerAnimations(this);
     this.player.setDepth(2);
 
     // --- MONSTRES DE TEST ---
@@ -88,19 +119,22 @@ class MainScene extends Phaser.Scene {
     // --- HUD ---
     const { hudY, uiElements } = createHud(this);
 
-    // --- Caméras : séparer monde et HUD pour éviter le zoom sur le HUD ---
-    const worldElements = [groundLayer, this.player];
+    // --- Cam�ras : s�parer monde et HUD pour �viter le zoom sur le HUD ---
+    const worldElements = [...mapLayers, this.player];
     if (grid) worldElements.push(grid);
     setupCamera(this, map, startX, startY, mapDef.cameraOffsets);
     setupHudCamera(this, uiElements, worldElements);
 
-    // Assure-toi que la caméra HUD ignore aussi les monstres déjà créés
+    // Assure-toi que la cam�ra HUD ignore aussi les monstres d�j� cr��s
     if (this.hudCamera && this.monsters) {
       this.monsters.forEach((m) => this.hudCamera.ignore(m));
     }
 
     // --- CLICK-TO-MOVE simple ---
     enableClickToMove(this, this.player, hudY, map, groundLayer);
+
+    // --- Zones de sortie de map (bordures cliquables) ---
+    createMapExits(this);
 
     // Initialisation du HUD HTML (en dehors de Phaser)
     initDomHud(this.player);
@@ -110,8 +144,15 @@ class MainScene extends Phaser.Scene {
     initDomSpells(this.player);
     // Initialisation de la popup de fin de combat
     initDomCombatResult(this, this.player);
-    // Initialisation de l'inventaire (fenêtre INV)
+    // Initialisation de l'inventaire (fen�tre INV)
     initDomInventory(this.player);
+
+    // DEBUG : touche "N" -> charge maptest2 avec le m?me centrage
+    this.input.keyboard.on("keydown-N", () => {
+      const next = maps.maptest2;
+      if (!next) return;
+      loadMapLikeMain(this, next);
+    });
 
     // --- PREVIEW_BLOCK_START
     this.damagePreviewText = null;
@@ -136,7 +177,7 @@ class MainScene extends Phaser.Scene {
       const tileX = monster.tileX;
       const tileY = monster.tileY;
 
-      // Si le sort ne peut pas être lancé sur cette case, on ne montre rien
+      // Si le sort ne peut pas �tre lanc� sur cette case, on ne montre rien
       if (
         !canCastSpellAtTile(
           this,
@@ -171,7 +212,7 @@ class MainScene extends Phaser.Scene {
         this.damagePreviewBg.destroy();
       }
 
-      // Texte centré au-dessus du monstre
+      // Texte centr� au-dessus du monstre
       // Position du centre de la bulle (un peu au-dessus du monstre)
       const bubbleCenterX = cx;
       const bubbleCenterY = cy - mapForCombat.tileHeight * 1.2;
@@ -184,10 +225,10 @@ class MainScene extends Phaser.Scene {
         strokeThickness: 1,
         align: "center",
       });
-      // On centre le texte sur ses coordonn�es
+      // On centre le texte sur ses coordonn?es
       dmgText.setOrigin(0.5, 0.5);
 
-      // Petit fond arrondi derri�re le texte
+      // Petit fond arrondi derri?re le texte
       const paddingX = 6;
       const paddingY = 2;
       const bgWidth = dmgText.width + paddingX * 2;
@@ -226,16 +267,20 @@ class MainScene extends Phaser.Scene {
     };
 
     // Clic sur un monstre = on demande au joueur d'aller vers lui,
-    // et le combat sera lancé quand le joueur atteindra sa case.
+    // et le combat sera lanc� quand le joueur atteindra sa case.
     this.input.on("gameobjectdown", (pointer, gameObject) => {
       if (!gameObject.monsterId) return;
 
-      // Combat déjà en cours -> on ignore
+      // Combat d�j� en cours -> on ignore
       if (this.combatState && this.combatState.enCours) return;
 
       // On enregistre la cible de combat pour plus tard
       this.pendingCombatTarget = gameObject;
     });
+  }
+
+  update() {
+    maybeHandleMapTransition(this);
   }
 }
 
@@ -256,3 +301,5 @@ const config = {
 };
 
 new Phaser.Game(config);
+
+
