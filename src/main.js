@@ -2,10 +2,10 @@
 import { BACKGROUND_COLOR, GAME_HEIGHT, GAME_WIDTH, SHOW_GRID } from "./config/constants.js";
 import { preloadMap, buildMap } from "./maps/loader.js";
 import { setupCamera } from "./maps/camera.js";
-import { createPlayer, enableClickToMove } from "./entities/player.js";
+import { createPlayer } from "./entities/player.js";
+import { enableClickToMove } from "./entities/playerMovement.js";
 import { setupPlayerAnimations } from "./entities/animation.js";
-import { loadMapLikeMain, maybeHandleMapTransition } from "./maps/world.js";
-import { createMapExits } from "./maps/exits.js";
+import { loadMapLikeMain } from "./maps/world.js";
 import { createHud, setupHudCamera } from "./ui/hud.js";
 import { initDomHud } from "./ui/domHud.js";
 import { initDomCombat } from "./ui/domCombat.js";
@@ -132,9 +132,6 @@ class MainScene extends Phaser.Scene {
 
     // --- CLICK-TO-MOVE simple ---
     enableClickToMove(this, this.player, hudY, map, groundLayer);
-
-    // --- Zones de sortie de map (bordures cliquables) ---
-    createMapExits(this);
 
     // Initialisation du HUD HTML (en dehors de Phaser)
     initDomHud(this.player);
@@ -279,9 +276,6 @@ class MainScene extends Phaser.Scene {
     });
   }
 
-  update() {
-    maybeHandleMapTransition(this);
-  }
 }
 
 const config = {
