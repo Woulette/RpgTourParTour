@@ -19,25 +19,46 @@ export function spawnInitialMonsters(
 ) {
   scene.monsters = scene.monsters || [];
 
+  // Corbeau : au-dessus du centre
   const monsterOffsetTilesY = -3;
-  const monsterTileX = centerTileX;
-  const monsterTileY = centerTileY + monsterOffsetTilesY;
+  const corbeauTileX = centerTileX;
+  const corbeauTileY = centerTileY + monsterOffsetTilesY;
 
-  const monsterWorld = map.tileToWorldXY(
-    monsterTileX,
-    monsterTileY,
+  const corbeauWorld = map.tileToWorldXY(
+    corbeauTileX,
+    corbeauTileY,
     undefined,
     undefined,
     groundLayer
   );
 
-  const monsterX = monsterWorld.x + map.tileWidth / 2;
-  const monsterY = monsterWorld.y + map.tileHeight / 2;
+  const corbeauX = corbeauWorld.x + map.tileWidth / 2;
+  const corbeauY = corbeauWorld.y + map.tileHeight / 2;
 
-  const corbeau = createMonster(scene, monsterX, monsterY, "corbeau");
-  corbeau.tileX = monsterTileX;
-  corbeau.tileY = monsterTileY;
+  const corbeau = createMonster(scene, corbeauX, corbeauY, "corbeau");
+  corbeau.tileX = corbeauTileX;
+  corbeau.tileY = corbeauTileY;
   scene.monsters.push(corbeau);
+
+  // Nouveau monstre : Aluineeks, légèrement décalé sur la droite
+  const aluineeksTileX = centerTileX + 3;
+  const aluineeksTileY = centerTileY + monsterOffsetTilesY;
+
+  const aluineeksWorld = map.tileToWorldXY(
+    aluineeksTileX,
+    aluineeksTileY,
+    undefined,
+    undefined,
+    groundLayer
+  );
+
+  const aluineeksX = aluineeksWorld.x + map.tileWidth / 2;
+  const aluineeksY = aluineeksWorld.y + map.tileHeight / 2;
+
+  const aluineeks = createMonster(scene, aluineeksX, aluineeksY, "aluineeks");
+  aluineeks.tileX = aluineeksTileX;
+  aluineeks.tileY = aluineeksTileY;
+  scene.monsters.push(aluineeks);
 }
 
 // Cherche un monstre exactement sur une tuile donnée

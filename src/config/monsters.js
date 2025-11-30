@@ -38,4 +38,27 @@ export const monsters = {
 
     xpReward: 20,
   },
+
+  aluineeks: {
+    id: "aluineeks",
+    label: "Aluineeks",
+    textureKey: "aluineeks",
+    spritePath: "assets/monsters/aluineeks.png",
+
+    // Monstre un peu plus costaud que le corbeau
+    statsOverrides: {
+      hpMax: 35,
+      hp: 35,
+      initiative: 4,
+      force: 6,
+    },
+
+    // Pour l'instant, on lui donne le même sort de base
+    spells: ["coup_de_bec"],
+
+    // Pas de loot spécifique pour le moment
+    loot: [],
+
+    xpReward: 30,
+  },
 };

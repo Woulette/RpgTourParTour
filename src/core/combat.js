@@ -3,6 +3,7 @@
 // - phase de préparation (placement) avant le vrai combat
 
 import { startOutOfCombatRegen } from "./regen.js";
+import { COMBAT_PATTERNS } from "../combatPatterns.js";
 
 // Crée l'état de combat à partir d'un joueur et d'un monstre.
 export function createCombatState(player, monster) {
@@ -38,29 +39,56 @@ export function createCombatState(player, monster) {
 // -----------------------------------------------------------
 
 // Détermine quelques cases de placement autour du monstre.
+// Détermine les cases de placement du joueur autour du monstre
+// en utilisant un paterne défini dans combatPatterns.js.
 function computePlacementTiles(map, monsterTileX, monsterTileY) {
-  const candidates = [
-    { dx: -2, dy: 0 },
-    { dx: -1, dy: 1 },
-    { dx: 0, dy: 2 },
-    { dx: 1, dy: 1 },
-  ];
+  const pattern = COMBAT_PATTERNS.close_melee;
+
+  // Sécurité : si le paterne n'est pas défini, on garde l'ancien comportement.
+  if (!pattern || !Array.isArray(pattern.playerOffsets)) {
+    const candidates = [
+      { dx: -2, dy: 0 },
+      { dx: -1, dy: 1 },
+      { dx: 0, dy: 2 },
+      { dx: 1, dy: 1},
+    ];
+
+    const fallback = [];
+    for (const { dx, dy } of candidates) {
+      const tx = monsterTileX + dx;
+      const ty = monsterTileY + dy;
+      if (tx >= 0 && tx < map.width && ty >= 0 && ty < map.height) {
+        fallback.push({ x: tx, y: ty });
+      }
+    }
+
+    if (fallback.length === 0) {
+      fallback.push({ x: monsterTileX, y: monsterTileY });
+    }
+
+    return fallback;
+  }
 
   const tiles = [];
-  for (const { dx, dy } of candidates) {
+
+  for (const { x: dx, y: dy } of pattern.playerOffsets) {
     const tx = monsterTileX + dx;
     const ty = monsterTileY + dy;
+
     if (tx >= 0 && tx < map.width && ty >= 0 && ty < map.height) {
       tiles.push({ x: tx, y: ty });
     }
   }
 
+  // Si, pour une raison quelconque, aucune case n'est valide,
+  // on retombe sur la case du monstre pour ne pas casser le combat.
   if (tiles.length === 0) {
     tiles.push({ x: monsterTileX, y: monsterTileY });
   }
 
   return tiles;
 }
+
 
 // Lance la phase de préparation (placement) avant le combat.
 export function startPrep(scene, player, monster, map, groundLayer) {
@@ -82,13 +110,84 @@ export function startPrep(scene, player, monster, map, groundLayer) {
   // On mémorise la carte / layer de combat pour l'IA monstre, les sorts, etc.
   scene.combatMap = map;
   scene.combatGroundLayer = groundLayer;
+    // Petit fondu noir à l'entrée en préparation (au clic sur le monstre)
+    const cam = scene.cameras && scene.cameras.main;
+    if (cam && cam.fadeOut && cam.fadeIn) {
+      cam.once("camerafadeoutcomplete", () => {
+        cam.fadeIn(1300, 0, 0, 0);
+      });
+      cam.fadeOut(0, 0, 0, 0);
+    }
+  
 
   const allowedTiles = computePlacementTiles(map, monster.tileX, monster.tileY);
+
+  // Cases ennemies calculées à partir du même paterne
+  let enemyTiles = [];
+  const pattern = COMBAT_PATTERNS.close_melee;
+  if (pattern && Array.isArray(pattern.enemyOffsets)) {
+    for (const { x: dx, y: dy } of pattern.enemyOffsets) {
+      const tx = monster.tileX + dx;
+      const ty = monster.tileY + dy;
+      if (tx >= 0 && tx < map.width && ty >= 0 && ty < map.height) {
+        enemyTiles.push({ x: tx, y: ty });
+      }
+    }
+  }
+    // Dès la préparation, on choisit une case rouge aléatoire pour placer le monstre.
+    if (enemyTiles.length > 0) {
+      const index = Math.floor(Math.random() * enemyTiles.length);
+      const tile = enemyTiles[index];
+  
+      monster.tileX = tile.x;
+      monster.tileY = tile.y;
+  
+      const worldPos = map.tileToWorldXY(
+        tile.x,
+        tile.y,
+        undefined,
+        undefined,
+        groundLayer
+      );
+      monster.x = worldPos.x + map.tileWidth / 2;
+      monster.y = worldPos.y + map.tileHeight / 2;
+    }
+    // Placement automatique du joueur sur une case bleue aléatoire dès la préparation.
+    if (allowedTiles.length > 0) {
+      const currentX = player.currentTileX;
+      const currentY = player.currentTileY;
+  
+      // On évite de reprendre exactement la tuile actuelle si possible.
+      let playerCandidates = allowedTiles.filter(
+        (t) => t.x !== currentX || t.y !== currentY
+      );
+      if (playerCandidates.length === 0) {
+        playerCandidates = allowedTiles;
+      }
+  
+      const idx = Math.floor(Math.random() * playerCandidates.length);
+      const tile = playerCandidates[idx];
+  
+      player.currentTileX = tile.x;
+      player.currentTileY = tile.y;
+  
+      const worldPosPlayer = map.tileToWorldXY(
+        tile.x,
+        tile.y,
+        undefined,
+        undefined,
+        groundLayer
+      );
+      player.x = worldPosPlayer.x + map.tileWidth / 2;
+      player.y = worldPosPlayer.y + map.tileHeight / 2;
+    }
+  
 
   const highlights = [];
   const halfW = map.tileWidth / 2;
   const halfH = map.tileHeight / 2;
 
+  // Surbrillance des cases de placement joueur (bleu)
   for (const tile of allowedTiles) {
     const worldPos = map.tileToWorldXY(
       tile.x,
@@ -102,7 +201,40 @@ export function startPrep(scene, player, monster, map, groundLayer) {
 
     const g = scene.add.graphics();
     g.lineStyle(2, 0x2a9df4, 1);
-    g.fillStyle(0x2a9df4, 0.25);
+    g.fillStyle(0x2a9df4, 0.7);
+
+    const points = [
+      new Phaser.Math.Vector2(cx, cy - halfH),
+      new Phaser.Math.Vector2(cx + halfW, cy),
+      new Phaser.Math.Vector2(cx, cy + halfH),
+      new Phaser.Math.Vector2(cx - halfW, cy),
+    ];
+
+    g.fillPoints(points, true);
+    g.strokePoints(points, true);
+
+    if (scene.hudCamera) {
+      scene.hudCamera.ignore(g);
+    }
+
+    highlights.push(g);
+  }
+
+  // Surbrillance des cases "cible" ennemies (rouge)
+  for (const tile of enemyTiles) {
+    const worldPos = map.tileToWorldXY(
+      tile.x,
+      tile.y,
+      undefined,
+      undefined,
+      groundLayer
+    );
+    const cx = worldPos.x + map.tileWidth / 2;
+    const cy = worldPos.y + map.tileHeight / 2;
+
+    const g = scene.add.graphics();
+    g.lineStyle(2, 0xff4444, 1);
+    g.fillStyle(0xff4444, 0.7);
 
     const points = [
       new Phaser.Math.Vector2(cx, cy - halfH),
@@ -126,12 +258,15 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     joueur: player,
     monstre: monster,
     allowedTiles,
+    enemyTiles,
     highlights,
   };
 
   document.body.classList.add("combat-prep");
 }
 
+// Termine la phase de préparation et démarre réellement le combat.
+// Termine la phase de préparation et démarre réellement le combat.
 // Termine la phase de préparation et démarre réellement le combat.
 export function startCombatFromPrep(scene) {
   const prep = scene.prepState;
@@ -149,6 +284,8 @@ export function startCombatFromPrep(scene) {
 
   startCombat(scene, prep.joueur, prep.monstre);
 }
+
+
 
 // -----------------------------------------------------------
 //  COMBAT EFFECTIF
