@@ -13,16 +13,25 @@ export function attachMonsterTooltip(scene) {
       return;
     }
 
-    const name =
+    const baseName =
       monster.displayName || monster.label || monster.monsterId || "Monstre";
     const level =
       monster.level ?? (monster.stats && monster.stats.niveau) ?? 1;
     const xp = monster.xpReward ?? 0;
+    const groupSize =
+      typeof monster.groupSize === "number" && monster.groupSize > 1
+        ? monster.groupSize
+        : null;
 
-    const text = `Niveau ${level}\n${name}\nXP : ${xp}`;
+    const name = groupSize ? `${baseName} x${groupSize}` : baseName;
+
+    const titleLine = `Niv. ${level} - ${name}`;
+    const xpLine = `XP : ${xp}`;
+    const text = `${titleLine}\n${xpLine}`;
 
     const bubbleCenterX = monster.x;
-    const bubbleCenterY = monster.y - 40;
+    // Légèrement au-dessus de la tête du monstre
+    const bubbleCenterY = monster.y - 70;
 
     if (scene.monsterTooltipText) {
       scene.monsterTooltipText.destroy();
@@ -35,13 +44,18 @@ export function attachMonsterTooltip(scene) {
 
     const tooltipText = scene.add.text(bubbleCenterX, bubbleCenterY, text, {
       fontFamily: "Arial",
-      fontSize: 12,
-      color: "#000000",
-      stroke: "#ffffff",
-      strokeThickness: 2,
+      fontSize: 13,
+      fontStyle: "bold",
+      color: "#ffffff",
+      stroke: "#000000",
+      strokeThickness: 3,
       align: "center",
     });
     tooltipText.setOrigin(0.5, 0.5);
+    // Meilleure définition pour un texte plus net
+    if (tooltipText.setResolution) {
+      tooltipText.setResolution(2);
+    }
 
     const paddingX = 8;
     const paddingY = 4;
@@ -80,4 +94,3 @@ export function attachMonsterTooltip(scene) {
     }
   };
 }
-

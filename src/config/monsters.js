@@ -61,6 +61,6 @@ export const monsters = {
     // Loot à définir plus tard
     loot: [],
 
-    xpReward: 30,
+    xpReward: 80,
   },
 };

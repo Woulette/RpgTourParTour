@@ -55,7 +55,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
   };
 }
 
-// Active le clic‑pour‑se‑déplacer et la prévisu de déplacement / sorts.
+// Active le clic pour se déplacer et la prévisu de déplacement / sorts.
 export function enableClickToMove(scene, player, hudY, map, groundLayer) {
   const worldToTile = createCalibratedWorldToTile(map, groundLayer);
 
@@ -181,14 +181,39 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     // Resynchronise la tuile courante à partir de la position actuelle
     updatePlayerTilePosition(player, worldToTile);
 
+    // Si on clique sur un monstre, on utilise sa tuile
+    // plutôt que la tuile "derrière" détectée par le clic.
+    let clickedMonster = null;
+    if (scene.monsters && scene.monsters.length > 0) {
+      const worldXForHit = pointer.worldX;
+      const worldYForHit = pointer.worldY;
+      clickedMonster = scene.monsters.find((m) => {
+        if (!m || !m.getBounds) return false;
+        const bounds = m.getBounds();
+        return bounds.contains(worldXForHit, worldYForHit);
+      });
+    }
+
     const worldX = pointer.worldX;
     const worldY = pointer.worldY;
 
-    const t = worldToTile(worldX, worldY);
-    if (!t) return;
+    let tileX;
+    let tileY;
 
-    let tileX = t.x;
-    let tileY = t.y;
+    if (
+      clickedMonster &&
+      typeof clickedMonster.tileX === "number" &&
+      typeof clickedMonster.tileY === "number"
+    ) {
+      // Clic directement sur le monstre : on vise sa tuile exacte
+      tileX = clickedMonster.tileX;
+      tileY = clickedMonster.tileY;
+    } else {
+      const t = worldToTile(worldX, worldY);
+      if (!t) return;
+      tileX = t.x;
+      tileY = t.y;
+    }
 
     if (!isValidTile(map, tileX, tileY)) return;
 
@@ -294,8 +319,7 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     if (player.currentTileX === tileX && player.currentTileY === tileY) return;
 
     // Chemin brut : diagonales autorisées hors combat, interdites en combat
-    const allowDiagonal =
-      !(scene.combatState && scene.combatState.enCours);
+    const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
 
     let path = calculatePath(
       player.currentTileX,
@@ -539,11 +563,6 @@ function maybeStartPendingCombat(scene, player, map, groundLayer) {
 }
 
 function isValidTile(map, tileX, tileY) {
-  return (
-    tileX >= 0 &&
-    tileX < map.width &&
-    tileY >= 0 &&
-    tileY < map.height
-  );
+  return tileX >= 0 && tileX < map.width && tileY >= 0 && tileY < map.height;
 }
 
