@@ -26,6 +26,11 @@ export function createMonster(scene, x, y, monsterId) {
     stats,
   });
 
+  // Aligne visuellement le monstre sur le centre de sa tuile
+  if (monster.setOrigin) {
+    monster.setOrigin(0.5, 0.85);
+  }
+
   // Place le monstre au‑dessus de la grille debug
   monster.setDepth(2);
 
@@ -136,23 +141,67 @@ export function createMonster(scene, x, y, monsterId) {
   monster.setInteractive({ useHandCursor: true });
 
   // Affichage des infos de la cible dans le HUD lors du survol
-  monster.on("pointerover", () => {
-    if (scene.updateHudTargetInfo) {
-      scene.updateHudTargetInfo(monster);
-    }
-    if (scene.showDamagePreview) {
-      scene.showDamagePreview(monster);
-    }
-  });
-  monster.on("pointerout", () => {
-    if (scene.updateHudTargetInfo) {
-      scene.updateHudTargetInfo(null);
-    }
-    if (scene.clearDamagePreview) {
-      scene.clearDamagePreview();
-    }
-  });
+   // Rendre le monstre cliquable pour entrer en combat
+   monster.setInteractive({ useHandCursor: true });
 
-  return monster;
-}
-
+   // Affichage des infos de la cible dans le HUD lors du survol
+   monster.on("pointerover", () => {
+     // Effet de lumière directement sur le sprite :
+     // on ajoute un doublon du sprite en mode ADD par-dessus lui.
+     if (!monster.hoverHighlight && scene.add) {
+       const overlay = scene.add.sprite(
+         monster.x,
+         monster.y,
+         monster.texture.key
+       );
+ 
+       // même origine que le monstre pour coller parfaitement
+       overlay.setOrigin(monster.originX, monster.originY);
+ 
+       // si le monstre a une frame (anim), on la copie
+       if (monster.frame && overlay.setFrame) {
+         overlay.setFrame(monster.frame.name);
+       }
+ 
+       overlay.setBlendMode(Phaser.BlendModes.ADD); // effet lumineux
+       overlay.setAlpha(0.6);                       // intensité
+       overlay.setDepth((monster.depth || 0) + 1);  // au-dessus du sprite
+ 
+       if (scene.hudCamera) {
+         scene.hudCamera.ignore(overlay);
+       }
+ 
+       monster.hoverHighlight = overlay;
+     }
+ 
+     if (scene.updateHudTargetInfo) {
+       scene.updateHudTargetInfo(monster);
+     }
+     if (scene.showDamagePreview) {
+       scene.showDamagePreview(monster);
+     }
+     if (scene.showMonsterTooltip) {
+       scene.showMonsterTooltip(monster);
+     }
+   });
+ 
+   monster.on("pointerout", () => {
+     // Retire le doublon lumineux s'il existe
+     if (monster.hoverHighlight) {
+       monster.hoverHighlight.destroy();
+       monster.hoverHighlight = null;
+     }
+     if (scene.updateHudTargetInfo) {
+       scene.updateHudTargetInfo(null);
+     }
+     if (scene.clearDamagePreview) {
+       scene.clearDamagePreview();
+     }
+     if (scene.hideMonsterTooltip) {
+       scene.hideMonsterTooltip();
+     }
+   });
+ 
+   return monster;
+ }
+ 

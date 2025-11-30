@@ -17,5 +17,20 @@ export const monsterSpells = {
       description: "Un coup de bec rapide au corps à corps.",
     },
   },
-};
 
+  aluineeks: {
+    fissure: {
+      id: "fissure",
+      label: "Fissure",
+      paCost: 4,
+      rangeMin: 1,
+      rangeMax: 2,        // 1 à 2 cases
+      lineOfSight: true,
+      zone: "cell",       // on gère la ligne dans l'IA
+      element: "terre",   // utilise la stat force dans spellSystem
+      damageMin: 12,
+      damageMax: 15,
+      description: "Fissure de terre en ligne (1–2 cases).",
+    },
+  },
+};

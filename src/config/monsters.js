@@ -45,18 +45,20 @@ export const monsters = {
     textureKey: "aluineeks",
     spritePath: "assets/monsters/aluineeks.png",
 
-    // Monstre un peu plus costaud que le corbeau
+    // Monstre terre, plus costaud que le corbeau
     statsOverrides: {
-      hpMax: 35,
-      hp: 35,
+      hpMax: 50,
+      hp: 50,
+      pa: 8,       // 8 PA => 2 fois un sort à 4 PA
+      pm: 4,       // 4 PM
+      force: 20,   // statistique Terre
       initiative: 4,
-      force: 6,
     },
 
-    // Pour l'instant, on lui donne le même sort de base
-    spells: ["coup_de_bec"],
+    // Il n'a qu'un sort : Fissure
+    spells: ["fissure"],
 
-    // Pas de loot spécifique pour le moment
+    // Loot à définir plus tard
     loot: [],
 
     xpReward: 30,
