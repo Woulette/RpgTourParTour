@@ -1,4 +1,4 @@
-import { PLAYER_SPEED } from "../config/constants.js";
+import { GAME_WIDTH, PLAYER_SPEED } from "../config/constants.js";
 import {
   startPrep,
   limitPathForCombat,
@@ -12,6 +12,7 @@ import {
   updateSpellRangePreview,
   clearSpellRangePreview,
 } from "../core/spellSystem.js";
+import { maybeHandleMapExit } from "../maps/world.js";
 
 /**
  * Crée une fonction worldToTile "calibrée" qui compense
@@ -157,6 +158,7 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
   // --- Clic pour déplacer ou lancer un sort ---
   scene.input.on("pointerdown", (pointer) => {
     const activeSpell = getActiveSpell(player);
+    const bandWidth = 30;
 
     // Clic sur le HUD : si un sort était sélectionné, on l'annule
     // et on revient en mode déplacement.
@@ -190,6 +192,39 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
 
     if (!isValidTile(map, tileX, tileY)) return;
 
+    const state = scene.combatState;
+
+    // Intention de sortie de map (hors combat uniquement).
+    const inCombat = state && state.enCours;
+    if (!inCombat) {
+      const clickedInRightBand = pointer.x >= GAME_WIDTH - bandWidth;
+      const exitsRight = scene.worldExits && scene.worldExits.right;
+
+      if (clickedInRightBand && exitsRight && exitsRight.length > 0) {
+        // Cherche la tuile de sortie la plus proche verticalement.
+        let best = null;
+        let bestDy = Infinity;
+        exitsRight.forEach((tile) => {
+          const dy = Math.abs(tile.y - tileY);
+          if (dy < bestDy) {
+            bestDy = dy;
+            best = tile;
+          }
+        });
+
+        if (best) {
+          tileX = best.x;
+          tileY = best.y;
+          scene.exitDirection = "right";
+          scene.exitTargetTile = { x: tileX, y: tileY };
+        }
+      } else {
+        // Clic normal : on annule une éventuelle sortie en attente.
+        scene.exitDirection = null;
+        scene.exitTargetTile = null;
+      }
+    }
+
     // En phase de préparation : déplacement uniquement sur les cases autorisées
     if (scene.prepState && scene.prepState.actif) {
       const allowed = scene.prepState.allowedTiles || [];
@@ -200,8 +235,6 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
         return;
       }
     }
-
-    const state = scene.combatState;
 
     // Si un sort est sélectionné et qu'on est en combat,
     // on tente de lancer le sort sur cette tuile.
@@ -469,6 +502,10 @@ function movePlayerAlongPath(
           player.anims.stop();
           player.setTexture("player");
         }
+
+        // Si une sortie de map est en attente et que le joueur est sur
+        // la tuile cible, on laisse world.js gérer la transition.
+        maybeHandleMapExit(scene);
       }
     },
   });

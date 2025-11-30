@@ -4,8 +4,9 @@ import { preloadMap, buildMap } from "./maps/loader.js";
 import { setupCamera } from "./maps/camera.js";
 import { createPlayer } from "./entities/player.js";
 import { enableClickToMove } from "./entities/playerMovement.js";
+import { createMapExits } from "./maps/exits.js";
 import { setupPlayerAnimations } from "./entities/animation.js";
-import { loadMapLikeMain } from "./maps/world.js";
+import { loadMapLikeMain, initWorldExitsForScene } from "./maps/world.js";
 import { createHud, setupHudCamera } from "./ui/hud.js";
 import { initDomHud } from "./ui/domHud.js";
 import { initDomCombat } from "./ui/domCombat.js";
@@ -87,6 +88,9 @@ class MainScene extends Phaser.Scene {
     setupPlayerAnimations(this);
     this.player.setDepth(2);
 
+    // Initialise les tuiles de sortie pour cette première map.
+    initWorldExitsForScene(this);
+
     // --- MONSTRES DE TEST ---
     spawnInitialMonsters(this, map, groundLayer, centerTileX, centerTileY);
 
@@ -129,6 +133,9 @@ class MainScene extends Phaser.Scene {
     if (this.hudCamera && this.monsters) {
       this.monsters.forEach((m) => this.hudCamera.ignore(m));
     }
+
+    // Bande visuelle de sortie de map (bord droit).
+    createMapExits(this);
 
     // --- CLICK-TO-MOVE simple ---
     enableClickToMove(this, this.player, hudY, map, groundLayer);
