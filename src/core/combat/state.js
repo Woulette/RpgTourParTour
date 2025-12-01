@@ -42,9 +42,12 @@ export function createCombatState(player, monster) {
     paBaseMonstre: paMonstre,
     pmBaseMonstre: pmMonstre,
 
-    // Ordre de tour multi‑acteurs (joueur + monstres)
+    // Ordre de tour multi-acteurs (joueur + monstres)
     actors: null,
     actorIndex: 0,
+
+    // suivi des sorts lances par tour (joueur)
+    castsThisTurn: {},
   };
 }
 
@@ -210,6 +213,9 @@ export function passerTour(scene) {
     }
   }
 
+  // reset des compteurs de sorts a chaque changement de tour
+  state.castsThisTurn = {};
+
   // Si c'est au joueur de jouer, rafraîchit les PA/PM dans le HUD
   if (
     state.tour === "joueur" &&
@@ -221,4 +227,3 @@ export function passerTour(scene) {
 
   return state.tour;
 }
-

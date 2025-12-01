@@ -42,6 +42,8 @@ export function createMonster(scene, x, y, monsterId) {
   // Métadonnées utiles pour le système de combat / loot
   monster.monsterId = monsterId;
   monster.xpReward = def.xpReward || 0;
+  monster.goldRewardMin = def.goldRewardMin ?? 0;
+  monster.goldRewardMax = def.goldRewardMax ?? monster.goldRewardMin ?? 0;
   monster.lootTable = def.loot || [];
   // Sorts disponibles pour ce monstre
   monster.spellIds = def.spells || [];
@@ -53,6 +55,8 @@ export function createMonster(scene, x, y, monsterId) {
   // Callback standard quand le monstre meurt
   monster.onKilled = (sceneArg, killer) => {
     const rewardXp = monster.xpReward || 0;
+    const goldMin = monster.goldRewardMin || 0;
+    const goldMax = monster.goldRewardMax || goldMin;
 
     if (killer && typeof addXpToPlayer === "function") {
       addXpToPlayer(killer, rewardXp);
@@ -62,6 +66,15 @@ export function createMonster(scene, x, y, monsterId) {
     if (sceneArg && sceneArg.combatState && sceneArg.combatState.enCours) {
       const cs = sceneArg.combatState;
       cs.xpGagne = (cs.xpGagne || 0) + rewardXp;
+
+      // gold de combat (pour l'instant uniquement cote joueur)
+      if (goldMax > 0) {
+        const goldGain =
+          goldMin >= goldMax
+            ? goldMin
+            : Phaser.Math.Between(goldMin, goldMax);
+        cs.goldGagne = (cs.goldGagne || 0) + goldGain;
+      }
 
       // --- Génération de loot simple lié au monstre ---
       if (killer && killer.inventory && Array.isArray(monster.lootTable)) {
@@ -236,4 +249,3 @@ export function createMonster(scene, x, y, monsterId) {
 
   return monster;
 }
-

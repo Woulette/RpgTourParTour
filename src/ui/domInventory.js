@@ -10,6 +10,7 @@ export function initDomInventory(player) {
   const invButton = document.getElementById("hud-inventory-button");
   const panel = document.getElementById("hud-inventory-panel");
   const grid = document.getElementById("inventory-grid");
+  const goldEl = document.getElementById("inventory-gold-value");
 
   const nameEl = document.getElementById("inventory-item-name");
   const typeEl = document.getElementById("inventory-item-type");
@@ -30,6 +31,15 @@ export function initDomInventory(player) {
   if (!invButton || !panel || !grid || !player) return;
 
   const equipSlots = panel.querySelectorAll(".equip-slot");
+
+  function updateGoldDisplay() {
+    if (!goldEl) return;
+    const value =
+      typeof player.gold === "number" && !Number.isNaN(player.gold)
+        ? player.gold
+        : 0;
+    goldEl.textContent = String(value);
+  }
 
   function clearDetails() {
     if (iconEl) {
@@ -250,6 +260,7 @@ export function initDomInventory(player) {
 
     grid.innerHTML = "";
     clearDetails();
+    updateGoldDisplay();
 
     for (let i = 0; i < inv.size; i += 1) {
       const slotData = inv.slots[i];
@@ -386,4 +397,3 @@ export function initDomInventory(player) {
     });
   }
 }
-

@@ -8,21 +8,32 @@ export const equipmentSets = {
     label: "Panoplie du Corbeau",
     // clés = nombre de pièces équipées, valeurs = bonus de stats
     thresholds: {
-      // 1 pièce : aucun bonus, donc pas de palier 1
+
       2: {
-        // petit bonus quand on a 2 pièces
+        // bonus un peu plus fort à 2 pièces
         agilite: 3,
       },
       3: {
-        // bonus un peu plus fort à 3 pièces
-        agilite: 5,
+        // petit bonus quand on a 4 pièces
+        agilite: 6,
         vitalite: 10,
       },
-      6: {
-        // bonus complet quand les 6 pièces sont équipées
+      4: {
+        // bonus un peu plus fort à 4 pièces
+        agilite: 9,
+        vitalite: 15,
+      },
+      5: {
+        // bonus complet quand les 5 pièces sont équipées
         agilite: 12,
         vitalite: 30,
         initiative: 10,
+      },
+      6: {
+        // bonus complet quand les 6 pièces sont équipées
+        agilite: 20,
+        vitalite: 30,
+        initiative: 30,
       },
     },
   },

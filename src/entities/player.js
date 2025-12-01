@@ -20,23 +20,32 @@ export function createPlayer(scene, x, y, classId) {
     stats,
   });
 
-  // Aligne l'origine du sprite sur les "pieds" du personnage.
+  // Stats de base "nues" du joueur (classe + points investis, sans équipement)
+  player.baseStats = { ...stats };
+
+  // Stats de base "nues" du joueur (sans équipement), utilisées pour
+  // recalculer les stats finales quand on équipe/déséquipe ou dépense des points.
+  player.baseStats = { ...stats };
+
+  // aligne l'origine du sprite sur les "pieds" du personnage.
   if (player.setOrigin) {
     player.setOrigin(0.5, 0.9);
   }
 
-  // État de niveau / XP
+  // etat de niveau / XP
   player.levelState = createLevelState();
   player.inventory = createPlayerInventory();
+  // monnaie du joueur
+  player.gold = 0;
 
-  // État lié au déplacement (utilisé par le système de mouvement)
+  // etat lie au deplacement (utilise par le systeme de mouvement)
   player.currentTileX = null;
   player.currentTileY = null;
   player.isMoving = false;
   player.movePath = [];
   player.currentMoveTween = null;
 
-  // Équipement (structure prête pour plus tard)
+  // equipement (structure prete pour plus tard)
   player.equipment = createEmptyEquipment();
   player.recomputeStatsWithEquipment = () => {
     recomputePlayerStatsWithEquipment(player);
@@ -45,7 +54,7 @@ export function createPlayer(scene, x, y, classId) {
   return player;
 }
 
-// Ajoute de l'XP au joueur et gère le gain de PV max par niveau
+// ajoute de l'XP au joueur et gere le gain de PV max par niveau
 export function addXpToPlayer(player, montantXp) {
   if (!player.levelState || !player.stats) return;
 
@@ -57,8 +66,19 @@ export function addXpToPlayer(player, montantXp) {
 
   if (niveauxGagnes > 0) {
     const gainHpMax = 5 * niveauxGagnes;
-    player.stats.hpMax = (player.stats.hpMax ?? 0) + gainHpMax;
-    player.stats.hp = player.stats.hpMax;
+
+    if (!player.baseStats) {
+      player.baseStats = { ...(player.stats || {}) };
+    }
+
+    player.baseStats.hpMax = (player.baseStats.hpMax ?? 0) + gainHpMax;
+  }
+
+  if (typeof player.recomputeStatsWithEquipment === "function") {
+    player.recomputeStatsWithEquipment();
+    if (player.stats) {
+      const hpMax = player.stats.hpMax ?? player.stats.hp ?? 0;
+      player.stats.hp = hpMax;
+    }
   }
 }
-

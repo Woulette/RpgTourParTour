@@ -2,13 +2,15 @@ import { classes } from "../config/classes.js";
 import { spells } from "../config/spells.js";
 import { setActiveSpell } from "../core/spellSystem.js";
 
-// Initialise la barre de sorts en bas + la fenêtre "grimoire" des sorts.
+// Initialise la barre de sorts en bas + la fenetre "grimoire" des sorts.
 export function initDomSpells(player) {
   const bar = document.getElementById("hud-spell-bar");
   const spellsButtonEl = document.getElementById("hud-spells-button");
   const spellsPanelEl = document.getElementById("hud-spells-panel");
   const spellsListEl = document.getElementById("hud-spells-list");
   const spellsClassNameEl = document.getElementById("spells-class-name");
+  const spellsDetailEl = document.getElementById("hud-spell-detail");
+  const tierButtons = document.querySelectorAll(".spells-tier-label");
 
   if (!bar || !player) return;
 
@@ -20,23 +22,30 @@ export function initDomSpells(player) {
     .map((id) => spells[id])
     .filter((s) => !!s);
 
-  // === Grimoire : bouton SORTS + fenêtre ===
-  if (spellsButtonEl && spellsPanelEl && spellsListEl) {
-    if (spellsClassNameEl) {
-      spellsClassNameEl.textContent = classDef.label || classId;
+  let currentTier = 1;
+
+  // helper pour remplir la liste selon le tier actif
+  function renderSpellsForTier(tier) {
+    if (!spellsListEl) return;
+
+    spellsListEl.innerHTML = "";
+    if (spellsDetailEl) {
+      spellsDetailEl.innerHTML = "";
     }
 
-    spellsButtonEl.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const willOpen = !document.body.classList.contains("hud-spells-open");
-      document.body.classList.toggle("hud-spells-open");
+    const playerLevel = player.levelState?.niveau ?? 1;
 
-      if (willOpen) {
-        // Remplir la liste à chaque ouverture
-        spellsListEl.innerHTML = "";
-        const playerLevel = player.levelState?.niveau ?? 1;
+    let idsForTier;
+    if (tier === 1) {
+      idsForTier = spellIds;
+    } else {
+      // pour l'instant, pas encore de sorts pour les tiers 2/3
+      idsForTier = [];
+    }
 
-        spellIds.forEach((id) => {
+    const items = [];
+
+    idsForTier.forEach((id) => {
           const spell = spells[id];
           if (!spell) return;
 
@@ -53,8 +62,10 @@ export function initDomSpells(player) {
           const dmgMax = spell.damageMax ?? dmgMin;
           const rangeMin = spell.rangeMin ?? 0;
           const rangeMax = spell.rangeMax ?? rangeMin;
+          const paCost = spell.paCost ?? 0;
+          const maxCasts = spell.maxCastsPerTurn ?? null;
 
-          // Texte d'élément pour l'affichage (Air / Terre / Feu / Eau / Neutre)
+          // Texte d'element pour l'affichage (Air / Terre / Feu / Eau / Neutre)
           let elementLabel = "Neutre";
           switch (spell.element) {
             case "agilite":
@@ -77,20 +88,95 @@ export function initDomSpells(player) {
               elementLabel = "Neutre";
           }
 
+          const effects = [];
+          if (spell.lifeSteal) {
+            effects.push("Vole de vie");
+          }
+          if (maxCasts) {
+            effects.push(`Lancers/tour : ${maxCasts}`);
+          }
+          const effectsText = effects.length > 0 ? effects.join(" · ") : null;
+
+          const elementClass = elementLabel.toLowerCase();
+
           li.innerHTML = `
             <div class="spellbook-item-main">
               <span class="spellbook-name">${spell.label}</span>
               <span class="spellbook-level">Niv. ${requiredLevel}</span>
             </div>
             <div class="spellbook-item-details">
-              <span>PA : ${spell.paCost ?? 0}</span>
-              <span>Dégâts : ${dmgMin} - ${dmgMax} (${elementLabel})</span>
-              <span>Portée : ${rangeMin}-${rangeMax}</span>
+              <span>PA : ${paCost}</span>
+              <span>Degats : ${dmgMin} - ${dmgMax}</span>
+              <span class="spellbook-element spellbook-element-${elementClass}">${elementLabel}</span>
+              <span>Portee : ${rangeMin}-${rangeMax}</span>
             </div>
+            ${
+              effectsText
+                ? `<div class="spellbook-item-effects"><span>${effectsText}</span></div>`
+                : ""
+            }
           `;
 
-          spellsListEl.appendChild(li);
-        });
+          // click sur un sort -> detail dans la colonne droite
+          li.addEventListener("click", () => {
+            // highlight de la ligne selectionnee
+            items.forEach((item) => item.classList.remove("selected"));
+            li.classList.add("selected");
+
+            if (spellsDetailEl) {
+              const elementClassDetail = elementLabel.toLowerCase();
+
+              spellsDetailEl.innerHTML = `
+                <h3>${spell.label}</h3>
+                <div class="spell-detail-line">Niveau requis : ${requiredLevel}</div>
+                <div class="spell-detail-line">
+                  <strong>PA :</strong> ${paCost} &nbsp;|&nbsp;
+                  <strong>Degats :</strong> ${dmgMin} - ${dmgMax}
+                  <span class="spellbook-element spellbook-element-${elementClassDetail}">${elementLabel}</span>
+                </div>
+                <div class="spell-detail-line">
+                  <strong>Portee :</strong> ${rangeMin}-${rangeMax}
+                </div>
+                ${
+                  effectsText
+                    ? `<div class="spell-detail-line"><strong>Effets :</strong> ${effectsText}</div>`
+                    : ""
+                }
+                ${
+                  spell.description
+                    ? `<div class="spell-detail-line">${spell.description}</div>`
+                    : ""
+                }
+              `;
+            }
+          });
+
+      items.push(li);
+      spellsListEl.appendChild(li);
+    });
+
+    // selection automatique du premier sort si present
+    if (items.length > 0) {
+      items[0].click();
+    } else if (spellsDetailEl) {
+      spellsDetailEl.innerHTML =
+        "<p>Aucun sort pour ce tier pour l'instant.</p>";
+    }
+  }
+
+  // === Grimoire : bouton SORTS + fenetre ===
+  if (spellsButtonEl && spellsPanelEl && spellsListEl) {
+    if (spellsClassNameEl) {
+      spellsClassNameEl.textContent = classDef.label || classId;
+    }
+
+    spellsButtonEl.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const willOpen = !document.body.classList.contains("hud-spells-open");
+      document.body.classList.toggle("hud-spells-open");
+
+      if (willOpen) {
+        renderSpellsForTier(currentTier);
       }
     });
   }
@@ -98,7 +184,7 @@ export function initDomSpells(player) {
   // === Barre de sorts (slots en bas du HUD) ===
   const slots = bar.querySelectorAll(".hud-spell-slot");
 
-  // Map index de slot -> élément DOM (pour les raccourcis clavier)
+  // Map index de slot -> element DOM (pour les raccourcis clavier)
   const slotByIndex = {};
 
   slots.forEach((slot, index) => {
@@ -121,25 +207,25 @@ export function initDomSpells(player) {
       nameEl.textContent = spell.label;
     }
 
-    // Sélection du sort au clic sur le slot
+    // Selection du sort au clic sur le slot
     slot.addEventListener("click", (event) => {
       event.stopPropagation();
 
-      // Un seul slot sélectionné
+      // Un seul slot selectionne
       slots.forEach((s) => s.classList.remove("selected"));
       slot.classList.add("selected");
 
-      // Sort actif côté joueur
+      // Sort actif cote joueur
       setActiveSpell(player, spell.id);
     });
   });
 
-  // --- Raccourcis clavier pour sélectionner un slot ---
-  // Mapping AZERTY : 1/& -> slot 1, 2/é -> slot 2, etc. jusqu'à 8
+  // --- Raccourcis clavier pour selectionner un slot ---
+  // Mapping AZERTY : 1/& -> slot 1, 2/� -> slot 2, etc. jusqu'a 8
   const keyToSlot = {
     "&": 1,
     "1": 1,
-    "é": 2,
+    "�": 2,
     "2": 2,
     '"': 3,
     "3": 3,
@@ -149,16 +235,19 @@ export function initDomSpells(player) {
     "5": 5,
     "-": 6,
     "6": 6,
-    "è": 7,
+    "�": 7,
     "7": 7,
     "_": 8,
     "8": 8,
   };
 
   window.addEventListener("keydown", (event) => {
-    // Évite de capturer les touches quand on tape dans un champ de texte
+    // Evite de capturer les touches quand on tape dans un champ de texte
     const target = event.target;
-    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+    if (
+      target &&
+      (target.tagName === "INPUT" || target.tagName === "TEXTAREA")
+    ) {
       return;
     }
 
@@ -168,8 +257,27 @@ export function initDomSpells(player) {
     const slot = slotByIndex[slotIndex];
     if (!slot || slot.classList.contains("empty")) return;
 
-    // Simule un clic sur le slot pour réutiliser toute la logique existante
+    // Simule un clic sur le slot pour reutiliser toute la logique existante
     slot.click();
   });
-}
 
+  // boutons de tiers (Tier 1 / 2 / 3)
+  if (tierButtons && tierButtons.length > 0) {
+    tierButtons.forEach((btn) => {
+      const tier = parseInt(btn.dataset.tier, 10) || 1;
+      if (tier === currentTier) {
+        btn.classList.add("active");
+      }
+
+      btn.addEventListener("click", () => {
+        currentTier = tier;
+        tierButtons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        if (document.body.classList.contains("hud-spells-open")) {
+          renderSpellsForTier(currentTier);
+        }
+      });
+    });
+  }
+}

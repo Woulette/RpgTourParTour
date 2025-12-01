@@ -133,7 +133,13 @@ function mettreAJourStatsPanel(player) {
 }
 
 function initStatControls(player) {
-  const stats = player.stats || {};
+  // Stats de base "nues" (sans équipement), qu'on modifie quand on dépense des points
+  const getBaseStats = () => {
+    if (!player.baseStats) {
+      player.baseStats = { ...(player.stats || {}) };
+    }
+    return player.baseStats;
+  };
   // S'assure qu'on a un levelState de base
   if (!player.levelState) {
     player.levelState = {
@@ -177,9 +183,13 @@ function initStatControls(player) {
     btn.addEventListener("click", () => {
       const levelState = getLevelState();
       if ((levelState.pointsCaracLibres ?? 0) <= 0) return;
-      const current = stats[key] ?? 0;
-      stats[key] = current + 1;
+      const base = getBaseStats();
+      const current = base[key] ?? 0;
+      base[key] = current + 1;
       levelState.pointsCaracLibres = (levelState.pointsCaracLibres ?? 0) - 1;
+      if (typeof player.recomputeStatsWithEquipment === "function") {
+        player.recomputeStatsWithEquipment();
+      }
       updateAll();
     });
   });
@@ -190,10 +200,14 @@ function initStatControls(player) {
 
     btn.addEventListener("click", () => {
       const levelState = getLevelState();
-      const current = stats[key] ?? 0;
+      const base = getBaseStats();
+      const current = base[key] ?? 0;
       if (current <= 0) return; // on ne descend pas en dessous de 0 pour l'instant
-      stats[key] = current - 1;
+      base[key] = current - 1;
       levelState.pointsCaracLibres = (levelState.pointsCaracLibres ?? 0) + 1;
+      if (typeof player.recomputeStatsWithEquipment === "function") {
+        player.recomputeStatsWithEquipment();
+      }
       updateAll();
     });
   });
@@ -205,12 +219,13 @@ function initStatControls(player) {
 
     input.addEventListener("change", () => {
       const levelState = getLevelState();
+      const base = getBaseStats();
       let newValue = parseInt(input.value, 10);
       if (Number.isNaN(newValue) || newValue < 0) {
         newValue = 0;
       }
 
-      const current = stats[key] ?? 0;
+      const current = base[key] ?? 0;
       let delta = newValue - current;
 
       const pointsLibres = levelState.pointsCaracLibres ?? 0;
@@ -233,10 +248,13 @@ function initStatControls(player) {
         return;
       }
 
-      stats[key] = current + delta;
+      base[key] = current + delta;
       levelState.pointsCaracLibres =
         (levelState.pointsCaracLibres ?? 0) - delta;
 
+      if (typeof player.recomputeStatsWithEquipment === "function") {
+        player.recomputeStatsWithEquipment();
+      }
       updateAll();
     });
   });

@@ -221,12 +221,20 @@
         <div class="spells-class-name">
           Classe : <span id="spells-class-name">---</span>
         </div>
+        <div class="spells-tier-bar">
+          <span class="spells-tier-label" data-tier="1">Tier 1</span>
+          <span class="spells-tier-label" data-tier="2">Tier 2</span>
+          <span class="spells-tier-label" data-tier="3">Tier 3</span>
+        </div>
       </header>
 
         <section class="spells-section">
           <ul id="hud-spells-list" class="spells-list">
             <!-- Rempli dynamiquement -->
           </ul>
+          <div id="hud-spell-detail" class="spell-detail">
+            <!-- Detail du sort selectionne -->
+          </div>
         </section>
       </aside>
 
@@ -295,7 +303,7 @@
 
   <!-- Fenêtre d'inventaire (ajoutée en bas pour l'instant) -->
   <aside id="hud-inventory-panel" aria-label="Inventaire du personnage">
-      <header class="inventory-header">
+        <header class="inventory-header">
         <h2 class="inventory-title">Inventaire</h2>
         <div class="inventory-filters">
           <button class="inventory-filter-btn inventory-filter-active" data-filter="all">Tout</button>
@@ -338,10 +346,13 @@
           </div>
         </div>
   
-        <!-- Colonne droite : grille d'inventaire (50 slots) -->
+        <!-- Colonne droite : grille d'inventaire (50 slots) + or -->
         <div class="inventory-right">
           <div id="inventory-grid" class="inventory-grid">
             <!-- rempli dynamiquement par domInventory.js -->
+          </div>
+          <div class="inventory-gold">
+            Or : <span id="inventory-gold-value">0</span>
           </div>
         </div>
       </section>

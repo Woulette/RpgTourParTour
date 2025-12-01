@@ -1,27 +1,63 @@
-// Définition des sorts du jeu.
+// Dï¿½finition des sorts du jeu.
 // Pour l'instant : un seul sort de test pour l'archer.
 
 export const spells = {
   tir_simple: {
     id: 'tir_simple',
     label: 'Tir simple',
-    // Coût en PA (pas de mana dans ton jeu)
+    // Coï¿½t en PA (pas de mana dans ton jeu)
     paCost: 3,
-    // Niveau minimum pour débloquer le sort
+    // Niveau minimum pour dï¿½bloquer le sort
     requiredLevel: 1,
-    // Portée en cases (min / max)
+    // Portï¿½e en cases (min / max)
     rangeMin: 1,
     rangeMax: 5,
-    // Nécessite une ligne de vue directe ou non (utile plus tard)
+    // Nï¿½cessite une ligne de vue directe ou non (utile plus tard)
     lineOfSight: true,
     // Type de zone : une seule case pour l'instant
     zone: 'cell',
-    // Élément principal du sort (utilisé plus tard pour les dégâts)
+    // ï¿½lï¿½ment principal du sort (utilisï¿½ plus tard pour les dï¿½gï¿½ts)
     element: 'agilite',
-    // Dégâts de base (fourchette min / max)
+    // Dï¿½gï¿½ts de base (fourchette min / max)
     damageMin: 9,
     damageMax: 15,
-    description: 'Un tir de base à distance.',
+    description: 'Un tir de base ï¿½ distance.',
+  },
+
+  fleche_carbonisee: {
+    id: "fleche_carbonisee",
+    label: "Fleche carbonisee",
+    paCost: 4,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 8,
+    lineOfSight: true,
+    zone: "cell",
+    element: "feu",
+    damageMin: 11,
+    damageMax: 17,
+    description: "Une fleche de feu plus puissante mais plus couteuse.",
+  },
+  flumigene: {
+    id: "flumigene",
+    label: "Flumigene",
+    paCost: 2,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 6,
+    lineOfSight: true,
+    zone: "cell",
+    element: "eau",
+    damageMin: 5,
+    damageMax: 7,
+    // meta for later logic
+    lifeSteal: true,
+    maxCastsPerTurn: 2,
+    description: "Une fleche d eau a faible degats qui vole la vie.",
   },
 };
+
+
+
+
 

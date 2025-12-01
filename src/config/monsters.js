@@ -34,9 +34,48 @@ export const monsters = {
         max: 1,
         dropRate: 1.0,
       },
+      // Pièces d'équipement du Corbeau (rares)
+      {
+        itemId: "coiffe_corbeau",
+        min: 1,
+        max: 1,
+        dropRate: 0.12,
+      },
+      {
+        itemId: "cape_corbeau",
+        min: 1,
+        max: 1,
+        dropRate: 0.12,
+      },
+      {
+        itemId: "amulette_corbeau",
+        min: 1,
+        max: 1,
+        dropRate: 0.10,
+      },
+      {
+        itemId: "ceinture_corbeau",
+        min: 1,
+        max: 1,
+        dropRate: 0.10,
+      },
+      {
+        itemId: "bottes_corbeau",
+        min: 1,
+        max: 1,
+        dropRate: 0.10,
+      },
+      {
+        itemId: "anneau_corbeau",
+        min: 1,
+        max: 1,
+        dropRate: 0.08,
+      },
     ],
 
     xpReward: 20,
+    goldRewardMin: 8,
+    goldRewardMax: 21,
   },
 
   aluineeks: {

@@ -3,20 +3,20 @@
 #hud-spells-panel {
   position: absolute;
   left: 50%;
-  top: 45%;
+  top: 40%;
   transform: translate(-50%, -50%);
 
   /* Taille de la fenêtre */
-  width: 790px;
-  height: 600px;
+  width: 850px;
+  height: 650px;
 
   padding: 1.2rem;
   box-sizing: border-box;
 
-  background: rgba(8, 20, 40, 0.95);
+  background: rgba(53, 53, 53, 0.979);
   border-radius: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+  border: 2px solid rgb(255, 255, 255);
+  box-shadow: 0 0 30px rgb(0, 0, 0);
 
   display: none;
   flex-direction: column;
@@ -35,12 +35,14 @@
 #hud-spells-panel::before {
   content: "";
   position: absolute;
-  top: 0.8rem;
+  /* start a bit lower to leave room
+     for the tier labels at the top */
+  top: 3.3rem;
   bottom: 0.8rem;
   left: 50%;
   width: 2px;
   /* Ligne plus discrète, adaptée au fond */
-  background: rgba(120, 150, 190, 0.25);
+  background: rgba(255, 255, 255, 0.432);
   pointer-events: none;
 }
 
@@ -50,8 +52,11 @@ body.hud-spells-open #hud-spells-panel {
 }
 
 .spells-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  padding-bottom: 0.6rem;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
+  border-bottom: 1px solid rgb(255, 255, 255);
+  padding-bottom: 0.4rem;
 }
 
 .spells-title {
@@ -61,9 +66,37 @@ body.hud-spells-open #hud-spells-panel {
 }
 
 .spells-class-name {
-  margin-top: 0.3rem;
+  margin-top: 0.1rem;
+  margin-left: 1.5rem;
   font-size: clamp(12px, 1.2vw, 14px);
   opacity: 0.9;
+}
+
+.spells-tier-bar {
+  margin-top: 0;
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.85em;
+  opacity: 0.9;
+  margin-left: auto;
+}
+
+.spells-tier-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.spells-tier-label:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.spells-tier-label.active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .spells-section {
@@ -78,16 +111,52 @@ body.hud-spells-open #hud-spells-panel {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.2rem;
 
   /* Colonne gauche uniquement (avant la ligne rouge) */
   width: 50%;
 }
 
+.spell-detail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  padding-left: 1.8rem;
+  padding-top: 0.1rem;
+  box-sizing: border-box;
+  font-size: 0.9em;
+  opacity: 0.95;
+}
+
+.spell-detail h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05em;
+}
+
+.spell-detail-line {
+  margin-bottom: 0.2rem;
+}
+
 .spellbook-item {
-  padding: 0.4rem 0.2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-size: clamp(12px, 1.2vw, 14px);
+  /* fond de base plus fonce */
+  background: rgba(0, 0, 0, 0.35);
+  transition: background 120ms ease;
+}
+
+.spells-list .spellbook-item:nth-child(even) {
+  /* ligne paire plus claire, bien visible */
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.spells-list .spellbook-item:hover {
+  /* meme intensite de surbrillance pour tous les sorts
+     (plus specifique que nth-child) */
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .spellbook-item-main {
@@ -110,6 +179,40 @@ body.hud-spells-open #hud-spells-panel {
   gap: 0.6rem;
   opacity: 0.9;
   font-size: 0.9em;
+}
+
+.spellbook-item-effects {
+  margin-top: 0.2rem;
+  font-size: 0.8em;
+  opacity: 0.85;
+}
+
+.spellbook-element {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.spellbook-element-air {
+  background: rgba(120, 220, 255, 0.18);
+  color: #78dcff;
+}
+.spellbook-element-terre {
+  background: rgba(170, 130, 80, 0.18);
+  color: #aa8350;
+}
+.spellbook-element-feu {
+  background: rgba(255, 90, 60, 0.2);
+  color: #ff5a3c;
+}
+.spellbook-element-eau {
+  background: rgba(60, 150, 255, 0.2);
+  color: #3c96ff;
+}
+.spellbook-element-neutre {
+  background: rgba(200, 200, 200, 0.15);
+  color: #e0e0e0;
 }
 
 .spellbook-item.locked {

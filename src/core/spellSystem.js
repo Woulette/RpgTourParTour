@@ -43,6 +43,16 @@ export function canCastSpell(scene, caster, spell) {
   const expectedTour = isPlayer ? "joueur" : "monstre";
   if (state.tour !== expectedTour) return false;
 
+  // limite de lancers par tour pour les sorts du joueur
+  const maxCasts = spell.maxCastsPerTurn ?? null;
+  if (maxCasts && isPlayer) {
+    state.castsThisTurn = state.castsThisTurn || {};
+    const used = state.castsThisTurn[spell.id] || 0;
+    if (used >= maxCasts) {
+      return false;
+    }
+  }
+
   const paCost = spell.paCost ?? 0;
   if (state.paRestants < paCost) return false;
 
@@ -282,6 +292,13 @@ export function castSpellAtTile(
 
   const isPlayerCaster = state.joueur === caster;
 
+  // incremente le compteur de lancers pour les sorts du joueur
+  if (isPlayerCaster) {
+    state.castsThisTurn = state.castsThisTurn || {};
+    const prev = state.castsThisTurn[spell.id] || 0;
+    state.castsThisTurn[spell.id] = prev + 1;
+  }
+
   if (isPlayerCaster) {
     // --- Dégâts du joueur vers un monstre ---
     const target = findMonsterAtTile(scene, tileX, tileY);
@@ -294,6 +311,48 @@ export function castSpellAtTile(
           : target.stats.hpMax ?? 0;
       const newHp = Math.max(0, currentHp - damage);
       target.stats.hp = newHp;
+
+      // life steal simple: le lanceur recupere les degats infliges
+      if (spell.lifeSteal && caster && caster.stats) {
+        const casterHp =
+          typeof caster.stats.hp === "number"
+            ? caster.stats.hp
+            : caster.stats.hpMax ?? 0;
+        const casterHpMax = caster.stats.hpMax ?? casterHp;
+        const heal = damage;
+        const newCasterHp = Math.min(casterHpMax, casterHp + heal);
+        caster.stats.hp = newCasterHp;
+
+        if (typeof caster.updateHudHp === "function") {
+          caster.updateHudHp(newCasterHp, casterHpMax);
+        }
+
+        // texte flottant de soin au-dessus du lanceur
+        const healText = scene.add.text(
+          caster.x + 8,
+          caster.y - map.tileHeight / 2,
+          `+${heal}`,
+          {
+            fontFamily: "Arial",
+            fontSize: 16,
+            color: "#44ff44",
+            stroke: "#000000",
+            strokeThickness: 2,
+          }
+        );
+        if (scene.hudCamera) {
+          scene.hudCamera.ignore(healText);
+        }
+        healText.setDepth(10);
+
+        scene.tweens.add({
+          targets: healText,
+          y: healText.y - 20,
+          duration: 1000,
+          ease: "Cubic.easeOut",
+          onComplete: () => healText.destroy(),
+        });
+      }
 
       console.log(
         `[SPELL] Dégâts infligés à ${target.monsterId}: ${damage}, hp restants = ${newHp}`

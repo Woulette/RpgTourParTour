@@ -132,10 +132,18 @@ export function endCombat(scene) {
   });
 
   // Démarre la régénération hors combat (+2 PV/s)
-  startOutOfCombatRegen(scene, state.joueur);
+  const player = state.joueur;
+  if (player && typeof result.goldGagne === "number" && result.goldGagne > 0) {
+    const currentGold =
+      typeof player.gold === "number" && !Number.isNaN(player.gold)
+        ? player.gold
+        : 0;
+    player.gold = currentGold + result.goldGagne;
+  }
+
+  startOutOfCombatRegen(scene, player);
 
   // Remet l'affichage PA/PM du HUD aux valeurs de base du joueur (exploration)
-  const player = state.joueur;
   if (player && typeof player.updateHudApMp === "function") {
     const basePa = player.stats?.pa ?? 0;
     const basePm = player.stats?.pm ?? 0;

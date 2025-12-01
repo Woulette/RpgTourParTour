@@ -28,12 +28,8 @@ export function createEmptyEquipment() {
 export function recomputePlayerStatsWithEquipment(player) {
   if (!player) return;
 
-  // Si aucune base n'a encore été mémorisée, on prend un snapshot
-  // des stats actuelles comme "stats de base" (sans équipement).
-  if (!player.baseStats && player.stats) {
-    player.baseStats = { ...player.stats };
-  }
-
+  // On considère toujours baseStats comme la source "nue" des stats joueur
+  // (classe + points investis), sans équipement.
   const base = player.baseStats || player.stats || {};
   const bonuses = [];
 
@@ -58,16 +54,26 @@ export function recomputePlayerStatsWithEquipment(player) {
   }
 
   // Bonus de panoplies (paliers)
+  // On applique uniquement le palier le plus élevé atteint
+  // (ex : 3 pièces => bonus du palier 3, mais pas celui de 2).
   for (const [setId, count] of Object.entries(setCounts)) {
     const setDef = equipmentSets[setId];
     if (!setDef || !setDef.thresholds) continue;
 
+    let bestThreshold = -1;
+    let bestBonus = null;
+
     for (const [thresholdStr, bonus] of Object.entries(setDef.thresholds)) {
       const threshold = parseInt(thresholdStr, 10);
       if (Number.isNaN(threshold)) continue;
-      if (count >= threshold && bonus) {
-        bonuses.push(bonus);
+      if (count >= threshold && bonus && threshold > bestThreshold) {
+        bestThreshold = threshold;
+        bestBonus = bonus;
       }
+    }
+
+    if (bestBonus) {
+      bonuses.push(bestBonus);
     }
   }
 
@@ -75,7 +81,15 @@ export function recomputePlayerStatsWithEquipment(player) {
 
   // On essaye de ne pas "tuer" le joueur quand on réduit les HP max :
   const oldHp = player.stats?.hp ?? newStats.hp;
-  const hpMax = newStats.hpMax ?? oldHp;
+
+  // HP max = hpMax de base (niveau, etc.) + éventuels bonus directs hp/hpMax
+  // + contribution de la Vitalité totale (base + équipement).
+  const vit = newStats.vitalite ?? 0;
+  const hpPerVit = 1; // 1 point de Vitalité = +1 PV max (ajustable)
+  const baseHpMaxWithBonuses =
+    newStats.hpMax ?? base.hpMax ?? oldHp ?? 0;
+  const hpMax = baseHpMaxWithBonuses + vit * hpPerVit;
+
   newStats.hpMax = hpMax;
   newStats.hp = Math.min(oldHp, hpMax);
 
