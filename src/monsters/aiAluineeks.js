@@ -1,6 +1,13 @@
 import { monsterSpells } from "../config/monsterSpells.js";
-import { castSpellAtTile } from "../core/spellSystem.js";
-import { moveMonsterAlongPath } from "./aiUtils.js";
+import {
+  castSpellAtTile,
+  isSpellInRangeFromPosition,
+  canCastSpellOnTile,
+} from "../core/spellSystem.js";
+import {
+  moveMonsterAlongPath,
+  isTileOccupiedByMonster,
+} from "./aiUtils.js";
 
 // IA d'Aluineeks :
 // - ne recule jamais (ne s'eloigne pas du joueur volontairement)
@@ -61,18 +68,26 @@ export function runTurn(
   const fissure = aluSpells.fissure;
 
   const isInFissureRange = (tx, ty) => {
-    const dx = px - tx;
-    const dy = py - ty;
-    const dist = Math.abs(dx) + Math.abs(dy);
-    const aligned = dx === 0 || dy === 0; // meme ligne ou meme colonne
-    return aligned && dist >= 1 && dist <= 2;
+    if (!fissure) return false;
+    return isSpellInRangeFromPosition(fissure, tx, ty, px, py);
   };
+  
 
   const tryCastFissure = () => {
     if (!fissure) return false;
     const stateNow = scene.combatState;
     if (!stateNow || !stateNow.enCours) return false;
-
+  
+    const canHit = canCastSpellOnTile(
+      scene,
+      monster,
+      fissure,
+      px,
+      py,
+      map
+    );
+    if (!canHit) return false;
+  
     return castSpellAtTile(
       scene,
       monster,
@@ -82,7 +97,7 @@ export function runTurn(
       map,
       groundLayer
     );
-  };
+  };  
 
   const pathTiles = [];
 
@@ -155,6 +170,11 @@ export function runTurn(
         break;
       }
 
+      // Ne pas marcher sur un autre monstre
+      if (isTileOccupiedByMonster(scene, nextX, nextY, monster)) {
+        break;
+      }
+
       cx = nextX;
       cy = nextY;
       pathTiles.push({ x: cx, y: cy });
@@ -193,6 +213,11 @@ export function runTurn(
         nextY < 0 ||
         nextY >= map.height
       ) {
+        break;
+      }
+
+      // Ne pas marcher sur un autre monstre
+      if (isTileOccupiedByMonster(scene, nextX, nextY, monster)) {
         break;
       }
 
@@ -267,4 +292,3 @@ export function runTurn(
     afterMoveAndCast
   );
 }
-

@@ -1,6 +1,8 @@
 // Gestion d'une petite fiche d'infos au-dessus du monstre survolé.
 // Affiche : niveau, nom, XP gagnée.
 
+import { monsters } from "../config/monsters.js";
+
 export function attachMonsterTooltip(scene) {
   if (!scene) return;
 
@@ -17,16 +19,22 @@ export function attachMonsterTooltip(scene) {
       monster.displayName || monster.label || monster.monsterId || "Monstre";
     const level =
       monster.level ?? (monster.stats && monster.stats.niveau) ?? 1;
-    const xp = monster.xpReward ?? 0;
+
+    const baseDef = monsters[monster.monsterId] || null;
+    const baseXp =
+      (baseDef && baseDef.xpReward) ?? monster.xpReward ?? 0;
+
     const groupSize =
       typeof monster.groupSize === "number" && monster.groupSize > 1
         ? monster.groupSize
-        : null;
+        : 1;
 
-    const name = groupSize ? `${baseName} x${groupSize}` : baseName;
+    const totalXp = baseXp * groupSize;
+
+    const name = groupSize > 1 ? `${baseName} x${groupSize}` : baseName;
 
     const titleLine = `Niv. ${level} - ${name}`;
-    const xpLine = `XP : ${xp}`;
+    const xpLine = `XP : ${totalXp}`;
     const text = `${titleLine}\n${xpLine}`;
 
     const bubbleCenterX = monster.x;

@@ -8,6 +8,7 @@ const AI_HANDLERS = {
 };
 
 // Point d'entrée générique : choisit l'IA en fonction du monsterId.
+// Utilise l'ordre de tour multi‑acteurs défini dans combatState.
 export function runMonsterTurn(scene) {
   const state = scene.combatState;
   if (!state || !state.enCours) return;
@@ -19,7 +20,7 @@ export function runMonsterTurn(scene) {
 
   if (!monster || !player || !map || !groundLayer) return;
 
-  // On passe officiellement au tour du monstre
+  // On passe officiellement au tour du monstre courant
   state.tour = "monstre";
   state.paRestants = state.paBaseMonstre;
   state.pmRestants = state.pmBaseMonstre;
@@ -27,19 +28,28 @@ export function runMonsterTurn(scene) {
   const lbl = document.getElementById("combat-turn-label");
   if (lbl) lbl.textContent = "Monstre";
 
+  const handler = AI_HANDLERS[monster.monsterId];
+
   const finishTurn = () => {
+    if (!state.enCours) return;
+
     const newTurn = passerTour(scene);
     const turnLabel = document.getElementById("combat-turn-label");
     if (turnLabel) {
-      turnLabel.textContent = newTurn === "monstre" ? "Monstre" : "Joueur";
+      turnLabel.textContent =
+        newTurn === "monstre" ? "Monstre" : "Joueur";
+    }
+
+    // Si le prochain acteur est encore un monstre (ex: C3 -> C4),
+    // on enchaîne immédiatement son tour.
+    if (newTurn === "monstre") {
+      runMonsterTurn(scene);
     }
   };
 
-  const handler = AI_HANDLERS[monster.monsterId];
   if (handler) {
     handler(scene, state, monster, player, map, groundLayer, finishTurn);
   } else {
     finishTurn();
   }
 }
-

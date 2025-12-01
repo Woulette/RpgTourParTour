@@ -1,9 +1,16 @@
 import { monsterSpells } from "../config/monsterSpells.js";
-import { castSpellAtTile } from "../core/spellSystem.js";
-import { moveMonsterAlongPath } from "./aiUtils.js";
+import {
+  castSpellAtTile,
+  canCastSpellOnTile,
+} from "../core/spellSystem.js";
+import {
+  moveMonsterAlongPath,
+  findPathToReachAdjacentToTarget,
+  chooseStepTowardsTarget,
+} from "./aiUtils.js";
 
-// IA du corbeau : approche simple + coup de bec au corps à corps,
-// avec fuite si ses PV tombent très bas.
+// IA du corbeau : approche simple + coup de bec au corps a corps,
+// avec fuite si ses PV tombent tres bas.
 export function runTurn(
   scene,
   state,
@@ -19,7 +26,7 @@ export function runTurn(
     return;
   }
 
-  // Coordonnées de tuile du monstre
+  // Coordonnees de tuile du monstre
   if (typeof monster.tileX !== "number" || typeof monster.tileY !== "number") {
     const t = map.worldToTileXY(
       monster.x,
@@ -69,20 +76,28 @@ export function runTurn(
   let stepsUsed = 0;
   const pathTiles = [];
 
-  // Distance actuelle joueur / corbeau en cases
-  const distToPlayer = Math.abs(px - mx) + Math.abs(py - my);
-
-  // Tente d'abord un coup de bec si on est déjà au corps à corps
+  // Tente d'abord un coup de bec si on est deja au corps a corps
   const corbeauSpells = monsterSpells.corbeau || {};
   const coupDeBec = corbeauSpells.coup_de_bec;
-
+  
   const tryMeleeAttack = () => {
     if (!coupDeBec) return false;
-
+  
     const stateNow = scene.combatState;
     if (!stateNow || !stateNow.enCours) return false;
-
-    const ok = castSpellAtTile(
+  
+    // Vérifie toutes les conditions via spellSystem (PA, tour, portée, etc.)
+    const canHit = canCastSpellOnTile(
+      scene,
+      monster,
+      coupDeBec,
+      px,
+      py,
+      map
+    );
+    if (!canHit) return false;
+  
+    return castSpellAtTile(
       scene,
       monster,
       coupDeBec,
@@ -91,54 +106,94 @@ export function runTurn(
       map,
       groundLayer
     );
-
-    return ok;
   };
-
-  // Si on est au cac et qu'on ne fuit pas, on essaye d'attaquer tout de suite
-  if (!fleeing && distToPlayer === 1) {
+  
+  // Si on peut frapper (et qu'on ne fuit pas), on essaye d'attaquer tout de suite
+  if (!fleeing) {
     const attacked = tryMeleeAttack();
     if (attacked) {
       if (typeof onComplete === "function") onComplete();
       return;
     }
+  }  
+
+  // Nouveau d��placement : on cherche un chemin vers une case de corps
+  // �� corps libre autour du joueur, en ��vitant les autres monstres,
+  // puis on ne consomme que pmRestants cases de ce chemin.
+  const bfsPath =
+    findPathToReachAdjacentToTarget(
+      scene,
+      map,
+      mx,
+      my,
+      px,
+      py,
+      50,
+      monster
+    ) || [];
+
+  if (bfsPath.length > 0) {
+    const slice = bfsPath.slice(0, pmRestants);
+    slice.forEach((step) => {
+      mx = step.x;
+      my = step.y;
+      stepsUsed += 1;
+      pathTiles.push({ x: mx, y: my });
+    });
   }
 
-  // On avance (ou recule) d'au plus pmRestants cases, sans diagonales
-  while (pmRestants > 0) {
-    const dx = px - mx;
-    const dy = py - my;
+  if (stepsUsed === 0 || pathTiles.length === 0) {
+    if (typeof onComplete === "function") onComplete();
+    return;
+  }
 
-    const dist = Math.abs(dx) + Math.abs(dy);
+  moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
+    state.pmRestants = Math.max(0, state.pmRestants - stepsUsed);
+
+    if (scene.updateHudTargetInfo) {
+      scene.updateHudTargetInfo(monster);
+    }
+
+    const finalMx = monster.tileX ?? mx;
+    const finalMy = monster.tileY ?? my;
+    const distAfterMove =
+      Math.abs(px - finalMx) + Math.abs(py - finalMy);
+
+    if (!fleeing && distAfterMove === 1) {
+      tryMeleeAttack();
+    }
+
+    if (typeof onComplete === "function") onComplete();
+  });
+
+  return;
+
+  // On avance (ou recule) d'au plus pmRestants cases, sans diagonales.
+  // Le choix de la prochaine case est délégué à l'IA globale (contournement, alliés, etc.).
+  while (pmRestants > 0) {
+    const dist = Math.abs(px - mx) + Math.abs(py - my);
 
     // Approche : on s'arrête à 1 case du joueur (corps à corps)
     if (!fleeing && dist <= 1) break;
 
-    let stepX = 0;
-    let stepY = 0;
+    const chosen = chooseStepTowardsTarget(
+      scene,
+      map,
+      monster,
+      mx,
+      my,
+      px,
+      py,
+      fleeing
+    );
 
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      stepX = dx === 0 ? 0 : Math.sign(dx);
-    } else {
-      stepY = dy === 0 ? 0 : Math.sign(dy);
-    }
-
-    if (fleeing) {
-      stepX = -stepX;
-      stepY = -stepY;
-    }
-
-    if (stepX === 0 && stepY === 0) break;
-
-    const nextX = mx + stepX;
-    const nextY = my + stepY;
-
-    if (nextX < 0 || nextX >= map.width || nextY < 0 || nextY >= map.height) {
+    if (!chosen) {
+      // Aucun mouvement possible qui respecte la grille et evite les allies
       break;
     }
 
-    mx = nextX;
-    my = nextY;
+    mx = chosen.x;
+    my = chosen.y;
     pmRestants -= 1;
     stepsUsed += 1;
     pathTiles.push({ x: mx, y: my });
@@ -168,4 +223,3 @@ export function runTurn(
     if (typeof onComplete === "function") onComplete();
   });
 }
-

@@ -335,10 +335,32 @@ export function castSpellAtTile(
           scene.monsters = scene.monsters.filter((m) => m !== target);
         }
 
-        if (scene.combatState) {
-          scene.combatState.issue = "victoire";
+        // Multi-monstres : on ne termine le combat
+        // que lorsqu'il n'y a plus aucun ennemi en vie.
+        let remaining = 0;
+
+        if (scene.combatMonsters && Array.isArray(scene.combatMonsters)) {
+          scene.combatMonsters = scene.combatMonsters.filter(
+            (m) => m && m !== target
+          );
+
+          remaining = scene.combatMonsters.filter((m) => {
+            const statsInner = m.stats || {};
+            const hpInner =
+              typeof statsInner.hp === "number"
+                ? statsInner.hp
+                : statsInner.hpMax ?? 0;
+            return hpInner > 0;
+          }).length;
+        } else if (scene.monsters) {
+          // Fallback 1v1 : on regarde s'il reste des monstres.
+          remaining = scene.monsters.length;
         }
-        endCombat(scene);
+
+        if (scene.combatState && remaining <= 0) {
+          scene.combatState.issue = "victoire";
+          endCombat(scene);
+        }
       }
     }
   } else if (state.monstre === caster) {
@@ -434,4 +456,30 @@ export function tryCastActiveSpellAtTile(
     map,
     groundLayer
   );
+}
+// Helpers g�n�riques de port�e / conditions de sort, utilisables
+// aussi bien par le joueur que par les IA de monstres.
+// Elles s'appuient sur la logique d�j� d�finie plus bas dans ce fichier
+// (isTileInRange et canCastSpellAtTile).
+export function isSpellInRangeFromPosition(
+  spell,
+  fromX,
+  fromY,
+  toX,
+  toY
+) {
+  // isTileInRange est d�clar� plus bas dans ce fichier.
+  return isTileInRange(spell, fromX, fromY, toX, toY);
+}
+
+export function canCastSpellOnTile(
+  scene,
+  caster,
+  spell,
+  tileX,
+  tileY,
+  map
+) {
+  // canCastSpellAtTile est d�clar� plus bas dans ce fichier.
+  return canCastSpellAtTile(scene, caster, spell, tileX, tileY, map);
 }

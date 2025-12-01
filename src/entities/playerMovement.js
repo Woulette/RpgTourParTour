@@ -1,8 +1,7 @@
-import { GAME_WIDTH, PLAYER_SPEED } from "../config/constants.js";
+import { GAME_WIDTH } from "../config/constants.js";
 import {
   startPrep,
   limitPathForCombat,
-  applyMoveCost,
   updateCombatPreview,
 } from "../core/combat.js";
 import {
@@ -13,6 +12,8 @@ import {
   clearSpellRangePreview,
 } from "../core/spellSystem.js";
 import { maybeHandleMapExit } from "../maps/world.js";
+import { findPathForPlayer } from "./movement/pathfinding.js";
+import { movePlayerAlongPath } from "./movement/runtime.js";
 
 /**
  * Crée une fonction worldToTile "calibrée" qui compense
@@ -133,7 +134,9 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     }
 
     // Chemin sans diagonales pour la prévisu en combat
-    let path = calculatePath(
+    let path = findPathForPlayer(
+      scene,
+      map,
       player.currentTileX,
       player.currentTileY,
       tileX,
@@ -321,7 +324,9 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     // Chemin brut : diagonales autorisées hors combat, interdites en combat
     const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
 
-    let path = calculatePath(
+    let path = findPathForPlayer(
+      scene,
+      map,
       player.currentTileX,
       player.currentTileY,
       tileX,
@@ -330,7 +335,8 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     );
 
     if (!path || path.length === 0) {
-      maybeStartPendingCombat(scene, player, map, groundLayer);
+      // Si on a cliqué sur un monstre mais qu'on ne trouve pas de chemin,
+      // on ne démarre pas de combat (comportement sécurisé).
       return;
     }
 
@@ -347,7 +353,14 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
       moveCost = limited.moveCost;
     }
 
-    movePlayerAlongPath(scene, player, map, groundLayer, path, moveCost);
+    movePlayerAlongPathWithCombat(
+      scene,
+      player,
+      map,
+      groundLayer,
+      path,
+      moveCost
+    );
   });
 }
 
@@ -359,180 +372,27 @@ function updatePlayerTilePosition(player, worldToTile) {
   player.currentTileY = t.y;
 }
 
-function calculatePath(startX, startY, endX, endY, allowDiagonal = true) {
-  const path = [];
-  let currentX = startX;
-  let currentY = startY;
-
-  while (currentX !== endX || currentY !== endY) {
-    const dx = endX - currentX;
-    const dy = endY - currentY;
-
-    let nextX = currentX;
-    let nextY = currentY;
-
-    if (allowDiagonal && dx !== 0 && dy !== 0) {
-      // Diagonale
-      nextX += dx > 0 ? 1 : -1;
-      nextY += dy > 0 ? 1 : -1;
-    } else if (dx !== 0) {
-      // Horizontal
-      nextX += dx > 0 ? 1 : -1;
-    } else if (dy !== 0) {
-      // Vertical
-      nextY += dy > 0 ? 1 : -1;
-    }
-
-    path.push({ x: nextX, y: nextY });
-    currentX = nextX;
-    currentY = nextY;
-  }
-
-  return path;
-}
-
-function getDirectionName(dx, dy) {
-  const absDx = Math.abs(dx);
-  const absDy = Math.abs(dy);
-
-  if (absDx < 1e-3 && absDy < 1e-3) {
-    return "south-east";
-  }
-
-  // Si le mouvement est principalement horizontal -> Est / Ouest
-  if (absDx > absDy * 2) {
-    return dx > 0 ? "east" : "west";
-  }
-
-  // Si le mouvement est principalement vertical -> Nord / Sud
-  if (absDy > absDx * 2) {
-    return dy > 0 ? "south" : "north";
-  }
-
-  // Sinon, on est sur une vraie diagonale -> NE / SE / SW / NW
-  if (dx > 0 && dy < 0) return "north-east";
-  if (dx > 0 && dy > 0) return "south-east";
-  if (dx < 0 && dy > 0) return "south-west";
-  return "north-west";
-}
-
-// Déplacement "manuel" vers une tuile cible (hors clic direct).
-// Utilisé par exemple pour des scripts ou téléportations contrôlées.
-export function movePlayerToTile(
-  scene,
-  player,
-  map,
-  groundLayer,
-  tileX,
-  tileY
-) {
-  if (!isValidTile(map, tileX, tileY)) return;
-
-  if (
-    typeof player.currentTileX !== "number" ||
-    typeof player.currentTileY !== "number"
-  ) {
-    const raw = groundLayer.worldToTileXY(player.x, player.y, false);
-    if (!raw) return;
-    player.currentTileX = Math.floor(raw.x);
-    player.currentTileY = Math.floor(raw.y);
-  }
-
-  const path = calculatePath(
-    player.currentTileX,
-    player.currentTileY,
-    tileX,
-    tileY,
-    true
-  );
-
-  if (!path || path.length === 0) return;
-
-  movePlayerAlongPath(scene, player, map, groundLayer, path, 0);
-}
-
-function movePlayerAlongPath(
+// Wrapper autour du mouvement runtime : exécute le déplacement puis,
+// une fois le chemin terminé, vérifie si un combat doit démarrer.
+function movePlayerAlongPathWithCombat(
   scene,
   player,
   map,
   groundLayer,
   path,
-  moveCost = 0
+  moveCost
 ) {
-  if (path.length === 0) {
-    player.isMoving = false;
-    maybeStartPendingCombat(scene, player, map, groundLayer);
-    return;
-  }
-
-  player.isMoving = true;
-  const nextTile = path.shift();
-
-  const worldPos = map.tileToWorldXY(
-    nextTile.x,
-    nextTile.y,
-    undefined,
-    undefined,
-    groundLayer
+  movePlayerAlongPath(
+    scene,
+    player,
+    map,
+    groundLayer,
+    path,
+    moveCost,
+    () => {
+      maybeStartPendingCombat(scene, player, map, groundLayer);
+    }
   );
-
-  const targetX = worldPos.x + map.tileWidth / 2;
-  const targetY = worldPos.y + map.tileHeight / 2;
-
-  const dxWorld = targetX - player.x;
-  const dyWorld = targetY - player.y;
-  const dir = getDirectionName(dxWorld, dyWorld);
-  if (
-    player.anims &&
-    scene.anims &&
-    scene.anims.exists &&
-    scene.anims.exists(`player_run_${dir}`)
-  ) {
-    player.anims.play(`player_run_${dir}`, true);
-  }
-
-  const distance = Phaser.Math.Distance.Between(
-    player.x,
-    player.y,
-    targetX,
-    targetY
-  );
-  const duration = (distance / PLAYER_SPEED) * 1000;
-
-  player.currentMoveTween = scene.tweens.add({
-    targets: player,
-    x: targetX,
-    y: targetY,
-    duration,
-    ease: "Linear",
-    onComplete: () => {
-      player.x = targetX;
-      player.y = targetY;
-      player.currentTileX = nextTile.x;
-      player.currentTileY = nextTile.y;
-
-      if (path.length > 0) {
-        movePlayerAlongPath(scene, player, map, groundLayer, path, moveCost);
-      } else {
-        player.isMoving = false;
-        player.currentMoveTween = null;
-        player.movePath = [];
-
-        // Applique le coût de déplacement au système de combat (PM, HUD)
-        applyMoveCost(scene, player, moveCost);
-
-        maybeStartPendingCombat(scene, player, map, groundLayer);
-        if (player.anims && player.anims.currentAnim) {
-          player.anims.stop();
-          player.setTexture("player");
-        }
-
-        // Si une sortie de map est en attente et que le joueur est sur
-        // la tuile cible, on laisse world.js gérer la transition.
-        maybeHandleMapExit(scene);
-      }
-    },
-  });
 }
 
 // Si une cible de combat est en attente et que le joueur est sur sa case
@@ -565,4 +425,3 @@ function maybeStartPendingCombat(scene, player, map, groundLayer) {
 function isValidTile(map, tileX, tileY) {
   return tileX >= 0 && tileX < map.width && tileY >= 0 && tileY < map.height;
 }
-

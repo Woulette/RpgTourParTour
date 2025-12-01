@@ -11,8 +11,8 @@ export const baseStats = {
   initiative: 0,
 
   // Points de vie (max et actuels)
-  hpMax: 50,
-  hp: 50,
+  hpMax: 200,
+  hp: 200,
 
   // Ressources d'action
   pa: 6, // Points d'action de base

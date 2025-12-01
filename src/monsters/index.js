@@ -25,7 +25,8 @@ export function spawnInitialMonsters(
   // --- Groupes de corbeaux ---
   // On crée 4 "packs" visibles : 1, 2, 3 et 4 corbeaux.
   // Visuellement : 1 sprite par pack, mais chaque pack
-  // a une taille (groupSize) et une XP totale différente.
+  // a une taille (groupSize). En combat, on pourra
+  // matérialiser chaque membre du pack séparément.
   const corbeauGroups = [
     { size: 1, tileX: centerTileX - 4, tileY: centerTileY + monsterOffsetTilesY },
     { size: 2, tileX: centerTileX - 1, tileY: centerTileY + monsterOffsetTilesY },
@@ -54,10 +55,6 @@ export function spawnInitialMonsters(
     corbeau.tileY = tileY;
     corbeau.groupId = `corbeau_group_${nextGroupId}`;
     corbeau.groupSize = size;
-
-    // XP du pack = taille du pack * XP d'un corbeau solo
-    const baseXp = monsters.corbeau?.xpReward ?? 0;
-    corbeau.xpReward = baseXp * size;
 
     scene.monsters.push(corbeau);
     nextGroupId += 1;
@@ -88,7 +85,12 @@ export function spawnInitialMonsters(
 
 // Cherche un monstre exactement sur une tuile donnée
 export function findMonsterAtTile(scene, tileX, tileY) {
-  const list = scene.monsters || [];
+  // En combat, on ne doit considérer que les monstres
+  // engagés dans le combat courant, jamais les monstres "monde".
+  const list =
+    (scene.combatMonsters && Array.isArray(scene.combatMonsters)
+      ? scene.combatMonsters
+      : scene.monsters || []);
   return (
     list.find(
       (m) =>

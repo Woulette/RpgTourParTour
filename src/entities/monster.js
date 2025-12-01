@@ -46,6 +46,10 @@ export function createMonster(scene, x, y, monsterId) {
   // Sorts disponibles pour ce monstre
   monster.spellIds = def.spells || [];
 
+  // Par défaut, les monstres "monde" respawnent, les clones de combat
+  // pourront forcer monster.respawnEnabled = false.
+  monster.respawnEnabled = monster.respawnEnabled ?? true;
+
   // Callback standard quand le monstre meurt
   monster.onKilled = (sceneArg, killer) => {
     const rewardXp = monster.xpReward || 0;
@@ -90,12 +94,32 @@ export function createMonster(scene, x, y, monsterId) {
       }
     }
 
-    if (sceneArg && typeof sceneArg.updateHudTargetInfo === "function") {
-      sceneArg.updateHudTargetInfo(null);
+    if (sceneArg) {
+      if (typeof sceneArg.updateHudTargetInfo === "function") {
+        sceneArg.updateHudTargetInfo(null);
+      }
+      // Nettoie immédiatement tous les overlays liés à ce monstre mort
+      if (typeof sceneArg.clearDamagePreview === "function") {
+        sceneArg.clearDamagePreview();
+      }
+      if (typeof sceneArg.hideMonsterTooltip === "function") {
+        sceneArg.hideMonsterTooltip();
+      }
     }
 
-    // Respawn simple : réapparaît au même endroit 5 secondes après la mort
+    // Détruit l'éventuel effet lumineux de survol restant
+    if (monster.hoverHighlight) {
+      monster.hoverHighlight.destroy();
+      monster.hoverHighlight = null;
+    }
+
+    // Respawn simple : réapparaît au même endroit 5 secondes après la mort.
+    // Désactivable via monster.respawnEnabled = false (utile pour des clones de combat).
+    const allowRespawn =
+      monster.respawnEnabled === undefined || monster.respawnEnabled === true;
+
     if (
+      allowRespawn &&
       sceneArg &&
       sceneArg.time &&
       sceneArg.map &&
@@ -129,6 +153,18 @@ export function createMonster(scene, x, y, monsterId) {
         sceneArg.monsters = sceneArg.monsters || [];
         sceneArg.monsters.push(newMonster);
 
+        // Si un combat est en cours, ce monstre respawné
+        // doit être hors combat : on le cache et on le rend non interactif
+        // jusqu'à la fin du combat.
+        if (sceneArg.combatState && sceneArg.combatState.enCours) {
+          newMonster.setVisible(false);
+          if (newMonster.disableInteractive) {
+            newMonster.disableInteractive();
+          }
+          sceneArg.hiddenWorldMonsters = sceneArg.hiddenWorldMonsters || [];
+          sceneArg.hiddenWorldMonsters.push(newMonster);
+        }
+
         // La caméra HUD doit ignorer le nouveau monstre également
         if (sceneArg.hudCamera) {
           sceneArg.hudCamera.ignore(newMonster);
@@ -141,67 +177,63 @@ export function createMonster(scene, x, y, monsterId) {
   monster.setInteractive({ useHandCursor: true });
 
   // Affichage des infos de la cible dans le HUD lors du survol
-   // Rendre le monstre cliquable pour entrer en combat
-   monster.setInteractive({ useHandCursor: true });
+  monster.on("pointerover", () => {
+    // Effet de lumière directement sur le sprite :
+    // on ajoute un doublon du sprite en mode ADD par‑dessus lui.
+    if (!monster.hoverHighlight && scene.add) {
+      const overlay = scene.add.sprite(
+        monster.x,
+        monster.y,
+        monster.texture.key
+      );
 
-   // Affichage des infos de la cible dans le HUD lors du survol
-   monster.on("pointerover", () => {
-     // Effet de lumière directement sur le sprite :
-     // on ajoute un doublon du sprite en mode ADD par-dessus lui.
-     if (!monster.hoverHighlight && scene.add) {
-       const overlay = scene.add.sprite(
-         monster.x,
-         monster.y,
-         monster.texture.key
-       );
- 
-       // même origine que le monstre pour coller parfaitement
-       overlay.setOrigin(monster.originX, monster.originY);
- 
-       // si le monstre a une frame (anim), on la copie
-       if (monster.frame && overlay.setFrame) {
-         overlay.setFrame(monster.frame.name);
-       }
- 
-       overlay.setBlendMode(Phaser.BlendModes.ADD); // effet lumineux
-       overlay.setAlpha(0.6);                       // intensité
-       overlay.setDepth((monster.depth || 0) + 1);  // au-dessus du sprite
- 
-       if (scene.hudCamera) {
-         scene.hudCamera.ignore(overlay);
-       }
- 
-       monster.hoverHighlight = overlay;
-     }
- 
-     if (scene.updateHudTargetInfo) {
-       scene.updateHudTargetInfo(monster);
-     }
-     if (scene.showDamagePreview) {
-       scene.showDamagePreview(monster);
-     }
-     if (scene.showMonsterTooltip) {
-       scene.showMonsterTooltip(monster);
-     }
-   });
- 
-   monster.on("pointerout", () => {
-     // Retire le doublon lumineux s'il existe
-     if (monster.hoverHighlight) {
-       monster.hoverHighlight.destroy();
-       monster.hoverHighlight = null;
-     }
-     if (scene.updateHudTargetInfo) {
-       scene.updateHudTargetInfo(null);
-     }
-     if (scene.clearDamagePreview) {
-       scene.clearDamagePreview();
-     }
-     if (scene.hideMonsterTooltip) {
-       scene.hideMonsterTooltip();
-     }
-   });
- 
-   return monster;
- }
- 
+      // même origine que le monstre pour coller parfaitement
+      overlay.setOrigin(monster.originX, monster.originY);
+
+      // si le monstre a une frame (anim), on la copie
+      if (monster.frame && overlay.setFrame) {
+        overlay.setFrame(monster.frame.name);
+      }
+
+      overlay.setBlendMode(Phaser.BlendModes.ADD); // effet lumineux
+      overlay.setAlpha(0.6); // intensité
+      overlay.setDepth((monster.depth || 0) + 1); // au‑dessus du sprite
+
+      if (scene.hudCamera) {
+        scene.hudCamera.ignore(overlay);
+      }
+
+      monster.hoverHighlight = overlay;
+    }
+
+    if (scene.updateHudTargetInfo) {
+      scene.updateHudTargetInfo(monster);
+    }
+    if (scene.showDamagePreview) {
+      scene.showDamagePreview(monster);
+    }
+    if (scene.showMonsterTooltip) {
+      scene.showMonsterTooltip(monster);
+    }
+  });
+
+  monster.on("pointerout", () => {
+    // Retire le doublon lumineux s'il existe
+    if (monster.hoverHighlight) {
+      monster.hoverHighlight.destroy();
+      monster.hoverHighlight = null;
+    }
+    if (scene.updateHudTargetInfo) {
+      scene.updateHudTargetInfo(null);
+    }
+    if (scene.clearDamagePreview) {
+      scene.clearDamagePreview();
+    }
+    if (scene.hideMonsterTooltip) {
+      scene.hideMonsterTooltip();
+    }
+  });
+
+  return monster;
+}
+

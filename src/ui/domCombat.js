@@ -2,7 +2,7 @@
 // - bouton "PRÊT" pendant la phase de préparation
 // - bouton "FIN DU TOUR" et indicateur de tour pendant le combat.
 
-import { startCombatFromPrep } from "../core/combat.js";
+import { startCombatFromPrep, passerTour } from "../core/combat.js";
 import { runMonsterTurn } from "../monsters/ai.js";
 
 export function initDomCombat(scene) {
@@ -27,8 +27,18 @@ export function initDomCombat(scene) {
       return;
     }
 
-    // L'IA du monstre gère le passage "monstre -> joueur"
-    runMonsterTurn(scene);
+    // Passe au prochain acteur dans l'ordre d'initiative
+    const newTurn = passerTour(scene);
+    if (!newTurn) return;
+
+    if (turnLabel) {
+      turnLabel.textContent = newTurn === "joueur" ? "Joueur" : "Monstre";
+    }
+
+    // Si c'est un monstre qui joue ensuite, on lance son tour.
+    if (newTurn === "monstre") {
+      runMonsterTurn(scene);
+    }
   });
 
   // Bouton "PRÊT" (phase de préparation)
@@ -42,11 +52,19 @@ export function initDomCombat(scene) {
 
       startCombatFromPrep(scene);
 
-      // Au début du combat, c'est le joueur qui joue
+      const state = scene.combatState;
+      if (!state || !state.enCours) return;
+
+      // Met à jour le label de tour en fonction de l'initiative
       if (turnLabel) {
-        turnLabel.textContent = "Joueur";
+        turnLabel.textContent =
+          state.tour === "joueur" ? "Joueur" : "Monstre";
+      }
+
+      // Si le monstre commence (initiative plus élevée), on lance tout de suite son tour.
+      if (state.tour === "monstre") {
+        runMonsterTurn(scene);
       }
     });
   }
 }
-
