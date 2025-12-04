@@ -333,12 +333,33 @@ body.hud-inventory-open #hud-inventory-panel {
   max-width: 110px;
   aspect-ratio: 1 / 1;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.753);
   background-color: rgba(156, 156, 156, 0.4);
   background-size: 80% 80%;
   background-repeat: no-repeat;
   background-position: center;
   align-self: flex-start;
-  margin-top: 2px; /* tu peux augmenter si besoin */
+  margin-top: 42px; /* tu peux augmenter si besoin */
 
+}
+
+/* --- Surcharge : cadre fixe pour la zone de description --- */
+#inventory-item-desc {
+  grid-area: desc;
+  margin: 0.4rem 0 0 0;
+  padding: 0.6rem 0.8rem;
+  width: calc(100% + 140px);   /* plus large */
+  margin: 0.4rem -8px 0  -140px; /* décale à gauche/droite */
+  box-sizing: border-box;
+
+  font-size: clamp(11px, 1.1vw, 13px);
+  line-height: 1.4;
+
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  background: rgba(0, 0, 0, 0.22);
+
+  /* cadre fixe pour la description, scroll interne si le texte est long */
+  height: 80px; /* ajuste si tu veux plus haut/bas */
+  overflow-y: auto;
 }
