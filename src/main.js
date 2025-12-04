@@ -142,7 +142,7 @@ class MainScene extends Phaser.Scene {
       this.monsters.forEach((m) => this.hudCamera.ignore(m));
     }
 
-    // Bande visuelle de sortie de map (bord droit).
+    // Bandes visuelles de sortie de map (bord droit + haut).
     createMapExits(this);
 
     // --- CLICK-TO-MOVE simple ---
@@ -159,9 +159,9 @@ class MainScene extends Phaser.Scene {
     // Initialisation de l'inventaire (fenêtre INV)
     initDomInventory(this.player);
 
-    // DEBUG : touche "N" -> charge maptest2 avec le même centrage
+    // DEBUG : touche "N" -> charge Map2Andemia avec le même centrage
     this.input.keyboard.on("keydown-N", () => {
-      const next = maps.maptest2;
+      const next = maps.Map2Andemia;
       if (!next) return;
       loadMapLikeMain(this, next);
     });

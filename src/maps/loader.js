@@ -7,9 +7,17 @@ export function preloadMap(scene, mapDef) {
 
 export function buildMap(scene, mapDef) {
   const map = scene.make.tilemap({ key: mapDef.key });
-  const tilesets = mapDef.tilesets.map((ts) =>
-    map.addTilesetImage(ts.name, ts.imageKey)
-  );
+
+  // On ne crée des tilesets Phaser que pour ceux
+  // qui existent réellement dans la carte Tiled.
+  const tilesets = map.tilesets.map((tsData) => {
+    const def = mapDef.tilesets.find((ts) => ts.name === tsData.name);
+    if (def) {
+      return map.addTilesetImage(def.name, def.imageKey);
+    }
+    // Fallback : tente avec le même nom pour la texture.
+    return map.addTilesetImage(tsData.name);
+  });
 
   const createdLayers = map.layers.map((layerData, index) => {
     const layer = map.createLayer(layerData.name, tilesets);

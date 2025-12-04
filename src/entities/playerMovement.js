@@ -11,7 +11,7 @@ import {
   updateSpellRangePreview,
   clearSpellRangePreview,
 } from "../core/spellSystem.js";
-import { maybeHandleMapExit } from "../maps/world.js";
+import { findExitTileForDirection } from "../maps/world.js";
 import { findPathForPlayer } from "./movement/pathfinding.js";
 import { movePlayerAlongPath } from "./movement/runtime.js";
 
@@ -161,7 +161,10 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
   // --- Clic pour déplacer ou lancer un sort ---
   scene.input.on("pointerdown", (pointer) => {
     const activeSpell = getActiveSpell(player);
-    const bandWidth = 30;
+    const bandWidthRight = 30;
+    const bandWidthLeft = 30;
+    const bandHeightTop = 30;
+    const bandHeightBottom = 30;
 
     // Clic sur le HUD : si un sort était sélectionné, on l'annule
     // et on revient en mode déplacement.
@@ -225,14 +228,18 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     // Intention de sortie de map (hors combat uniquement).
     const inCombat = state && state.enCours;
     if (!inCombat) {
-      const clickedInRightBand = pointer.x >= GAME_WIDTH - bandWidth;
-      const exitsRight = scene.worldExits && scene.worldExits.right;
+      const clickedInRightBand = pointer.x >= GAME_WIDTH - bandWidthRight;
+      const clickedInLeftBand = pointer.x <= bandWidthLeft;
+      const clickedInTopBand = pointer.y <= bandHeightTop;
+      const clickedInBottomBand =
+        pointer.y >= hudY - bandHeightBottom && pointer.y < hudY;
+      const exits = scene.worldExits || {};
 
-      if (clickedInRightBand && exitsRight && exitsRight.length > 0) {
-        // Cherche la tuile de sortie la plus proche verticalement.
+      if (clickedInRightBand && exits.right && exits.right.length > 0) {
+        // Sortie à droite : tuile de sortie la plus proche verticalement
         let best = null;
         let bestDy = Infinity;
-        exitsRight.forEach((tile) => {
+        exits.right.forEach((tile) => {
           const dy = Math.abs(tile.y - tileY);
           if (dy < bestDy) {
             bestDy = dy;
@@ -244,6 +251,80 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
           tileX = best.x;
           tileY = best.y;
           scene.exitDirection = "right";
+          scene.exitTargetTile = { x: tileX, y: tileY };
+        }
+      } else if (clickedInLeftBand && exits.left && exits.left.length > 0) {
+        // Sortie à gauche : tuile de sortie la plus proche verticalement
+        let best = null;
+        let bestDy = Infinity;
+        exits.left.forEach((tile) => {
+          const dy = Math.abs(tile.y - tileY);
+          if (dy < bestDy) {
+            bestDy = dy;
+            best = tile;
+          }
+        });
+
+        if (best) {
+          tileX = best.x;
+          tileY = best.y;
+          scene.exitDirection = "left";
+          scene.exitTargetTile = { x: tileX, y: tileY };
+        }
+      } else if (clickedInTopBand && exits.up && exits.up.length > 0) {
+        // Sortie vers le haut : tuile la plus proche du clic en X
+        let best = null;
+        let bestDx = Infinity;
+
+        exits.up.forEach((tile) => {
+          const wp = map.tileToWorldXY(
+            tile.x,
+            tile.y,
+            undefined,
+            undefined,
+            groundLayer
+          );
+          const cx = wp.x + map.tileWidth / 2;
+          const dx = Math.abs(pointer.worldX - cx);
+
+          if (dx < bestDx) {
+            bestDx = dx;
+            best = tile;
+          }
+        });
+
+        if (best) {
+          tileX = best.x;
+          tileY = best.y;
+          scene.exitDirection = "up";
+          scene.exitTargetTile = { x: tileX, y: tileY };
+        }
+      } else if (clickedInBottomBand && exits.down && exits.down.length > 0) {
+        // Sortie vers le bas : tuile la plus proche du clic en X
+        let best = null;
+        let bestDx = Infinity;
+
+        exits.down.forEach((tile) => {
+          const wp = map.tileToWorldXY(
+            tile.x,
+            tile.y,
+            undefined,
+            undefined,
+            groundLayer
+          );
+          const cx = wp.x + map.tileWidth / 2;
+          const dx = Math.abs(pointer.worldX - cx);
+
+          if (dx < bestDx) {
+            bestDx = dx;
+            best = tile;
+          }
+        });
+
+        if (best) {
+          tileX = best.x;
+          tileY = best.y;
+          scene.exitDirection = "down";
           scene.exitTargetTile = { x: tileX, y: tileY };
         }
       } else {
@@ -303,22 +384,6 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
       }
     }
 
-    // DEBUG : marque la tuile détectée
-    const debugWorld = map.tileToWorldXY(
-      tileX,
-      tileY,
-      undefined,
-      undefined,
-      groundLayer
-    );
-    const debugCX = debugWorld.x + map.tileWidth / 2;
-    const debugCY = debugWorld.y + map.tileHeight / 2;
-    const marker = scene.add.rectangle(debugCX, debugCY, 10, 10, 0xff0000, 0.7);
-    if (scene.hudCamera) {
-      scene.hudCamera.ignore(marker);
-    }
-    scene.time.delayedCall(200, () => marker.destroy());
-
     if (player.currentTileX === tileX && player.currentTileY === tileY) return;
 
     // Chemin brut : diagonales autorisées hors combat, interdites en combat
@@ -335,8 +400,7 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     );
 
     if (!path || path.length === 0) {
-      // Si on a cliqué sur un monstre mais qu'on ne trouve pas de chemin,
-      // on ne démarre pas de combat (comportement sécurisé).
+      // Si on n'a aucun chemin, on ne déclenche rien (ni combat, ni sortie).
       return;
     }
 
@@ -373,7 +437,8 @@ function updatePlayerTilePosition(player, worldToTile) {
 }
 
 // Wrapper autour du mouvement runtime : exécute le déplacement puis,
-// une fois le chemin terminé, vérifie si un combat doit démarrer.
+// une fois le chemin terminé, vérifie si un combat doit démarrer
+// et laisse world.js gérer la sortie de map via maybeHandleMapExit.
 function movePlayerAlongPathWithCombat(
   scene,
   player,

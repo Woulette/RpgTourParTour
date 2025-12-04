@@ -94,7 +94,7 @@ body.hud-inventory-open #hud-inventory-panel {
   flex: 1;
   display: grid;
   /* gauche : équipement + fiche, droite : grille */
-  grid-template-columns:  3fr 1.2fr;
+  grid-template-columns: 3fr 1.2fr;
   gap: 1rem;
   min-height: 0;
 }
@@ -127,15 +127,14 @@ body.hud-inventory-open #hud-inventory-panel {
   left: 50%;
   transform: translate(-50%, -50%);
 
-  width: 200px;   /* plus large */
-  height: 200px;  /* plus haut */
+  width: 200px;
+  height: 200px;
 
   background-image: url("../aventurier.png");
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
 }
-
 
 /* Colonne droite : seulement la grille d’inventaire */
 .inventory-right {
@@ -146,11 +145,11 @@ body.hud-inventory-open #hud-inventory-panel {
   position: relative;
 }
 
-/* Grille d'équipement à l'intérieur du bloc de gauche */
+/* Grille d’équipement à l'intérieur du bloc de gauche */
 .equip-grid {
   width: 100%;
   height: 100%;
-  
+
   padding: 0.6rem;
   box-sizing: border-box;
 
@@ -174,11 +173,11 @@ body.hud-inventory-open #hud-inventory-panel {
   background: rgba(121, 121, 121, 0.6);
 
   box-sizing: border-box;
-  position: relative;       /* pour que l'icône absolue reste dans le slot */
+  position: relative; /* pour que l'icône absolue reste dans le slot */
   overflow: hidden;
 }
 
-/* Grille d’inventaire : étroite, verticale (4 colonnes x 10 lignes = 40 slots) */
+/* Grille d’inventaire : étroite, verticale (5 colonnes x 10 lignes = 50 slots) */
 .inventory-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(60px, 1fr));
@@ -204,7 +203,7 @@ body.hud-inventory-open #hud-inventory-panel {
 
 .inventory-slot.empty {
   opacity: 0.5;
-  border-style: solid; /* plus de pointillés, bordure pleine */
+  border-style: solid;
 }
 
 .inventory-slot.filled:hover {
@@ -241,122 +240,92 @@ body.hud-inventory-open #hud-inventory-panel {
   color: #f5f5f5;
 }
 
-.inventory-detail {
-  border-radius: 10px;
-  border: 1px solid rgba(200, 200, 200, 0.6);
-  background: rgba(121, 121, 121, 0.6);
-  padding: 0.6rem 0.8rem;
-  font-size: clamp(11px, 1.1vw, 13px);
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  
-  /* Hauteur minimale de la fiche de détails */
-  min-height: 180px;
-}
-  
-.inventory-detail h3 {
-  margin: 0;
-  font-size: clamp(14px, 1.4vw, 18px);
-  order: 0;
-}
-  
-.inventory-detail p {
-  margin: 0;
-  order: 2;
-}
-
-/* Icône de l'objet sélectionné dans la fiche de détails */
-  .inventory-item-icon {
-    width: 130px;
-    height: 130px;
-    border-radius: 8px;
-    margin-bottom: 0.4rem;
-    border-radius: 6px;
-
-    border: 1px solid rgb(185, 185, 185);
-    background-color: rgba(0, 0, 0, 0.123);
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    order: 1;
+@media (max-width: 1200px) {
+  #hud-inventory-panel {
+    width: min(560px, 92vw);
+    height: min(380px, 78vh);
   }
-
-  @media (max-width: 1200px) {
-    #hud-inventory-panel {
-      width: min(560px, 92vw);
-      height: min(380px, 78vh);
-    }
 }
 
-/* Ajustements supplémentaires pour la fiche de détails :
-   - type aligné en haut à droite
-   - icône sous le nom */
+/* --- Nouvelle fiche objet inventaire : nom en haut, bonus au milieu, description en bas --- */
 .inventory-detail {
-  position: relative;
-}
-
-#inventory-item-type {
-  position: absolute;
-  top: 0.6rem;
-  right: 0.8rem;
-}
-
-.inventory-item-icon {
   margin-top: 0.4rem;
-}
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(230, 230, 255, 0.3);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+    rgba(10, 20, 40, 0.95);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
 
-/* --- Surcharge mise en page fiche de détails (bonus à droite) --- */
-.inventory-detail {
-  border-radius: 10px;
-  border: 1px solid rgba(200, 200, 200, 0.6);
-  background: rgba(121, 121, 121, 0.6);
-  padding: 0.6rem 0.8rem;
-  font-size: clamp(11px, 1.1vw, 13px);
-
-  /* grille : icône à gauche, texte à droite */
   display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: 120px 1fr auto;
+  /* 1ère ligne = nom + type (hauteur fixe) / 2ème = bonus / 3ème = description */
+  grid-template-rows: 34px auto 1fr;
   grid-template-areas:
-    "name type"
-    "icon desc";
+    "icon name type"
+    "icon bonus bonus"
+    "icon desc desc";
   column-gap: 1rem;
-  row-gap: 0.4rem;
+  row-gap: 0.3rem;
 
-  min-height: 180px;
+  min-height: 230px;
+  max-height: 260px;
 }
 
+/* Nom de l'objet : en haut, ne change plus la hauteur de la fiche */
 .inventory-detail h3 {
-  margin: 0;
-  font-size: clamp(15px, 1.5vw, 20px);
   grid-area: name;
-}
-
-.inventory-detail p {
   margin: 0;
+  font-size: clamp(15px, 1.6vw, 20px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  align-self: center;
 }
 
-.inventory-item-icon {
-  grid-area: icon;
-  width: 130px;
-  height: 130px;
-  border-radius: 6px;
-
-  border: 1px solid rgb(185, 185, 185);
-  background-color: rgba(0, 0, 0, 0.123);
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
+/* Type de l'objet : aligné à droite sur la même ligne que le nom */
 #inventory-item-type {
-  position: static; /* annule le absolute plus haut */
   grid-area: type;
+  margin: 0;
+  font-size: clamp(11px, 1.1vw, 13px);
+  opacity: 0.85;
+  align-self: center;
   text-align: right;
 }
 
+/* Zone "bonus / effets" au milieu */
+#inventory-item-bonus {
+  grid-area: bonus;
+  margin: 0;
+  font-size: clamp(11px, 1.1vw, 13px);
+  line-height: 1.35;
+}
+
+/* Description séparée en bas, avec scroll si elle est longue */
 #inventory-item-desc {
   grid-area: desc;
-  font-size: clamp(12px, 1.2vw, 15px); /* plus visible à droite */
+  margin: 0;
+  font-size: clamp(11px, 1.1vw, 13px);
+  line-height: 1.4;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  overflow-y: auto;
+}
+
+/* Icône de l'objet à gauche, centrée verticalement */
+.inventory-item-icon {
+  grid-area: icon;
+  width: 100%;
+  max-width: 110px;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background-color: rgba(156, 156, 156, 0.4);
+  background-size: 80% 80%;
+  background-repeat: no-repeat;
+  background-position: center;
+  align-self: flex-start;
+  margin-top: 2px; /* tu peux augmenter si besoin */
+
 }

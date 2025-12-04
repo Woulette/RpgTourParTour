@@ -37,21 +37,32 @@ const anemiaTilesets = [
 ];
 
 export const maps = {
-  maptest: {
-    key: "maptest",
+  // Map de départ au centre
+  Map1Andemia: {
+    key: "Map1Andemia",
     worldPos: { x: 0, y: 0 },
-    jsonPath: "assets/maps/Map1Andemia.json",
+    jsonPath: "assets/maps/MapAndemiaTest.json",
     tilesets: anemiaTilesets,
     cameraOffsets: { x: 0, y: 43 },
   },
 
-  maptest2: {
-    key: "maptest2",
-    worldPos: { x: 1, y: 0 }, // à droite de maptest
+  // Map à droite
+  Map2Andemia: {
+    key: "Map2Andemia",
+    worldPos: { x: 1, y: 0 },
     jsonPath: "assets/maps/Map2Andemia.json",
+    tilesets: anemiaTilesets,
+    cameraOffsets: { x: 0, y: 43 },
+  },
+
+  // Map du bas
+  Map3Andemia: {
+    key: "Map3Andemia",
+    worldPos: { x: 0, y:-1 }, // au-dessous de Map1Andemia
+    jsonPath: "assets/maps/Map3andemia.json",
     tilesets: anemiaTilesets,
     cameraOffsets: { x: 0, y: 43 },
   },
 };
 
-export const defaultMapKey = "maptest";
+export const defaultMapKey = "Map1Andemia";

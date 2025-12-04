@@ -56,6 +56,8 @@ function computePlayableBounds(map, groundLayer) {
 
   const leftByRow = new Array(map.height).fill(null);
   const rightByRow = new Array(map.height).fill(null);
+  const topByCol = new Array(map.width).fill(null);
+  const bottomByCol = new Array(map.width).fill(null);
 
   map.forEachTile(
     (tile) => {
@@ -75,6 +77,12 @@ function computePlayableBounds(map, groundLayer) {
       if (rightByRow[y] === null || x > rightByRow[y]) {
         rightByRow[y] = x;
       }
+      if (topByCol[x] === null || y < topByCol[x]) {
+        topByCol[x] = y;
+      }
+      if (bottomByCol[x] === null || y > bottomByCol[x]) {
+        bottomByCol[x] = y;
+      }
     },
     undefined,
     0,
@@ -85,15 +93,77 @@ function computePlayableBounds(map, groundLayer) {
   );
 
   if (!found) return null;
-  return { minX, maxX, minY, maxY, leftByRow, rightByRow };
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    leftByRow,
+    rightByRow,
+    topByCol,
+    bottomByCol,
+  };
 }
 
-// Construit les tuiles de sortie pour chaque direction (pour l'instant: droite uniquement).
-export function buildWorldExits(map, playableBounds) {
-  const exits = {};
+// Construit les tuiles de sortie pour chaque direction.
+// 1) Si un calque d'objets "exits" existe, on l'utilise (sorties définies à la main).
+// 2) Sinon, on retombe sur le calcul automatique basé sur playableBounds.
+export function buildWorldExits(map, playableBounds, groundLayer) {
+  const exits = { up: [], down: [], left: [], right: [] };
+
+  // --- 1) Mode "manuel" : calque d'objets "exits" dans Tiled ---
+  const objectLayer = map.getObjectLayer("exits") || map.getObjectLayer("Exits");
+  if (objectLayer && Array.isArray(objectLayer.objects) && groundLayer) {
+    const worldToTile = createCalibratedWorldToTile(map, groundLayer);
+
+    const getProp = (obj, name) => {
+      if (!obj.properties) return undefined;
+      const p = obj.properties.find((prop) => prop.name === name);
+      return p ? p.value : undefined;
+    };
+
+    objectLayer.objects.forEach((obj) => {
+      const rawDir =
+        getProp(obj, "direction") ||
+        getProp(obj, "dir") ||
+        obj.type ||
+        obj.name;
+
+      if (!rawDir) return;
+      const dir = String(rawDir).toLowerCase();
+      if (!["up", "down", "left", "right"].includes(dir)) return;
+
+      // 1) Si tileX / tileY sont définis dans Tiled, on les utilise directement.
+      const txProp = getProp(obj, "tileX");
+      const tyProp = getProp(obj, "tileY");
+
+      let tx;
+      let ty;
+
+      if (typeof txProp === "number" && typeof tyProp === "number") {
+        tx = txProp;
+        ty = tyProp;
+      } else {
+        // 2) Sinon on déduit la tuile à partir de la position monde de l'objet.
+        const tilePos = worldToTile(obj.x, obj.y - obj.height / 2);
+        if (!tilePos) return;
+        tx = tilePos.x;
+        ty = tilePos.y;
+      }
+
+      exits[dir].push({ x: tx, y: ty });
+    });
+
+    return exits;
+  }
+
+  // --- 2) Fallback : ancien calcul automatique ---
   if (!playableBounds) return exits;
 
-  const { rightByRow, maxX } = playableBounds;
+  const { rightByRow, maxX, topByCol, minY, bottomByCol, maxY } =
+    playableBounds;
+
+  // Sorties vers la droite
   const right = [];
 
   for (let y = 0; y < map.height; y++) {
@@ -113,8 +183,176 @@ export function buildWorldExits(map, playableBounds) {
     }
   }
 
+  // Sorties vers le haut
+  const up = [];
+  // Petit décalage pour tenir compte du fait que
+  // seule la zone centrale de la map iso est jouable.
+  // Ajuste cette valeur si nécessaire (en nombre de tuiles).
+  const TOP_MARGIN = 2;
+  for (let x = 0; x < map.width; x++) {
+    let y = minY;
+    if (topByCol && typeof topByCol[x] === "number") {
+      y = topByCol[x];
+    }
+    y += TOP_MARGIN;
+    if (y < minY) y = minY;
+    if (y > maxY) y = maxY;
+
+    if (typeof y === "number") {
+      let exitY = y - 1;
+      if (exitY < 0) {
+        exitY = y;
+      }
+      up.push({ x, y: exitY });
+    }
+  }
+
+  // Sorties vers le bas
+  const down = [];
+  for (let x = 0; x < map.width; x++) {
+    let y = maxY;
+    if (bottomByCol && typeof bottomByCol[x] === "number") {
+      y = bottomByCol[x];
+    }
+    if (typeof y === "number") {
+      let exitY = y + 1;
+      if (exitY >= map.height) {
+        exitY = y;
+      }
+      down.push({ x, y: exitY });
+    }
+  }
+
   exits.right = right;
+  exits.up = up;
+  exits.down = down;
   return exits;
+}
+
+// Conversion monde->tuiles "calibrée" pour l'isométrique.
+// Dupliquée depuis playerMovement pour rester locale au module de monde.
+function createCalibratedWorldToTile(map, groundLayer) {
+  const testTileX = 0;
+  const testTileY = 0;
+
+  const worldPos = map.tileToWorldXY(
+    testTileX,
+    testTileY,
+    undefined,
+    undefined,
+    groundLayer
+  );
+  const centerX = worldPos.x + map.tileWidth / 2;
+  const centerY = worldPos.y + map.tileHeight / 2;
+
+  const tF = groundLayer.worldToTileXY(centerX, centerY, false);
+
+  let offsetX = 0;
+  let offsetY = 0;
+  if (tF) {
+    offsetX = tF.x - testTileX - 0.5;
+    offsetY = tF.y - testTileY - 0.5;
+  }
+
+  return function worldToTile(worldX, worldY) {
+    const raw = groundLayer.worldToTileXY(worldX, worldY, false);
+    if (!raw) return null;
+
+    return {
+      x: Math.floor(raw.x - offsetX),
+      y: Math.floor(raw.y - offsetY),
+    };
+  };
+}
+
+// Calcule, pour la map isométrique actuelle, les vecteurs de déplacement
+// "écran" (haut/bas/gauche/droite) exprimés en delta de tuiles.
+function computeScreenDirectionVectors(map, groundLayer) {
+  const worldToTile = createCalibratedWorldToTile(map, groundLayer);
+
+  const centerTileX = Math.floor(map.width / 2);
+  const centerTileY = Math.floor(map.height / 2);
+  const centerWorld = map.tileToWorldXY(
+    centerTileX,
+    centerTileY,
+    undefined,
+    undefined,
+    groundLayer
+  );
+
+  const baseX = centerWorld.x + map.tileWidth / 2;
+  const baseY = centerWorld.y + map.tileHeight / 2;
+
+  const stepX = map.tileWidth;
+  const stepY = map.tileHeight;
+
+  const tileCenter = worldToTile(baseX, baseY);
+  const upTile = worldToTile(baseX, baseY - stepY);
+  const downTile = worldToTile(baseX, baseY + stepY);
+  const leftTile = worldToTile(baseX - stepX, baseY);
+  const rightTile = worldToTile(baseX + stepX, baseY);
+
+  function diff(a, b) {
+    if (!a || !b) return { dx: 0, dy: 0 };
+    return { dx: a.x - b.x, dy: a.y - b.y };
+  }
+
+  return {
+    up: diff(upTile, tileCenter),
+    down: diff(downTile, tileCenter),
+    left: diff(leftTile, tileCenter),
+    right: diff(rightTile, tileCenter),
+  };
+}
+
+// Trouve la dernière tuile "jouable" en partant de la tuile du joueur
+// et en avançant dans une direction d'écran (up/right/left/down).
+export function findExitTileForDirection(scene, direction) {
+  if (
+    !scene ||
+    !scene.map ||
+    !scene.groundLayer ||
+    !scene.playableBounds ||
+    !scene.player
+  ) {
+    return null;
+  }
+
+  const dirs = scene.screenDirVectors;
+  if (!dirs) return null;
+
+  const vec = dirs[direction];
+  if (!vec || (!vec.dx && !vec.dy)) return null;
+
+  const { dx, dy } = vec;
+  const { minX, maxX, minY, maxY } = scene.playableBounds;
+
+  let tx = scene.player.currentTileX;
+  let ty = scene.player.currentTileY;
+  if (typeof tx !== "number" || typeof ty !== "number") return null;
+
+  let lastX = tx;
+  let lastY = ty;
+  let safety = scene.map.width + scene.map.height + 10;
+
+  while (safety-- > 0) {
+    const nextX = tx + dx;
+    const nextY = ty + dy;
+
+    if (nextX < minX || nextX > maxX || nextY < minY || nextY > maxY) {
+      break;
+    }
+
+    tx = nextX;
+    ty = nextY;
+    lastX = tx;
+    lastY = ty;
+  }
+
+  if (lastX === scene.player.currentTileX && lastY === scene.player.currentTileY)
+    return null;
+
+  return { x: lastX, y: lastY };
 }
 
 // (Ré)initialise les bornes jouables et les tuiles de sortie pour une scène déjà
@@ -124,7 +362,15 @@ export function initWorldExitsForScene(scene) {
 
   const playableBounds = computePlayableBounds(scene.map, scene.groundLayer);
   scene.playableBounds = playableBounds;
-  scene.worldExits = buildWorldExits(scene.map, playableBounds);
+  scene.worldExits = buildWorldExits(
+    scene.map,
+    playableBounds,
+    scene.groundLayer
+  );
+  scene.screenDirVectors = computeScreenDirectionVectors(
+    scene.map,
+    scene.groundLayer
+  );
 
   scene.exitDirection = null;
   scene.exitTargetTile = null;
