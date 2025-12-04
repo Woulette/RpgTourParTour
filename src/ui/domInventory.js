@@ -14,6 +14,7 @@ export function initDomInventory(player) {
 
   const nameEl = document.getElementById("inventory-item-name");
   const typeEl = document.getElementById("inventory-item-type");
+  const bonusEl = document.getElementById("inventory-item-bonus");
   const descEl = document.getElementById("inventory-item-desc");
   let iconEl = document.getElementById("inventory-item-icon");
 
@@ -47,6 +48,7 @@ export function initDomInventory(player) {
     }
     if (nameEl) nameEl.textContent = "-";
     if (typeEl) typeEl.textContent = "";
+    if (bonusEl) bonusEl.textContent = "";
     if (descEl) {
       descEl.textContent = "Selectionne un objet pour voir ses details.";
     }
@@ -144,14 +146,15 @@ export function initDomInventory(player) {
 
     if (!descEl) return;
 
-    const lines = [];
+    const bonusLines = [];
+    const descLines = [];
 
-    // Description libre
+    // Description libre -> zone description (en bas)
     if (def && typeof def.description === "string") {
-      lines.push(def.description);
+      descLines.push(def.description);
     }
 
-    // Effets "consommables" génériques
+    // Effets "consommables" -> zone bonus
     const effect = def?.effect || {};
     const effectParts = [];
     if (typeof effect.hpPlus === "number" && effect.hpPlus !== 0) {
@@ -164,21 +167,20 @@ export function initDomInventory(player) {
       effectParts.push(`+${effect.pmPlus} PM`);
     }
     if (effectParts.length > 0) {
-      lines.push(`Effets : ${effectParts.join(", ")}`);
+      bonusLines.push(`Effets : ${effectParts.join(", ")}`);
     }
 
-    // Bonus de l'équipement (statsBonus)
+    // Bonus de l'équipement (statsBonus) -> zone bonus
     if (def && def.category === "equipement" && def.statsBonus) {
       const bonusTxt = formatBonusObject(def.statsBonus);
       if (bonusTxt) {
-        lines.push(`Bonus objet : ${bonusTxt}`);
+        bonusLines.push(`Bonus objet : ${bonusTxt}`);
       }
 
-      // Bonus de panoplie actifs
+      // Bonus de panoplie actifs -> zone bonus
       if (def.setId && player.equipment) {
         const setDef = equipmentSets[def.setId];
         if (setDef && setDef.thresholds) {
-          // Compte de pièces équipées pour cette panoplie
           let count = 0;
           for (const entry of Object.values(player.equipment)) {
             const d =
@@ -189,9 +191,7 @@ export function initDomInventory(player) {
           }
 
           const activeLines = [];
-          for (const [thStr, bonus] of Object.entries(
-            setDef.thresholds
-          )) {
+          for (const [thStr, bonus] of Object.entries(setDef.thresholds)) {
             const threshold = parseInt(thStr, 10);
             if (Number.isNaN(threshold)) continue;
             if (count >= threshold) {
@@ -203,7 +203,7 @@ export function initDomInventory(player) {
           }
 
           if (activeLines.length > 0) {
-            lines.push(
+            bonusLines.push(
               `Panoplie (${count} équipés) : ${activeLines.join(" | ")}`
             );
           }
@@ -211,10 +211,19 @@ export function initDomInventory(player) {
       }
     }
 
-    descEl.textContent =
-      lines.length > 0
-        ? lines.join(" | ")
-        : "Aucun effet particulier.";
+    // Zone bonus : effets + bonus + panoplie
+    if (bonusEl) {
+      bonusEl.textContent =
+        bonusLines.length > 0
+          ? bonusLines.join(" | ")
+          : "Aucun effet particulier.";
+    }
+
+    // Zone description : uniquement la description libre
+    if (descEl) {
+      descEl.textContent = descLines.length > 0 ? descLines.join(" ") : "";
+    }
+
   }
 
   // filtre courant : "all" | "equipement" | "consommable" | "ressource" | "quete"

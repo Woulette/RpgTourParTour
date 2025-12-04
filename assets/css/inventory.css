@@ -249,7 +249,7 @@ body.hud-inventory-open #hud-inventory-panel {
 
 /* --- Nouvelle fiche objet inventaire : nom en haut, bonus au milieu, description en bas --- */
 .inventory-detail {
-  margin-top: 0.4rem;
+  margin-top: 0rem;
   padding: 0.8rem 1rem;
   border-radius: 12px;
   border: 1px solid rgba(230, 230, 255, 0.3);
@@ -269,7 +269,7 @@ body.hud-inventory-open #hud-inventory-panel {
   column-gap: 1rem;
   row-gap: 0.3rem;
 
-  min-height: 230px;
+  min-height: 240px;
   max-height: 260px;
 }
 
@@ -294,12 +294,25 @@ body.hud-inventory-open #hud-inventory-panel {
   text-align: right;
 }
 
-/* Zone "bonus / effets" au milieu */
+/* Zone "bonus / effets" au milieu (légèrement encadrée) */
 #inventory-item-bonus {
   grid-area: bonus;
-  margin: 0;
+  margin: 0.35rem 0 0.1rem 0;
+  padding: 0.5rem 0.8rem;
+  width: 100%;
+  box-sizing: border-box;
+
   font-size: clamp(11px, 1.1vw, 13px);
   line-height: 1.35;
+
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(0, 0, 0, 0.25);
+
+  /* zone à hauteur contrôlée, scroll interne si beaucoup de bonus */
+  min-height: 110px;
+  max-height: 70px;
+  overflow-y: auto;
 }
 
 /* Description séparée en bas, avec scroll si elle est longue */
