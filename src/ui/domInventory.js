@@ -18,6 +18,49 @@ export function initDomInventory(player) {
   const descEl = document.getElementById("inventory-item-desc");
   let iconEl = document.getElementById("inventory-item-icon");
 
+  // Sous‑composants pour l'encadré de bonus : onglets Objet / Panoplie + texte
+  let bonusTextEl = null;
+  let bonusMode = "object"; // "object" | "set"
+  let lastObjectBonusText = "";
+  let lastSetBonusText = "";
+
+  if (bonusEl) {
+    bonusEl.innerHTML = `
+      <div class="inventory-bonus-tabs">
+        <button type="button"
+                class="inventory-bonus-tab inventory-bonus-tab-active"
+                data-mode="object">
+          Objet
+        </button>
+        <button type="button"
+                class="inventory-bonus-tab"
+                data-mode="set">
+          Panoplie
+        </button>
+      </div>
+      <div class="inventory-bonus-text"></div>
+    `;
+
+    bonusTextEl = bonusEl.querySelector(".inventory-bonus-text");
+
+    const tabs = bonusEl.querySelectorAll(".inventory-bonus-tab");
+    tabs.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const mode = btn.getAttribute("data-mode") || "object";
+        bonusMode = mode;
+
+        tabs.forEach((b) =>
+          b.classList.toggle(
+            "inventory-bonus-tab-active",
+            b === btn
+          )
+        );
+
+        applyBonusText();
+      });
+    });
+  }
+
   // Icône de détail créée dynamiquement si absente du HTML
   if (!iconEl && panel) {
     const detail = panel.querySelector(".inventory-detail");
@@ -32,6 +75,19 @@ export function initDomInventory(player) {
   if (!invButton || !panel || !grid || !player) return;
 
   const equipSlots = panel.querySelectorAll(".equip-slot");
+
+  // Applique le texte de bonus courant dans l'encadré, en HTML coloré
+  function applyBonusText() {
+    if (!bonusTextEl) return;
+
+    if (bonusMode === "set") {
+      bonusTextEl.innerHTML =
+        lastSetBonusText || "Aucun bonus de panoplie actif.";
+    } else {
+      bonusTextEl.innerHTML =
+        lastObjectBonusText || "Aucun effet particulier.";
+    }
+  }
 
   function updateGoldDisplay() {
     if (!goldEl) return;
@@ -48,7 +104,9 @@ export function initDomInventory(player) {
     }
     if (nameEl) nameEl.textContent = "-";
     if (typeEl) typeEl.textContent = "";
-    if (bonusEl) bonusEl.textContent = "";
+    lastObjectBonusText = "";
+    lastSetBonusText = "";
+    applyBonusText();
     if (descEl) {
       descEl.textContent = "Selectionne un objet pour voir ses details.";
     }
@@ -211,12 +269,48 @@ export function initDomInventory(player) {
       }
     }
 
-    // Zone bonus : effets + bonus + panoplie
-    if (bonusEl) {
-      bonusEl.textContent =
-        bonusLines.length > 0
-          ? bonusLines.join(" | ")
-          : "Aucun effet particulier.";
+    // Zone bonus : effets + bonus d'objet / onglets Objet / Panoplie
+    if (bonusTextEl) {
+      const objectLines = bonusLines.filter(
+        (line) => !line.startsWith("Panoplie")
+      );
+      const setLines = bonusLines.filter((line) =>
+        line.startsWith("Panoplie")
+      );
+
+      // Ajoute de la couleur / structure aux libellés de statistiques
+      function decorateBonusHtml(text) {
+        if (!text) return "";
+        let html = text;
+
+        const patterns = [
+          { label: "Force", cls: "inventory-bonus-stat-force" },
+          { label: "Intelligence", cls: "inventory-bonus-stat-intel" },
+          { label: "Agilit\u00e9", cls: "inventory-bonus-stat-agilite" },
+          { label: "Chance", cls: "inventory-bonus-stat-chance" },
+          { label: "Vitalit\u00e9", cls: "inventory-bonus-stat-vitalite" },
+          { label: "Initiative", cls: "inventory-bonus-stat-init" },
+          { label: "PV", cls: "inventory-bonus-stat-hp" },
+          { label: "PA", cls: "inventory-bonus-stat-pa" },
+          { label: "PM", cls: "inventory-bonus-stat-pm" },
+        ];
+
+        patterns.forEach(({ label, cls }) => {
+          const re = new RegExp(`([+\\-]\\d+\\s${label})`, "g");
+          html = html.replace(
+            re,
+            `<span class="inventory-bonus-stat ${cls}">$1</span>`
+          );
+        });
+
+        // Légère séparation visuelle entre stats
+        html = html.replace(/,\s*/g, " &nbsp;&nbsp;");
+        return html;
+      }
+
+      lastObjectBonusText = decorateBonusHtml(objectLines.join(" | "));
+      lastSetBonusText = decorateBonusHtml(setLines.join(" | "));
+      applyBonusText();
     }
 
     // Zone description : uniquement la description libre

@@ -315,6 +315,53 @@ body.hud-inventory-open #hud-inventory-panel {
   overflow-y: auto;
 }
 
+/* Style des stats dans les bonus (petits tags colorés) */
+.inventory-bonus-stat {
+  display: inline-block;
+  margin-right: 0.45rem;
+  margin-top: 0.2rem;
+  padding: 0 0.25rem;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.inventory-bonus-stat-force {
+  color: #ffb347;
+}
+
+.inventory-bonus-stat-intel {
+  color: #7fd0ff;
+}
+
+.inventory-bonus-stat-agilite {
+  color: #7dff7a;
+}
+
+.inventory-bonus-stat-chance {
+  color: #bba9ff;
+}
+
+.inventory-bonus-stat-vitalite,
+.inventory-bonus-stat-hp {
+  color: #ff6b6b;
+}
+
+.inventory-bonus-stat-pa {
+  color: #ffd93b;
+}
+
+.inventory-bonus-stat-pm {
+  color: #6bffb8;
+}
+
+.inventory-bonus-stat-init {
+  color: #ff9ce6;
+}
+
+.inventory-bonus-stat-generic {
+  color: #e0e0e0;
+}
+
 /* Description séparée en bas, avec scroll si elle est longue */
 #inventory-item-desc {
   grid-area: desc;
@@ -341,6 +388,33 @@ body.hud-inventory-open #hud-inventory-panel {
   align-self: flex-start;
   margin-top: 42px; /* tu peux augmenter si besoin */
 
+}
+
+/* Onglets Objet / Panoplie dans l'encadré des bonus */
+.inventory-bonus-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.inventory-bonus-tab {
+  flex: 0 0 auto;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.4);
+  color: #f5f7ff;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.inventory-bonus-tab-active {
+  background: #f5f7ff;
+  color: #081428;
+}
+
+.inventory-bonus-text {
+  flex: 1 1 auto;
 }
 
 /* --- Surcharge : cadre fixe pour la zone de description --- */
