@@ -1,4 +1,7 @@
 import { harvestTree } from "./harvest.js";
+import { blockTile, isTileBlocked } from "../../collision/collisionGrid.js";
+import { findPathForPlayer } from "../../entities/movement/pathfinding.js";
+import { movePlayerAlongPath } from "../../entities/movement/runtime.js";
 
 const TREE_TEXTURE_KEY = "tree_chene";
 const TREE_STUMP_TEXTURE_KEY = "tree_chene_stump";
@@ -14,6 +17,109 @@ const FIXED_TREE_POSITIONS_BY_MAP = {
     { tileX: 26, tileY: 18 },
   ],
 };
+
+function showHarvestFeedback(scene, node, result) {
+  if (!scene || !result) return;
+
+  const baseX = node.x;
+  const baseY = node.y - 40;
+
+  const style = {
+    fontFamily: "system-ui, sans-serif",
+    fontSize: "14px",
+    color: "#f5f7ff",
+    stroke: "#000000",
+    strokeThickness: 3,
+  };
+
+  if (result.gainedXp && result.gainedXp > 0) {
+    const txtXp = scene.add.text(
+      baseX,
+      baseY,
+      `+${result.gainedXp} XP`,
+      style
+    );
+    txtXp.setOrigin(0.5, 1);
+    txtXp.setDepth(node.y + 10);
+
+    if (scene.hudCamera) {
+      scene.hudCamera.ignore(txtXp);
+    }
+
+    scene.tweens.add({
+      targets: txtXp,
+      y: baseY - 30,
+      alpha: 0,
+      duration: 1900,
+      ease: "Cubic.easeOut",
+      onComplete: () => {
+        txtXp.destroy();
+      },
+    });
+  }
+
+  if (result.gainedItems && result.gainedItems > 0) {
+    scene.time.delayedCall(600, () => {
+      const txtItems = scene.add.text(
+        baseX,
+        baseY,
+        `+${result.gainedItems} bois`,
+        style
+      );
+      txtItems.setOrigin(0.5, 1);
+      txtItems.setDepth(node.y + 10);
+
+      if (scene.hudCamera) {
+        scene.hudCamera.ignore(txtItems);
+      }
+
+      scene.tweens.add({
+        targets: txtItems,
+        y: baseY - 30,
+        alpha: 0,
+        duration: 1900,
+        ease: "Cubic.easeOut",
+        onComplete: () => {
+          txtItems.destroy();
+        },
+      });
+    });
+  }
+}
+
+function findAdjacentTileNearNode(scene, map, node, player) {
+  if (!map) return null;
+
+  const { tileX, tileY } = node;
+
+  const candidates = [
+    { x: tileX + 1, y: tileY },
+    { x: tileX - 1, y: tileY },
+    { x: tileX, y: tileY + 1 },
+    { x: tileX, y: tileY - 1 },
+  ];
+
+  const insideMap = (t) =>
+    t.x >= 0 && t.x < map.width && t.y >= 0 && t.y < map.height;
+
+  const free = candidates.filter(
+    (t) => insideMap(t) && !isTileBlocked(scene, t.x, t.y)
+  );
+  if (free.length === 0) return null;
+
+  const px =
+    typeof player.currentTileX === "number" ? player.currentTileX : tileX;
+  const py =
+    typeof player.currentTileY === "number" ? player.currentTileY : tileY;
+
+  free.sort((a, b) => {
+    const da = (a.x - px) * (a.x - px) + (a.y - py) * (a.y - py);
+    const db = (b.x - px) * (b.x - px) + (b.y - py) * (b.y - py);
+    return da - db;
+  });
+
+  return free[0];
+}
 
 /**
  * Spawn de quelques arbres de test pour le métier bûcheron.
@@ -90,23 +196,30 @@ export function spawnTestTrees(scene, map, player, mapKey) {
       }
     });
 
-    treeSprite.on("pointerdown", () => {
+    treeSprite.on("pointerdown", (pointer, localX, localY, event) => {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
       if (node.harvested || node.isHarvesting) return;
 
       const maxDistSq = 80 * 80;
 
       const startCut = () => {
         node.isHarvesting = true;
+        player.isHarvestingTree = true;
 
         if (scene.time && scene.time.delayedCall) {
           scene.time.delayedCall(CUT_DURATION_MS, () => {
             if (!scene.scene || !scene.scene.isActive() || node.harvested) {
               node.isHarvesting = false;
+              player.isHarvestingTree = false;
               return;
             }
 
             const result = harvestTree(scene, player, node);
             node.isHarvesting = false;
+            player.isHarvestingTree = false;
 
             if (!result.success) return;
 
@@ -116,6 +229,8 @@ export function spawnTestTrees(scene, map, player, mapKey) {
               node.hoverHighlight.destroy();
               node.hoverHighlight = null;
             }
+
+            showHarvestFeedback(scene, node, result);
 
             // Change visuellement l'arbre en souche si la texture existe,
             // sinon on garde le visuel "fané".
@@ -162,39 +277,72 @@ export function spawnTestTrees(scene, map, player, mapKey) {
       const dy = player.y - node.y;
       const distSq = dx * dx + dy * dy;
 
-      // Déjà à portée : on commence à couper immédiatement
-      if (distSq <= maxDistSq) {
+      const isAdjacentNow =
+        typeof player.currentTileX === "number" &&
+        typeof player.currentTileY === "number" &&
+        Math.abs(player.currentTileX - tileX) +
+          Math.abs(player.currentTileY - tileY) ===
+          1;
+
+      // Déjà à portée (case adjacente) : on commence à couper immédiatement
+      if (isAdjacentNow || distSq <= maxDistSq * 0.25) {
+        if (player.currentMoveTween) {
+          player.currentMoveTween.stop();
+          player.currentMoveTween = null;
+          player.isMoving = false;
+        }
         startCut();
         return;
       }
 
-      // Trop loin : on attend que le joueur se rapproche (son clic déclenche déjà le déplacement)
-      if (scene.time && scene.time.addEvent) {
-        const checkEvent = scene.time.addEvent({
-          delay: 150,
-          loop: true,
-          callback: () => {
-            if (!scene.scene || !scene.scene.isActive() || node.harvested) {
-              node.isHarvesting = false;
-              checkEvent.remove(false);
-              return;
-            }
-
-            const cdx = player.x - node.x;
-            const cdy = player.y - node.y;
-            const cdistSq = cdx * cdx + cdy * cdy;
-
-            if (cdistSq <= maxDistSq) {
-              checkEvent.remove(false);
-              startCut();
-            }
-          },
-        });
+      const targetTile = findAdjacentTileNearNode(scene, map, node, player);
+      if (!targetTile) {
+        return;
       }
+
+      const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
+      const path = findPathForPlayer(
+        scene,
+        map,
+        player.currentTileX,
+        player.currentTileY,
+        targetTile.x,
+        targetTile.y,
+        allowDiagonal
+      );
+
+      if (!path || path.length === 0) {
+        return;
+      }
+
+      movePlayerAlongPath(
+        scene,
+        player,
+        map,
+        scene.groundLayer || map.layers?.[0],
+        path,
+        0,
+        () => {
+          const isAdjacent =
+            typeof player.currentTileX === "number" &&
+            typeof player.currentTileY === "number" &&
+            Math.abs(player.currentTileX - tileX) +
+              Math.abs(player.currentTileY - tileY) ===
+              1;
+
+          if (isAdjacent) {
+            startCut();
+          }
+        }
+      );
     });
 
     nodes.push(node);
+
+    // Enregistre cette tuile comme bloquée pour le déplacement du joueur
+    blockTile(scene, tileX, tileY);
   });
 
   scene.bucheronNodes = nodes;
 }
+

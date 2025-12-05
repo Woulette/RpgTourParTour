@@ -14,6 +14,7 @@ import {
 import { findExitTileForDirection } from "../maps/world.js";
 import { findPathForPlayer } from "./movement/pathfinding.js";
 import { movePlayerAlongPath } from "./movement/runtime.js";
+import { isTileBlocked } from "../collision/collisionGrid.js";
 
 /**
  * Crée une fonction worldToTile "calibrée" qui compense
@@ -177,6 +178,11 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
       return;
     }
 
+    // Pas de nouveau déplacement pendant la récolte d'un arbre.
+    if (player.isHarvestingTree) {
+      return;
+    }
+
     // Stop mouvement en cours
     if (player.currentMoveTween) {
       player.currentMoveTween.stop();
@@ -222,6 +228,11 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     }
 
     if (!isValidTile(map, tileX, tileY)) return;
+
+    // Collision logique : on ne se déplace pas sur une tuile bloquée
+    if (isTileBlocked(scene, tileX, tileY)) {
+      return;
+    }
 
     const state = scene.combatState;
 
@@ -490,3 +501,4 @@ function maybeStartPendingCombat(scene, player, map, groundLayer) {
 function isValidTile(map, tileX, tileY) {
   return tileX >= 0 && tileX < map.width && tileY >= 0 && tileY < map.height;
 }
+

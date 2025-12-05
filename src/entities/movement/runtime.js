@@ -1,6 +1,7 @@
 import { PLAYER_SPEED } from "../../config/constants.js";
 import { applyMoveCost } from "../../core/combat.js";
 import { maybeHandleMapExit } from "../../maps/world.js";
+import { isTileBlocked } from "../../collision/collisionGrid.js";
 
 // Détermine le nom de direction d'animation à partir d'un vecteur.
 function getDirectionName(dx, dy) {
@@ -94,6 +95,15 @@ export function movePlayerAlongPath(
   player.isMoving = true;
   const nextTile = path.shift();
 
+  // Collision logique : on ne se déplace jamais sur une tuile bloquée
+  if (isTileBlocked(scene, nextTile.x, nextTile.y)) {
+    player.isMoving = false;
+    if (typeof onCompleteAll === "function") {
+      onCompleteAll();
+    }
+    return;
+  }
+
   const worldPos = map.tileToWorldXY(
     nextTile.x,
     nextTile.y,
@@ -171,4 +181,3 @@ export function movePlayerAlongPath(
     },
   });
 }
-

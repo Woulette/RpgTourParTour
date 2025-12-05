@@ -5,6 +5,8 @@
 import { addItem } from "../../inventory/inventoryCore.js";
 import { bucheronResources } from "./resources.js";
 
+const BUCHERON_XP_PER_HARVEST = 10;
+
 /**
  * Vérifie rapidement si le joueur peut interagir avec un node de bûcheron.
  * (Portée, état déjà coupé, etc. à compléter plus tard.)
@@ -49,10 +51,8 @@ export function harvestTree(scene, player, node) {
   }
 
   const resourceDef = bucheronResources[node.resourceId];
-  const amount =
-    typeof node.amount === "number" && !Number.isNaN(node.amount)
-      ? node.amount
-      : 1;
+  // Quantité de bois aléatoire entre 1 et 3 à chaque récolte
+  const amount = Phaser.Math.Between(1, 3);
 
   let gainedItems = 0;
   let gainedXp = 0;
@@ -65,14 +65,9 @@ export function harvestTree(scene, player, node) {
     );
     gainedItems = amount - remaining;
 
-    const xpPerUnit =
-      typeof resourceDef.xpPerUnit === "number"
-        ? resourceDef.xpPerUnit
-        : 0;
-    gainedXp = xpPerUnit * gainedItems;
-    if (gainedXp > 0) {
-      addBucheronXp(player, gainedXp);
-    }
+    // XP fixe par récolte, quelle que soit la quantité
+    gainedXp = BUCHERON_XP_PER_HARVEST;
+    addBucheronXp(player, gainedXp);
   }
 
   node.harvested = true;

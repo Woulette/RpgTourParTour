@@ -1,7 +1,9 @@
 // Fonctions de pathfinding pour le joueur (combat + hors combat).
 
-// Chemin simple "en ligne" (ancienne logique), utilisé hors combat
-// ou comme fallback. Ne gère pas les obstacles.
+import { isTileBlocked } from "../../collision/collisionGrid.js";
+
+// Chemin simple "en ligne" (ancienne logique), utilis��� hors combat
+// ou comme fallback. Ne g���re pas les obstacles.
 export function calculatePath(
   startX,
   startY,
@@ -11,7 +13,7 @@ export function calculatePath(
 ) {
   const path = [];
 
-  // Sécurité : si les coordonnées ne sont pas valides, on renvoie un chemin vide.
+  // S���curit��� : si les coordonn���es ne sont pas valides, on renvoie un chemin vide.
   if (
     !Number.isFinite(startX) ||
     !Number.isFinite(startY) ||
@@ -51,9 +53,10 @@ export function calculatePath(
   return path;
 }
 
-// Pathfinding pour le joueur : en combat, on évite les cases occupées
+// Pathfinding pour le joueur : en combat, on ���vite les cases occup���es
 // par des monstres (on ne traverse pas un ennemi). Hors combat, on
-// conserve le chemin simple existant.
+// conserve le chemin simple existant, mais on peut consulter la grille
+// de collision si besoin plus tard.
 export function findPathForPlayer(
   scene,
   map,
@@ -63,14 +66,10 @@ export function findPathForPlayer(
   endY,
   allowDiagonal = true
 ) {
-  const state = scene.combatState;
-
-  // Hors combat : on garde l'ancien comportement (ligne "droite").
-  if (!state || !state.enCours) {
-    return calculatePath(startX, startY, endX, endY, allowDiagonal);
-  }
-
   if (!map) return [];
+
+  const state = scene.combatState;
+  const inCombat = !!(state && state.enCours);
 
   const width = map.width;
   const height = map.height;
@@ -92,10 +91,12 @@ export function findPathForPlayer(
 
   const dirs = allowDiagonal ? dirs8 : dirs4;
 
-  // Rayon maximum à explorer autour de la position de départ,
-  // basé sur les PM du joueur (avec une petite marge).
-  const maxStepsFromStart =
-    (state.pmRestants ?? state.pmBaseJoueur ?? 3) + 2;
+  // Rayon maximum à explorer autour de la position de départ.
+  // En combat : basé sur les PM du joueur (avec une petite marge).
+  // Hors combat : suffisamment grand pour couvrir une bonne partie de la carte.
+  const maxStepsFromStart = inCombat
+    ? (state.pmRestants ?? state.pmBaseJoueur ?? 3) + 2
+    : width + height;
 
   const startKey = `${startX},${startY}`;
   const visited = new Set([startKey]);
@@ -110,19 +111,32 @@ export function findPathForPlayer(
 
   const isBlocked = (x, y) => {
     // En combat : un monstre sur la case = obstacle.
-    const monstersList =
-      (scene.combatMonsters && Array.isArray(scene.combatMonsters)
-        ? scene.combatMonsters
-        : scene.monsters || []);
+    if (inCombat) {
+      const monstersList =
+        (scene.combatMonsters && Array.isArray(scene.combatMonsters)
+          ? scene.combatMonsters
+          : scene.monsters || []);
 
-    return monstersList.some(
-      (m) =>
-        m &&
-        typeof m.tileX === "number" &&
-        typeof m.tileY === "number" &&
-        m.tileX === x &&
-        m.tileY === y
-    );
+      if (
+        monstersList.some(
+          (m) =>
+            m &&
+            typeof m.tileX === "number" &&
+            typeof m.tileY === "number" &&
+            m.tileX === x &&
+            m.tileY === y
+        )
+      ) {
+        return true;
+      }
+    }
+
+    // Tuile logique bloquée (arbres, murs, etc.)
+    if (isTileBlocked(scene, x, y)) {
+      return true;
+    }
+
+    return false;
   };
 
   while (queue.length > 0) {
@@ -139,14 +153,14 @@ export function findPathForPlayer(
 
       if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
 
-      // On ne regarde que dans un rayon raisonnable autour du départ.
+      // On ne regarde que dans un rayon raisonnable autour du d���part.
       const distFromStart = Math.abs(nx - startX) + Math.abs(ny - startY);
       if (distFromStart > maxStepsFromStart) continue;
 
       const key = `${nx},${ny}`;
       if (visited.has(key)) continue;
 
-      // On ne traverse pas de monstre : case bloquée.
+      // On ne traverse pas les obstacles
       if (isBlocked(nx, ny)) continue;
 
       visited.add(key);
@@ -159,7 +173,6 @@ export function findPathForPlayer(
     }
   }
 
-  // Aucun chemin trouvé
+  // Aucun chemin trouv���
   return [];
 }
-

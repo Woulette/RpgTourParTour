@@ -18,7 +18,7 @@ import { initDomCombat } from "./ui/domCombat.js";
 import { initDomSpells } from "./ui/domSpells.js";
 import { initDomCombatResult } from "./ui/domCombatResult.js";
 import { initDomInventory } from "./ui/domInventory.js";
-import { initDomMetiers } from "./ui/domMetiers.js";
+import { initDomMetiers } from "./ui/domMetiersBucheron.js";
 import { preloadMonsters, spawnInitialMonsters } from "./monsters/index.js";
 import { defaultClassId } from "./config/classes.js";
 import { attachCombatPreview } from "./ui/combatPreview.js";
@@ -38,6 +38,10 @@ class MainScene extends Phaser.Scene {
 
     this.load.image("player", "assets/rotations/south-east.png");
     this.load.image("tree_chene", "assets/metier/bucheron/Chene.png");
+    this.load.image(
+      "tree_chene_stump",
+      "assets/metier/bucheron/SoucheChene.png"
+    );
 
     const animDirs = [
       "south",

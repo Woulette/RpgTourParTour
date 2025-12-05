@@ -4,15 +4,15 @@ export function initDomMetiers(player) {
 
   if (!buttonEl || !panelEl || !player) return;
 
-  // DǸfinition des mǸtiers disponibles et de leurs ressources
+  // Définition des métiers disponibles et de leurs ressources
   const METIERS_DEFS = {
     bucheron: {
       id: "bucheron",
       name: "Bucheron",
       resources: [
         {
-          id: "arbre-debutant",
-          name: "Arbre dǸbutant",
+          id: "Chene",
+          name: "Bois De Chene",
           level: 1,
           quantityMin: 1,
           quantityMax: 3,
@@ -20,7 +20,7 @@ export function initDomMetiers(player) {
         },
         {
           id: "chene-solide",
-          name: "ChǸne solide",
+          name: "Chêne solide",
           level: 10,
           quantityMin: 1,
           quantityMax: 4,
@@ -28,53 +28,9 @@ export function initDomMetiers(player) {
         },
       ],
     },
-    mineur: {
-      id: "mineur",
-      name: "Mineur",
-      resources: [
-        {
-          id: "fer-brut",
-          name: "Minerai de fer",
-          level: 1,
-          quantityMin: 1,
-          quantityMax: 3,
-          xpGain: 10,
-        },
-        {
-          id: "cuivre",
-          name: "Minerai de cuivre",
-          level: 15,
-          quantityMin: 1,
-          quantityMax: 4,
-          xpGain: 30,
-        },
-      ],
-    },
-    paysan: {
-      id: "paysan",
-      name: "Paysan",
-      resources: [
-        {
-          id: "ble-simple",
-          name: "BlǸ simple",
-          level: 1,
-          quantityMin: 1,
-          quantityMax: 5,
-          xpGain: 8,
-        },
-        {
-          id: "orge",
-          name: "Orge",
-          level: 10,
-          quantityMin: 1,
-          quantityMax: 5,
-          xpGain: 18,
-        },
-      ],
-    },
   };
 
-  // S'assure qu'on a une structure de base pour les mǸtiers du joueur
+  // S'assure qu'on a une structure de base pour les métiers du joueur
   if (!player.metiers) {
     player.metiers = {};
   }
@@ -85,7 +41,7 @@ export function initDomMetiers(player) {
     }
   });
 
-  // Construction de la nouvelle structure HTML dans le panneau (liste + dǸtails)
+  // Construction de la nouvelle structure HTML dans le panneau (liste + détails)
   const existingBody = panelEl.querySelector(".metiers-body");
   const bodyEl =
     existingBody ||
@@ -106,7 +62,7 @@ export function initDomMetiers(player) {
     listEl = document.createElement("nav");
     listEl.id = "metiers-list";
     listEl.className = "metiers-list";
-    listEl.setAttribute("aria-label", "Liste des mǸtiers");
+    listEl.setAttribute("aria-label", "Liste des métiers");
     bodyEl.appendChild(listEl);
   }
 
@@ -117,7 +73,7 @@ export function initDomMetiers(player) {
     detailEl.className = "metier-detail";
     detailEl.setAttribute(
       "aria-label",
-      "DǸtails du mǸtier sǸlectionnǸ"
+      "Détails du métier sélectionné"
     );
     detailEl.innerHTML = `
       <header class="metier-detail-header">
@@ -136,13 +92,13 @@ export function initDomMetiers(player) {
         </div>
       </header>
       <section class="metier-resources">
-        <h4 class="metier-resources-title">Ressources rǸcoltables</h4>
+        <h4 class="metier-resources-title">Ressources récoltables</h4>
         <table class="metier-resources-table">
           <thead>
             <tr>
               <th>Ressource</th>
               <th>Niveau</th>
-              <th>QuantitǸ</th>
+              <th>Quantité</th>
               <th>XP</th>
             </tr>
           </thead>
