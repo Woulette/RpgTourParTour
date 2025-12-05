@@ -58,7 +58,7 @@ body.hud-inventory-open #hud-inventory-panel {
   opacity: 0.95;
   white-space: nowrap;
   position: absolute;
-  right: 4px;
+  right: 8px;
   bottom: 22px;
 }
 
@@ -317,12 +317,17 @@ body.hud-inventory-open #hud-inventory-panel {
 
 /* Style des stats dans les bonus (petits tags colorés) */
 .inventory-bonus-stat {
-  display: inline-block;
-  margin-right: 0.45rem;
-  margin-top: 0.2rem;
-  padding: 0 0.25rem;
+  display: block;
+  margin: 0;
+  padding: 0 5.25rem;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 16px;
+  line-height: 0.0;
+}
+
+/* Laisse un léger espace entre "Bonus objet :" et la première stat uniquement */
+.inventory-bonus-stat:first-of-type {
+  margin-top: -0.5rem;
 }
 
 .inventory-bonus-stat-force {
@@ -393,6 +398,7 @@ body.hud-inventory-open #hud-inventory-panel {
 /* Onglets Objet / Panoplie dans l'encadré des bonus */
 .inventory-bonus-tabs {
   display: flex;
+  justify-content: flex-end;
   gap: 0.4rem;
   margin-bottom: 0.35rem;
 }
@@ -415,6 +421,7 @@ body.hud-inventory-open #hud-inventory-panel {
 
 .inventory-bonus-text {
   flex: 1 1 auto;
+  margin-top: -1.5rem;  /* remonte le bloc, mais laisse un peu d'espace sous "Bonus objet :" */
 }
 
 /* --- Surcharge : cadre fixe pour la zone de description --- */

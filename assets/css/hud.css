@@ -2,14 +2,16 @@
 #hud-root {
   position: fixed;
   inset: 0;
-  pointer-events: none; /* la souris passe au travers, sauf sur les éléments interactifs */
+  /* La souris passe au travers par défaut, sauf sur les éléments interactifs */
+  pointer-events: none;
 }
 
-/* Boutons STATS / SORTS / INV / CARTE : même style de base */
+/* Boutons STATS / SORTS / INV / CARTE / METIERS : même style de base */
 #hud-stats-button,
 #hud-spells-button,
 #hud-inventory-button,
-#hud-map-button {
+#hud-map-button,
+#hud-metiers-button {
   min-width: 80px; /* largeur commune */
   min-height: 48px;
   padding: 0.4em 0.8em;
@@ -108,6 +110,27 @@
 
 #hud-map-button:active {
   transform: translate(-330%, 1px);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Bouton métiers : encore plus à gauche du bouton CARTE */
+#hud-metiers-button {
+  position: absolute;
+  right: 0.5%;
+  bottom: 70%;
+  transform: translateX(-440%);
+
+  pointer-events: auto;
+}
+
+#hud-metiers-button:hover {
+  background: rgba(20, 40, 80, 0.95);
+  transform: translate(-440%, -1px);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+#hud-metiers-button:active {
+  transform: translate(-440%, 1px);
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
 }
 

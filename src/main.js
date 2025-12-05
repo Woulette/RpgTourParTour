@@ -18,10 +18,12 @@ import { initDomCombat } from "./ui/domCombat.js";
 import { initDomSpells } from "./ui/domSpells.js";
 import { initDomCombatResult } from "./ui/domCombatResult.js";
 import { initDomInventory } from "./ui/domInventory.js";
+import { initDomMetiers } from "./ui/domMetiers.js";
 import { preloadMonsters, spawnInitialMonsters } from "./monsters/index.js";
 import { defaultClassId } from "./config/classes.js";
 import { attachCombatPreview } from "./ui/combatPreview.js";
 import { attachMonsterTooltip } from "./ui/monsterTooltip.js";
+import { spawnTestTrees } from "./metier/bucheron/trees.js";
 
 class MainScene extends Phaser.Scene {
   constructor() {
@@ -33,7 +35,9 @@ class MainScene extends Phaser.Scene {
     Object.values(maps).forEach((mapDef) => {
       preloadMap(this, mapDef);
     });
+
     this.load.image("player", "assets/rotations/south-east.png");
+    this.load.image("tree_chene", "assets/metier/bucheron/Chene.png");
 
     const animDirs = [
       "south",
@@ -54,6 +58,7 @@ class MainScene extends Phaser.Scene {
         );
       }
     });
+
     preloadMonsters(this);
   }
 
@@ -96,6 +101,9 @@ class MainScene extends Phaser.Scene {
     // --- MONSTRES DE TEST ---
     spawnInitialMonsters(this, map, groundLayer, centerTileX, centerTileY);
 
+    // --- ARBRES DE TEST (MÉTIER BÛCHERON) ---
+    spawnTestTrees(this, map, this.player, mapDef.key);
+
     // --- GRILLE ISO (DEBUG) ---
     let grid = null;
     if (SHOW_GRID) {
@@ -134,6 +142,12 @@ class MainScene extends Phaser.Scene {
     // --- Caméras : séparer monde et HUD pour éviter le zoom sur le HUD ---
     const worldElements = [...mapLayers, this.player];
     if (grid) worldElements.push(grid);
+    if (this.bucheronNodes) {
+      this.bucheronNodes.forEach((node) => {
+        if (node.sprite) worldElements.push(node.sprite);
+      });
+    }
+
     setupCamera(this, map, startX, startY, mapDef.cameraOffsets);
     setupHudCamera(this, uiElements, worldElements);
 
@@ -158,6 +172,8 @@ class MainScene extends Phaser.Scene {
     initDomCombatResult(this, this.player);
     // Initialisation de l'inventaire (fenêtre INV)
     initDomInventory(this.player);
+    // Initialisation de la fenêtre de métiers
+    initDomMetiers(this.player);
 
     // DEBUG : touche "N" -> charge Map2Andemia avec le même centrage
     this.input.keyboard.on("keydown-N", () => {
@@ -201,4 +217,3 @@ const config = {
 };
 
 new Phaser.Game(config);
-

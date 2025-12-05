@@ -1,7 +1,7 @@
 // Fonctions de pathfinding pour le joueur (combat + hors combat).
 
-// Chemin simple "en ligne" (ancienne logique), utilis� hors combat
-// ou comme fallback. Ne g�re pas les obstacles.
+// Chemin simple "en ligne" (ancienne logique), utilisé hors combat
+// ou comme fallback. Ne gère pas les obstacles.
 export function calculatePath(
   startX,
   startY,
@@ -11,7 +11,7 @@ export function calculatePath(
 ) {
   const path = [];
 
-  // S�curit� : si les coordonn�es ne sont pas valides, on renvoie un chemin vide.
+  // Sécurité : si les coordonnées ne sont pas valides, on renvoie un chemin vide.
   if (
     !Number.isFinite(startX) ||
     !Number.isFinite(startY) ||
@@ -51,7 +51,7 @@ export function calculatePath(
   return path;
 }
 
-// Pathfinding pour le joueur : en combat, on �vite les cases occup�es
+// Pathfinding pour le joueur : en combat, on évite les cases occupées
 // par des monstres (on ne traverse pas un ennemi). Hors combat, on
 // conserve le chemin simple existant.
 export function findPathForPlayer(
@@ -92,8 +92,8 @@ export function findPathForPlayer(
 
   const dirs = allowDiagonal ? dirs8 : dirs4;
 
-  // Rayon maximum � explorer autour de la position de d�part,
-  // bas� sur les PM du joueur (avec une petite marge).
+  // Rayon maximum à explorer autour de la position de départ,
+  // basé sur les PM du joueur (avec une petite marge).
   const maxStepsFromStart =
     (state.pmRestants ?? state.pmBaseJoueur ?? 3) + 2;
 
@@ -139,14 +139,14 @@ export function findPathForPlayer(
 
       if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
 
-      // On ne regarde que dans un rayon raisonnable autour du d�part.
+      // On ne regarde que dans un rayon raisonnable autour du départ.
       const distFromStart = Math.abs(nx - startX) + Math.abs(ny - startY);
       if (distFromStart > maxStepsFromStart) continue;
 
       const key = `${nx},${ny}`;
       if (visited.has(key)) continue;
 
-      // On ne traverse pas de monstre : case bloqu�e.
+      // On ne traverse pas de monstre : case bloquée.
       if (isBlocked(nx, ny)) continue;
 
       visited.add(key);
@@ -159,7 +159,7 @@ export function findPathForPlayer(
     }
   }
 
-  // Aucun chemin trouv�
+  // Aucun chemin trouvé
   return [];
 }
 

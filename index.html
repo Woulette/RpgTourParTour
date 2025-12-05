@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="assets/css/hud.css" />
   <link rel="stylesheet" href="assets/css/hudInterface.css" />
   <link rel="stylesheet" href="assets/css/stats.css" />
+  <link rel="stylesheet" href="assets/css/metiers.css" />
   <link rel="stylesheet" href="assets/css/combat.css" />
   <link rel="stylesheet" href="assets/css/combatResult.css" />
   <link rel="stylesheet" href="assets/css/spellBook.css" />
@@ -43,6 +44,9 @@
       </button>
       <button id="hud-stats-button" aria-label="Ouvrir les statistiques">
         STATS
+      </button>
+      <button id="hud-metiers-button" aria-label="Ouvrir les métiers">
+        MÉTIERS
       </button>
 
       <!-- Mini-carte au centre du HUD -->
@@ -134,6 +138,54 @@
       </div>
     </div>
 
+    <!-- Fenêtre d'inventaire -->
+    <aside id="hud-inventory-panel" aria-label="Inventaire du personnage">
+      <header class="inventory-header">
+        <h2 class="inventory-title">Inventaire</h2>
+        <div class="inventory-filters">
+          <button class="inventory-filter-btn inventory-filter-active" data-filter="all">Tout</button>
+          <button class="inventory-filter-btn" data-filter="equipement">Equip.</button>
+          <button class="inventory-filter-btn" data-filter="consommable">Consom.</button>
+          <button class="inventory-filter-btn" data-filter="ressource">Ress.</button>
+          <button class="inventory-filter-btn" data-filter="quete">Quête</button>
+        </div>
+        <div class="inventory-gold">
+          Or : <span id="inventory-gold-value">0</span>
+        </div>
+      </header>
+
+      <div class="inventory-body">
+        <div class="inventory-left">
+          <div class="inventory-equip">
+            <div class="equip-character"></div>
+            <div class="equip-grid">
+              <div class="equip-slot" data-equip="head"></div>
+              <div class="equip-slot" data-equip="cape"></div>
+              <div class="equip-slot" data-equip="amulet"></div>
+              <div class="equip-slot" data-equip="weapon"></div>
+              <div class="equip-slot" data-equip="ring1"></div>
+              <div class="equip-slot" data-equip="ring2"></div>
+              <div class="equip-slot" data-equip="belt"></div>
+              <div class="equip-slot" data-equip="boots"></div>
+            </div>
+          </div>
+
+          <div class="inventory-detail">
+            <h3 id="inventory-item-name">-</h3>
+            <div id="inventory-item-type"></div>
+            <div id="inventory-item-bonus"></div>
+            <div id="inventory-item-desc"></div>
+          </div>
+        </div>
+
+        <div class="inventory-right">
+          <div class="inventory-grid" id="inventory-grid">
+            <!-- Slots créés dynamiquement -->
+          </div>
+        </div>
+      </div>
+    </aside>
+
     <!-- Fenêtre de statistiques (simple, responsive) -->
     <aside id="hud-stats-panel" aria-label="Fenêtre de statistiques du personnage">
       <header class="stats-header">
@@ -214,6 +266,26 @@
       </section>
     </aside>
 
+    <!-- Fenêtre des métiers -->
+    <aside id="hud-metiers-panel" aria-label="Fenêtre des métiers du personnage">
+      <header class="metiers-header">
+        <h2 class="metiers-title">Métiers</h2>
+      </header>
+
+      <section class="metiers-section">
+        <div class="metier-line">
+          <span class="metier-name">Bûcheron</span>
+          <span class="metier-level">
+            Niv. <span id="metier-bucheron-level">1</span>
+          </span>
+        </div>
+        <div class="metier-xp-line">
+          XP : <span id="metier-bucheron-xp">0</span>
+          / <span id="metier-bucheron-xp-next">100</span>
+        </div>
+      </section>
+    </aside>
+
     <!-- Fenêtre des sorts de la classe -->
     <aside id="hud-spells-panel" aria-label="Fenêtre des sorts de la classe">
       <header class="spells-header">
@@ -228,28 +300,28 @@
         </div>
       </header>
 
-        <section class="spells-section">
-          <ul id="hud-spells-list" class="spells-list">
-            <!-- Rempli dynamiquement -->
-          </ul>
-          <div id="hud-spell-detail" class="spell-detail">
-            <!-- Detail du sort selectionne -->
-          </div>
-        </section>
-      </aside>
+      <section class="spells-section">
+        <ul id="hud-spells-list" class="spells-list">
+          <!-- Rempli dynamiquement -->
+        </ul>
+        <div id="hud-spell-detail" class="spell-detail">
+          <!-- Detail du sort selectionne -->
+        </div>
+      </section>
+    </aside>
 
-      <!-- FenǦtre de carte du monde -->
-      <aside id="hud-map-panel" aria-label="Carte du monde">
-        <header class="map-header">
-          <h2 class="map-title">Carte</h2>
-        </header>
-          <section class="map-body">
-            <div class="map-main">
-              <div class="map-inner"></div>
-            </div>
-          </section>
-      </aside>
-    </div>
+    <!-- Fenêtre de carte du monde -->
+    <aside id="hud-map-panel" aria-label="Carte du monde">
+      <header class="map-header">
+        <h2 class="map-title">Carte</h2>
+      </header>
+      <section class="map-body">
+        <div class="map-main">
+          <div class="map-inner"></div>
+        </div>
+      </section>
+    </aside>
+  </div>
 
   <!-- UI de combat (bouton passer le tour, indicateur) -->
   <div id="combat-ui-root">
@@ -259,108 +331,9 @@
     <button id="combat-ready-button" type="button">
       PRÊT
     </button>
-    <button id="combat-end-turn-button" type="button">
-      FIN DU TOUR
-    </button>
   </div>
 
-  <!-- Popup de récapitulatif de combat -->
-  <div id="combat-result-overlay" class="combat-result-hidden">
-    <div class="combat-result-panel">
-      <h2 id="combat-result-title" class="combat-result-title">
-        Fin du combat
-      </h2>
-      <div class="combat-result-body">
-        <div class="combat-result-section">
-          <h3>Joueur</h3>
-          <p>Niveau : <span id="combat-result-player-level">1</span></p>
-          <p>XP gagnée : <span id="combat-result-xp-gain">0</span></p>
-          <p>
-            XP totale :
-            <span id="combat-result-xp-total">0</span>
-            /
-            <span id="combat-result-xp-next">0</span>
-          </p>
-        </div>
-        <div class="combat-result-section">
-          <h3>Monstre</h3>
-          <p>Type : <span id="combat-result-monster-name">-</span></p>
-          <p>PV restants : <span id="combat-result-monster-hp">0</span></p>
-        </div>
-        <div class="combat-result-section">
-          <h3>Combat</h3>
-          <p>Durée : <span id="combat-result-duration">0s</span></p>
-          <p>Or gagné : <span id="combat-result-gold">0</span></p>
-        </div>
-      </div>
-      <div class="combat-result-actions">
-        <button id="combat-result-continue-button" type="button">
-          Continuer
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Fenêtre d'inventaire (ajoutée en bas pour l'instant) -->
-  <aside id="hud-inventory-panel" aria-label="Inventaire du personnage">
-        <header class="inventory-header">
-        <h2 class="inventory-title">Inventaire</h2>
-        <div class="inventory-filters">
-          <button class="inventory-filter-btn inventory-filter-active" data-filter="all">Tout</button>
-          <button class="inventory-filter-btn" data-filter="equipement">Equip.</button>
-          <button class="inventory-filter-btn" data-filter="consommable">Consom.</button>
-          <button class="inventory-filter-btn" data-filter="ressource">Ress.</button>
-          <button class="inventory-filter-btn" data-filter="quete">Quête</button>
-        </div>
-      </header>
-      <section class="inventory-body">
-      <!-- Colonne gauche : équipement + fiche de détails -->
-      <div class="inventory-left">
-        <div class="inventory-equip">
-          <div class="equip-character"></div>
-          <div class="equip-grid">
-              <!-- Ligne 1 : coiffe / cape -->
-              <div class="equip-slot equip-head"  data-equip="head"  title="Coiffe"></div>
-              <div class="equip-slot equip-cape"  data-equip="cape"  title="Cape"></div>
-  
-              <!-- Ligne 2 : amulette / arme -->
-              <div class="equip-slot equip-amulet" data-equip="amulet" title="Amulette"></div>
-              <div class="equip-slot equip-weapon" data-equip="weapon" title="Arme"></div>
-  
-              <!-- Ligne 3 : anneau 1 / anneau 2 -->
-              <div class="equip-slot equip-ring1" data-equip="ring1" title="Anneau 1"></div>
-              <div class="equip-slot equip-ring2" data-equip="ring2" title="Anneau 2"></div>
-  
-              <!-- Ligne 4 : ceinture / bottes -->
-              <div class="equip-slot equip-belt"  data-equip="belt"  title="Ceinture"></div>
-              <div class="equip-slot equip-boots" data-equip="boots" title="Bottes"></div>
-            </div>
-          </div>
-  
-          <div class="inventory-detail">
-            <h3 id="inventory-item-name">-</h3>
-            <p id="inventory-item-type"></p>
-            <p id="inventory-item-bonus"></p>
-            <p id="inventory-item-desc">
-              Sélectionne un objet pour voir ses détails.
-            </p>
-          </div>
-        </div>
-  
-        <!-- Colonne droite : grille d'inventaire (50 slots) + or -->
-        <div class="inventory-right">
-          <div id="inventory-grid" class="inventory-grid">
-            <!-- rempli dynamiquement par domInventory.js -->
-          </div>
-          <div class="inventory-gold">
-            Or : <span id="inventory-gold-value">0</span>
-          </div>
-        </div>
-      </section>
-    
-  </aside>
-
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

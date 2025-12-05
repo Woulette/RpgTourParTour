@@ -271,12 +271,58 @@ export function initDomInventory(player) {
 
     // Zone bonus : effets + bonus d'objet / onglets Objet / Panoplie
     if (bonusTextEl) {
+      // Récapitulatif "Panoplie : X pièces : +stats"
+      // On affiche uniquement le meilleur palier atteint, comme
+      // dans le calcul des stats du joueur.
+      let setSummaryLine = "";
+      if (def && def.setId && player && player.equipment) {
+        const setDef = equipmentSets[def.setId];
+        if (setDef && setDef.thresholds) {
+          let count = 0;
+          for (const entry of Object.values(player.equipment)) {
+            const d =
+              entry && entry.itemId ? getItemDef(entry.itemId) : null;
+            if (d && d.setId === def.setId) {
+              count += 1;
+            }
+          }
+
+          let bestThreshold = -1;
+          let bestBonus = null;
+          for (const [thStr, bonus] of Object.entries(setDef.thresholds)) {
+            const threshold = parseInt(thStr, 10);
+            if (Number.isNaN(threshold)) continue;
+            if (count >= threshold && bonus && threshold > bestThreshold) {
+              bestThreshold = threshold;
+              bestBonus = bonus;
+            }
+          }
+
+          if (bestThreshold > 0 && bestBonus) {
+            const txt = formatBonusObject(bestBonus);
+            if (txt) {
+              const piecesLabel =
+                bestThreshold > 1 ? "pièces" : "pièce";
+              setSummaryLine = `Panoplie : ${bestThreshold} ${piecesLabel} : ${txt}`;
+            }
+          }
+        }
+      }
+
       const objectLines = bonusLines.filter(
         (line) => !line.startsWith("Panoplie")
       );
-      const setLines = bonusLines.filter((line) =>
-        line.startsWith("Panoplie")
-      );
+      const setLines = bonusLines
+        .filter((line) => line.startsWith("Panoplie"))
+        .map((line) => {
+          const match = line.match(/Panoplie\s*\((\d+)/);
+          const count = match ? Number(match[1]) || 0 : 0;
+          if (!count) return "";
+          return `Panoplie : ${count} pièce${
+            count > 1 ? "s" : ""
+          } équipée${count > 1 ? "s" : ""}`;
+        })
+        .filter(Boolean);
 
       // Ajoute de la couleur / structure aux libellés de statistiques
       function decorateBonusHtml(text) {
@@ -304,12 +350,15 @@ export function initDomInventory(player) {
         });
 
         // Légère séparation visuelle entre stats
-        html = html.replace(/,\s*/g, " &nbsp;&nbsp;");
+        html = html.replace(/,\s*/g, "<br>");
         return html;
       }
 
       lastObjectBonusText = decorateBonusHtml(objectLines.join(" | "));
-      lastSetBonusText = decorateBonusHtml(setLines.join(" | "));
+      const rawSetText =
+        setSummaryLine || setLines.join(" | ");
+      const cleanedSetText = rawSetText.replace(/^Panoplie\s*:\s*/i, "");
+      lastSetBonusText = decorateBonusHtml(cleanedSetText);
       applyBonusText();
     }
 
