@@ -19,11 +19,14 @@ import { initDomSpells } from "./ui/domSpells.js";
 import { initDomCombatResult } from "./ui/domCombatResult.js";
 import { initDomInventory } from "./ui/domInventory.js";
 import { initDomMetiers } from "./ui/domMetiersBucheron.js";
+import { initDomQuests } from "./ui/domQuests.js";
 import { preloadMonsters, spawnInitialMonsters } from "./monsters/index.js";
 import { defaultClassId } from "./config/classes.js";
 import { attachCombatPreview } from "./ui/combatPreview.js";
 import { attachMonsterTooltip } from "./ui/monsterTooltip.js";
 import { spawnTestTrees } from "./metier/bucheron/trees.js";
+import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
+import { initStore } from "./state/store.js";
 
 class MainScene extends Phaser.Scene {
   constructor() {
@@ -64,6 +67,7 @@ class MainScene extends Phaser.Scene {
     });
 
     preloadMonsters(this);
+    preloadNpcs(this);
   }
 
   create() {
@@ -99,6 +103,9 @@ class MainScene extends Phaser.Scene {
     setupPlayerAnimations(this);
     this.player.setDepth(2);
 
+    // Initialise le store central avec le joueur.
+    initStore(this.player);
+
     // Initialise les tuiles de sortie pour cette première map.
     initWorldExitsForScene(this);
 
@@ -107,6 +114,9 @@ class MainScene extends Phaser.Scene {
 
     // --- ARBRES DE TEST (MÉTIER BÛCHERON) ---
     spawnTestTrees(this, map, this.player, mapDef.key);
+
+    // --- PNJ ---
+    spawnNpcsForMap(this, map, groundLayer, mapDef.key);
 
     // --- GRILLE ISO (DEBUG) ---
     let grid = null;
@@ -151,6 +161,11 @@ class MainScene extends Phaser.Scene {
         if (node.sprite) worldElements.push(node.sprite);
       });
     }
+    if (this.npcs) {
+      this.npcs.forEach((npc) => {
+        if (npc.sprite) worldElements.push(npc.sprite);
+      });
+    }
 
     setupCamera(this, map, startX, startY, mapDef.cameraOffsets);
     setupHudCamera(this, uiElements, worldElements);
@@ -178,6 +193,7 @@ class MainScene extends Phaser.Scene {
     initDomInventory(this.player);
     // Initialisation de la fenêtre de métiers
     initDomMetiers(this.player);
+    initDomQuests(this.player);
 
     // DEBUG : touche "N" -> charge Map2Andemia avec le même centrage
     this.input.keyboard.on("keydown-N", () => {

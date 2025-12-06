@@ -1,4 +1,5 @@
 import { items } from "./itemsConfig.js";
+import { emit as emitStoreEvent } from "../state/store.js";
 
 // Cr�e un inventaire simple avec un nombre fixe de slots.
 export function createInventory(size = 20) {
@@ -65,6 +66,8 @@ export function addItem(container, itemId, qty) {
     remaining -= addNow;
   }
 
+  // Notification de mise à jour d'inventaire
+  emitStoreEvent("inventory:updated", { container });
   return remaining;
 }
 
@@ -87,6 +90,9 @@ export function removeItem(container, itemId, qty) {
     }
   }
 
+  if (removed > 0) {
+    emitStoreEvent("inventory:updated", { container });
+  }
   return removed;
 }
 
@@ -114,6 +120,10 @@ export function moveBetweenContainers(
     from.slots[fromSlotIndex] = null;
   }
 
+  if (moved > 0) {
+    emitStoreEvent("inventory:updated", { container: from });
+    emitStoreEvent("inventory:updated", { container: to });
+  }
   return moved;
 }
 
@@ -131,4 +141,3 @@ export function getSlotsByFilter(container, predicate) {
   }
   return result;
 }
-

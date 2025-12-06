@@ -27,25 +27,30 @@
   <link rel="stylesheet" href="assets/css/spellBook.css" />
   <link rel="stylesheet" href="assets/css/inventory.css" />
   <link rel="stylesheet" href="assets/css/map.css" />
+  <link rel="stylesheet" href="assets/css/npcDialog.css" />
+  <link rel="stylesheet" href="assets/css/quests.css" />
 </head>
 <body>
   <!-- HUD HTML en overlay par-dessus le canvas Phaser -->
   <div id="hud-root">
     <!-- Barre HUD en bas de l'écran -->
     <div id="hud-bar">
-      <button id="hud-spells-button" aria-label="Ouvrir les sorts">
+      <button class="hud-pill" id="hud-spells-button" aria-label="Ouvrir les sorts">
         SORTS
       </button>
-      <button id="hud-inventory-button" aria-label="Ouvrir l'inventaire">
+      <button class="hud-pill" id="hud-inventory-button" aria-label="Ouvrir l'inventaire">
         INV
       </button>
-      <button id="hud-map-button" aria-label="Ouvrir la carte du monde">
+      <button class="hud-pill" id="hud-map-button" aria-label="Ouvrir la carte du monde">
         CARTE
       </button>
-      <button id="hud-stats-button" aria-label="Ouvrir les statistiques">
+      <button class="hud-pill" id="hud-stats-button" aria-label="Ouvrir les statistiques">
         STATS
       </button>
-      <button id="hud-metiers-button" aria-label="Ouvrir les métiers">
+      <button class="hud-pill" id="hud-quests-button" aria-label="Ouvrir les quêtes">
+        QUETES
+      </button>
+      <button class="hud-pill" id="hud-metiers-button" aria-label="Ouvrir les métiers">
         MÉTIERS
       </button>
 
@@ -318,6 +323,78 @@
       <section class="map-body">
         <div class="map-main">
           <div class="map-inner"></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Fenêtre de dialogue PNJ -->
+    <aside
+      id="npc-dialog-panel"
+      class="npc-dialog-panel"
+      aria-label="Dialogue avec un PNJ"
+      aria-hidden="true"
+    >
+      <header class="npc-dialog-header">
+        <h2 id="npc-dialog-name" class="npc-dialog-name">PNJ</h2>
+      </header>
+      <section class="npc-dialog-body">
+        <div class="npc-dialog-block npc-dialog-npc-block">
+          <div class="npc-dialog-speaker-line">
+            <span
+              id="npc-dialog-speaker-npc"
+              class="npc-dialog-speaker npc-dialog-speaker-npc"
+              >PNJ</span
+            >
+          </div>
+          <div id="npc-dialog-text" class="npc-dialog-text">
+            Bonjour.
+          </div>
+        </div>
+
+        <div class="npc-dialog-block npc-dialog-player-block">
+          <div class="npc-dialog-speaker-line">
+            <span class="npc-dialog-speaker npc-dialog-speaker-player"
+              >Vous</span
+            >
+          </div>
+          <div class="npc-dialog-choices">
+            <button
+              id="npc-dialog-choice-1"
+              type="button"
+              class="npc-dialog-choice"
+            >
+              Bonjour.
+            </button>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- FenǦtre des quǸtes -->
+    <aside id="hud-quests-panel" aria-label="FenǦtre des quǸtes du personnage">
+      <header class="quests-header">
+        <h2 class="quests-title">QuǸtes</h2>
+      </header>
+      <section class="quests-body">
+        <div class="quests-columns">
+          <div class="quests-column">
+            <h3 class="quests-column-title">Disponibles</h3>
+            <ul id="quests-list-available" class="quests-list"></ul>
+          </div>
+          <div class="quests-column">
+            <h3 class="quests-column-title">En cours</h3>
+            <ul id="quests-list-active" class="quests-list"></ul>
+          </div>
+          <div class="quests-column">
+            <h3 class="quests-column-title">TerminǸes</h3>
+            <ul id="quests-list-completed" class="quests-list"></ul>
+          </div>
+        </div>
+        <div class="quests-detail">
+          <h3 id="quest-detail-title" class="quest-detail-title"></h3>
+          <p id="quest-detail-desc" class="quest-detail-desc"></p>
+          <p id="quest-detail-progress" class="quest-detail-progress"></p>
+          <p id="quest-detail-rewards" class="quest-detail-rewards"></p>
         </div>
       </section>
     </aside>

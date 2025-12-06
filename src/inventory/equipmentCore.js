@@ -1,6 +1,7 @@
 import { getItemDef, addItem, removeItem } from "./inventoryCore.js";
 import { applyBonuses } from "../core/stats.js";
 import { equipmentSets } from "./sets.js";
+import { emit as emitStoreEvent } from "../state/store.js";
 
 // Slots d'équipement possibles pour un joueur
 export const EQUIP_SLOTS = [
@@ -132,6 +133,8 @@ export function equipFromInventory(player, inventory, inventorySlotIndex) {
 
   player.equipment[equipSlot] = { itemId: slot.itemId };
   recomputePlayerStatsWithEquipment(player);
+  emitStoreEvent("equipment:updated", { slot: equipSlot });
+  emitStoreEvent("inventory:updated", { container: inventory });
   return true;
 }
 
@@ -150,5 +153,7 @@ export function unequipToInventory(player, inventory, equipSlot) {
 
   player.equipment[equipSlot] = null;
   recomputePlayerStatsWithEquipment(player);
+  emitStoreEvent("equipment:updated", { slot: equipSlot });
+  emitStoreEvent("inventory:updated", { container: inventory });
   return true;
 }

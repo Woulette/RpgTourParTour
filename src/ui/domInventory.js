@@ -4,9 +4,15 @@ import {
   unequipToInventory,
 } from "../inventory/equipmentCore.js";
 import { equipmentSets } from "../inventory/sets.js";
+import { on as onStoreEvent } from "../state/store.js";
+
+let inventoryUiInitialized = false;
+let unsubscribeInventory = null;
+let unsubscribeEquipment = null;
 
 // Initialisation de la fenêtre d'inventaire HTML.
 export function initDomInventory(player) {
+  if (inventoryUiInitialized) return;
   const invButton = document.getElementById("hud-inventory-button");
   const panel = document.getElementById("hud-inventory-panel");
   const grid = document.getElementById("inventory-grid");
@@ -548,4 +554,18 @@ export function initDomInventory(player) {
       });
     });
   }
+
+  // Rafraîchit l'UI lorsque le store signale une MAJ inventaire/équipement
+  unsubscribeInventory = onStoreEvent("inventory:updated", () => {
+    if (document.body.classList.contains("hud-inventory-open")) {
+      renderInventory();
+    }
+  });
+  unsubscribeEquipment = onStoreEvent("equipment:updated", () => {
+    if (document.body.classList.contains("hud-inventory-open")) {
+      renderInventory();
+    }
+  });
+
+  inventoryUiInitialized = true;
 }

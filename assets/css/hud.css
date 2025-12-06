@@ -1,18 +1,18 @@
-/* Conteneur HUD global (overlay au-dessus du canvas) */
+/* HUD overlay container */
 #hud-root {
   position: fixed;
   inset: 0;
-  /* La souris passe au travers par défaut, sauf sur les éléments interactifs */
+  /* Pointer events go through by default, except on interactive elements */
   pointer-events: none;
 }
 
-/* Boutons STATS / SORTS / INV / CARTE / METIERS : même style de base */
-#hud-stats-button,
-#hud-spells-button,
-#hud-inventory-button,
-#hud-map-button,
-#hud-metiers-button {
-  min-width: 80px; /* largeur commune */
+/* Shared style for all HUD pill buttons */
+.hud-pill {
+  position: absolute;
+  right: 0.5%;
+  bottom: 70%;
+
+  min-width: 80px;
   min-height: 48px;
   padding: 0.4em 0.8em;
 
@@ -28,109 +28,43 @@
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
   cursor: pointer;
   transition: transform 0.1s ease, background 0.1s ease, box-shadow 0.1s ease;
+  pointer-events: auto;
+
+  transform: translateX(var(--hud-btn-offset, 0));
 }
 
-/* Bouton stats : dans la zone HUD (dans la barre bleue) */
+.hud-pill:hover {
+  background: rgba(20, 40, 80, 0.95);
+  transform: translate(var(--hud-btn-offset, 0), -1px);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.hud-pill:active {
+  transform: translate(var(--hud-btn-offset, 0), 1px);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Horizontal offsets per button */
 #hud-stats-button {
-  position: absolute;
-  right: 0.5%;
-  bottom: 70%;
-
-  pointer-events: auto;
+  --hud-btn-offset: 0%;
 }
 
-#hud-stats-button:hover {
-  background: rgba(20, 40, 80, 0.95);
-  transform: translateY(-1px);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-}
-
-#hud-stats-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
-
-/* Bouton sorts : même style que STATS, collé à sa gauche */
 #hud-spells-button {
-  position: absolute;
-  right: 0.5%; /* même ancre que STATS */
-  bottom: 70%;
-  transform: translateX(-110%); /* décalé d'un peu plus d'une largeur de bouton vers la gauche */
-
-  pointer-events: auto;
+  --hud-btn-offset: -110%;
 }
 
-#hud-spells-button:hover {
-  background: rgba(20, 40, 80, 0.95);
-  transform: translate(-110%, -1px);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-}
-
-#hud-spells-button:active {
-  transform: translate(-110%, 1px);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
-
-/* Bouton inventaire : encore plus à gauche du bouton SORTS */
 #hud-inventory-button {
-  position: absolute;
-  right: 0.5%;
-  bottom: 70%;
-  transform: translateX(-220%);
-
-  pointer-events: auto;
+  --hud-btn-offset: -220%;
 }
 
-#hud-inventory-button:hover {
-  background: rgba(20, 40, 80, 0.95);
-  transform: translate(-220%, -1px);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-}
-
-#hud-inventory-button:active {
-  transform: translate(-220%, 1px);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
-
-/* Bouton carte : encore plus à gauche du bouton INVENTAIRE */
 #hud-map-button {
-  position: absolute;
-  right: 0.5%;
-  bottom: 70%;
-  transform: translateX(-330%);
-
-  pointer-events: auto;
+  --hud-btn-offset: -330%;
 }
 
-#hud-map-button:hover {
-  background: rgba(20, 40, 80, 0.95);
-  transform: translate(-330%, -1px);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+#hud-quests-button {
+  --hud-btn-offset: -430%;
 }
 
-#hud-map-button:active {
-  transform: translate(-330%, 1px);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
-
-/* Bouton métiers : encore plus à gauche du bouton CARTE */
 #hud-metiers-button {
-  position: absolute;
-  right: 0.5%;
-  bottom: 70%;
-  transform: translateX(-440%);
-
-  pointer-events: auto;
+  --hud-btn-offset: -500%;
 }
-
-#hud-metiers-button:hover {
-  background: rgba(20, 40, 80, 0.95);
-  transform: translate(-440%, -1px);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-}
-
-#hud-metiers-button:active {
-  transform: translate(-440%, 1px);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
-
