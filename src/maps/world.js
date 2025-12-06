@@ -1,6 +1,10 @@
 import { maps } from "./index.js";
 import { buildMap } from "./loader.js";
 import { setupCamera } from "./camera.js";
+import { spawnInitialMonsters } from "../monsters/index.js";
+import { spawnNpcsForMap } from "../npc/spawn.js";
+import { spawnTestTrees } from "../metier/bucheron/trees.js";
+import { createMapExits } from "./exits.js";
 
 // Index des maps par coordonnees logiques (x, y).
 // Cle: "x,y" -> valeur = definition de map.
@@ -382,6 +386,29 @@ export function loadMapLikeMain(scene, mapDef) {
 
   // On ne detruit pas l'ancienne map ici pour ne pas casser
   // la logique de deplacement existante : on la masque seulement.
+  // Cleanup des entites propres �� la map pour Ǹviter de les voir sur la suivante.
+  if (Array.isArray(scene.monsters)) {
+    scene.monsters.forEach((m) => {
+      if (m && m.destroy) m.destroy();
+    });
+    scene.monsters = [];
+  }
+  if (Array.isArray(scene.npcs)) {
+    scene.npcs.forEach((npc) => {
+      if (npc && npc.sprite && npc.sprite.destroy) {
+        npc.sprite.destroy();
+      }
+    });
+    scene.npcs = [];
+  }
+  if (Array.isArray(scene.bucheronNodes)) {
+    scene.bucheronNodes.forEach((node) => {
+      if (node?.sprite?.destroy) node.sprite.destroy();
+      if (node?.hoverHighlight?.destroy) node.hoverHighlight.destroy();
+    });
+    scene.bucheronNodes = [];
+  }
+
   if (Array.isArray(scene.mapLayers) && scene.mapLayers.length > 0) {
     scene.mapLayers.forEach((layer) => {
       if (layer && layer.setVisible) {
@@ -429,6 +456,20 @@ export function loadMapLikeMain(scene, mapDef) {
   }
 
   setupCamera(scene, map, startX, startY, mapDef.cameraOffsets);
+
+  // Respawn des entites propres �� la nouvelle map
+  if (mapDef.spawnDefaults) {
+    spawnInitialMonsters(
+      scene,
+      map,
+      scene.groundLayer,
+      centerTileX,
+      centerTileY
+    );
+    spawnTestTrees(scene, map, scene.player, mapDef.key);
+    spawnNpcsForMap(scene, map, scene.groundLayer, mapDef.key);
+  }
+  createMapExits(scene);
 }
 
 // Vérifie si le joueur est sur une tuile de sortie ciblée et lance la transition.

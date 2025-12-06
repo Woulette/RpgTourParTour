@@ -1,0 +1,15 @@
+/* Styles de base partagés pour les panneaux HUD (inventaire, quêtes, métiers) */
+:is(#hud-inventory-panel, #hud-quests-panel, #hud-metiers-panel) {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+
+  box-sizing: border-box;
+  display: none;
+  flex-direction: column;
+
+  color: #f5f7ff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  pointer-events: auto;
+}

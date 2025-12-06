@@ -20,6 +20,7 @@ import { initDomCombatResult } from "./ui/domCombatResult.js";
 import { initDomInventory } from "./ui/domInventory.js";
 import { initDomMetiers } from "./ui/domMetiersBucheron.js";
 import { initDomQuests } from "./ui/domQuests.js";
+import { initQuestTracker } from "./ui/domQuestTracker.js";
 import { preloadMonsters, spawnInitialMonsters } from "./monsters/index.js";
 import { defaultClassId } from "./config/classes.js";
 import { attachCombatPreview } from "./ui/combatPreview.js";
@@ -27,6 +28,7 @@ import { attachMonsterTooltip } from "./ui/monsterTooltip.js";
 import { spawnTestTrees } from "./metier/bucheron/trees.js";
 import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
 import { initStore } from "./state/store.js";
+    
 
 class MainScene extends Phaser.Scene {
   constructor() {
@@ -109,14 +111,16 @@ class MainScene extends Phaser.Scene {
     // Initialise les tuiles de sortie pour cette première map.
     initWorldExitsForScene(this);
 
-    // --- MONSTRES DE TEST ---
-    spawnInitialMonsters(this, map, groundLayer, centerTileX, centerTileY);
+    if (mapDef.spawnDefaults) {
+      // --- MONSTRES DE TEST ---
+      spawnInitialMonsters(this, map, groundLayer, centerTileX, centerTileY);
 
-    // --- ARBRES DE TEST (MÉTIER BÛCHERON) ---
-    spawnTestTrees(this, map, this.player, mapDef.key);
+      // --- ARBRES DE TEST (M?TIER B?CHERON) ---
+      spawnTestTrees(this, map, this.player, mapDef.key);
 
-    // --- PNJ ---
-    spawnNpcsForMap(this, map, groundLayer, mapDef.key);
+      // --- PNJ ---
+      spawnNpcsForMap(this, map, groundLayer, mapDef.key);
+    }
 
     // --- GRILLE ISO (DEBUG) ---
     let grid = null;
@@ -194,6 +198,7 @@ class MainScene extends Phaser.Scene {
     // Initialisation de la fenêtre de métiers
     initDomMetiers(this.player);
     initDomQuests(this.player);
+    initQuestTracker(this.player);
 
     // DEBUG : touche "N" -> charge Map2Andemia avec le même centrage
     this.input.keyboard.on("keydown-N", () => {

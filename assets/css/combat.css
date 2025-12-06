@@ -4,6 +4,7 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
+  z-index: 8000; /* au-dessus des autres HUD */
 }
 
 #combat-end-turn-button,
@@ -13,6 +14,7 @@
   bottom: 2vh;
 
   pointer-events: auto;
+  z-index: 8001;
 
   min-width: 60px;
   min-height: 40px;

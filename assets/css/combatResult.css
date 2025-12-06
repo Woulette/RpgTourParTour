@@ -6,7 +6,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  z-index: 50;
+  z-index: 9000; /* au-dessus des autres overlays HUD */
   padding-top:16vh;
 }
 

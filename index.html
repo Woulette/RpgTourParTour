@@ -19,6 +19,7 @@
     }
   </style>
   <link rel="stylesheet" href="assets/css/hud.css" />
+  <link rel="stylesheet" href="assets/css/hudPanels.css" />
   <link rel="stylesheet" href="assets/css/hudInterface.css" />
   <link rel="stylesheet" href="assets/css/stats.css" />
   <link rel="stylesheet" href="assets/css/metiers.css" />
@@ -29,8 +30,28 @@
   <link rel="stylesheet" href="assets/css/map.css" />
   <link rel="stylesheet" href="assets/css/npcDialog.css" />
   <link rel="stylesheet" href="assets/css/quests.css" />
+  <link rel="stylesheet" href="assets/css/questTracker.css" />
 </head>
 <body>
+  <div id="quest-tracker" class="quest-tracker" aria-label="Suivi des quetes">
+    <button
+      id="quest-tracker-toggle"
+      class="quest-tracker-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="quest-tracker-list"
+      title="Afficher / masquer les quetes suivies"
+    >
+      <span class="quest-tracker-toggle-icon">›</span>
+    </button>
+    <div class="quest-tracker-inner">
+      <div class="quest-tracker-header">
+        <span class="quest-tracker-title">Quetes</span>
+      </div>
+      <div id="quest-tracker-list" class="quest-tracker-list"></div>
+    </div>
+  </div>
+
   <!-- HUD HTML en overlay par-dessus le canvas Phaser -->
   <div id="hud-root">
     <!-- Barre HUD en bas de l'écran -->
@@ -365,15 +386,16 @@
             >
               Bonjour.
             </button>
+            <span id="npc-dialog-quest-badge" class="npc-dialog-quest-badge" aria-hidden="true">!</span>
           </div>
         </div>
       </section>
     </aside>
 
-    <!-- FenǦtre des quǸtes -->
-    <aside id="hud-quests-panel" aria-label="FenǦtre des quǸtes du personnage">
+    <!-- Fenetre des quetes -->
+    <aside id="hud-quests-panel" aria-label="Fenetre des quetes du personnage">
       <header class="quests-header">
-        <h2 class="quests-title">QuǸtes</h2>
+        <h2 class="quests-title">Quetes</h2>
       </header>
       <section class="quests-body">
         <div class="quests-columns">
@@ -386,7 +408,7 @@
             <ul id="quests-list-active" class="quests-list"></ul>
           </div>
           <div class="quests-column">
-            <h3 class="quests-column-title">TerminǸes</h3>
+            <h3 class="quests-column-title">Terminees</h3>
             <ul id="quests-list-completed" class="quests-list"></ul>
           </div>
         </div>
@@ -405,12 +427,49 @@
     <div id="combat-turn-indicator">
       Tour : <span id="combat-turn-label">Joueur</span>
     </div>
+    <button id="combat-end-turn-button" type="button">
+      FIN DU TOUR
+    </button>
     <button id="combat-ready-button" type="button">
-      PRÊT
+      PRET
     </button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+  <!-- Popup de fin de combat -->
+  <div id="combat-result-overlay" class="combat-result-hidden">
+    <div class="combat-result-panel">
+      <h2 id="combat-result-title" class="combat-result-title">Fin du combat</h2>
+      <div class="combat-result-body">
+        <div class="combat-result-section">
+          <h3>Joueur</h3>
+          <p>Niveau : <span id="combat-result-player-level">1</span></p>
+          <p>XP gagnée : <span id="combat-result-xp-gain">0</span></p>
+          <p>XP totale : <span id="combat-result-xp-total">0</span></p>
+          <p>XP prochaine : <span id="combat-result-xp-next">0</span></p>
+        </div>
+        <div class="combat-result-section">
+          <h3>Monstre</h3>
+          <p>Id : <span id="combat-result-monster-name">-</span></p>
+          <p>PV restants : <span id="combat-result-monster-hp">0</span></p>
+        </div>
+        <div class="combat-result-section">
+          <h3>Combat</h3>
+          <p>Durée : <span id="combat-result-duration">0s</span></p>
+          <p>Or : <span id="combat-result-gold">0</span></p>
+        </div>
+        <div class="combat-result-section">
+          <h3>Butin</h3>
+          <div id="combat-result-loot" class="combat-result-loot-list"></div>
+        </div>
+      </div>
+      <div class="combat-result-actions">
+        <button id="combat-result-continue-button" type="button">
+          Continuer
+        </button>
+      </div>
+    </div>
+  </div>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

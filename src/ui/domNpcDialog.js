@@ -1,4 +1,5 @@
 let currentNpc = null;
+let currentDialog = null;
 
 function getElements() {
   const panel = document.getElementById("npc-dialog-panel");
@@ -8,8 +9,9 @@ function getElements() {
   const speakerNpcEl = document.getElementById("npc-dialog-speaker-npc");
   const textEl = document.getElementById("npc-dialog-text");
   const choiceBtn = document.getElementById("npc-dialog-choice-1");
+  const questBadge = document.getElementById("npc-dialog-quest-badge");
 
-  return { panel, nameEl, speakerNpcEl, textEl, choiceBtn };
+  return { panel, nameEl, speakerNpcEl, textEl, choiceBtn, questBadge };
 }
 
 function closeNpcDialog() {
@@ -17,14 +19,16 @@ function closeNpcDialog() {
   if (!els) return;
   document.body.classList.remove("npc-dialog-open");
   currentNpc = null;
+  currentDialog = null;
 }
 
-export function openNpcDialog(npc, player) {
+export function openNpcDialog(npc, player, dialogData) {
   const els = getElements();
   if (!els) return;
-  const { panel, nameEl, speakerNpcEl, textEl, choiceBtn } = els;
+  const { panel, nameEl, speakerNpcEl, textEl, choiceBtn, questBadge } = els;
 
   currentNpc = npc || null;
+  currentDialog = dialogData || null;
 
   const npcName = npc?.def?.name || "PNJ";
 
@@ -36,15 +40,30 @@ export function openNpcDialog(npc, player) {
   }
 
   if (textEl) {
-    textEl.textContent = "Bonjour.";
+    textEl.textContent = dialogData?.text || "Bonjour.";
   }
 
   if (choiceBtn) {
-    choiceBtn.textContent = "Bonjour.";
+    choiceBtn.textContent = dialogData?.choice || "À plus tard.";
     choiceBtn.onclick = () => {
-      // Pour l'instant, répondre "Bonjour." ferme juste le dialogue.
+      if (dialogData && typeof dialogData.onChoice === "function") {
+        dialogData.onChoice();
+      }
       closeNpcDialog();
     };
+  }
+
+  if (questBadge) {
+    const symbol =
+      dialogData && dialogData.questOffer
+        ? "!"
+        : dialogData && dialogData.questTurnIn
+          ? "?"
+          : "";
+    const shouldShow = Boolean(symbol);
+    questBadge.textContent = symbol;
+    questBadge.classList.toggle("npc-dialog-quest-badge-visible", shouldShow);
+    questBadge.setAttribute("aria-hidden", shouldShow ? "false" : "true");
   }
 
   panel.setAttribute("aria-hidden", "false");

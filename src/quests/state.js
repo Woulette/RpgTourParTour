@@ -1,4 +1,5 @@
 import { QUEST_STATES, quests } from "./catalog.js";
+import { emit as emitStoreEvent } from "../state/store.js";
 
 function ensureQuestContainer(player) {
   if (!player.quests) {
@@ -7,30 +8,90 @@ function ensureQuestContainer(player) {
   return player.quests;
 }
 
+function resetStageProgress(state) {
+  state.progress = { currentCount: 0 };
+}
+
+function getQuestStageByIndex(questDef, stageIndex = 0) {
+  if (!questDef || !Array.isArray(questDef.stages) || questDef.stages.length === 0) {
+    return null;
+  }
+  const safeIndex = Math.max(0, Math.min(stageIndex, questDef.stages.length - 1));
+  return questDef.stages[safeIndex];
+}
+
+export function getCurrentQuestStage(questDef, state) {
+  if (!questDef || !state) return null;
+  return getQuestStageByIndex(questDef, state.stageIndex || 0);
+}
+
 export function getQuestDef(questId) {
   return quests[questId] || null;
 }
 
-export function getQuestState(player, questId) {
+export function getQuestState(player, questId, { emit = true } = {}) {
   if (!player) return null;
   const container = ensureQuestContainer(player);
   if (!container[questId]) {
     container[questId] = {
       state: QUEST_STATES.NOT_STARTED,
+      stageIndex: 0,
       progress: { currentCount: 0 },
     };
+    if (emit) {
+      emitStoreEvent("quest:updated", { questId, state: container[questId] });
+    }
   }
   return container[questId];
 }
 
 export function acceptQuest(player, questId) {
-  const qDef = getQuestDef(questId);
-  if (!qDef || !player) return;
+  const questDef = getQuestDef(questId);
+  if (!questDef || !player) return;
   const state = getQuestState(player, questId);
   if (state.state === QUEST_STATES.NOT_STARTED) {
     state.state = QUEST_STATES.IN_PROGRESS;
-    state.progress.currentCount = 0;
+    state.stageIndex = 0;
+    resetStageProgress(state);
+    emitStoreEvent("quest:updated", { questId, state });
   }
+}
+
+export function advanceQuestStage(player, questId, { scene } = {}) {
+  const questDef = getQuestDef(questId);
+  if (!questDef || !player) return;
+  const state = getQuestState(player, questId);
+  if (state.state !== QUEST_STATES.IN_PROGRESS) return;
+
+  const currentStage = getCurrentQuestStage(questDef, state);
+  if (currentStage && typeof currentStage.onComplete === "function") {
+    try {
+      currentStage.onComplete({
+        player,
+        scene,
+        questId,
+        questDef,
+        stage: currentStage,
+        state,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[quest] stage onComplete error", questId, err);
+    }
+  }
+
+  const hasStages =
+    Array.isArray(questDef.stages) && questDef.stages.length > 0;
+  const nextIndex = hasStages ? state.stageIndex + 1 : 0;
+
+  if (!hasStages || nextIndex >= questDef.stages.length) {
+    completeQuest(scene, player, questId);
+    return;
+  }
+
+  state.stageIndex = nextIndex;
+  resetStageProgress(state);
+  emitStoreEvent("quest:updated", { questId, state });
 }
 
 export function isQuestCompleted(player, questId) {
@@ -39,34 +100,47 @@ export function isQuestCompleted(player, questId) {
 }
 
 export function incrementKillProgress(scene, player, questId, monsterId) {
-  const qDef = getQuestDef(questId);
-  if (!qDef || !player) return;
-  if (!qDef.objective || qDef.objective.type !== "kill_monster") return;
-  if (qDef.objective.monsterId !== monsterId) return;
+  const questDef = getQuestDef(questId);
+  if (!questDef || !player) return;
 
   const state = getQuestState(player, questId);
   if (state.state !== QUEST_STATES.IN_PROGRESS) return;
 
-  const required = qDef.objective.requiredCount || 1;
+  const stage = getCurrentQuestStage(questDef, state);
+  if (!stage || !stage.objective || stage.objective.type !== "kill_monster") {
+    return;
+  }
+  if (stage.objective.monsterId !== monsterId) return;
+
+  const required = stage.objective.requiredCount || 1;
   const current = state.progress.currentCount || 0;
   const next = Math.min(required, current + 1);
 
   state.progress.currentCount = next;
+  emitStoreEvent("quest:updated", { questId, state });
 
   if (next >= required) {
-    completeQuest(scene, player, questId);
+    advanceQuestStage(player, questId, { scene });
   }
 }
 
 export function completeQuest(scene, player, questId) {
-  const qDef = getQuestDef(questId);
-  if (!qDef || !player) return;
+  const questDef = getQuestDef(questId);
+  if (!questDef || !player) return;
   const state = getQuestState(player, questId);
   if (state.state === QUEST_STATES.COMPLETED) return;
 
-  state.state = QUEST_STATES.COMPLETED;
+  const stageCount = Array.isArray(questDef.stages)
+    ? questDef.stages.length
+    : 0;
+  if (stageCount > 0) {
+    state.stageIndex = stageCount - 1;
+  }
 
-  const rewards = qDef.rewards || {};
+  state.state = QUEST_STATES.COMPLETED;
+  emitStoreEvent("quest:updated", { questId, state });
+
+  const rewards = questDef.rewards || {};
   const xp = rewards.xpPlayer || 0;
   const gold = rewards.gold || 0;
 
@@ -88,8 +162,8 @@ export function completeQuest(scene, player, questId) {
 export function getAllQuestStates(player) {
   const container = ensureQuestContainer(player);
   return Object.entries(quests).map(([id, def]) => {
-    const state = getQuestState(player, id);
-    return { def, state };
+    const state = getQuestState(player, id, { emit: false });
+    const stage = getCurrentQuestStage(def, state);
+    return { def, state, stage };
   });
 }
-

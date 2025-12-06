@@ -1,32 +1,69 @@
 import { openNpcDialog } from "../ui/domNpcDialog.js";
-import { initDomQuests } from "../ui/domQuests.js";
 import {
-  getPrimaryQuestForNpc,
-  getQuestState,
+  getQuestContextForNpc,
   QUEST_STATES,
   acceptQuest,
+  advanceQuestStage,
 } from "../quests/index.js";
+import { getNpcDialog } from "../dialog/npc/index.js";
 
-let questsUiInitialized = false;
+function setTalkObjectiveComplete(state, stage) {
+  if (!state || !stage || !stage.objective) return;
+  if (stage.objective.type !== "talk_to_npc") return;
+  const required = stage.objective.requiredCount || 1;
+  state.progress.currentCount = required;
+}
 
 export function startNpcInteraction(scene, player, npc) {
   if (!scene || !player || !npc || !npc.sprite) return;
 
-  if (!questsUiInitialized) {
-    initDomQuests(player);
-    questsUiInitialized = true;
-  }
+  const questContext = getQuestContextForNpc(player, npc.id);
+  let dialogData = null;
 
-  // Pour l'instant : pas de condition de distance,
-  // tu peux parler au PNJ de n'importe où sur la map.
+  if (questContext) {
+    const { quest, state, stage } = questContext;
+    const dialogDef = getNpcDialog(npc.id, quest.id, state.state, stage?.id);
 
-  const quest = getPrimaryQuestForNpc(npc.id);
-  if (quest) {
-    const state = getQuestState(player, quest.id);
-    if (state && state.state === QUEST_STATES.NOT_STARTED) {
-      acceptQuest(player, quest.id);
+    const isOffer = state.state === QUEST_STATES.NOT_STARTED;
+    const isNpcStage = stage && stage.npcId === npc.id;
+    const isTalkStage = stage?.objective?.type === "talk_to_npc";
+    const requiredCount = stage?.objective?.requiredCount || 1;
+    const currentCount = state.progress?.currentCount || 0;
+    const objectiveReady = isTalkStage || currentCount >= requiredCount;
+
+    if (isOffer) {
+      const base = dialogDef || {
+        text: "Salut, tu veux aider ?",
+        choice: "J'accepte",
+      };
+      dialogData = {
+        ...base,
+        questOffer: true,
+        onChoice: () => acceptQuest(player, quest.id),
+      };
+    } else if (
+      isNpcStage &&
+      state.state === QUEST_STATES.IN_PROGRESS &&
+      objectiveReady
+    ) {
+      const base = dialogDef || {
+        text: "Merci pour le coup de main !",
+        choice: "À plus tard.",
+      };
+      dialogData = {
+        ...base,
+        questTurnIn: true,
+        onChoice: () => {
+          setTalkObjectiveComplete(state, stage);
+          advanceQuestStage(player, quest.id, { scene });
+        },
+      };
+    } else {
+      dialogData = dialogDef || { text: "Bonjour.", choice: "À plus tard." };
     }
+  } else {
+    dialogData = getNpcDialog(npc.id) || { text: "Bonjour.", choice: "À plus tard." };
   }
 
-  openNpcDialog(npc, player);
+  openNpcDialog(npc, player, dialogData);
 }

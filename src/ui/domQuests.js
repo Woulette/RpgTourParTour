@@ -1,6 +1,8 @@
 import { getAllQuestStates, QUEST_STATES } from "../quests/index.js";
+import { on as onStoreEvent } from "../state/store.js";
 
 let domQuestsInitialized = false;
+let unsubscribeQuests = null;
 
 export function initDomQuests(player) {
   if (domQuestsInitialized) return;
@@ -92,122 +94,7 @@ export function initDomQuests(player) {
 
   let currentFilter = "all";
   let activeItemEl = null;
-
-  const renderLists = () => {
-    if (!listAvailable || !listActive || !listCompleted) return;
-    listAvailable.innerHTML = "";
-    listActive.innerHTML = "";
-    listCompleted.innerHTML = "";
-
-    const all = getAllQuestStates(player);
-
-    const counts = {
-      all: all.length,
-      available: 0,
-      active: 0,
-      completed: 0,
-    };
-
-    all.forEach(({ def, state }) => {
-      const li = document.createElement("li");
-      li.className = "quest-item";
-      li.textContent = def.title;
-      li.dataset.questId = def.id;
-
-      li.addEventListener("click", (event) => {
-        event.stopPropagation();
-        if (activeItemEl) {
-          activeItemEl.classList.remove("quest-item-active");
-        }
-        activeItemEl = li;
-        li.classList.add("quest-item-active");
-        renderDetail(def, state);
-      });
-
-      if (state.state === QUEST_STATES.NOT_STARTED) {
-        listAvailable.appendChild(li);
-        counts.available += 1;
-      } else if (state.state === QUEST_STATES.IN_PROGRESS) {
-        listActive.appendChild(li);
-        counts.active += 1;
-      } else if (state.state === QUEST_STATES.COMPLETED) {
-        listCompleted.appendChild(li);
-        counts.completed += 1;
-      }
-    });
-
-    if (filterCounts.all) filterCounts.all.textContent = counts.all;
-    if (filterCounts.available)
-      filterCounts.available.textContent = counts.available;
-    if (filterCounts.active) filterCounts.active.textContent = counts.active;
-    if (filterCounts.completed)
-      filterCounts.completed.textContent = counts.completed;
-
-    applyFilter(currentFilter, { columnAvailable, columnActive, columnCompleted });
-  };
-
-  const renderDetail = (def, state) => {
-    if (!def || !state) {
-      if (detailTitleEl) detailTitleEl.textContent = "";
-      if (detailDescEl) detailDescEl.textContent = "";
-      if (detailProgressEl) detailProgressEl.textContent = "";
-      if (detailRewardsEl) detailRewardsEl.textContent = "";
-      return;
-    }
-
-    if (detailTitleEl) {
-      detailTitleEl.textContent = def.title;
-    }
-
-    if (detailDescEl) {
-      detailDescEl.textContent = def.description || "";
-    }
-
-    if (detailProgressEl) {
-      if (def.objective && def.objective.type === "kill_monster") {
-        const required = def.objective.requiredCount || 1;
-        const current = state.progress.currentCount || 0;
-        detailProgressEl.textContent = `${def.objective.label}: ${current}/${required}`;
-
-        const percent = Math.max(
-          0,
-          Math.min(100, (current / required) * 100)
-        );
-        if (detailProgressBarFillEl) {
-          detailProgressBarFillEl.style.setProperty(
-            "--quest-progress-percent",
-            `${percent}%`
-          );
-        }
-      } else {
-        detailProgressEl.textContent = "";
-        if (detailProgressBarFillEl) {
-          detailProgressBarFillEl.style.setProperty(
-            "--quest-progress-percent",
-            "0%"
-          );
-        }
-      }
-    }
-
-    if (detailRewardsEl) {
-      const rewards = def.rewards || {};
-      const parts = [];
-      if (rewards.xpPlayer) {
-        parts.push(`${rewards.xpPlayer} XP`);
-      }
-      if (rewards.gold) {
-        parts.push(`${rewards.gold} or`);
-      }
-      // Affiche les récompenses séparées par un séparateur lisible
-      // Separateur lisible et ASCII
-      detailRewardsEl.textContent = parts.join(" / ");
-    }
-  };
-
-  const refreshPanel = () => {
-    renderLists();
-  };
+  let selectedQuestId = null;
 
   const applyFilter = (filter, columns) => {
     currentFilter = filter;
@@ -236,11 +123,178 @@ export function initDomQuests(player) {
     }
   };
 
+  const renderDetail = (def, state, stage) => {
+    if (!def || !state) {
+      if (detailTitleEl) detailTitleEl.textContent = "";
+      if (detailDescEl) detailDescEl.textContent = "";
+      if (detailProgressEl) detailProgressEl.textContent = "";
+      if (detailRewardsEl) detailRewardsEl.textContent = "";
+      if (detailProgressBarFillEl) {
+        detailProgressBarFillEl.style.setProperty(
+          "--quest-progress-percent",
+          "0%"
+        );
+      }
+      return;
+    }
+
+    if (detailTitleEl) {
+      detailTitleEl.textContent = def.title;
+    }
+
+    if (detailDescEl) {
+      const stageDesc = stage?.description;
+      detailDescEl.textContent = stageDesc || def.description || "";
+    }
+
+    if (detailProgressEl) {
+      const objective = stage?.objective;
+      if (objective && objective.type === "kill_monster") {
+        const required = objective.requiredCount || 1;
+        const current = state.progress?.currentCount || 0;
+        detailProgressEl.textContent = `${objective.label}: ${current}/${required}`;
+
+        const percent = Math.max(
+          0,
+          Math.min(100, (current / required) * 100)
+        );
+        if (detailProgressBarFillEl) {
+          detailProgressBarFillEl.style.setProperty(
+            "--quest-progress-percent",
+            `${percent}%`
+          );
+        }
+      } else if (objective && objective.type === "talk_to_npc") {
+        const required = objective.requiredCount || 1;
+        const current = Math.min(
+          required,
+          state.progress?.currentCount || 0
+        );
+        detailProgressEl.textContent = `${objective.label}: ${current}/${required}`;
+        if (detailProgressBarFillEl) {
+          const percent = (current / required) * 100;
+          detailProgressBarFillEl.style.setProperty(
+            "--quest-progress-percent",
+            `${percent}%`
+          );
+        }
+      } else {
+        detailProgressEl.textContent = "";
+        if (detailProgressBarFillEl) {
+          detailProgressBarFillEl.style.setProperty(
+            "--quest-progress-percent",
+            "0%"
+          );
+        }
+      }
+    }
+
+    if (detailRewardsEl) {
+      const rewards = def.rewards || {};
+      const parts = [];
+      if (rewards.xpPlayer) {
+        parts.push(`${rewards.xpPlayer} XP`);
+      }
+      if (rewards.gold) {
+        parts.push(`${rewards.gold} or`);
+      }
+      detailRewardsEl.textContent = parts.join(" / ");
+    }
+  };
+
+  const renderLists = () => {
+    if (!listAvailable || !listActive || !listCompleted) return;
+    listAvailable.innerHTML = "";
+    listActive.innerHTML = "";
+    listCompleted.innerHTML = "";
+
+    const all = getAllQuestStates(player);
+
+    const counts = {
+      all: all.length,
+      available: 0,
+      active: 0,
+      completed: 0,
+    };
+
+    let selectedEntry = null;
+
+    all.forEach(({ def, state, stage }) => {
+      if (!def) return;
+
+      const li = document.createElement("li");
+      li.className = "quest-item";
+      li.textContent = def.title;
+      li.dataset.questId = def.id;
+
+      li.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (activeItemEl) {
+          activeItemEl.classList.remove("quest-item-active");
+        }
+        activeItemEl = li;
+        li.classList.add("quest-item-active");
+        selectedQuestId = def.id;
+        renderDetail(def, state, stage);
+      });
+
+      if (selectedQuestId && selectedQuestId === def.id) {
+        selectedEntry = { def, state, stage, li };
+      }
+
+      if (state.state === QUEST_STATES.NOT_STARTED) {
+        listAvailable.appendChild(li);
+        counts.available += 1;
+      } else if (state.state === QUEST_STATES.IN_PROGRESS) {
+        listActive.appendChild(li);
+        counts.active += 1;
+      } else if (state.state === QUEST_STATES.COMPLETED) {
+        listCompleted.appendChild(li);
+        counts.completed += 1;
+      }
+    });
+
+    if (filterCounts.all) filterCounts.all.textContent = counts.all;
+    if (filterCounts.available)
+      filterCounts.available.textContent = counts.available;
+    if (filterCounts.active) filterCounts.active.textContent = counts.active;
+    if (filterCounts.completed)
+      filterCounts.completed.textContent = counts.completed;
+
+    applyFilter(currentFilter, { columnAvailable, columnActive, columnCompleted });
+
+    if (selectedEntry) {
+      if (activeItemEl) {
+        activeItemEl.classList.remove("quest-item-active");
+      }
+      activeItemEl = selectedEntry.li;
+      activeItemEl.classList.add("quest-item-active");
+      renderDetail(selectedEntry.def, selectedEntry.state, selectedEntry.stage);
+    } else {
+      if (activeItemEl) {
+        activeItemEl.classList.remove("quest-item-active");
+      }
+      activeItemEl = null;
+      selectedQuestId = null;
+      renderDetail(null, null, null);
+    }
+  };
+
+  const refreshPanel = () => {
+    renderLists();
+  };
+
   buttonEl.addEventListener("click", (event) => {
     event.stopPropagation();
     const willOpen = !document.body.classList.contains("hud-quests-open");
     document.body.classList.toggle("hud-quests-open", willOpen);
     if (willOpen) {
+      refreshPanel();
+    }
+  });
+
+  unsubscribeQuests = onStoreEvent("quest:updated", () => {
+    if (document.body.classList.contains("hud-quests-open")) {
       refreshPanel();
     }
   });

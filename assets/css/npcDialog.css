@@ -102,9 +102,12 @@ body.npc-dialog-open #npc-dialog-panel {
 }
 
 .npc-dialog-choices {
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.4rem;
+  min-height: 40px;
 }
 
 .npc-dialog-choice {
@@ -121,4 +124,30 @@ body.npc-dialog-open #npc-dialog-panel {
 .npc-dialog-choice:hover {
   background: rgba(30, 64, 175, 0.98);
   border-color: rgba(191, 219, 254, 0.9);
+}
+
+.npc-dialog-quest-badge {
+  position: absolute;
+  right: -0px;
+  top: 25%;
+  transform: translateY(-50%) scale(0.8);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #b4f397, #22c55e);
+  color: #0f172a;
+  font-weight: 900;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.npc-dialog-quest-badge-visible {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
 }
