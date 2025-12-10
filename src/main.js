@@ -113,10 +113,17 @@ class MainScene extends Phaser.Scene {
 
     if (mapDef.spawnDefaults) {
       // --- MONSTRES DE TEST ---
-      spawnInitialMonsters(this, map, groundLayer, centerTileX, centerTileY);
+      spawnInitialMonsters(
+        this,
+        map,
+        groundLayer,
+        centerTileX,
+        centerTileY,
+        mapDef
+      );
 
       // --- ARBRES DE TEST (M?TIER B?CHERON) ---
-      spawnTestTrees(this, map, this.player, mapDef.key);
+      spawnTestTrees(this, map, this.player, mapDef);
 
       // --- PNJ ---
       spawnNpcsForMap(this, map, groundLayer, mapDef.key);

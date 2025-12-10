@@ -8,16 +8,6 @@ const TREE_STUMP_TEXTURE_KEY = "tree_chene_stump";
 const CUT_DURATION_MS = 3000;
 const REGROW_DURATION_MS = 30000;
 
-// Positions fixes d'arbres par map (coordonnées tuiles)
-const FIXED_TREE_POSITIONS_BY_MAP = {
-  // Map de départ actuelle
-  Map1Andemia: [
-    { tileX: 7, tileY: 18 },
-    { tileX: 15, tileY: 24 },
-    { tileX: 26, tileY: 18 },
-  ],
-};
-
 function showHarvestFeedback(scene, node, result) {
   if (!scene || !result) return;
 
@@ -33,19 +23,18 @@ function showHarvestFeedback(scene, node, result) {
   };
 
   if (result.gainedXp && result.gainedXp > 0) {
-    const txtXp = scene.add.text(
-      baseX,
-      baseY,
-      `+${result.gainedXp} XP`,
-      style
-    );
-    txtXp.setOrigin(0.5, 1);
-    txtXp.setDepth(node.y + 10);
+      const txtXp = scene.add.text(
+        baseX,
+        baseY,
+        `+${result.gainedXp} XP`,
+        style
+      );
+      txtXp.setOrigin(0.5, 1);
+      txtXp.setDepth(node.y + 10);
 
-    if (scene.hudCamera) {
-      scene.hudCamera.ignore(txtXp);
-    }
-
+      if (scene.hudCamera) {
+        scene.hudCamera.ignore(txtXp);
+      }
     scene.tweens.add({
       targets: txtXp,
       y: baseY - 30,
@@ -72,7 +61,6 @@ function showHarvestFeedback(scene, node, result) {
       if (scene.hudCamera) {
         scene.hudCamera.ignore(txtItems);
       }
-
       scene.tweens.add({
         targets: txtItems,
         y: baseY - 30,
@@ -122,27 +110,42 @@ function findAdjacentTileNearNode(scene, map, node, player) {
 }
 
 /**
- * Spawn de quelques arbres de test pour le métier bûcheron.
- * Désormais : positions fixes sur la map, pour que les arbres
- * soient toujours au même endroit à chaque chargement.
+ * Spawn d'arbres pour le métier bucheron.
+ * Chaque map fournit ses positions via mapDef.treePositions : aucune
+ * position n'est partagée entre cartes.
  *
  * @param {Phaser.Scene} scene
  * @param {Phaser.Tilemaps.Tilemap} map
  * @param {object} player
- * @param {string} [mapKey]
+ * @param {object} [mapDef]
  */
-export function spawnTestTrees(scene, map, player, mapKey) {
+export function spawnTestTrees(scene, map, player, mapDef) {
   if (!scene || !map || !player) return;
 
-  const effectiveMapKey = mapKey || "Map1Andemia";
   const positions =
-    FIXED_TREE_POSITIONS_BY_MAP[effectiveMapKey] ||
-    FIXED_TREE_POSITIONS_BY_MAP.Map1Andemia ||
+    (mapDef && Array.isArray(mapDef.treePositions) && mapDef.treePositions) ||
     [];
+
+  if (positions.length === 0) {
+    return;
+  }
 
   const nodes = [];
 
   positions.forEach((pos) => {
+    if (typeof pos.tileX !== "number" || typeof pos.tileY !== "number") {
+      return;
+    }
+
+    if (
+      pos.tileX < 0 ||
+      pos.tileY < 0 ||
+      pos.tileX >= map.width ||
+      pos.tileY >= map.height
+    ) {
+      return;
+    }
+
     const tileX = pos.tileX;
     const tileY = pos.tileY;
 
@@ -345,4 +348,3 @@ export function spawnTestTrees(scene, map, player, mapKey) {
 
   scene.bucheronNodes = nodes;
 }
-

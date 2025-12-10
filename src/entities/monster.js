@@ -32,7 +32,7 @@ export function createMonster(scene, x, y, monsterId) {
     monster.setOrigin(0.5, 0.85);
   }
 
-  // Place le monstre au‑dessus de la grille debug
+  // Place le monstre au-dessus de la grille debug
   monster.setDepth(2);
 
   // S'assure que la caméra HUD n'affiche pas le monstre
@@ -217,7 +217,7 @@ export function createMonster(scene, x, y, monsterId) {
 
       overlay.setBlendMode(Phaser.BlendModes.ADD); // effet lumineux
       overlay.setAlpha(0.6); // intensité
-      overlay.setDepth((monster.depth || 0) + 1); // au‑dessus du sprite
+      overlay.setDepth((monster.depth || 0) + 1); // au-dessus du sprite
 
       if (scene.hudCamera) {
         scene.hudCamera.ignore(overlay);

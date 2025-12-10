@@ -8,36 +8,51 @@ export function preloadMonsters(scene) {
   });
 }
 
-// Pour l'instant : on place plusieurs groupes de corbeaux autour du centre
-// et un Aluineeks un peu plus loin. Plus tard, on pourra lire un calque
-// "Monstres" dans Tiled ici.
+// Place les monstres déclarés dans la définition de la map (mapDef.monsterSpawns).
+// Chaque map fournit sa propre liste : pas de partage implicite entre maps.
 export function spawnInitialMonsters(
   scene,
   map,
   groundLayer,
   centerTileX,
-  centerTileY
+  centerTileY,
+  mapDef
 ) {
   scene.monsters = scene.monsters || [];
 
-  const monsterOffsetTilesY = -3;
+  const spawnDefs =
+    (mapDef && Array.isArray(mapDef.monsterSpawns) && mapDef.monsterSpawns) ||
+    [];
 
-  // --- Groupes de corbeaux ---
-  // On crée 4 "packs" visibles : 1, 2, 3 et 4 corbeaux.
-  // Visuellement : 1 sprite par pack, mais chaque pack
-  // a une taille (groupSize). En combat, on pourra
-  // matérialiser chaque membre du pack séparément.
-  const corbeauGroups = [
-    { size: 1, tileX: centerTileX - 4, tileY: centerTileY + monsterOffsetTilesY },
-    { size: 2, tileX: centerTileX - 1, tileY: centerTileY + monsterOffsetTilesY },
-    { size: 3, tileX: centerTileX + 2, tileY: centerTileY + monsterOffsetTilesY },
-    { size: 4, tileX: centerTileX + 5, tileY: centerTileY + monsterOffsetTilesY },
-  ];
+  if (spawnDefs.length === 0) return;
 
   let nextGroupId = 1;
 
-  corbeauGroups.forEach((group) => {
-    const { size, tileX, tileY } = group;
+  spawnDefs.forEach((spawn) => {
+    if (!spawn) return;
+
+    let tileX = null;
+    let tileY = null;
+
+    if (typeof spawn.tileX === "number" && typeof spawn.tileY === "number") {
+      tileX = spawn.tileX;
+      tileY = spawn.tileY;
+    } else if (spawn.offsetFromCenter) {
+      const { x: dx = 0, y: dy = 0 } = spawn.offsetFromCenter || {};
+      tileX = centerTileX + dx;
+      tileY = centerTileY + dy;
+    }
+
+    if (
+      tileX === null ||
+      tileY === null ||
+      tileX < 0 ||
+      tileY < 0 ||
+      tileX >= map.width ||
+      tileY >= map.height
+    ) {
+      return;
+    }
 
     const worldPos = map.tileToWorldXY(
       tileX,
@@ -50,37 +65,21 @@ export function spawnInitialMonsters(
     const x = worldPos.x + map.tileWidth / 2;
     const y = worldPos.y + map.tileHeight / 2;
 
-    const corbeau = createMonster(scene, x, y, "corbeau");
-    corbeau.tileX = tileX;
-    corbeau.tileY = tileY;
-    corbeau.groupId = `corbeau_group_${nextGroupId}`;
-    corbeau.groupSize = size;
+    const type = spawn.type || "corbeau";
+    const groupSize =
+      typeof spawn.groupSize === "number" && spawn.groupSize > 0
+        ? spawn.groupSize
+        : 1;
 
-    scene.monsters.push(corbeau);
+    const monster = createMonster(scene, x, y, type);
+    monster.tileX = tileX;
+    monster.tileY = tileY;
+    monster.groupId = `${type}_group_${nextGroupId}`;
+    monster.groupSize = groupSize;
+
+    scene.monsters.push(monster);
     nextGroupId += 1;
   });
-
-  // --- Aluineeks de test ---
-  const aluineeksTileX = centerTileX + 8;
-  const aluineeksTileY = centerTileY + monsterOffsetTilesY;
-
-  const aluineeksWorld = map.tileToWorldXY(
-    aluineeksTileX,
-    aluineeksTileY,
-    undefined,
-    undefined,
-    groundLayer
-  );
-
-  const aluineeksX = aluineeksWorld.x + map.tileWidth / 2;
-  const aluineeksY = aluineeksWorld.y + map.tileHeight / 2;
-
-  const aluineeks = createMonster(scene, aluineeksX, aluineeksY, "aluineeks");
-  aluineeks.tileX = aluineeksTileX;
-  aluineeks.tileY = aluineeksTileY;
-  aluineeks.groupId = "aluineeks_group_1";
-  aluineeks.groupSize = 1;
-  scene.monsters.push(aluineeks);
 }
 
 // Cherche un monstre exactement sur une tuile donnée

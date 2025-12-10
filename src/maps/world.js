@@ -389,12 +389,20 @@ export function loadMapLikeMain(scene, mapDef) {
   // Cleanup des entites propres �� la map pour Ǹviter de les voir sur la suivante.
   if (Array.isArray(scene.monsters)) {
     scene.monsters.forEach((m) => {
+      if (m?.hoverHighlight?.destroy) {
+        m.hoverHighlight.destroy();
+      }
+      m.hoverHighlight = null;
       if (m && m.destroy) m.destroy();
     });
     scene.monsters = [];
   }
   if (Array.isArray(scene.npcs)) {
     scene.npcs.forEach((npc) => {
+      if (npc?.hoverHighlight?.destroy) {
+        npc.hoverHighlight.destroy();
+      }
+      npc.hoverHighlight = null;
       if (npc && npc.sprite && npc.sprite.destroy) {
         npc.sprite.destroy();
       }
@@ -403,8 +411,9 @@ export function loadMapLikeMain(scene, mapDef) {
   }
   if (Array.isArray(scene.bucheronNodes)) {
     scene.bucheronNodes.forEach((node) => {
-      if (node?.sprite?.destroy) node.sprite.destroy();
       if (node?.hoverHighlight?.destroy) node.hoverHighlight.destroy();
+      node.hoverHighlight = null;
+      if (node?.sprite?.destroy) node.sprite.destroy();
     });
     scene.bucheronNodes = [];
   }
@@ -464,9 +473,10 @@ export function loadMapLikeMain(scene, mapDef) {
       map,
       scene.groundLayer,
       centerTileX,
-      centerTileY
+      centerTileY,
+      mapDef
     );
-    spawnTestTrees(scene, map, scene.player, mapDef.key);
+    spawnTestTrees(scene, map, scene.player, mapDef);
     spawnNpcsForMap(scene, map, scene.groundLayer, mapDef.key);
   }
   createMapExits(scene);

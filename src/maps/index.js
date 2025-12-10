@@ -14,6 +14,22 @@ export const maps = {
     tilesets: anemiaTilesets,
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,
+    monsterSpawns: [
+      { type: "corbeau", groupSize: 1, offsetFromCenter: { x: -4, y: -3 } },
+      { type: "corbeau", groupSize: 2, offsetFromCenter: { x: -1, y: -3 } },
+      { type: "corbeau", groupSize: 3, offsetFromCenter: { x: 2, y: -3 } },
+      { type: "corbeau", groupSize: 4, offsetFromCenter: { x: 5, y: -3 } },
+      { type: "aluineeks", groupSize: 1, offsetFromCenter: { x: 8, y: -3 } },
+    ],
+    treePositions: [
+      { tileX: 7, tileY: 18 },
+      { tileX: 15, tileY: 24 },
+      { tileX: 26, tileY: 18 },
+    ],
+    // Optionnel : borne manuelle des bandes de sortie (coordonnées monde).
+    // Laisse null pour l’auto, ou mets { minX, minY, maxX, maxY } si tu veux régler à la main.
+    exitBounds: null
+
   },
   Map2Andemia: {
     key: "Map2Andemia",
@@ -21,7 +37,19 @@ export const maps = {
     jsonPath: "assets/maps/MapAndemiaTest5.json",
     tilesets: anemiaTilesets,
     cameraOffsets: { x: 0, y: 43 },
-    spawnDefaults: false,
+    spawnDefaults: true,
+    monsterSpawns: [
+      { type: "corbeau", groupSize: 2, offsetFromCenter: { x: -3, y: -2 } },
+      { type: "corbeau", groupSize: 1, offsetFromCenter: { x: 4, y: 1 } },
+      { type: "aluineeks", groupSize: 1, offsetFromCenter: { x: 6, y: -1 } },
+    ],
+    treePositions: [
+      { tileX: 10, tileY: 10 },
+      { tileX: 18, tileY: 20 },
+      { tileX: 25, tileY: 12 },
+    ],
+    // Bornes de bandes de sortie (coordonnées monde)
+    exitBounds: null
   },
 };
 
