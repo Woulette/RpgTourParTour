@@ -129,6 +129,14 @@ export function setupWorkstations(scene, map, groundLayer, mapDef) {
       const player = scene.player;
       if (!player) return;
 
+      // Stoppe un déplacement en cours pour éviter les jitters quand on change de cible
+      if (player.currentMoveTween) {
+        player.currentMoveTween.stop();
+        player.currentMoveTween = null;
+        player.isMoving = false;
+        player.movePath = [];
+      }
+
       const openPanel = () => {
         if (ws.id === "tailleur") {
           openTailleurCraftPanel(scene, scene?.player);

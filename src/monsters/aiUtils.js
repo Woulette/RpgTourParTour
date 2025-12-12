@@ -1,4 +1,5 @@
 import { PLAYER_SPEED } from "../config/constants.js";
+import { isTileBlocked } from "../collision/collisionGrid.js";
 
 // Déplacement fluide case par case en chaînant les tweens.
 export function moveMonsterAlongPath(
@@ -131,7 +132,8 @@ export function chooseStepTowardsTarget(
     // Hors de la carte
     if (nx < 0 || nx >= map.width || ny < 0 || ny >= map.height) continue;
 
-    // Case occupée par un allié
+    // Case bloquante : collision ou allié
+    if (isTileBlocked(scene, nx, ny)) continue;
     if (isTileOccupiedByMonster(scene, nx, ny, monster)) continue;
 
     const d = Math.abs(targetX - nx) + Math.abs(targetY - ny);
@@ -229,6 +231,7 @@ export function findPathToReachAdjacentToTarget(
       if (visited.has(key)) continue;
 
       // Case occupǸe par un autre monstre : on ne peut pas marcher dessus
+      if (isTileBlocked(scene, nx, ny)) continue;
       if (isTileOccupiedByMonster(scene, nx, ny, self)) continue;
 
       visited.add(key);

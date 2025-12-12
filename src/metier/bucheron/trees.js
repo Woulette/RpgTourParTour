@@ -8,6 +8,19 @@ const TREE_STUMP_TEXTURE_KEY = "tree_chene_stump";
 const CUT_DURATION_MS = 3000;
 const REGROW_DURATION_MS = 30000;
 
+function cancelCurrentHarvest(player) {
+  if (!player) return;
+  if (player.currentHarvestTimer?.remove) {
+    player.currentHarvestTimer.remove(false);
+  }
+  if (player.currentHarvestNode) {
+    player.currentHarvestNode.isHarvesting = false;
+  }
+  player.currentHarvestTimer = null;
+  player.currentHarvestNode = null;
+  player.isHarvestingTree = false;
+}
+
 function showHarvestFeedback(scene, node, result) {
   if (!scene || !result) return;
 
@@ -209,25 +222,63 @@ export function spawnTestTrees(scene, map, player, mapDef) {
         event.stopPropagation();
       }
 
-      if (node.harvested || node.isHarvesting) return;
+      // Pas de récolte pendant un combat ou la phase de préparation
+      if (scene.combatState && scene.combatState.enCours) {
+        return;
+      }
+      if (scene.prepState && scene.prepState.actif) {
+        return;
+      }
+
+      // Ne pas lancer une nouvelle coupe si un autre arbre est en cours de récolte
+      if (node.harvested || node.isHarvesting || player.isHarvestingTree) return;
+
+      // Si l'overlay de fin de combat est visible, on ignore le clic (pour éviter les actions fantômes après combat)
+      const combatOverlay = document.getElementById("combat-result-overlay");
+      if (combatOverlay && !combatOverlay.classList.contains("combat-result-hidden")) {
+        return;
+      }
+
+      // Nouvelle cible : annule un éventuel timer en cours
+      cancelCurrentHarvest(player);
+      player.currentHarvestNode = node;
+      // Stoppe un éventuel déplacement en cours pour éviter le jitter
+      if (player.currentMoveTween) {
+        player.currentMoveTween.stop();
+        player.currentMoveTween = null;
+        player.isMoving = false;
+        player.movePath = [];
+      }
 
       const maxDistSq = 80 * 80;
 
       const startCut = () => {
+        if (player.currentHarvestNode !== node) return;
         node.isHarvesting = true;
         player.isHarvestingTree = true;
 
         if (scene.time && scene.time.delayedCall) {
-          scene.time.delayedCall(CUT_DURATION_MS, () => {
+          const timer = scene.time.delayedCall(CUT_DURATION_MS, () => {
             if (!scene.scene || !scene.scene.isActive() || node.harvested) {
               node.isHarvesting = false;
               player.isHarvestingTree = false;
+              player.currentHarvestTimer = null;
+              player.currentHarvestNode = null;
+              return;
+            }
+
+            if (player.currentHarvestNode !== node) {
+              node.isHarvesting = false;
+              player.isHarvestingTree = false;
+              player.currentHarvestTimer = null;
               return;
             }
 
             const result = harvestTree(scene, player, node);
             node.isHarvesting = false;
             player.isHarvestingTree = false;
+            player.currentHarvestTimer = null;
+            player.currentHarvestNode = null;
 
             if (!result.success) return;
 
@@ -278,6 +329,7 @@ export function spawnTestTrees(scene, map, player, mapDef) {
               });
             }
           });
+          player.currentHarvestTimer = timer;
         }
       };
 

@@ -41,7 +41,8 @@ export function loadMapLikeMain(scene, mapDef) {
   // Cleanup workstations prÈcÈdents
   if (Array.isArray(scene.workstations)) {
     scene.workstations.forEach((w) => {
-      if (w?.hitbox?.destroy) w.hitbox.destroy();
+      if (w?.hoverHighlight?.destroy) w.hoverHighlight.destroy();
+      if (w?.sprite?.destroy) w.sprite.destroy();
     });
   }
   scene.workstations = [];
