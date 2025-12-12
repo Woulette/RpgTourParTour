@@ -38,6 +38,50 @@
   gap: 8px;
 }
 
+.craft-panel .craft-xp-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.craft-panel .craft-xp-bar {
+  position: relative;
+  height: 12px;
+  background: #1f2933;
+  border: 1px solid #3a4552;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.craft-panel .craft-xp-bar-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #1f7bc1, #42c2ff);
+  transition: width 0.25s ease;
+}
+
+.craft-panel .craft-xp-bar-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #dbe9f9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.craft-panel .craft-xp-level {
+  font-size: 13px;
+  color: #dbe9f9;
+  font-weight: 600;
+  min-width: 68px;
+  text-align: right;
+  margin-left: -32px;
+}
+
 .craft-panel .craft-panel-close {
   background: none;
   border: 1px solid #38404a;
@@ -136,6 +180,27 @@
   object-fit: cover;
   background: #a7a7a7;
   border: 1px solid #1f2933;
+}
+
+.craft-recipe .craft-recipe-xp {
+  margin-top: -20px;
+  align-self: flex-end;
+  transform: translateY(-6px);
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(31, 123, 193, 0.12);
+  border: 1px solid rgba(31, 123, 193, 0.35);
+  color: #dbe9f9;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.craft-recipe .craft-recipe-xp::before {
+  content: "★";
+  font-size: 11px;
+  color: #ffd166;
 }
 
 .craft-tag {

@@ -1,9 +1,11 @@
 import { bucheronDefinition } from "../metier/bucheron/config.js";
 import { ensureBucheronState } from "../metier/bucheron/state.js";
+import { tailleurDefinition } from "../metier/tailleur/config.js";
+import { ensureTailleurState } from "../metier/tailleur/state.js";
 import { on as onStoreEvent } from "../state/store.js";
 
 // Métier unique pour l'instant, mais structuré pour en ajouter d'autres.
-const METIERS = [bucheronDefinition];
+const METIERS = [bucheronDefinition, tailleurDefinition];
 const METIERS_BY_ID = Object.fromEntries(METIERS.map((m) => [m.id, m]));
 
 let metiersUiInitialized = false;
@@ -96,6 +98,9 @@ export function initDomMetiers(player) {
   const getPlayerMetierState = (id) => {
     if (id === "bucheron") {
       return ensureBucheronState(player);
+    }
+    if (id === "tailleur") {
+      return ensureTailleurState(player);
     }
     // Fallback pour futurs métiers
     if (!player.metiers) player.metiers = {};

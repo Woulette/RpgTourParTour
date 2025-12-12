@@ -24,7 +24,7 @@ import { initDomCombat } from "./ui/domCombat.js";
 import { initDomSpells } from "./ui/domSpells.js";
 import { initDomCombatResult } from "./ui/domCombatResult.js";
 import { initDomInventory } from "./ui/domInventory.js";
-import { initDomMetiers } from "./ui/domMetiersBucheron.js";
+import { initDomMetiers } from "./ui/domMetiers.js";
 import { initDomQuests } from "./ui/domQuests.js";
 import { initQuestTracker } from "./ui/domQuestTracker.js";
 import { preloadMonsters, spawnInitialMonsters } from "./monsters/index.js";
@@ -265,4 +265,3 @@ const config = {
 };
 
 new Phaser.Game(config);
-

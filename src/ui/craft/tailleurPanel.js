@@ -6,6 +6,7 @@ import { emit as emitStoreEvent } from "../../state/store.js";
 let panelEl = null;
 let isOpen = false;
 let lastCrafted = null;
+let xpRenderRequested = false;
 
 function labelForStatKey(key) {
   switch (key) {
@@ -99,6 +100,13 @@ function ensurePanelElements() {
         <h3>Table de Tailleur</h3>
         <button type="button" class="craft-panel-close" aria-label="Fermer">✕</button>
       </header>
+      <div class="craft-xp-row">
+        <div class="craft-xp-bar">
+          <div class="craft-xp-bar-fill" id="tailleur-xp-fill"></div>
+          <div class="craft-xp-bar-label" id="tailleur-xp-label">XP 0 / 100</div>
+        </div>
+        <div class="craft-xp-level">Niv. <span id="tailleur-xp-level">1</span></div>
+      </div>
       <div class="craft-body">
         <section class="craft-left">
           <ul class="craft-recipes" id="tailleur-recipes"></ul>
@@ -132,6 +140,24 @@ function ensurePanelElements() {
   closeBtn.addEventListener("click", () => closeTailleurCraftPanel());
 
   return panelEl;
+}
+
+function renderXpHeader(player) {
+  if (!panelEl || xpRenderRequested) return;
+  xpRenderRequested = true;
+  requestAnimationFrame(() => {
+    xpRenderRequested = false;
+    const state = ensureTailleurState(player);
+    if (!state) return;
+    const fill = panelEl.querySelector("#tailleur-xp-fill");
+    const label = panelEl.querySelector("#tailleur-xp-label");
+    const lvl = panelEl.querySelector("#tailleur-xp-level");
+    const percent =
+      state.xpNext > 0 ? Math.min(100, (state.xp / state.xpNext) * 100) : 0;
+    if (fill) fill.style.width = `${percent}%`;
+    if (label) label.textContent = `XP ${state.xp} / ${state.xpNext}`;
+    if (lvl) lvl.textContent = String(state.level ?? 1);
+  });
 }
 
 function renderInventory(player) {
@@ -380,6 +406,12 @@ function renderRecipes(player, selectedIdRef) {
     });
     li.appendChild(reqs);
 
+    const xpPill = document.createElement("div");
+    xpPill.className = "craft-recipe-xp";
+    const xpValue = recipe.xpGain ?? 0;
+    xpPill.textContent = `${xpValue} XP`;
+    li.appendChild(xpPill);
+
     if (currentSelected === recipe.id) {
       li.classList.add("active");
     }
@@ -424,6 +456,7 @@ export function openTailleurCraftPanel(scene, player) {
   const selectedRef = { value: tailleurRecipes[0]?.id };
   const selected = renderRecipes(player, selectedRef);
   const recipe = tailleurRecipes.find((r) => r.id === selected);
+  renderXpHeader(player);
   renderSlots(recipe, player);
   renderInventory(player);
   updateCraftButton(recipe, player);
@@ -464,6 +497,7 @@ export function openTailleurCraftPanel(scene, player) {
       if (recipe.xpGain && recipe.xpGain > 0) {
         addTailleurXp(player, recipe.xpGain);
         emitStoreEvent("metier:updated", { id: "tailleur", state: player.metiers.tailleur });
+        renderXpHeader(player);
       }
       emitStoreEvent("craft:completed", { metierId: "tailleur", recipeId: recipe.id });
       // refresh UI
