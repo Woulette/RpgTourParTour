@@ -25,6 +25,14 @@ const tilesetLegacy = [
   },
 ];
 
+const craftTableTileset = {
+  name: "TableDeCraftTailleur",
+  imageKey: "TableDeCraftTailleur",
+  imagePath: "assets/TableDeCraftTailleur.png",
+  frameWidth: 54,
+  frameHeight: 65,
+};
+
 export const maps = {
   Map1Andemia: {
     key: "Map1Andemia",
@@ -47,8 +55,7 @@ export const maps = {
     ],
     // Optionnel : borne manuelle des bandes de sortie (coordonnées monde).
     // Laisse null pour l’auto, ou mets { minX, minY, maxX, maxY } si tu veux régler à la main.
-    exitBounds: null
-
+    exitBounds: null,
   },
   Map2Andemia: {
     key: "Map2Andemia",
@@ -68,7 +75,26 @@ export const maps = {
       { tileX: 25, tileY: 12 },
     ],
     // Bornes de bandes de sortie (coordonnées monde)
-    exitBounds: null
+    exitBounds: null,
+  },
+  MapAndemia2: {
+    key: "MapAndemia2",
+    worldPos: { x: -1, y: 0 },
+    jsonPath: "assets/maps/MapAndemia2.json",
+    tilesets: [...tilesetNew, craftTableTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: false,
+    monsterSpawns: [],
+    treePositions: [],
+    workstations: [
+      {
+        id: "tailleur",
+        tileX: 15,
+        tileY: 16,
+        offsetX: -4,
+      },
+    ],
+    exitBounds: null,
   },
 };
 

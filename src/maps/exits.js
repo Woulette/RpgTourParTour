@@ -1,7 +1,7 @@
 import { GAME_HEIGHT, GAME_WIDTH, HUD_HEIGHT } from "../config/constants.js";
 
 const EXIT_BAND_DEPTH = 10000;
-const DEFAULT_BAND_THICKNESS = 30;
+const DEFAULT_BAND_THICKNESS = 25;
 // Offsets en nombre de tuiles pour ajuster visuellement les bandes d'exit.
 // Modifie ces valeurs si tu veux avancer/reculer les bandes par direction.
 const BAND_OFFSETS_TILES = {
@@ -13,10 +13,10 @@ const BAND_OFFSETS_TILES = {
 // Trim facultatif (en tuiles) pour rogner la largeur/hauteur des bandes.
 // Exemple : left: 0.5 rogne d'une demi-tuile à gauche.
 const BAND_TRIM_TILES = {
-  up: { left: 0, right: 0, top: 0, bottom: 0 },
-  down: { left: 0, right: 0, top: 0, bottom: 0 }, // rogne un peu la largeur du bas
-  left: { left: 0, right: 0, top: 0, bottom: 0 },
-  right: { left: 0, right: 0, top: 0, bottom: 0 },
+  up: { left: 0, right: 0, top: -0.2, bottom: 0 },
+  down: { left: 0, right: 0, top: 0, bottom: -0.2 }, // rogne un peu la largeur du bas
+  left: { left: -0.1, right: 0, top: 0, bottom: 0 },
+  right: { left: 0, right: -0.1, top: 0, bottom: 0 },
 };
 
 // Bandes alignees sur les tuiles d'exit (calque Tiled "exits").
