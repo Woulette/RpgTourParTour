@@ -7,6 +7,75 @@ let panelEl = null;
 let isOpen = false;
 let lastCrafted = null;
 
+function labelForStatKey(key) {
+  switch (key) {
+    case "force":
+      return "Force";
+    case "intelligence":
+      return "Intelligence";
+    case "agilite":
+      return "Agilité";
+    case "chance":
+      return "Chance";
+    case "vitalite":
+      return "Vitalité";
+    case "initiative":
+      return "Initiative";
+    case "hp":
+    case "hpPlus":
+    case "hpMax":
+      return "PV";
+    case "pa":
+    case "paPlus":
+      return "PA";
+    case "pm":
+    case "pmPlus":
+      return "PM";
+    default:
+      return key;
+  }
+}
+
+function formatStatsBonus(bonus) {
+  if (!bonus) return [];
+  const parts = [];
+  Object.entries(bonus).forEach(([key, val]) => {
+    if (typeof val !== "number" || val === 0) return;
+    const label = labelForStatKey(key);
+    const sign = val >= 0 ? "+" : "";
+    const cls = (() => {
+      switch (key) {
+        case "force":
+          return "inventory-bonus-stat-force";
+        case "intelligence":
+          return "inventory-bonus-stat-intel";
+        case "agilite":
+          return "inventory-bonus-stat-agilite";
+        case "chance":
+          return "inventory-bonus-stat-chance";
+        case "vitalite":
+          return "inventory-bonus-stat-vitalite";
+        case "initiative":
+          return "inventory-bonus-stat-init";
+        case "hp":
+        case "hpPlus":
+        case "hpMax":
+          return "inventory-bonus-stat-hp";
+        case "pa":
+        case "paPlus":
+          return "inventory-bonus-stat-pa";
+        case "pm":
+        case "pmPlus":
+          return "inventory-bonus-stat-pm";
+        default:
+          return "inventory-bonus-stat-generic";
+      }
+    })();
+    parts.push({ text: `${sign}${val} ${label}`, cls });
+  });
+  return parts;
+}
+
 function ensurePanelElements() {
   if (panelEl) return panelEl;
   // Inject CSS links if not present
@@ -159,14 +228,70 @@ function renderResult() {
   }
   resultEl.classList.remove("empty");
   const def = getItemDef(lastCrafted.itemId);
+  const img = document.createElement("img");
   if (def?.icon) {
-    const img = document.createElement("img");
     img.src = def.icon;
     img.alt = def?.label || lastCrafted.itemId;
-    resultEl.appendChild(img);
   }
+  resultEl.appendChild(img);
+
   const text = document.createElement("div");
-  text.innerHTML = `<strong>${def?.label || lastCrafted.itemId}</strong><br/>x${lastCrafted.qty}`;
+  text.style.display = "flex";
+  text.style.flexDirection = "column";
+  text.style.alignItems = "flex-start";
+  text.style.gap = "2px";
+  text.style.position = "relative";
+
+  const title = document.createElement("div");
+  title.innerHTML = `<strong>${def?.label || lastCrafted.itemId}</strong>`;
+  text.appendChild(title);
+
+  const qtyLine = document.createElement("div");
+  qtyLine.textContent = `x${lastCrafted.qty}`;
+  text.appendChild(qtyLine);
+
+  const statsArr = formatStatsBonus(def?.statsBonus);
+  if (statsArr.length > 0) {
+    const statsEl = document.createElement("div");
+    statsEl.style.fontSize = "12px";
+    statsEl.style.color = "#c9d1d9";
+    statsEl.style.marginTop = "-25px";
+    statsEl.style.display = "flex";
+    statsEl.style.flexDirection = "column";
+    statsEl.style.gap = "2px";
+    statsEl.style.alignItems = "flex-start";
+    statsArr.forEach((entry) => {
+      const line = document.createElement("div");
+      line.className = `inventory-bonus-stat ${entry.cls}`;
+      line.style.display = "block";
+      line.style.lineHeight = "1.2";
+      line.style.display = "flex";
+      line.style.alignItems = "center";
+      line.style.gap = "6px";
+      line.style.marginLeft = "-50px";
+      line.style.marginTop = "-2px";
+
+      const valSpan = document.createElement("span");
+      valSpan.textContent = entry.text.split(" ")[0];
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = entry.text.split(" ").slice(1).join(" ");
+
+      line.appendChild(valSpan);
+      line.appendChild(labelSpan);
+      statsEl.appendChild(line);
+    });
+    text.appendChild(statsEl);
+  }
+
+  if (def?.description) {
+    const descEl = document.createElement("div");
+    descEl.style.fontSize = "11px";
+    descEl.style.color = "#aeb8c2";
+    descEl.style.marginTop = "2px";
+    descEl.textContent = def.description;
+    text.appendChild(descEl);
+  }
+
   resultEl.appendChild(text);
 }
 

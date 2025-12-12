@@ -243,6 +243,36 @@
   border: 1px solid #1f2933;
 }
 
+/* Couleurs de stats (reprise inventaire) */
+.inventory-bonus-stat-force {
+  color: #ffb347;
+}
+.inventory-bonus-stat-intel {
+  color: #7fd0ff;
+}
+.inventory-bonus-stat-agilite {
+  color: #7dff7a;
+}
+.inventory-bonus-stat-chance {
+  color: #bba9ff;
+}
+.inventory-bonus-stat-vitalite,
+.inventory-bonus-stat-hp {
+  color: #ff6b6b;
+}
+.inventory-bonus-stat-pa {
+  color: #ffd93b;
+}
+.inventory-bonus-stat-pm {
+  color: #6bffb8;
+}
+.inventory-bonus-stat-init {
+  color: #ff9ce6;
+}
+.inventory-bonus-stat-generic {
+  color: #e0e0e0;
+}
+
 /* Inventaire (colonne droite) */
 .craft-inventory {
   display: flex;
