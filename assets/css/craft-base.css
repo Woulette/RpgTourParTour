@@ -1,0 +1,331 @@
+/* Style du panneau de craft, calé sur l’esthétique de l’inventaire */
+
+.craft-panel {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 2000;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.craft-panel.open {
+  display: flex;
+}
+
+.craft-panel .craft-panel-inner {
+  width: 980px;
+  max-width: 92vw;
+  max-height: 80vh;
+  background: #2f343a;
+  color: #f5f7ff;
+  border-radius: 18px;
+  border: 1px solid #f3f3f3;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.craft-panel .craft-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.craft-panel .craft-panel-close {
+  background: none;
+  border: 1px solid #38404a;
+  color: inherit;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.craft-panel .craft-body {
+  display: grid;
+  grid-template-columns: 30% 33.5% 34%;
+  gap: 6px;
+  min-height: 0;
+  height: 100%;
+}
+
+.craft-panel section {
+  background: linear-gradient(180deg, #40464e, #3a3f46);
+  border: 1px solid #5a626c;
+  border-radius: 14px;
+  padding: 10px 10px 6px 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Recettes (colonne gauche) */
+.craft-recipes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.craft-recipe {
+  border: 1px solid #27313d;
+  border-radius: 10px;
+  padding: 10px;
+  background: #6b6b6b;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.craft-recipe.active {
+  border-color: #1f7bc1;
+  box-shadow: 0 0 0 1px rgba(31, 123, 193, 0.4);
+}
+
+.craft-recipe header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.craft-recipe .recipe-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #bdbdbd;
+  border: 1px solid #1f2933;
+}
+
+.craft-req {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+  color: #c9d1d9;
+}
+
+.craft-req .req-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #535353;
+  border: 1px solid #1f2933;
+}
+
+.craft-req .req-item img {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: #a7a7a7;
+  border: 1px solid #1f2933;
+}
+
+.craft-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #1f2933;
+  color: #9fb3c8;
+}
+
+.craft-tag.locked {
+  background: #3a1b1b;
+  color: #f4c2c2;
+}
+
+/* Centre : slots, bouton, résultat */
+.craft-center {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.craft-slots {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.craft-slot {
+  height: 62px;
+  border: 1px dashed #38404a;
+  border-radius: 10px;
+  background: #6e6e6e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #c9d1d9;
+  font-size: 12px;
+}
+
+.craft-slot.filled {
+  border-style: solid;
+  border-color: #2b7a0b;
+}
+
+.craft-slot img {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #acacac;
+  border: 1px solid #1f2933;
+}
+
+.craft-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.craft-btn {
+  width: 100%;
+  background: linear-gradient(90deg, #289647, #1e7a37);
+  border: none;
+  color: white;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.craft-btn:disabled {
+  background: #2f3640;
+  cursor: not-allowed;
+}
+
+.craft-result {
+  border-radius: 10px;
+  padding: 10px;
+  background: linear-gradient(135deg, rgba(40, 150, 71, 0.12), rgba(40, 150, 71, 0.28));
+  border: 1px solid #2a7c3d;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.craft-result.empty {
+  opacity: 0.5;
+  border-style: dashed;
+  background: #0d1117;
+  border-color: #38404a;
+}
+
+.craft-result img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #b8b8b8;
+  border: 1px solid #1f2933;
+}
+
+/* Inventaire (colonne droite) */
+.craft-inventory {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100%;
+  border-radius: 14px;
+}
+
+.craft-inventory-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.craft-inventory-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.craft-inventory-filters button {
+  background: #3d3d3d;
+  border: 1px solid rgb(172, 172, 172);
+  color: #f5f7ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  min-width: 20px;
+  height: 24px;
+  white-space: nowrap;
+}
+
+.craft-inventory-filters button.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+.craft-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+  margin-top: 3px;
+  padding-bottom: 4px;
+}
+
+.craft-inventory-slot {
+  position: relative;
+  height: 60px;
+  border-radius: 4px;
+  background: rgba(149, 166, 173, 0.685);
+  border: 2px solid rgb(182, 182, 182);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.craft-inventory-slot.filtered-out {
+  opacity: 0.25;
+}
+
+.craft-inventory-slot img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.craft-inventory-slot .qty {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}

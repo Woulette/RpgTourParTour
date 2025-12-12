@@ -1,0 +1,17 @@
+/* Surcouche Tailleur (couleurs/accent). */
+.craft-panel.tailleur .craft-btn {
+  background: linear-gradient(90deg, #1f7bc1, #145a8f);
+}
+
+.craft-panel.tailleur .craft-result {
+  background: linear-gradient(135deg, rgba(31, 123, 193, 0.15), rgba(20, 90, 143, 0.32));
+  border-color: #1f7bc1;
+}
+
+.craft-panel.tailleur .craft-recipe {
+  border-color: #2a3b4d;
+}
+
+.craft-panel.tailleur .craft-req .req-item {
+  border-color: #2a3b4d;
+}
