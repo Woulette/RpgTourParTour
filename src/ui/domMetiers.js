@@ -2,6 +2,8 @@ import { bucheronDefinition } from "../metier/bucheron/config.js";
 import { ensureBucheronState } from "../metier/bucheron/state.js";
 import { tailleurDefinition } from "../metier/tailleur/config.js";
 import { ensureTailleurState } from "../metier/tailleur/state.js";
+import { tailleurRecipes } from "../metier/tailleur/recipes.js";
+import { getItemDef } from "../inventory/inventoryCore.js";
 import { on as onStoreEvent } from "../state/store.js";
 
 // Métier unique pour l'instant, mais structuré pour en ajouter d'autres.
@@ -67,7 +69,7 @@ export function initDomMetiers(player) {
             <div class="metier-detail-xp-bar-fill"></div>
           </div>
         </header>
-        <section class="metier-resources">
+        <section class="metier-resources" id="metier-resources-section">
           <h4 class="metier-resources-title">Ressources récoltables</h4>
           <table class="metier-resources-table">
             <thead>
@@ -81,12 +83,30 @@ export function initDomMetiers(player) {
             <tbody id="metier-resources-body"></tbody>
           </table>
         </section>
+        <section class="metier-craft" id="metier-craft-section" style="display:none; gap:10px; flex-direction:column;">
+          <div class="metier-craft-controls" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div class="metier-craft-filters" id="metier-craft-filters" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+            <input id="metier-craft-search" type="text" placeholder="Rechercher un équipement..." style="flex:1; min-width:180px; padding:6px 8px; border-radius:8px; border:1px solid #4a5560; background:#0f141b; color:#e8eef7;">
+          </div>
+          <div class="metier-craft-body" style="display:grid; grid-template-columns: 45% 1fr; gap:10px; min-height:0;">
+            <div class="metier-craft-list" id="metier-craft-list" style="display:flex; flex-direction:column; gap:6px; overflow:auto; min-height:0;"></div>
+            <div class="metier-craft-info" id="metier-craft-info" style="border:1px solid #2d3742; border-radius:10px; padding:10px; background:#0f141b; min-height:120px;">
+              <p style="opacity:0.7; margin:0;">Sélectionne un équipement pour voir les détails.</p>
+            </div>
+          </div>
+        </section>
       `;
       bodyEl.appendChild(detail);
       return detail;
     })();
 
   const resourcesBodyEl = detailEl.querySelector("#metier-resources-body");
+  const resourcesSectionEl = detailEl.querySelector("#metier-resources-section");
+  const craftSectionEl = detailEl.querySelector("#metier-craft-section");
+  const craftFiltersEl = detailEl.querySelector("#metier-craft-filters");
+  const craftSearchEl = detailEl.querySelector("#metier-craft-search");
+  const craftListEl = detailEl.querySelector("#metier-craft-list");
+  const craftInfoEl = detailEl.querySelector("#metier-craft-info");
   const detailNameEl = detailEl.querySelector("#metier-detail-name");
   const detailLevelEl = detailEl.querySelector("#metier-detail-level");
   const detailXpEl = detailEl.querySelector("#metier-detail-xp");
@@ -94,6 +114,9 @@ export function initDomMetiers(player) {
   const detailXpBarFillEl = detailEl.querySelector(".metier-detail-xp-bar-fill");
 
   let currentMetierId = "bucheron";
+  let craftSelectedId = null;
+  let craftSearchValue = "";
+  let craftCategory = "all";
 
   const getPlayerMetierState = (id) => {
     if (id === "bucheron") {
@@ -172,7 +195,18 @@ export function initDomMetiers(player) {
       detailXpBarFillEl.style.setProperty("--metier-xp-percent", `${percent}%`);
     }
 
-    if (resourcesBodyEl) {
+    const isCraft = def.type === "craft";
+    if (!isCraft) {
+      craftSelectedId = null;
+    }
+    if (resourcesSectionEl) {
+      resourcesSectionEl.style.display = isCraft ? "none" : "block";
+    }
+    if (craftSectionEl) {
+      craftSectionEl.style.display = isCraft ? "flex" : "none";
+    }
+
+    if (!isCraft && resourcesBodyEl) {
       resourcesBodyEl.innerHTML = "";
       (def.resources || []).forEach((res) => {
         const tr = document.createElement("tr");
@@ -200,6 +234,243 @@ export function initDomMetiers(player) {
 
         resourcesBodyEl.appendChild(tr);
       });
+    }
+
+    if (isCraft && craftSectionEl) {
+      renderCraftPanel(def, state);
+    }
+  };
+
+  const renderCraftInfo = (recipe) => {
+    if (!craftInfoEl) return;
+    craftInfoEl.innerHTML = "";
+    if (!recipe) {
+      craftInfoEl.innerHTML =
+        '<p style="opacity:0.7; margin:0;">Sélectionne un équipement pour voir les détails.</p>';
+      return;
+    }
+    const outDef = getItemDef(recipe.output.itemId);
+    const title = document.createElement("div");
+    title.style.display = "flex";
+    title.style.alignItems = "center";
+    title.style.gap = "10px";
+    const icon = document.createElement("img");
+    icon.src = outDef?.icon || "";
+    icon.alt = outDef?.label || recipe.output.itemId;
+    icon.style.width = "42px";
+    icon.style.height = "42px";
+    icon.style.borderRadius = "8px";
+    icon.style.background = "#1f2933";
+    icon.style.border = "1px solid #2d3742";
+    const titleText = document.createElement("div");
+    titleText.innerHTML = `<strong>${outDef?.label || recipe.label}</strong><br/>Niv. ${recipe.level}`;
+    title.appendChild(icon);
+    title.appendChild(titleText);
+
+    const xpLine = document.createElement("div");
+    xpLine.style.marginTop = "6px";
+    xpLine.textContent = `XP gagné : ${recipe.xpGain ?? 0} XP`;
+
+    const stats = outDef?.statsBonus;
+    const statsBlock = document.createElement("div");
+    statsBlock.style.marginTop = "8px";
+    if (stats && typeof stats === "object") {
+      const ul = document.createElement("ul");
+      ul.style.listStyle = "none";
+      ul.style.padding = "0";
+      ul.style.margin = "0";
+      Object.entries(stats).forEach(([k, v]) => {
+        const li = document.createElement("li");
+        li.style.display = "flex";
+        li.style.gap = "6px";
+        li.style.alignItems = "center";
+        const spanVal = document.createElement("span");
+        spanVal.textContent = `${v >= 0 ? "+" : ""}${v}`;
+        const spanLabel = document.createElement("span");
+        spanLabel.textContent = k;
+
+        const cls = (() => {
+          switch (k) {
+            case "vitalite":
+            case "hp":
+            case "hpMax":
+            case "hpPlus":
+              return "inventory-bonus-stat-vitalite";
+            case "agilite":
+              return "inventory-bonus-stat-agilite";
+            case "force":
+              return "inventory-bonus-stat-force";
+            case "intelligence":
+              return "inventory-bonus-stat-intel";
+            case "chance":
+              return "inventory-bonus-stat-chance";
+            case "initiative":
+              return "inventory-bonus-stat-init";
+            case "pa":
+            case "paPlus":
+              return "inventory-bonus-stat-pa";
+            case "pm":
+            case "pmPlus":
+              return "inventory-bonus-stat-pm";
+            default:
+              return "inventory-bonus-stat-generic";
+          }
+        })();
+
+        spanVal.className = cls;
+        spanLabel.className = cls;
+        li.appendChild(spanVal);
+        li.appendChild(spanLabel);
+        ul.appendChild(li);
+      });
+      statsBlock.appendChild(ul);
+    } else {
+      statsBlock.innerHTML = '<span style="opacity:0.7;">Aucune statistique.</span>';
+    }
+
+    const ingTitle = document.createElement("div");
+    ingTitle.style.marginTop = "10px";
+    ingTitle.innerHTML = "<strong>Ingrédients :</strong>";
+
+    const ingList = document.createElement("ul");
+    ingList.style.listStyle = "none";
+    ingList.style.padding = "0";
+    ingList.style.margin = "4px 0 0 0";
+    recipe.inputs.forEach((input) => {
+      const def = getItemDef(input.itemId);
+      const li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.alignItems = "center";
+      li.style.gap = "6px";
+      const ingIcon = document.createElement("img");
+      ingIcon.src = def?.icon || "";
+      ingIcon.alt = def?.label || input.itemId;
+      ingIcon.style.width = "24px";
+      ingIcon.style.height = "24px";
+      ingIcon.style.objectFit = "cover";
+      ingIcon.style.borderRadius = "6px";
+      ingIcon.style.background = "#1f2933";
+      ingIcon.style.border = "1px solid #2d3742";
+
+      const txt = document.createElement("span");
+      txt.textContent = `${input.qty} x ${def?.label || input.itemId}`;
+      li.appendChild(ingIcon);
+      li.appendChild(txt);
+      ingList.appendChild(li);
+    });
+
+    craftInfoEl.appendChild(title);
+    craftInfoEl.appendChild(xpLine);
+    craftInfoEl.appendChild(statsBlock);
+    craftInfoEl.appendChild(ingTitle);
+    craftInfoEl.appendChild(ingList);
+  };
+
+  const renderCraftPanel = (def, state) => {
+    if (!craftFiltersEl || !craftListEl) return;
+
+    // Filtres
+    craftFiltersEl.innerHTML = "";
+    const categories =
+      def.craftCategories && def.craftCategories.length > 0
+        ? def.craftCategories
+        : [
+            { id: "all", label: "Tout" },
+          ];
+    const allBtn = document.createElement("button");
+    allBtn.textContent = "Tout";
+    allBtn.className = craftCategory === "all" ? "active" : "";
+    allBtn.onclick = () => {
+      craftCategory = "all";
+      renderCraftPanel(def, state);
+    };
+    craftFiltersEl.appendChild(allBtn);
+
+    categories.forEach((cat) => {
+      const btn = document.createElement("button");
+      btn.textContent = cat.label;
+      btn.className = craftCategory === cat.id ? "active" : "";
+      btn.onclick = () => {
+        craftCategory = cat.id;
+        renderCraftPanel(def, state);
+      };
+      craftFiltersEl.appendChild(btn);
+    });
+
+    // Recherche
+    if (craftSearchEl && craftSearchEl.value !== craftSearchValue) {
+      craftSearchValue = craftSearchEl.value;
+    }
+    if (craftSearchEl && !craftSearchEl.oninput) {
+      craftSearchEl.oninput = () => {
+        craftSearchValue = craftSearchEl.value || "";
+        renderCraftPanel(def, state);
+      };
+    }
+
+    const search = (craftSearchValue || "").toLowerCase();
+
+    // Recettes filtrées
+    const recipes = tailleurRecipes.filter((r) => {
+      const matchCat = craftCategory === "all" || r.category === craftCategory;
+      const label = (r.label || "").toLowerCase();
+      return matchCat && (!search || label.includes(search));
+    });
+
+    craftListEl.innerHTML = "";
+    recipes.forEach((recipe) => {
+      const outDef = getItemDef(recipe.output.itemId);
+      const card = document.createElement("div");
+      card.className = "metier-craft-card";
+      card.style.border = "1px solid #2d3742";
+      card.style.borderRadius = "10px";
+      card.style.padding = "8px";
+      card.style.display = "flex";
+      card.style.alignItems = "center";
+      card.style.justifyContent = "space-between";
+      card.style.gap = "10px";
+      card.style.cursor = "pointer";
+      card.style.background = craftSelectedId === recipe.id ? "#1b2430" : "#0f141b";
+
+      const left = document.createElement("div");
+      left.style.display = "flex";
+      left.style.alignItems = "center";
+      left.style.gap = "8px";
+      const icon = document.createElement("img");
+      icon.src = outDef?.icon || "";
+      icon.alt = outDef?.label || recipe.output.itemId;
+      icon.style.width = "38px";
+      icon.style.height = "38px";
+      icon.style.borderRadius = "8px";
+      icon.style.background = "#1f2933";
+      icon.style.border = "1px solid #2d3742";
+      const text = document.createElement("div");
+      text.innerHTML = `<div>${outDef?.label || recipe.label}</div><div style="opacity:0.7; font-size:12px;">Niv. ${recipe.level}</div>`;
+      left.appendChild(icon);
+      left.appendChild(text);
+
+      const right = document.createElement("div");
+      right.style.fontSize = "12px";
+      right.style.color = "#dbe9f9";
+      right.textContent = `${recipe.xpGain ?? 0} XP`;
+
+      card.onclick = () => {
+        craftSelectedId = recipe.id;
+        renderCraftPanel(def, state);
+        renderCraftInfo(recipe);
+      };
+
+      card.appendChild(left);
+      card.appendChild(right);
+      craftListEl.appendChild(card);
+    });
+
+    if (!craftSelectedId && recipes.length > 0) {
+      craftSelectedId = recipes[0].id;
+      renderCraftInfo(recipes[0]);
+    } else {
+      const selectedRecipe = recipes.find((r) => r.id === craftSelectedId);
+      renderCraftInfo(selectedRecipe || recipes[0]);
     }
   };
 

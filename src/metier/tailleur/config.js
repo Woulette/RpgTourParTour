@@ -2,16 +2,10 @@
 export const tailleurDefinition = {
   id: "tailleur",
   name: "Tailleur",
+  type: "craft",
   description: "Fabrication de coiffes et capes.",
-  // Placeholder d'aperçu pour l'onglet métiers (non récoltable, mais visible dans la liste).
-  resources: [
-    {
-      id: "coiffe",
-      name: "Coiffes / Capes",
-      level: 1,
-      quantityMin: 1,
-      quantityMax: 1,
-      xpGain: 25,
-    },
+  craftCategories: [
+    { id: "coiffe", label: "Coiffes" },
+    { id: "cape", label: "Capes" },
   ],
 };

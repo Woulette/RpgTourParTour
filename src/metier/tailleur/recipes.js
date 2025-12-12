@@ -5,6 +5,7 @@ export const tailleurRecipes = [
     id: "coiffe_corbeau",
     label: "Coiffe du corbeau",
     level: 1,
+    category: "coiffe",
     inputs: [
       { itemId: "plume_corbeau", qty: 3 },
       { itemId: "bois_chene", qty: 2 },
@@ -16,6 +17,7 @@ export const tailleurRecipes = [
     id: "cape_corbeau",
     label: "Cape du corbeau",
     level: 1,
+    category: "cape",
     inputs: [
       { itemId: "plume_corbeau", qty: 4 },
       { itemId: "bois_chene", qty: 3 },
