@@ -229,9 +229,23 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
 
     if (!isValidTile(map, tileX, tileY)) return;
 
-    // Collision logique : on ne se déplace pas sur une tuile bloquée
+    // Collision logique : si la tuile est bloquée, on vise la tuile libre la plus proche
     if (isTileBlocked(scene, tileX, tileY)) {
-      return;
+      const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
+      const nearest = findNearestReachableTile(
+        scene,
+        map,
+        player.currentTileX,
+        player.currentTileY,
+        tileX,
+        tileY,
+        allowDiagonal
+      );
+      if (!nearest) {
+        return;
+      }
+      tileX = nearest.x;
+      tileY = nearest.y;
     }
 
     const state = scene.combatState;
@@ -502,3 +516,68 @@ function isValidTile(map, tileX, tileY) {
   return tileX >= 0 && tileX < map.width && tileY >= 0 && tileY < map.height;
 }
 
+// Cherche la tuile libre la plus proche d'une cible bloquée et accessible depuis le joueur.
+function findNearestReachableTile(
+  scene,
+  map,
+  playerTileX,
+  playerTileY,
+  targetTileX,
+  targetTileY,
+  allowDiagonal
+) {
+  if (!map) return null;
+
+  const visited = new Set();
+  const dirs4 = [
+    { dx: 1, dy: 0 },
+    { dx: -1, dy: 0 },
+    { dx: 0, dy: 1 },
+    { dx: 0, dy: -1 },
+  ];
+  const dirs8 = [
+    ...dirs4,
+    { dx: 1, dy: 1 },
+    { dx: 1, dy: -1 },
+    { dx: -1, dy: 1 },
+    { dx: -1, dy: -1 },
+  ];
+  const dirs = allowDiagonal ? dirs8 : dirs4;
+
+  const maxRadius = map.width + map.height; // bornage raisonnable
+  const queue = [{ x: targetTileX, y: targetTileY, dist: 0 }];
+  visited.add(`${targetTileX},${targetTileY}`);
+
+  while (queue.length > 0) {
+    const { x, y, dist } = queue.shift();
+    if (dist > maxRadius) break;
+
+    if (isValidTile(map, x, y) && !isTileBlocked(scene, x, y)) {
+      const path = findPathForPlayer(
+        scene,
+        map,
+        playerTileX,
+        playerTileY,
+        x,
+        y,
+        allowDiagonal
+      );
+      if (path && path.length > 0) {
+        return { x, y };
+      }
+    }
+
+    dirs.forEach(({ dx, dy }) => {
+      const nx = x + dx;
+      const ny = y + dy;
+      const key = `${nx},${ny}`;
+      if (visited.has(key)) return;
+      visited.add(key);
+      if (isValidTile(map, nx, ny) && dist + 1 <= maxRadius) {
+        queue.push({ x: nx, y: ny, dist: dist + 1 });
+      }
+    });
+  }
+
+  return null;
+}

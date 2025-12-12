@@ -19,7 +19,7 @@ export function createCharacter(scene, x, y, options = {}) {
   scene.physics.add.existing(sprite);
   sprite.body.setCollideWorldBounds(true);
 
-  // Ajuste le body pour coller au sprite si nécessaire
+  // Ajuste le body pour coller au sprite si nǸcessaire
   if (sprite.body && sprite.width && sprite.height) {
     sprite.body.setSize(sprite.width, sprite.height);
   }

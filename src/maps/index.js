@@ -1,8 +1,27 @@
-const anemiaTilesets = [
+const tilesetNew = [
+  {
+    name: "NewTilesetPerso",
+    imageKey: "NewTilesetPerso",
+    imagePath: "assets/tileset/NewTilesetPerso.png",
+    frameWidth: 64,
+    frameHeight: 32,
+  },
+  {
+    name: "Boulleau",
+    imageKey: "Boulleau",
+    imagePath: "assets/tileset/Boulleau.png",
+    frameWidth: 50,
+    frameHeight: 80,
+  },
+];
+
+const tilesetLegacy = [
   {
     name: "tilesetperso",
     imageKey: "tilesetperso",
     imagePath: "assets/tileset/tilesetperso.png",
+    frameWidth: 64,
+    frameHeight: 32,
   },
 ];
 
@@ -10,8 +29,8 @@ export const maps = {
   Map1Andemia: {
     key: "Map1Andemia",
     worldPos: { x: 0, y: 0 },
-    jsonPath: "assets/maps/MapAndemiaTest4.json",
-    tilesets: anemiaTilesets,
+    jsonPath: "assets/maps/MapAndemia1.json",
+    tilesets: tilesetNew,
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,
     monsterSpawns: [
@@ -22,9 +41,9 @@ export const maps = {
       { type: "aluineeks", groupSize: 1, offsetFromCenter: { x: 8, y: -3 } },
     ],
     treePositions: [
-      { tileX: 7, tileY: 18 },
-      { tileX: 15, tileY: 24 },
-      { tileX: 26, tileY: 18 },
+      { tileX: 8, tileY: 18 },
+      { tileX: 23, tileY: 23 },
+      { tileX: 19, tileY: 8 },
     ],
     // Optionnel : borne manuelle des bandes de sortie (coordonnées monde).
     // Laisse null pour l’auto, ou mets { minX, minY, maxX, maxY } si tu veux régler à la main.
@@ -35,7 +54,7 @@ export const maps = {
     key: "Map2Andemia",
     worldPos: { x: 1, y: 0 },
     jsonPath: "assets/maps/MapAndemiaTest5.json",
-    tilesets: anemiaTilesets,
+    tilesets: tilesetLegacy,
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,
     monsterSpawns: [

@@ -1,4 +1,4 @@
-import { defaultMapKey, maps } from "./maps/index.js";
+﻿import { defaultMapKey, maps } from "./maps/index.js";
 import {
   BACKGROUND_COLOR,
   GAME_HEIGHT,
@@ -11,7 +11,13 @@ import { createPlayer } from "./entities/player.js";
 import { enableClickToMove } from "./entities/playerMovement.js";
 import { createMapExits } from "./maps/exits.js";
 import { setupPlayerAnimations } from "./entities/animation.js";
-import { loadMapLikeMain, initWorldExitsForScene } from "./maps/world.js";
+import {
+  loadMapLikeMain,
+  initWorldExitsForScene,
+  rebuildCollisionGridFromMap,
+  applyCustomLayerDepths,
+  spawnObjectLayerTrees,
+} from "./maps/world.js";
 import { createHud, setupHudCamera } from "./ui/hud.js";
 import { initDomHud } from "./ui/domHud.js";
 import { initDomCombat } from "./ui/domCombat.js";
@@ -36,7 +42,7 @@ class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    // Précharge toutes les maps définies dans src/maps/index.js
+    // PrÃ©charge toutes les maps dÃ©finies dans src/maps/index.js
     Object.values(maps).forEach((mapDef) => {
       preloadMap(this, mapDef);
     });
@@ -47,6 +53,8 @@ class MainScene extends Phaser.Scene {
       "tree_chene_stump",
       "assets/metier/bucheron/SoucheChene.png"
     );
+    this.load.image("chene", "assets/tileset/chene.png");
+    this.load.image("boulleau_single", "assets/tileset/Boulleau.png");
 
     const animDirs = [
       "south",
@@ -72,7 +80,7 @@ class MainScene extends Phaser.Scene {
     preloadNpcs(this);
   }
 
-  create() {
+    create() {
     const mapDef = maps[defaultMapKey];
     const { map, groundLayer, layers } = buildMap(this, mapDef);
 
@@ -86,9 +94,14 @@ class MainScene extends Phaser.Scene {
     this.mapLayers = mapLayers;
     this.currentMapKey = mapDef.key;
     this.currentMapDef = mapDef;
+    applyCustomLayerDepths(this);
 
-    // --- JOUEUR AU CENTRE (coordonnées tuiles) ---
-    const centerTileX = Math.floor(map.width / 2);
+    // Collision : applique les rectangles du calque "collisions"
+  rebuildCollisionGridFromMap(this, map, groundLayer);
+  spawnObjectLayerTrees(this, map, "trees");
+
+  // --- JOUEUR AU CENTRE (coordonnÃ©es tuiles) ---
+  const centerTileX = Math.floor(map.width / 2);
     const centerTileY = Math.floor(map.height / 2);
     const centerWorld = map.tileToWorldXY(
       centerTileX,
@@ -103,12 +116,12 @@ class MainScene extends Phaser.Scene {
 
     this.player = createPlayer(this, startX, startY, defaultClassId);
     setupPlayerAnimations(this);
-    this.player.setDepth(2);
+    this.player.setDepth(startY);
 
     // Initialise le store central avec le joueur.
     initStore(this.player);
 
-    // Initialise les tuiles de sortie pour cette première map.
+    // Initialise les tuiles de sortie pour cette premiÃ¨re map.
     initWorldExitsForScene(this);
 
     if (mapDef.spawnDefaults) {
@@ -164,9 +177,12 @@ class MainScene extends Phaser.Scene {
     // --- HUD ---
     const { hudY, uiElements } = createHud(this);
 
-    // --- Caméras : séparer monde et HUD pour éviter le zoom sur le HUD ---
+    // --- CamÃ©ras : sÃ©parer monde et HUD pour Ã©viter le zoom sur le HUD ---
     const worldElements = [...mapLayers, this.player];
     if (grid) worldElements.push(grid);
+    if (this.staticTrees) {
+      this.staticTrees.forEach((tree) => worldElements.push(tree));
+    }
     if (this.bucheronNodes) {
       this.bucheronNodes.forEach((node) => {
         if (node.sprite) worldElements.push(node.sprite);
@@ -181,7 +197,7 @@ class MainScene extends Phaser.Scene {
     setupCamera(this, map, startX, startY, mapDef.cameraOffsets);
     setupHudCamera(this, uiElements, worldElements);
 
-    // Assure-toi que la caméra HUD ignore aussi les monstres déjà créés
+    // Assure-toi que la camÃ©ra HUD ignore aussi les monstres dÃ©jÃ  crÃ©Ã©s
     if (this.hudCamera && this.monsters) {
       this.monsters.forEach((m) => this.hudCamera.ignore(m));
     }
@@ -200,14 +216,14 @@ class MainScene extends Phaser.Scene {
     initDomSpells(this.player);
     // Initialisation de la popup de fin de combat
     initDomCombatResult(this, this.player);
-    // Initialisation de l'inventaire (fenêtre INV)
+    // Initialisation de l'inventaire (fenÃªtre INV)
     initDomInventory(this.player);
-    // Initialisation de la fenêtre de métiers
+    // Initialisation de la fenÃªtre de mÃ©tiers
     initDomMetiers(this.player);
     initDomQuests(this.player);
     initQuestTracker(this.player);
 
-    // DEBUG : touche "N" -> charge Map2Andemia avec le même centrage
+    // DEBUG : touche "N" -> charge Map2Andemia avec le mÃªme centrage
     this.input.keyboard.on("keydown-N", () => {
       const next = maps.Map2Andemia;
       if (!next) return;
@@ -219,11 +235,11 @@ class MainScene extends Phaser.Scene {
     attachMonsterTooltip(this);
 
     // Clic sur un monstre = on demande au joueur d'aller vers lui,
-    // et le combat sera lancé quand le joueur atteindra sa case.
+    // et le combat sera lancÃ© quand le joueur atteindra sa case.
     this.input.on("gameobjectdown", (pointer, gameObject) => {
       if (!gameObject.monsterId) return;
 
-      // Combat déjà en cours -> on ignore
+      // Combat dÃ©jÃ  en cours -> on ignore
       if (this.combatState && this.combatState.enCours) return;
 
       // On enregistre la cible de combat pour plus tard
@@ -249,3 +265,4 @@ const config = {
 };
 
 new Phaser.Game(config);
+

@@ -137,6 +137,11 @@ export function spawnTestTrees(scene, map, player, mapDef) {
       return;
     }
 
+    const offsetX =
+      typeof pos.offsetX === "number" ? pos.offsetX : 0;
+    const offsetY =
+      typeof pos.offsetY === "number" ? pos.offsetY : 0;
+
     if (
       pos.tileX < 0 ||
       pos.tileY < 0 ||
@@ -150,8 +155,8 @@ export function spawnTestTrees(scene, map, player, mapDef) {
     const tileY = pos.tileY;
 
     const worldPos = map.tileToWorldXY(tileX, tileY);
-    const x = worldPos.x + map.tileWidth / 2;
-    const y = worldPos.y + map.tileHeight; // base de la tuile
+    const x = worldPos.x + map.tileWidth / 2 + offsetX;
+    const y = worldPos.y + map.tileHeight + offsetY; // base de la tuile, avec un léger offset sprite optionnel
 
     const treeSprite = scene.add.sprite(x, y, TREE_TEXTURE_KEY);
     treeSprite.setOrigin(0.5, 1); // pieds de l'arbre sur le sol

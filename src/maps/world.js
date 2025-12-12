@@ -1,10 +1,148 @@
-import { maps } from "./index.js";
+﻿import { maps } from "./index.js";
 import { buildMap } from "./loader.js";
 import { setupCamera } from "./camera.js";
 import { spawnInitialMonsters } from "../monsters/index.js";
 import { spawnNpcsForMap } from "../npc/spawn.js";
 import { spawnTestTrees } from "../metier/bucheron/trees.js";
 import { createMapExits } from "./exits.js";
+import {
+  blockTile,
+  ensureCollisionState,
+} from "../collision/collisionGrid.js";
+
+// Applique des profondeurs personnalisées pour certains calques nommés.
+// Exemple: calque contenant "tronc" passe sous le joueur, "canopy"/"feuillage" passe au-dessus.
+export function applyCustomLayerDepths(scene) {
+  if (!scene || !Array.isArray(scene.mapLayers)) return;
+  scene.mapLayers.forEach((layer, index) => {
+    if (!layer || typeof layer.setDepth !== "function") return;
+    const rawName =
+      (layer.name ||
+        (layer.layer && layer.layer.name) ||
+        (layer.tilemapLayer && layer.tilemapLayer.layer?.name) ||
+        "").toLowerCase().trim();
+    if (rawName.includes("tronc")) {
+      layer.setDepth(2);
+      return;
+    }
+    if (rawName.includes("canopy") || rawName.includes("feuillage")) {
+      // Très haut pour être au-dessus du joueur (depth = y)
+      layer.setDepth(100000);
+      return;
+    }
+    layer.setDepth(index);
+  });
+}
+
+// Instancie les objets "trees" (calque d'objets Tiled) en sprites Phaser triÃ©s par Y.
+export function spawnObjectLayerTrees(scene, map, layerName = "trees") {
+  if (!scene || !map) return;
+  const objectLayer = map.getObjectLayer(layerName);
+  if (!objectLayer || !Array.isArray(objectLayer.objects)) return;
+
+  // Nettoie un Ã©ventuel prÃ©cÃ©dent chargement
+  if (Array.isArray(scene.staticTrees)) {
+    scene.staticTrees.forEach((s) => s?.destroy?.());
+  }
+  scene.staticTrees = [];
+
+  const FLIP_MASK = 0xe0000000;
+
+  objectLayer.objects.forEach((obj) => {
+    if (!obj || !obj.gid) return;
+
+    const rawGid = obj.gid & ~FLIP_MASK;
+    const getProp = (name) =>
+      obj.properties?.find((p) => p.name === name)?.value;
+    const propTexture = getProp("textureKey");
+    const propFrame =
+      typeof getProp("frame") === "number" ? getProp("frame") : null;
+    const propOffsetY =
+      typeof getProp("offsetY") === "number" ? getProp("offsetY") : 0;
+
+    const ordered = [...(map.tilesets || [])]
+      .filter((t) => typeof t.firstgid === "number")
+      .sort((a, b) => (a.firstgid ?? 0) - (b.firstgid ?? 0));
+
+    let ts = null;
+    for (const candidate of ordered) {
+      if (rawGid >= candidate.firstgid) {
+        ts = candidate;
+      } else {
+        break;
+      }
+    }
+    if (!ts) {
+      ts =
+        map.tilesets.find((t) => t.name === "NewTilesetPerso") ||
+        map.tilesets[0];
+    }
+    if (!ts) return;
+
+    const textureKey =
+      propTexture || (ts.image && ts.image.key) || ts.name || "NewTilesetPerso";
+    const firstGid = ts.firstgid ?? 1;
+    let frame =
+      propTexture && propFrame === null ? 0 : propFrame ?? rawGid - firstGid;
+
+    const tilesPerSet =
+      ts.total ??
+      ts.tileCount ??
+      ts.tilecount ??
+      (ts.image && ts.tileWidth && ts.tileHeight
+        ? Math.floor(ts.image.width / ts.tileWidth) *
+          Math.floor(ts.image.height / ts.tileHeight)
+        : ts.imageWidth && ts.imageHeight && ts.tileWidth && ts.tileHeight
+        ? Math.floor(ts.imageWidth / ts.tileWidth) *
+          Math.floor(ts.imageHeight / ts.tileHeight)
+        : undefined);
+
+    if (typeof tilesPerSet === "number" && tilesPerSet > 0) {
+      if (frame < 0) return;
+      if (frame >= tilesPerSet) {
+        frame = frame % tilesPerSet;
+      }
+    } else if (frame < 0) {
+      return;
+    }
+
+    // Position : soit coordonnées monde de l'objet, soit coordonnées tuile (tileX/tileY)
+    const propTileX = Number.isFinite(getProp("tileX")) ? getProp("tileX") : null;
+    const propTileY = Number.isFinite(getProp("tileY")) ? getProp("tileY") : null;
+    let posX = obj.x;
+    let posY = obj.y + propOffsetY;
+
+    if (
+      propTileX !== null &&
+      propTileY !== null &&
+      typeof map.tileToWorldXY === "function"
+    ) {
+      const layerForWorld = scene.groundLayer || map.layers?.[0];
+      const wp = map.tileToWorldXY(
+        propTileX,
+        propTileY,
+        undefined,
+        undefined,
+        layerForWorld
+      );
+      if (wp) {
+        posX = wp.x + map.tileWidth / 2;
+        // Centre de la tuile iso (là où le joueur se positionne)
+        posY = wp.y + map.tileHeight / 2 + propOffsetY;
+      }
+    }
+
+    const sprite = scene.add.sprite(posX, posY, textureKey, frame);
+    sprite.setOrigin(0.5, 1);
+    sprite.setDepth(sprite.y);
+
+    if (scene.hudCamera) {
+      scene.hudCamera.ignore(sprite);
+    }
+
+    scene.staticTrees.push(sprite);
+  });
+}
 
 // Index des maps par coordonnees logiques (x, y).
 // Cle: "x,y" -> valeur = definition de map.
@@ -110,8 +248,8 @@ function computePlayableBounds(map, groundLayer) {
 }
 
 // Construit les tuiles de sortie pour chaque direction.
-// 1) Si un calque d'objets "exits" existe, on l'utilise (sorties définies à la main).
-// 2) Sinon, on retombe sur le calcul automatique basé sur playableBounds.
+// 1) Si un calque d'objets "exits" existe, on l'utilise (sorties dÃ©finies Ã  la main).
+// 2) Sinon, on retombe sur le calcul automatique basÃ© sur playableBounds.
 export function buildWorldExits(map, playableBounds, groundLayer) {
   const exits = { up: [], down: [], left: [], right: [] };
 
@@ -137,7 +275,7 @@ export function buildWorldExits(map, playableBounds, groundLayer) {
       const dir = String(rawDir).toLowerCase();
       if (!["up", "down", "left", "right"].includes(dir)) return;
 
-      // 1) Si tileX / tileY sont définis dans Tiled, on les utilise directement.
+      // 1) Si tileX / tileY sont dÃ©finis dans Tiled, on les utilise directement.
       const txProp = getProp(obj, "tileX");
       const tyProp = getProp(obj, "tileY");
 
@@ -148,7 +286,7 @@ export function buildWorldExits(map, playableBounds, groundLayer) {
         tx = txProp;
         ty = tyProp;
       } else {
-        // 2) Sinon on déduit la tuile à partir de la position monde de l'objet.
+        // 2) Sinon on dÃ©duit la tuile Ã  partir de la position monde de l'objet.
         const tilePos = worldToTile(obj.x, obj.y - obj.height / 2);
         if (!tilePos) return;
         tx = tilePos.x;
@@ -176,7 +314,7 @@ export function buildWorldExits(map, playableBounds, groundLayer) {
       x = rightByRow[y];
     }
     if (typeof x === "number") {
-      // On décale la tuile de sortie d'une colonne vers la droite
+      // On dÃ©cale la tuile de sortie d'une colonne vers la droite
       // (si on reste dans la map) pour que le changement de map
       // se fasse une case "plus loin" visuellement.
       let exitX = x + 1;
@@ -189,9 +327,9 @@ export function buildWorldExits(map, playableBounds, groundLayer) {
 
   // Sorties vers le haut
   const up = [];
-  // Petit décalage pour tenir compte du fait que
+  // Petit dÃ©calage pour tenir compte du fait que
   // seule la zone centrale de la map iso est jouable.
-  // Ajuste cette valeur si nécessaire (en nombre de tuiles).
+  // Ajuste cette valeur si nÃ©cessaire (en nombre de tuiles).
   const TOP_MARGIN = 2;
   for (let x = 0; x < map.width; x++) {
     let y = minY;
@@ -233,8 +371,141 @@ export function buildWorldExits(map, playableBounds, groundLayer) {
   return exits;
 }
 
-// Conversion monde->tuiles "calibrée" pour l'isométrique.
-// Dupliquée depuis playerMovement pour rester locale au module de monde.
+// Construit la grille de collisions Ã  partir du calque d'objets "collisions"/"Collisions".
+export function rebuildCollisionGridFromMap(scene, map, groundLayer) {
+  if (!scene || !map || !groundLayer) return;
+
+  // Reset collision state
+  scene.collision = { blockedTiles: new Set() };
+  ensureCollisionState(scene);
+
+  const layer =
+    map.getObjectLayer("collisions") || map.getObjectLayer("Collisions");
+  if (!layer || !Array.isArray(layer.objects)) return;
+
+  const getProp = (obj, name) => {
+    if (!obj || !obj.properties) return undefined;
+    const p = obj.properties.find((prop) => prop.name === name);
+    return p ? p.value : undefined;
+  };
+
+  const worldToTile = createCalibratedWorldToTile(map, groundLayer);
+
+  const blockRect = (obj) => {
+    // --- Mode "tile-based" : l'objet fournit directement ses coord. en tuiles ---
+    const tileXProp = getProp(obj, "tileX");
+    const tileYProp = getProp(obj, "tileY");
+    const tilesWide =
+      getProp(obj, "tilesWide") ??
+      getProp(obj, "tilesW") ??
+      getProp(obj, "widthTiles");
+    const tilesHigh =
+      getProp(obj, "tilesHigh") ??
+      getProp(obj, "tilesH") ??
+      getProp(obj, "heightTiles");
+
+    if (typeof tileXProp === "number" && typeof tileYProp === "number") {
+      const startX = Math.floor(tileXProp);
+      const startY = Math.floor(tileYProp);
+      const widthInTiles =
+        typeof tilesWide === "number" ? Math.max(1, Math.round(tilesWide)) : 1;
+      const heightInTiles =
+        typeof tilesHigh === "number" ? Math.max(1, Math.round(tilesHigh)) : 1;
+
+      for (let ty = startY; ty < startY + heightInTiles; ty++) {
+        for (let tx = startX; tx < startX + widthInTiles; tx++) {
+          if (tx >= 0 && tx < map.width && ty >= 0 && ty < map.height) {
+            blockTile(scene, tx, ty);
+          }
+        }
+      }
+      return;
+    }
+
+    // --- Fallback : rectangles dÃ©finis en pixels (coord. monde Tiled) ---
+    if (
+      typeof obj.x !== "number" ||
+      typeof obj.y !== "number" ||
+      typeof obj.width !== "number" ||
+      typeof obj.height !== "number"
+    ) {
+      return;
+    }
+
+    // En isomÃ©trique, les rectangles d'objets Tiled sont positionnÃ©s
+    // par leur coin bas (centre horizontal). On reconstruit la bbox rÃ©elle.
+    const left = obj.x - obj.width / 2;
+    const right = obj.x + obj.width / 2;
+    const top = obj.y - obj.height;
+    const bottom = obj.y;
+
+    const corners = [
+      worldToTile(left, top),
+      worldToTile(right, top),
+      worldToTile(left, bottom),
+      worldToTile(right, bottom),
+    ].filter(Boolean);
+
+    if (corners.length === 0) return;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    corners.forEach(({ x, y }) => {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    });
+
+    for (let ty = minY; ty <= maxY; ty++) {
+      for (let tx = minX; tx <= maxX; tx++) {
+        if (tx >= 0 && tx < map.width && ty >= 0 && ty < map.height) {
+          blockTile(scene, tx, ty);
+        }
+      }
+    }
+  };
+
+  layer.objects.forEach(blockRect);
+
+  // Collision issues directement des shapes de tuiles (Ã©diteur de collision Tiled sur les tilesets).
+  const layersToScan = Array.isArray(scene.mapLayers)
+    ? scene.mapLayers
+    : groundLayer
+    ? [groundLayer]
+    : [];
+
+  layersToScan.forEach((tileLayer) => {
+    if (!tileLayer || !tileLayer.forEachTile) return;
+    tileLayer.forEachTile((tile) => {
+      if (!tile || tile.index < 0 || !tile.tileset) return;
+
+      // RÃ©cupÃ¨re les mÃ©tadonnÃ©es de tuile : en Phaser, tile.index est global.
+      let data =
+        (tile.tileset.getTileData && tile.tileset.getTileData(tile.index)) ||
+        tile.tileset.tileData?.[tile.index];
+      if (!data && tile.tileset.firstgid) {
+        const localIndex = tile.index - tile.tileset.firstgid;
+        data = tile.tileset.tileData?.[localIndex];
+      }
+
+      const hasShapes =
+        data &&
+        data.objectgroup &&
+        Array.isArray(data.objectgroup.objects) &&
+        data.objectgroup.objects.length > 0;
+      if (hasShapes) {
+        blockTile(scene, tile.x, tile.y);
+      }
+    });
+  });
+}
+
+// Conversion monde->tuiles "calibrÃ©e" pour l'isomÃ©trique.
+// DupliquÃ©e depuis playerMovement pour rester locale au module de monde.
 function createCalibratedWorldToTile(map, groundLayer) {
   const testTileX = 0;
   const testTileY = 0;
@@ -269,8 +540,8 @@ function createCalibratedWorldToTile(map, groundLayer) {
   };
 }
 
-// Calcule, pour la map isométrique actuelle, les vecteurs de déplacement
-// "écran" (haut/bas/gauche/droite) exprimés en delta de tuiles.
+// Calcule, pour la map isomÃ©trique actuelle, les vecteurs de dÃ©placement
+// "Ã©cran" (haut/bas/gauche/droite) exprimÃ©s en delta de tuiles.
 function computeScreenDirectionVectors(map, groundLayer) {
   const worldToTile = createCalibratedWorldToTile(map, groundLayer);
 
@@ -309,8 +580,8 @@ function computeScreenDirectionVectors(map, groundLayer) {
   };
 }
 
-// Trouve la dernière tuile "jouable" en partant de la tuile du joueur
-// et en avançant dans une direction d'écran (up/right/left/down).
+// Trouve la derniÃ¨re tuile "jouable" en partant de la tuile du joueur
+// et en avanÃ§ant dans une direction d'Ã©cran (up/right/left/down).
 export function findExitTileForDirection(scene, direction) {
   if (
     !scene ||
@@ -359,8 +630,8 @@ export function findExitTileForDirection(scene, direction) {
   return { x: lastX, y: lastY };
 }
 
-// (Ré)initialise les bornes jouables et les tuiles de sortie pour une scène déjà
-// associée à une map et un groundLayer.
+// (RÃ©)initialise les bornes jouables et les tuiles de sortie pour une scÃ¨ne dÃ©jÃ 
+// associÃ©e Ã  une map et un groundLayer.
 export function initWorldExitsForScene(scene) {
   if (!scene || !scene.map || !scene.groundLayer) return;
 
@@ -380,13 +651,14 @@ export function initWorldExitsForScene(scene) {
   scene.exitTargetTile = null;
 }
 
+// Instancie les sprites du calque d'objets "decor"/"Decor".
 // Recharge une map en reproduisant la logique de centrage de main.js.
 export function loadMapLikeMain(scene, mapDef) {
   if (!scene || !mapDef) return;
 
   // On ne detruit pas l'ancienne map ici pour ne pas casser
   // la logique de deplacement existante : on la masque seulement.
-  // Cleanup des entites propres �� la map pour Ǹviter de les voir sur la suivante.
+  // Cleanup des entites propres ï¿½ï¿½ la map pour Ç¸viter de les voir sur la suivante.
   if (Array.isArray(scene.monsters)) {
     scene.monsters.forEach((m) => {
       if (m?.hoverHighlight?.destroy) {
@@ -417,6 +689,12 @@ export function loadMapLikeMain(scene, mapDef) {
     });
     scene.bucheronNodes = [];
   }
+  if (Array.isArray(scene.staticTrees)) {
+    scene.staticTrees.forEach((s) => {
+      if (s?.destroy) s.destroy();
+    });
+    scene.staticTrees = [];
+  }
 
   if (Array.isArray(scene.mapLayers) && scene.mapLayers.length > 0) {
     scene.mapLayers.forEach((layer) => {
@@ -441,7 +719,13 @@ export function loadMapLikeMain(scene, mapDef) {
   scene.currentMapKey = mapDef.key;
   scene.currentMapDef = mapDef;
 
-  // Bornes jouables (zone où il y a vraiment des tuiles) et tuiles de sortie.
+  applyCustomLayerDepths(scene);
+
+  // Collision : applique les rectangles du calque "collisions"
+  rebuildCollisionGridFromMap(scene, map, scene.groundLayer);
+  spawnObjectLayerTrees(scene, map, "trees");
+
+  // Bornes jouables (zone oÃ¹ il y a vraiment des tuiles) et tuiles de sortie.
   initWorldExitsForScene(scene);
 
   const centerTileX = Math.floor(map.width / 2);
@@ -466,7 +750,7 @@ export function loadMapLikeMain(scene, mapDef) {
 
   setupCamera(scene, map, startX, startY, mapDef.cameraOffsets);
 
-  // Respawn des entites propres �� la nouvelle map
+  // Respawn des entites propres ï¿½ï¿½ la nouvelle map
   if (mapDef.spawnDefaults) {
     spawnInitialMonsters(
       scene,
@@ -482,7 +766,7 @@ export function loadMapLikeMain(scene, mapDef) {
   createMapExits(scene);
 }
 
-// Vérifie si le joueur est sur une tuile de sortie ciblée et lance la transition.
+// VÃ©rifie si le joueur est sur une tuile de sortie ciblÃ©e et lance la transition.
 export function maybeHandleMapExit(scene) {
   if (!scene || !scene.player || !scene.currentMapDef) return;
 
@@ -508,7 +792,7 @@ export function maybeHandleMapExit(scene) {
     return;
   }
 
-  // On annule tout de suite l'intention pour éviter plusieurs déclenchements.
+  // On annule tout de suite l'intention pour Ã©viter plusieurs dÃ©clenchements.
   scene.exitDirection = null;
   scene.exitTargetTile = null;
 
@@ -535,3 +819,8 @@ export function maybeHandleMapExit(scene) {
     doChange();
   }
 }
+
+
+
+
+

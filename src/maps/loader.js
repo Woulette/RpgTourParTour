@@ -1,7 +1,14 @@
 export function preloadMap(scene, mapDef) {
   scene.load.tilemapTiledJSON(mapDef.key, mapDef.jsonPath);
   mapDef.tilesets.forEach((ts) => {
-    scene.load.image(ts.imageKey, ts.imagePath);
+    if (ts.frameWidth && ts.frameHeight) {
+      scene.load.spritesheet(ts.imageKey, ts.imagePath, {
+        frameWidth: ts.frameWidth,
+        frameHeight: ts.frameHeight,
+      });
+    } else {
+      scene.load.image(ts.imageKey, ts.imagePath);
+    }
   });
 }
 

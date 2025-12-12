@@ -14,7 +14,7 @@ const BAND_OFFSETS_TILES = {
 // Exemple : left: 0.5 rogne d'une demi-tuile à gauche.
 const BAND_TRIM_TILES = {
   up: { left: 0, right: 0, top: 0, bottom: 0 },
-  down: { left: 0.5, right: 0, top: 0, bottom: 0 }, // rogne un peu la largeur du bas
+  down: { left: 0, right: 0, top: 0, bottom: 0 }, // rogne un peu la largeur du bas
   left: { left: 0, right: 0, top: 0, bottom: 0 },
   right: { left: 0, right: 0, top: 0, bottom: 0 },
 };

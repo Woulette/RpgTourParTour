@@ -115,6 +115,10 @@ export function movePlayerAlongPath(
   const targetX = worldPos.x + map.tileWidth / 2;
   const targetY = worldPos.y + map.tileHeight / 2;
 
+  if (player.setDepth) {
+    player.setDepth(player.y);
+  }
+
   const dxWorld = targetX - player.x;
   const dyWorld = targetY - player.y;
   const dir = getDirectionName(dxWorld, dyWorld);
@@ -146,6 +150,9 @@ export function movePlayerAlongPath(
       player.y = targetY;
       player.currentTileX = nextTile.x;
       player.currentTileY = nextTile.y;
+      if (player.setDepth) {
+        player.setDepth(player.y);
+      }
 
       if (path.length > 0) {
         movePlayerAlongPath(
