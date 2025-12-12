@@ -1,0 +1,17 @@
+/* Surcouche Bijoutier (même style que tailleur). */
+.craft-panel.bijoutier .craft-btn {
+  background: linear-gradient(90deg, #1f7bc1, #145a8f);
+}
+
+.craft-panel.bijoutier .craft-result {
+  background: linear-gradient(135deg, rgba(31, 123, 193, 0.15), rgba(20, 90, 143, 0.32));
+  border-color: #1f7bc1;
+}
+
+.craft-panel.bijoutier .craft-recipe {
+  border-color: #2a3b4d;
+}
+
+.craft-panel.bijoutier .craft-req .req-item {
+  border-color: #2a3b4d;
+}

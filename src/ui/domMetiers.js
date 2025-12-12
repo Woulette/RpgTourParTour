@@ -2,13 +2,24 @@ import { bucheronDefinition } from "../metier/bucheron/config.js";
 import { ensureBucheronState } from "../metier/bucheron/state.js";
 import { tailleurDefinition } from "../metier/tailleur/config.js";
 import { ensureTailleurState } from "../metier/tailleur/state.js";
+import { bijoutierDefinition } from "../metier/bijoutier/config.js";
+import { ensureBijoutierState } from "../metier/bijoutier/state.js";
 import { tailleurRecipes } from "../metier/tailleur/recipes.js";
+import { bijoutierRecipes } from "../metier/bijoutier/recipes.js";
+import { cordonnierDefinition } from "../metier/cordonnier/config.js";
+import { ensureCordonnierState } from "../metier/cordonnier/state.js";
+import { cordonnierRecipes } from "../metier/cordonnier/recipes.js";
 import { getItemDef } from "../inventory/inventoryCore.js";
 import { on as onStoreEvent } from "../state/store.js";
 
 // Métier unique pour l'instant, mais structuré pour en ajouter d'autres.
-const METIERS = [bucheronDefinition, tailleurDefinition];
+const METIERS = [bucheronDefinition, tailleurDefinition, bijoutierDefinition, cordonnierDefinition];
 const METIERS_BY_ID = Object.fromEntries(METIERS.map((m) => [m.id, m]));
+const CRAFT_RECIPES = {
+  tailleur: tailleurRecipes,
+  bijoutier: bijoutierRecipes,
+  cordonnier: cordonnierRecipes,
+};
 
 let metiersUiInitialized = false;
 let unsubscribeMetier = null;
@@ -89,8 +100,9 @@ export function initDomMetiers(player) {
             <input id="metier-craft-search" type="text" placeholder="Rechercher un équipement..." style="flex:1; min-width:180px; padding:6px 8px; border-radius:8px; border:1px solid #4a5560; background:#0f141b; color:#e8eef7;">
           </div>
           <div class="metier-craft-body" style="display:grid; grid-template-columns: 45% 1fr; gap:10px; min-height:0;">
-            <div class="metier-craft-list" id="metier-craft-list" style="display:flex; flex-direction:column; gap:6px; overflow:auto; min-height:0;"></div>
-            <div class="metier-craft-info" id="metier-craft-info" style="border:1px solid #2d3742; border-radius:10px; padding:10px; background:#0f141b; min-height:120px;">
+            <div class="metier-craft-list" id="metier-craft-list" style="display:flex; flex-direction:column; gap:6px; overflow:auto; min-height:0; max-height:50vh;">
+            </div>
+            <div class="metier-craft-info" id="metier-craft-info" style="border:1px solid #2d3742; border-radius:10px; padding:10px; background:#0f141b; min-height:120px; max-height:50vh; overflow:auto;">
               <p style="opacity:0.7; margin:0;">Sélectionne un équipement pour voir les détails.</p>
             </div>
           </div>
@@ -114,7 +126,7 @@ export function initDomMetiers(player) {
   const detailXpBarFillEl = detailEl.querySelector(".metier-detail-xp-bar-fill");
 
   let currentMetierId = "bucheron";
-  let craftSelectedId = null;
+  const craftSelectedByMetier = {};
   let craftSearchValue = "";
   let craftCategory = "all";
 
@@ -124,6 +136,12 @@ export function initDomMetiers(player) {
     }
     if (id === "tailleur") {
       return ensureTailleurState(player);
+    }
+    if (id === "bijoutier") {
+      return ensureBijoutierState(player);
+    }
+    if (id === "cordonnier") {
+      return ensureCordonnierState(player);
     }
     // Fallback pour futurs métiers
     if (!player.metiers) player.metiers = {};
@@ -197,7 +215,7 @@ export function initDomMetiers(player) {
 
     const isCraft = def.type === "craft";
     if (!isCraft) {
-      craftSelectedId = null;
+      craftSelectedByMetier[metierId] = null;
     }
     if (resourcesSectionEl) {
       resourcesSectionEl.style.display = isCraft ? "none" : "block";
@@ -237,7 +255,7 @@ export function initDomMetiers(player) {
     }
 
     if (isCraft && craftSectionEl) {
-      renderCraftPanel(def, state);
+      renderCraftPanel(def, state, metierId);
     }
   };
 
@@ -254,14 +272,14 @@ export function initDomMetiers(player) {
     title.style.display = "flex";
     title.style.alignItems = "center";
     title.style.gap = "10px";
-    const icon = document.createElement("img");
-    icon.src = outDef?.icon || "";
-    icon.alt = outDef?.label || recipe.output.itemId;
-    icon.style.width = "42px";
-    icon.style.height = "42px";
-    icon.style.borderRadius = "8px";
-    icon.style.background = "#1f2933";
-    icon.style.border = "1px solid #2d3742";
+      const icon = document.createElement("img");
+      icon.src = outDef?.icon || "";
+      icon.alt = outDef?.label || recipe.output.itemId;
+      icon.style.width = "42px";
+      icon.style.height = "42px";
+      icon.style.borderRadius = "8px";
+      icon.style.background = "#2c3a48";
+      icon.style.border = "1px solid #46566a";
     const titleText = document.createElement("div");
     titleText.innerHTML = `<strong>${outDef?.label || recipe.label}</strong><br/>Niv. ${recipe.level}`;
     title.appendChild(icon);
@@ -366,17 +384,16 @@ export function initDomMetiers(player) {
     craftInfoEl.appendChild(ingList);
   };
 
-  const renderCraftPanel = (def, state) => {
+  const renderCraftPanel = (def, state, metierId) => {
     if (!craftFiltersEl || !craftListEl) return;
+    const recipesForMetier = CRAFT_RECIPES[metierId] || [];
 
     // Filtres
     craftFiltersEl.innerHTML = "";
     const categories =
       def.craftCategories && def.craftCategories.length > 0
         ? def.craftCategories
-        : [
-            { id: "all", label: "Tout" },
-          ];
+        : [{ id: "all", label: "Tout" }];
     const allBtn = document.createElement("button");
     allBtn.textContent = "Tout";
     allBtn.className = craftCategory === "all" ? "active" : "";
@@ -411,7 +428,7 @@ export function initDomMetiers(player) {
     const search = (craftSearchValue || "").toLowerCase();
 
     // Recettes filtrées
-    const recipes = tailleurRecipes.filter((r) => {
+    const recipes = recipesForMetier.filter((r) => {
       const matchCat = craftCategory === "all" || r.category === craftCategory;
       const label = (r.label || "").toLowerCase();
       return matchCat && (!search || label.includes(search));
@@ -430,7 +447,9 @@ export function initDomMetiers(player) {
       card.style.justifyContent = "space-between";
       card.style.gap = "10px";
       card.style.cursor = "pointer";
-      card.style.background = craftSelectedId === recipe.id ? "#1b2430" : "#0f141b";
+      const currentSelected = craftSelectedByMetier[metierId] || null;
+      card.style.background =
+        currentSelected === recipe.id ? "#1b2430" : "#0f141b";
 
       const left = document.createElement("div");
       left.style.display = "flex";
@@ -442,8 +461,8 @@ export function initDomMetiers(player) {
       icon.style.width = "38px";
       icon.style.height = "38px";
       icon.style.borderRadius = "8px";
-      icon.style.background = "#1f2933";
-      icon.style.border = "1px solid #2d3742";
+      icon.style.background = "#2c3a48";
+      icon.style.border = "1px solid #46566a";
       const text = document.createElement("div");
       text.innerHTML = `<div>${outDef?.label || recipe.label}</div><div style="opacity:0.7; font-size:12px;">Niv. ${recipe.level}</div>`;
       left.appendChild(icon);
@@ -455,8 +474,8 @@ export function initDomMetiers(player) {
       right.textContent = `${recipe.xpGain ?? 0} XP`;
 
       card.onclick = () => {
-        craftSelectedId = recipe.id;
-        renderCraftPanel(def, state);
+        craftSelectedByMetier[metierId] = recipe.id;
+        renderCraftPanel(def, state, metierId);
         renderCraftInfo(recipe);
       };
 
@@ -465,11 +484,12 @@ export function initDomMetiers(player) {
       craftListEl.appendChild(card);
     });
 
-    if (!craftSelectedId && recipes.length > 0) {
-      craftSelectedId = recipes[0].id;
+    const currentSel = craftSelectedByMetier[metierId];
+    if (!currentSel && recipes.length > 0) {
+      craftSelectedByMetier[metierId] = recipes[0].id;
       renderCraftInfo(recipes[0]);
     } else {
-      const selectedRecipe = recipes.find((r) => r.id === craftSelectedId);
+      const selectedRecipe = recipes.find((r) => r.id === currentSel);
       renderCraftInfo(selectedRecipe || recipes[0]);
     }
   };

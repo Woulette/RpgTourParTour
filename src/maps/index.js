@@ -33,6 +33,22 @@ const craftTableTileset = {
   frameHeight: 65,
 };
 
+const craftTableBijoutierTileset = {
+  name: "TableDeCraftBijoutier",
+  imageKey: "TableDeCraftBijoutier",
+  imagePath: "assets/TableDeCraftBijoutier.png",
+  frameWidth: 54,
+  frameHeight: 65,
+};
+
+const craftTableCordonnierTileset = {
+  name: "TableDeCraftCordonnier",
+  imageKey: "TableDeCraftCordonnier",
+  imagePath: "assets/TableDeCraftCordonnier.png",
+  frameWidth: 54,
+  frameHeight: 65,
+};
+
 export const maps = {
   Map1Andemia: {
     key: "Map1Andemia",
@@ -81,7 +97,7 @@ export const maps = {
     key: "MapAndemia2",
     worldPos: { x: -1, y: 0 },
     jsonPath: "assets/maps/MapAndemia2.json",
-    tilesets: [...tilesetNew, craftTableTileset],
+    tilesets: [...tilesetNew, craftTableTileset, craftTableBijoutierTileset, craftTableCordonnierTileset],
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: false,
     monsterSpawns: [],
@@ -92,6 +108,20 @@ export const maps = {
         tileX: 15,
         tileY: 16,
         offsetX: -4,
+      },
+      {
+        id: "bijoutier",
+        tileX: 15,
+        tileY: 14,
+        offsetY: -4,
+        textureKey: "TableDeCraftBijoutier",
+      },
+      {
+        id: "cordonnier",
+        tileX: 15,
+        tileY: 12,
+        offsetX: -4,
+        textureKey: "TableDeCraftCordonnier",
       },
     ],
     exitBounds: null,

@@ -1,4 +1,6 @@
 import { openTailleurCraftPanel } from "../ui/craft/tailleurPanel.js";
+import { openBijoutierCraftPanel } from "../ui/craft/bijoutierPanel.js";
+import { openCordonnierCraftPanel } from "../ui/craft/cordonnierPanel.js";
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { blockTile, isTileBlocked } from "../collision/collisionGrid.js";
 import { findPathForPlayer } from "../entities/movement/pathfinding.js";
@@ -140,6 +142,12 @@ export function setupWorkstations(scene, map, groundLayer, mapDef) {
       const openPanel = () => {
         if (ws.id === "tailleur") {
           openTailleurCraftPanel(scene, scene?.player);
+        }
+        if (ws.id === "bijoutier") {
+          openBijoutierCraftPanel(scene, scene?.player);
+        }
+        if (ws.id === "cordonnier") {
+          openCordonnierCraftPanel(scene, scene?.player);
         }
       };
 
