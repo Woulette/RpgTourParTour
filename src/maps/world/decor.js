@@ -1,14 +1,20 @@
 // Instancie les objets "trees" (calque d'objets Tiled) en sprites Phaser triÈs par Y.
-export function spawnObjectLayerTrees(scene, map, layerName = "trees") {
+export function spawnObjectLayerTrees(
+  scene,
+  map,
+  layerName = "trees",
+  storeKey = "staticTrees"
+) {
   if (!scene || !map) return;
   const objectLayer = map.getObjectLayer(layerName);
   if (!objectLayer || !Array.isArray(objectLayer.objects)) return;
 
   // Nettoie un Èventuel prÈcÈdent chargement
-  if (Array.isArray(scene.staticTrees)) {
-    scene.staticTrees.forEach((s) => s?.destroy?.());
+  const storeName = storeKey || "staticTrees";
+  if (Array.isArray(scene[storeName])) {
+    scene[storeName].forEach((s) => s?.destroy?.());
   }
-  scene.staticTrees = [];
+  scene[storeName] = [];
 
   const FLIP_MASK = 0xe0000000;
 
@@ -104,6 +110,6 @@ export function spawnObjectLayerTrees(scene, map, layerName = "trees") {
       scene.hudCamera.ignore(sprite);
     }
 
-    scene.staticTrees.push(sprite);
+    scene[storeName].push(sprite);
   });
 }

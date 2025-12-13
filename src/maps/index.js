@@ -49,12 +49,20 @@ const craftTableCordonnierTileset = {
   frameHeight: 65,
 };
 
+const entreeDonjonTileset = {
+  name: "EntreDonjons1Teste",
+  imageKey: "EntreDonjons1Teste",
+  imagePath: "assets/EntreDonjons1Teste.png",
+  frameWidth: 164,
+  frameHeight: 124,
+};
+
 export const maps = {
   Map1Andemia: {
     key: "Map1Andemia",
     worldPos: { x: 0, y: 0 },
     jsonPath: "assets/maps/MapAndemia1.json",
-    tilesets: tilesetNew,
+    tilesets: [...tilesetNew, entreeDonjonTileset],
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,
     monsterSpawns: [
@@ -71,6 +79,17 @@ export const maps = {
     ],
     // Optionnel : borne manuelle des bandes de sortie (coordonnées monde).
     // Laisse null pour l’auto, ou mets { minX, minY, maxX, maxY } si tu veux régler à la main.
+    exitBounds: null,
+  },
+  MapAndemia3: {
+    key: "MapAndemia3",
+    worldPos: { x: -1, y: -1 }, // au-dessus de MapAndemia2 (-1,0)
+    jsonPath: "assets/maps/MapAndemia3.json",
+    tilesets: [...tilesetNew, craftTableTileset, entreeDonjonTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: false,
+    monsterSpawns: [],
+    treePositions: [],
     exitBounds: null,
   },
   Map2Andemia: {

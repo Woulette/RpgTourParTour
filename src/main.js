@@ -98,7 +98,8 @@ class MainScene extends Phaser.Scene {
 
     // Collision : applique les rectangles du calque "collisions"
   rebuildCollisionGridFromMap(this, map, groundLayer);
-  spawnObjectLayerTrees(this, map, "trees");
+  spawnObjectLayerTrees(this, map, "trees", "staticTrees");
+  spawnObjectLayerTrees(this, map, "decor", "staticDecor");
 
   // --- JOUEUR AU CENTRE (coordonnÃ©es tuiles) ---
   const centerTileX = Math.floor(map.width / 2);
@@ -182,6 +183,9 @@ class MainScene extends Phaser.Scene {
     if (grid) worldElements.push(grid);
     if (this.staticTrees) {
       this.staticTrees.forEach((tree) => worldElements.push(tree));
+    }
+    if (this.staticDecor) {
+      this.staticDecor.forEach((obj) => worldElements.push(obj));
     }
     if (this.bucheronNodes) {
       this.bucheronNodes.forEach((node) => {

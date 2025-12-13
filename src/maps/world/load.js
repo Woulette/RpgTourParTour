@@ -86,6 +86,12 @@ export function loadMapLikeMain(scene, mapDef) {
     });
     scene.staticTrees = [];
   }
+  if (Array.isArray(scene.staticDecor)) {
+    scene.staticDecor.forEach((s) => {
+      if (s?.destroy) s.destroy();
+    });
+    scene.staticDecor = [];
+  }
 
   if (Array.isArray(scene.mapLayers) && scene.mapLayers.length > 0) {
     scene.mapLayers.forEach((layer) => {
@@ -114,7 +120,8 @@ export function loadMapLikeMain(scene, mapDef) {
 
   // Collision : applique les rectangles du calque "collisions"
   rebuildCollisionGridFromMap(scene, map, scene.groundLayer);
-  spawnObjectLayerTrees(scene, map, "trees");
+  spawnObjectLayerTrees(scene, map, "trees", "staticTrees");
+  spawnObjectLayerTrees(scene, map, "decor", "staticDecor");
   setupWorkstations(scene, map, scene.groundLayer, mapDef);
 
   // Bornes jouables (zone o— il y a vraiment des tuiles) et tuiles de sortie.
