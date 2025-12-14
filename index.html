@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="assets/css/npcDialog.css" />
   <link rel="stylesheet" href="assets/css/quests.css" />
   <link rel="stylesheet" href="assets/css/questTracker.css" />
+  <link rel="stylesheet" href="assets/css/chat.css" />
 </head>
 <body>
   <div id="quest-tracker" class="quest-tracker" aria-label="Suivi des quetes">
@@ -56,18 +57,23 @@
   <div id="hud-root">
     <!-- Barre HUD en bas de l'écran -->
     <div id="hud-bar">
-      <button class="hud-pill" id="hud-spells-button" aria-label="Ouvrir les sorts">
-        SORTS
-      </button>
-      <button class="hud-pill" id="hud-inventory-button" aria-label="Ouvrir l'inventaire">
-        INV
-      </button>
-      <button class="hud-pill" id="hud-map-button" aria-label="Ouvrir la carte du monde">
-        CARTE
-      </button>
-      <button class="hud-pill" id="hud-stats-button" aria-label="Ouvrir les statistiques">
-        STATS
-      </button>
+      <!-- Chat (zone fixe, style MMO) -->
+      <section id="hud-chat" class="hud-chat" aria-label="Chat">
+        <header class="hud-chat-header">
+          <div id="hud-chat-tabs" class="hud-chat-tabs" role="tablist" aria-label="Canaux de chat"></div>
+        </header>
+        <div id="chat-messages" class="hud-chat-messages" aria-live="polite"></div>
+        <form id="chat-form" class="hud-chat-form" autocomplete="off">
+          <input
+            id="chat-input"
+            class="hud-chat-input"
+            type="text"
+            maxlength="200"
+            placeholder="Écrire..."
+            aria-label="Saisir un message"
+          />
+        </form>
+      </section>
       <button class="hud-pill" id="hud-quests-button" aria-label="Ouvrir les quêtes">
         QUETES
       </button>
@@ -77,6 +83,23 @@
 
       <!-- Mini-carte au centre du HUD -->
       <div id="hud-minimap" aria-label="Mini-carte de la zone"></div>
+
+      <!-- Dock HUD unifié (menu + barre sorts/objets) -->
+      <section id="hud-dock" class="hud-dock" aria-label="Menu et actions">
+        <div id="hud-dock-menu" class="hud-dock-menu" aria-label="Raccourcis HUD">
+          <button class="hud-pill" id="hud-map-button" aria-label="Ouvrir la carte du monde">
+            CARTE
+          </button>
+          <button class="hud-pill" id="hud-inventory-button" aria-label="Ouvrir l'inventaire">
+            INV
+          </button>
+          <button class="hud-pill" id="hud-spells-button" aria-label="Ouvrir les sorts">
+            SORTS
+          </button>
+          <button class="hud-pill" id="hud-stats-button" aria-label="Ouvrir les statistiques">
+            STATS
+          </button>
+        </div>
 
       <!-- Conteneur barre de sorts + petits slots Sorts/Obj. -->
       <div id="hud-spell-container">
@@ -140,6 +163,7 @@
           <div class="hud-spell-toggle-slot hud-spell-toggle-items">Obj.</div>
         </div>
       </div>
+      </section>
 
       <!-- PA / PM toujours visibles dans le HUD bas -->
       <div id="hud-ap-mp">

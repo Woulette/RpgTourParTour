@@ -18,7 +18,7 @@
 .craft-panel .craft-panel-inner {
   width: 980px;
   max-width: 92vw;
-  max-height: 80vh;
+  max-height: 82vh;
   background: #2f343a;
   color: #f5f7ff;
   border-radius: 18px;
@@ -38,50 +38,6 @@
   gap: 8px;
 }
 
-.craft-panel .craft-xp-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px;
-  align-items: center;
-}
-
-.craft-panel .craft-xp-bar {
-  position: relative;
-  height: 12px;
-  background: #1f2933;
-  border: 1px solid #3a4552;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.craft-panel .craft-xp-bar-fill {
-  position: absolute;
-  inset: 0;
-  width: 0%;
-  background: linear-gradient(90deg, #1f7bc1, #42c2ff);
-  transition: width 0.25s ease;
-}
-
-.craft-panel .craft-xp-bar-label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: #dbe9f9;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-}
-
-.craft-panel .craft-xp-level {
-  font-size: 13px;
-  color: #dbe9f9;
-  font-weight: 600;
-  min-width: 68px;
-  text-align: right;
-  margin-left: -32px;
-}
-
 .craft-panel .craft-panel-close {
   background: none;
   border: 1px solid #38404a;
@@ -96,7 +52,6 @@
   grid-template-columns: 30% 33.5% 34%;
   gap: 6px;
   min-height: 0;
-  height: 100%;
 }
 
 .craft-panel section {
@@ -104,9 +59,6 @@
   border: 1px solid #5a626c;
   border-radius: 14px;
   padding: 10px 10px 6px 10px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 
 /* Recettes (colonne gauche) */
@@ -117,8 +69,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1 1 auto;
-  min-height: 0;
+  max-height: 64vh;
   overflow-y: auto;
 }
 
@@ -139,15 +90,14 @@
 .craft-recipe.active {
   border-color: #42c2ff;
   border-width: 2px;
-  background: linear-gradient(180deg, rgba(31, 123, 193, 0.35), rgba(31, 123, 193, 0.12));
-  box-shadow:
-    0 0 0 2px rgba(66, 194, 255, 0.35),
+  background: linear-gradient(
+    180deg,
+    rgba(31, 123, 193, 0.35),
+    rgba(31, 123, 193, 0.12)
+  );
+  box-shadow: 0 0 0 2px rgba(66, 194, 255, 0.35),
     0 10px 24px rgba(0, 0, 0, 0.35);
   transform: translateY(-1px);
-}
-
-.craft-recipe.active::after {
-  content: none;
 }
 
 .craft-recipe:hover {
@@ -198,27 +148,6 @@
   border: 1px solid #1f2933;
 }
 
-.craft-recipe .craft-recipe-xp {
-  margin-top: -20px;
-  align-self: flex-end;
-  transform: translateY(-6px);
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: rgba(31, 123, 193, 0.12);
-  border: 1px solid rgba(31, 123, 193, 0.35);
-  color: #dbe9f9;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.craft-recipe .craft-recipe-xp::before {
-  content: "★";
-  font-size: 11px;
-  color: #ffd166;
-}
-
 .craft-tag {
   font-size: 11px;
   padding: 2px 6px;
@@ -237,8 +166,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex: 1 1 auto;
-  min-height: 0;
 }
 
 .craft-slots {
@@ -324,36 +251,6 @@
   border: 1px solid #1f2933;
 }
 
-/* Couleurs de stats (reprise inventaire) */
-.inventory-bonus-stat-force {
-  color: #ffb347;
-}
-.inventory-bonus-stat-intel {
-  color: #7fd0ff;
-}
-.inventory-bonus-stat-agilite {
-  color: #7dff7a;
-}
-.inventory-bonus-stat-chance {
-  color: #bba9ff;
-}
-.inventory-bonus-stat-vitalite,
-.inventory-bonus-stat-hp {
-  color: #ff6b6b;
-}
-.inventory-bonus-stat-pa {
-  color: #ffd93b;
-}
-.inventory-bonus-stat-pm {
-  color: #6bffb8;
-}
-.inventory-bonus-stat-init {
-  color: #ff9ce6;
-}
-.inventory-bonus-stat-generic {
-  color: #e0e0e0;
-}
-
 /* Inventaire (colonne droite) */
 .craft-inventory {
   display: flex;
@@ -401,12 +298,11 @@
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 3px;
-  flex: 1 1 auto;
-  min-height: 0;
+  max-height: 60vh;
   overflow: auto;
   padding-right: 2px;
-  margin-top: 3px;
-  padding-bottom: 4px;
+  margin-top: 6px;
+  padding-bottom: 4px; 
 }
 
 .craft-inventory-slot {

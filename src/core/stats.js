@@ -5,18 +5,18 @@ export const baseStats = {
   // Caractéristiques principales
   force: 0,
   intelligence: 0,
-  agilite: 100,
+  agilite: 0,
   chance: 0,
   vitalite: 0,
   initiative: 0,
   sagesse: 0,
 
   // Points de vie (max et actuels)
-  hpMax: 200,
-  hp: 200,
+  hpMax: 50,
+  hp: 50,
 
   // Ressources d'action
-  pa: 12, // Points d'action de base
+  pa: 6, // Points d'action de base
   pm: 3, // Points de mouvement de base
 };
 

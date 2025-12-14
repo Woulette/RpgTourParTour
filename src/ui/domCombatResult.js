@@ -2,6 +2,7 @@
 // + affichage du butin (loot).
 
 import { items } from "../inventory/itemsConfig.js";
+import { addChatMessage } from "../chat/chat.js";
 
 export function initDomCombatResult(scene, player) {
   const overlay = document.getElementById("combat-result-overlay");
@@ -134,6 +135,30 @@ export function initDomCombatResult(scene, player) {
 
     // Loot
     renderLoot(result.loot);
+
+    // Chat : affiche le drop en fin de combat (TOTAL + Général)
+    if (issue === "victoire" && player) {
+      const parts = [];
+      const gold = result.goldGagne ?? 0;
+      if (gold > 0) parts.push(`+${gold} or`);
+
+      const loot = Array.isArray(result.loot) ? result.loot : [];
+      loot.forEach((entry) => {
+        if (!entry || !entry.itemId) return;
+        const qty = entry.qty ?? 0;
+        if (qty <= 0) return;
+        const def = items[entry.itemId];
+        const label = def?.label || entry.itemId;
+        parts.push(`${label} x${qty}`);
+      });
+
+      if (parts.length > 0) {
+        addChatMessage(
+          { kind: "system", channel: "global", text: `Butin : ${parts.join(", ")}` },
+          { player }
+        );
+      }
+    }
 
     // Texte du bouton en fonction de l'issue
     buttonEl.textContent = issue === "defaite" ? "Respawn" : "Continuer";

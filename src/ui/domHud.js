@@ -21,6 +21,9 @@ export function initDomHud(player) {
     return;
   }
 
+  // Aligne les boutons HUD dans le dock (layout unifié)
+  mountHudDockMenu();
+
   // --- Panneau de stats joueur ---
   statsButtonEl.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -84,6 +87,27 @@ export function initDomHud(player) {
   if (player.scene) {
     player.scene.updateHudTargetInfo = updateTargetHud;
   }
+}
+
+function mountHudDockMenu() {
+  const menu = document.getElementById("hud-dock-menu");
+  if (!menu) return;
+
+  const ids = [
+    "hud-metiers-button",
+    "hud-quests-button",
+    "hud-map-button",
+    "hud-inventory-button",
+    "hud-spells-button",
+    "hud-stats-button",
+  ];
+
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.parentNode === menu) return;
+    menu.appendChild(el);
+  });
 }
 
 function mettreAJourStatsPanel(player) {

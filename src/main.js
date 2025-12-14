@@ -28,6 +28,7 @@ import { initDomInventory } from "./ui/domInventory.js";
 import { initDomMetiers } from "./ui/domMetiers.js";
 import { initDomQuests } from "./ui/domQuests.js";
 import { initQuestTracker } from "./ui/domQuestTracker.js";
+import { initDomChat } from "./ui/domChat.js";
 import { preloadMonsters, spawnInitialMonsters } from "./monsters/index.js";
 import { defaultClassId } from "./config/classes.js";
 import { attachCombatPreview } from "./ui/combatPreview.js";
@@ -36,6 +37,7 @@ import { spawnTestTrees } from "./metier/bucheron/trees.js";
 import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
 import { initStore } from "./state/store.js";
 import { initQuestRuntime } from "./quests/runtime/init.js";
+import { initDevCheats } from "./dev/cheats.js";
     
 
 class MainScene extends Phaser.Scene {
@@ -126,7 +128,9 @@ class MainScene extends Phaser.Scene {
 
     // Initialise le store central avec le joueur.
     initStore(this.player);
+    initDomChat(this.player);
     initQuestRuntime(this.player);
+    initDevCheats(this);
 
     // Initialise les tuiles de sortie pour cette premiÃ¨re map.
     initWorldExitsForScene(this);

@@ -1,5 +1,6 @@
 import { QUEST_STATES, quests } from "./catalog.js";
 import { emit as emitStoreEvent } from "../state/store.js";
+import { addChatMessage } from "../chat/chat.js";
 
 function ensureQuestContainer(player) {
   if (!player.quests) {
@@ -54,6 +55,15 @@ export function acceptQuest(player, questId) {
     state.stageIndex = 0;
     resetStageProgress(state);
     emitStoreEvent("quest:updated", { questId, state });
+    addChatMessage(
+      {
+        kind: "quest",
+        author: "Quêtes",
+        channel: "quest",
+        text: `Quête commencée : ${questDef.title}`,
+      },
+      { player }
+    );
   }
 }
 
@@ -193,6 +203,20 @@ export function completeQuest(scene, player, questId) {
   if (gold > 0) {
     player.gold += gold;
   }
+
+  const rewardParts = [];
+  if (xp > 0) rewardParts.push(`+${xp} XP`);
+  if (gold > 0) rewardParts.push(`+${gold} or`);
+  const rewardText = rewardParts.length > 0 ? ` (${rewardParts.join(", ")})` : "";
+  addChatMessage(
+    {
+      kind: "quest",
+      author: "Quêtes",
+      channel: "quest",
+      text: `Quête terminée : ${questDef.title}${rewardText}`,
+    },
+    { player }
+  );
 }
 
 export function getAllQuestStates(player) {

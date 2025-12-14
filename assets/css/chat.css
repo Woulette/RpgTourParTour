@@ -1,0 +1,156 @@
+.hud-chat {
+  position: absolute;
+  left: var(--hud-pane-gap, 0.8%);
+  bottom: var(--hud-pane-bottom, 3%);
+  width: var(--hud-pane-width, 38%);
+  height: var(--hud-pane-height, 92%);
+
+  display: flex;
+  flex-direction: column;
+
+  pointer-events: auto;
+  box-sizing: border-box;
+
+  border-radius: 0;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  background: radial-gradient(
+      circle at 12% 10%,
+      rgba(255, 255, 255, 0.10),
+      rgba(10, 22, 40, 0.92)
+    );
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 10px 18px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+
+  color: #f5f7ff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.hud-chat-header {
+  padding: 3px 6px 2px;
+  background: rgba(0, 0, 0, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hud-chat-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 2px;
+}
+
+.hud-chat-tab {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: rgba(5, 15, 30, 0.72);
+  color: rgba(245, 247, 255, 0.92);
+  border-radius: 0;
+  padding: 2px 6px;
+  font-weight: 800;
+  font-size: clamp(9px, 0.8vw, 11px);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hud-chat-tab:hover {
+  background: rgba(10, 22, 40, 0.82);
+}
+
+.hud-chat-tab-active {
+  border-color: rgba(255, 211, 77, 0.65);
+  background: rgba(20, 40, 80, 0.88);
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.hud-chat-messages {
+  flex: 1;
+  padding: 5px 10px 6px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: rgba(255, 255, 255, 0.06);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 211, 77, 0.55) rgba(0, 0, 0, 0.25);
+}
+
+.hud-chat-messages::-webkit-scrollbar {
+  width: 10px;
+}
+
+.hud-chat-messages::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.22);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 211, 77, 0.45);
+  border: 2px solid rgba(0, 0, 0, 0.25);
+}
+
+.hud-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 211, 77, 0.60);
+}
+
+.hud-chat-form {
+  padding: 3px 10px 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.10);
+}
+
+.hud-chat-input {
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 0;
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: rgba(5, 15, 30, 0.70);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  font-size: 12px;
+}
+
+.hud-chat-input::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.hud-chat-message {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 3px 0;
+  font-size: clamp(11px, 1.05vw, 13px);
+  line-height: 1.25;
+}
+
+.hud-chat-time {
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-chat-content {
+  color: rgba(245, 247, 255, 0.92);
+}
+
+.hud-chat-author {
+  color: rgba(245, 247, 255, 0.92);
+  font-weight: 900;
+}
+
+.hud-chat-sep {
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 700;
+}
+
+.hud-chat-text {
+  color: rgba(245, 247, 255, 0.92);
+}
+
+.hud-chat-message-quest .hud-chat-author {
+  color: rgba(255, 211, 77, 0.95);
+}
+
+.hud-chat-message-player .hud-chat-author {
+  color: rgba(143, 208, 255, 0.98);
+}
