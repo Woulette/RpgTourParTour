@@ -332,7 +332,11 @@ export function openBijoutierCraftPanel(scene, player) {
   if (!panelEl) return;
   const selectedRef = { value: bijoutierRecipes[0]?.id };
   const selected = renderRecipes(player, selectedRef);
-  const recipe = bijoutierRecipes.find((r) => r.id === selected);
+  const getActiveRecipe = () =>
+    bijoutierRecipes.find((r) => r.id === selectedRef.value) ||
+    bijoutierRecipes.find((r) => r.id === selected) ||
+    bijoutierRecipes[0];
+  const recipe = getActiveRecipe();
   renderXpHeader(player);
   renderSlots(recipe, player);
   renderInventory(player);
@@ -354,34 +358,40 @@ export function openBijoutierCraftPanel(scene, player) {
   const btn = panelEl.querySelector("#bijoutier-craft-btn");
   if (btn) {
     btn.onclick = () => {
-      if (!recipe || btn.disabled) return;
+      const activeRecipe = getActiveRecipe();
+      if (!activeRecipe || btn.disabled) return;
       const inv = player?.inventory;
       const countItem = (id) =>
         inv?.slots?.reduce(
           (acc, slot) => acc + (slot && slot.itemId === id ? slot.qty : 0),
           0
         ) || 0;
-      const stillHave = recipe.inputs.every(
+      const stillHave = activeRecipe.inputs.every(
         (input) => countItem(input.itemId) >= input.qty
       );
       if (!stillHave) return;
 
-      recipe.inputs.forEach((input) => {
+      activeRecipe.inputs.forEach((input) => {
         removeItem(player.inventory, input.itemId, input.qty);
       });
-      addItem(player.inventory, recipe.output.itemId, recipe.output.qty);
-      lastCrafted = recipe.output;
-      if (recipe.xpGain && recipe.xpGain > 0) {
-        addBijoutierXp(player, recipe.xpGain);
+      addItem(player.inventory, activeRecipe.output.itemId, activeRecipe.output.qty);
+      lastCrafted = activeRecipe.output;
+      if (activeRecipe.xpGain && activeRecipe.xpGain > 0) {
+        addBijoutierXp(player, activeRecipe.xpGain);
         emitStoreEvent("metier:updated", { id: "bijoutier", state: player.metiers.bijoutier });
         renderXpHeader(player);
       }
-      emitStoreEvent("craft:completed", { metierId: "bijoutier", recipeId: recipe.id });
+      emitStoreEvent("craft:completed", {
+        metierId: "bijoutier",
+        recipeId: activeRecipe.id,
+        itemId: activeRecipe.output.itemId,
+        qty: activeRecipe.output.qty,
+      });
       renderInventory(player);
       renderRecipes(player, selectedRef);
-      renderSlots(recipe, player);
+      renderSlots(activeRecipe, player);
       renderResult();
-      updateCraftButton(recipe, player);
+      updateCraftButton(activeRecipe, player);
     };
   }
 

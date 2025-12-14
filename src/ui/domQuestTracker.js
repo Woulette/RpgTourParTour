@@ -1,10 +1,12 @@
 import { getAllQuestStates, QUEST_STATES } from "../quests/index.js";
 import { on as onStoreEvent } from "../state/store.js";
+import { countItemInInventory } from "../quests/runtime/objectives.js";
 
 let trackerInitialized = false;
 let unsubscribeTracker = null;
+let unsubscribeTrackerInventory = null;
 
-function pickObjectiveText(stage, state, questDef) {
+function pickObjectiveText(stage, state, questDef, player) {
   const objective = stage?.objective;
   if (objective && objective.type === "kill_monster") {
     const required = objective.requiredCount || 1;
@@ -13,6 +15,17 @@ function pickObjectiveText(stage, state, questDef) {
   }
   if (objective && objective.type === "talk_to_npc") {
     const required = objective.requiredCount || 1;
+    const current = Math.min(required, state.progress?.currentCount || 0);
+    return `${objective.label}: ${current}/${required}`;
+  }
+  if (objective && objective.type === "deliver_item") {
+    const required = objective.qty || 1;
+    const current = Math.min(required, countItemInInventory(player, objective.itemId));
+    return `${objective.label}: ${current}/${required}`;
+  }
+  if (objective && objective.type === "craft_items") {
+    const items = Array.isArray(objective.items) ? objective.items : [];
+    const required = items.reduce((acc, it) => acc + (it?.qty || 1), 0);
     const current = Math.min(required, state.progress?.currentCount || 0);
     return `${objective.label}: ${current}/${required}`;
   }
@@ -66,7 +79,7 @@ export function initQuestTracker(player) {
 
       const objective = document.createElement("div");
       objective.className = "quest-tracker-item-objective";
-      objective.textContent = pickObjectiveText(stage, state, def);
+      objective.textContent = pickObjectiveText(stage, state, def, player);
 
       item.appendChild(title);
       item.appendChild(objective);
@@ -110,6 +123,10 @@ export function initQuestTracker(player) {
   render();
 
   unsubscribeTracker = onStoreEvent("quest:updated", () => {
+    render();
+  });
+
+  unsubscribeTrackerInventory = onStoreEvent("inventory:updated", () => {
     render();
   });
 

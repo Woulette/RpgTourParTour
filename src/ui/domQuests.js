@@ -1,8 +1,10 @@
 import { getAllQuestStates, QUEST_STATES } from "../quests/index.js";
 import { on as onStoreEvent } from "../state/store.js";
+import { countItemInInventory } from "../quests/runtime/objectives.js";
 
 let domQuestsInitialized = false;
 let unsubscribeQuests = null;
+let unsubscribeQuestsInventory = null;
 
 export function initDomQuests(player) {
   if (domQuestsInitialized) return;
@@ -178,6 +180,32 @@ export function initDomQuests(player) {
             `${percent}%`
           );
         }
+      } else if (objective && objective.type === "deliver_item") {
+        const required = objective.qty || 1;
+        const current = Math.min(
+          required,
+          countItemInInventory(player, objective.itemId)
+        );
+        detailProgressEl.textContent = `${objective.label}: ${current}/${required}`;
+        if (detailProgressBarFillEl) {
+          const percent = (current / required) * 100;
+          detailProgressBarFillEl.style.setProperty(
+            "--quest-progress-percent",
+            `${percent}%`
+          );
+        }
+      } else if (objective && objective.type === "craft_items") {
+        const items = Array.isArray(objective.items) ? objective.items : [];
+        const required = items.reduce((acc, it) => acc + (it?.qty || 1), 0);
+        const current = Math.min(required, state.progress?.currentCount || 0);
+        detailProgressEl.textContent = `${objective.label}: ${current}/${required}`;
+        if (detailProgressBarFillEl) {
+          const percent = required > 0 ? (current / required) * 100 : 0;
+          detailProgressBarFillEl.style.setProperty(
+            "--quest-progress-percent",
+            `${percent}%`
+          );
+        }
       } else {
         detailProgressEl.textContent = "";
         if (detailProgressBarFillEl) {
@@ -294,6 +322,12 @@ export function initDomQuests(player) {
   });
 
   unsubscribeQuests = onStoreEvent("quest:updated", () => {
+    if (document.body.classList.contains("hud-quests-open")) {
+      refreshPanel();
+    }
+  });
+
+  unsubscribeQuestsInventory = onStoreEvent("inventory:updated", () => {
     if (document.body.classList.contains("hud-quests-open")) {
       refreshPanel();
     }

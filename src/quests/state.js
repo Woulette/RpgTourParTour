@@ -9,7 +9,7 @@ function ensureQuestContainer(player) {
 }
 
 function resetStageProgress(state) {
-  state.progress = { currentCount: 0 };
+  state.progress = { currentCount: 0, crafted: {} };
 }
 
 function getQuestStageByIndex(questDef, stageIndex = 0) {
@@ -122,6 +122,42 @@ export function incrementKillProgress(scene, player, questId, monsterId) {
   if (next >= required) {
     advanceQuestStage(player, questId, { scene });
   }
+}
+
+export function incrementCraftProgress(player, itemId, qty = 1) {
+  const craftedQty = qty || 1;
+  if (!player || !itemId || craftedQty <= 0) return;
+
+  Object.values(quests).forEach((questDef) => {
+    if (!questDef) return;
+    const state = getQuestState(player, questDef.id, { emit: false });
+    if (state.state !== QUEST_STATES.IN_PROGRESS) return;
+
+    const stage = getCurrentQuestStage(questDef, state);
+    const objective = stage?.objective;
+    if (!objective || objective.type !== "craft_items") return;
+
+    const items = Array.isArray(objective.items) ? objective.items : [];
+    const target = items.find((it) => it && it.itemId === itemId);
+    if (!target) return;
+
+    const required = target.qty || 1;
+    state.progress = state.progress || {};
+    state.progress.crafted = state.progress.crafted || {};
+
+    const current = state.progress.crafted[itemId] || 0;
+    const next = Math.min(required, current + craftedQty);
+    state.progress.crafted[itemId] = next;
+
+    const totalRequired = items.reduce((acc, it) => acc + (it?.qty || 1), 0);
+    const totalCurrent = items.reduce(
+      (acc, it) => acc + Math.min(it?.qty || 1, state.progress.crafted[it.itemId] || 0),
+      0
+    );
+    state.progress.currentCount = Math.min(totalRequired, totalCurrent);
+
+    emitStoreEvent("quest:updated", { questId: questDef.id, state });
+  });
 }
 
 export function completeQuest(scene, player, questId) {

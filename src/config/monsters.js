@@ -25,14 +25,14 @@ export const monsters = {
       {
         itemId: "plume_corbeau",
         min: 1,
-        max: 2,
-        dropRate: 0.4, // 100 % de chance pour les tests
+        max: 1,
+        dropRate: 0.5, // 100 % de chance pour les tests
       },
       {
         itemId: "patte_corbeau",
         min: 1,
         max: 1,
-        dropRate: 0.4,
+        dropRate: 0.5,
       },
       // Pièces d'équipement du Corbeau (rares)
       {

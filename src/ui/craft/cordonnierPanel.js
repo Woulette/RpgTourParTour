@@ -332,7 +332,11 @@ export function openCordonnierCraftPanel(scene, player) {
   if (!panelEl) return;
   const selectedRef = { value: cordonnierRecipes[0]?.id };
   const selected = renderRecipes(player, selectedRef);
-  const recipe = cordonnierRecipes.find((r) => r.id === selected);
+  const getActiveRecipe = () =>
+    cordonnierRecipes.find((r) => r.id === selectedRef.value) ||
+    cordonnierRecipes.find((r) => r.id === selected) ||
+    cordonnierRecipes[0];
+  const recipe = getActiveRecipe();
   renderXpHeader(player);
   renderSlots(recipe, player);
   renderInventory(player);
@@ -354,34 +358,40 @@ export function openCordonnierCraftPanel(scene, player) {
   const btn = panelEl.querySelector("#cordonnier-craft-btn");
   if (btn) {
     btn.onclick = () => {
-      if (!recipe || btn.disabled) return;
+      const activeRecipe = getActiveRecipe();
+      if (!activeRecipe || btn.disabled) return;
       const inv = player?.inventory;
       const countItem = (id) =>
         inv?.slots?.reduce(
           (acc, slot) => acc + (slot && slot.itemId === id ? slot.qty : 0),
           0
         ) || 0;
-      const stillHave = recipe.inputs.every(
+      const stillHave = activeRecipe.inputs.every(
         (input) => countItem(input.itemId) >= input.qty
       );
       if (!stillHave) return;
 
-      recipe.inputs.forEach((input) => {
+      activeRecipe.inputs.forEach((input) => {
         removeItem(player.inventory, input.itemId, input.qty);
       });
-      addItem(player.inventory, recipe.output.itemId, recipe.output.qty);
-      lastCrafted = recipe.output;
-      if (recipe.xpGain && recipe.xpGain > 0) {
-        addCordonnierXp(player, recipe.xpGain);
+      addItem(player.inventory, activeRecipe.output.itemId, activeRecipe.output.qty);
+      lastCrafted = activeRecipe.output;
+      if (activeRecipe.xpGain && activeRecipe.xpGain > 0) {
+        addCordonnierXp(player, activeRecipe.xpGain);
         emitStoreEvent("metier:updated", { id: "cordonnier", state: player.metiers.cordonnier });
         renderXpHeader(player);
       }
-      emitStoreEvent("craft:completed", { metierId: "cordonnier", recipeId: recipe.id });
+      emitStoreEvent("craft:completed", {
+        metierId: "cordonnier",
+        recipeId: activeRecipe.id,
+        itemId: activeRecipe.output.itemId,
+        qty: activeRecipe.output.qty,
+      });
       renderInventory(player);
       renderRecipes(player, selectedRef);
-      renderSlots(recipe, player);
+      renderSlots(activeRecipe, player);
       renderResult();
-      updateCraftButton(recipe, player);
+      updateCraftButton(activeRecipe, player);
     };
   }
 

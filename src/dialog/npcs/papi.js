@@ -1,4 +1,3 @@
-// Dialogues pour le PNJ Papi, indexés par questId, étape et état.
 import { QUEST_STATES } from "../../quests/catalog.js";
 
 export const papiDialog = {
@@ -6,14 +5,26 @@ export const papiDialog = {
     papi_corbeaux_1: {
       hunt_corbeaux: {
         [QUEST_STATES.NOT_STARTED]: {
-          text:
-            "Mais d'où sors-tu, toi ? Je ne t'ai pas vu arriver.\n\n" +
-            "Tu as l'air perdu... Depuis la fracture, des gens apparaissent ici comme toi, sans explication.\n\n" +
-            "Effectivement, tout est lié.\n" +
-            "Bienvenue à Andémia. Une fois pris dans cette fracture, on ne repart pas aussi facilement...\n" +
-            "Mais si tu dois rester, autant apprendre à survivre. Ta formation commence ici, aventurier.\n" +
-            "Tu veux bien me donner un coup de main ?",
-          choice: "J'ai juste un souvenir flou… mais je vais t'aider.",
+          sequence: [
+            {
+              text: "Mais d'où sors-tu, toi ? Je ne t'ai pas vu arriver.",
+              choice: "Je... je ne sais même pas. Tout est flou.",
+            },
+            {
+              text:
+                "Hum. Ça se confirme...\n" +
+                "Depuis la fracture, des gens apparaissent ici comme toi : d'un coup, sans explication.\n" +
+                "Certains disent que le temps lui-même s'est déréglé.",
+              choice: "J'ai juste un souvenir flou…",
+            },
+            {
+              text:
+                "Bienvenue à Andémia. Une fois pris dans cette fracture, on ne repart pas aussi facilement...\n\n" +
+                "Mais si tu dois rester, autant apprendre à survivre. Ta formation commence ici, aventurier.\n" +
+                "Tu veux bien me donner un coup de main ?",
+              choice: "D'accord, je vais t'aider.",
+            },
+          ],
         },
         [QUEST_STATES.IN_PROGRESS]: {
           text: "Alors, combien de corbeaux as-tu déjà chassés ?",
@@ -34,7 +45,6 @@ export const papiDialog = {
       },
     },
 
-    // Quête suivante : Papi t'envoie voir Mémé.
     papi_meme_1: {
       talk_to_meme: {
         [QUEST_STATES.NOT_STARTED]: {
@@ -47,7 +57,7 @@ export const papiDialog = {
         [QUEST_STATES.IN_PROGRESS]: {
           text:
             "Maintenant que la zone est plus tranquille, va voir ma femme.\n" +
-            "Elle a sûrement besoin d'un aventurier motivé comme toi.",
+            "Elle aura sûrement besoin d'un aventurier motivé comme toi.",
           choice: "Se mettre en route.",
         },
         [QUEST_STATES.COMPLETED]: {
@@ -62,4 +72,3 @@ export const papiDialog = {
     choice: "À plus tard.",
   },
 };
-

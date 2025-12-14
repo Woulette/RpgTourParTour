@@ -5,10 +5,7 @@ import { questGiverNpcs } from "./catalog/questGivers.js";
 import { flavorNpcs } from "./catalog/flavor.js";
 import { startNpcInteraction } from "./interaction.js";
 import {
-  quests,
-  QUEST_STATES,
-  getQuestState,
-  getCurrentQuestStage,
+  getNpcMarker,
 } from "../quests/index.js";
 import { on as onStoreEvent } from "../state/store.js";
 
@@ -20,41 +17,7 @@ const ALL_NPCS = [
 ];
 
 let questMarkerUnsubscribe = null;
-
-function hasAvailableQuest(player, npcId) {
-  if (!player || !npcId) return false;
-  const entries = Object.values(quests);
-
-  return entries.some((questDef) => {
-    if (questDef.giverNpcId !== npcId) return false;
-    const state = getQuestState(player, questDef.id, { emit: false });
-    if (state.state !== QUEST_STATES.NOT_STARTED) return false;
-
-    if (Array.isArray(questDef.requires) && questDef.requires.length > 0) {
-      const allDone = questDef.requires.every((reqId) => {
-        const reqState = getQuestState(player, reqId, { emit: false });
-        return reqState.state === QUEST_STATES.COMPLETED;
-      });
-      if (!allDone) return false;
-    }
-
-    return true;
-  });
-}
-
-function hasQuestTurnIn(player, npcId) {
-  if (!player || !npcId) return false;
-  const entries = Object.values(quests);
-
-  return entries.some((questDef) => {
-    const state = getQuestState(player, questDef.id, { emit: false });
-    if (state.state !== QUEST_STATES.IN_PROGRESS) return false;
-    const stage = getCurrentQuestStage(questDef, state);
-    if (!stage || stage.npcId !== npcId) return false;
-    const objective = stage.objective;
-    return objective && objective.type === "talk_to_npc";
-  });
-}
+let inventoryMarkerUnsubscribe = null;
 
 export function preloadNpcs(scene) {
   if (!scene) return;
@@ -73,7 +36,7 @@ export function preloadNpcs(scene) {
 function refreshNpcQuestMarkers(scene, player) {
   if (!scene || !scene.npcs) return;
   scene.npcs.forEach((npcInstance) => {
-    if (!npcInstance || npcInstance.type !== "quest_giver") return;
+    if (!npcInstance) return;
 
     // Détruit l'ancien marqueur éventuel
     if (npcInstance.questMarker && npcInstance.questMarker.destroy) {
@@ -83,11 +46,9 @@ function refreshNpcQuestMarkers(scene, player) {
 
     const npcId = npcInstance.id;
     let markerTexture = null;
-    if (hasAvailableQuest(player, npcId)) {
-      markerTexture = "quest_exclamation";
-    } else if (hasQuestTurnIn(player, npcId)) {
-      markerTexture = "quest_question";
-    }
+    const markerSymbol = getNpcMarker(player, npcId);
+    if (markerSymbol === "!") markerTexture = "quest_exclamation";
+    else if (markerSymbol === "?") markerTexture = "quest_question";
 
     if (!markerTexture) return;
 
@@ -185,6 +146,12 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
   // Etablie un listener global une seule fois pour réagir aux mises à jour de quête
   if (!questMarkerUnsubscribe) {
     questMarkerUnsubscribe = onStoreEvent("quest:updated", () => {
+      refreshNpcQuestMarkers(scene, scene.player);
+    });
+  }
+
+  if (!inventoryMarkerUnsubscribe) {
+    inventoryMarkerUnsubscribe = onStoreEvent("inventory:updated", () => {
       refreshNpcQuestMarkers(scene, scene.player);
     });
   }

@@ -35,6 +35,7 @@ import { attachMonsterTooltip } from "./ui/monsterTooltip.js";
 import { spawnTestTrees } from "./metier/bucheron/trees.js";
 import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
 import { initStore } from "./state/store.js";
+import { initQuestRuntime } from "./quests/runtime/init.js";
     
 
 class MainScene extends Phaser.Scene {
@@ -125,6 +126,7 @@ class MainScene extends Phaser.Scene {
 
     // Initialise le store central avec le joueur.
     initStore(this.player);
+    initQuestRuntime(this.player);
 
     // Initialise les tuiles de sortie pour cette premiÃ¨re map.
     initWorldExitsForScene(this);

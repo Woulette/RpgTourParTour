@@ -131,11 +131,27 @@
   flex-direction: column;
   gap: 6px;
   cursor: pointer;
+  position: relative;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease,
+    background 0.12s ease;
 }
 
 .craft-recipe.active {
-  border-color: #1f7bc1;
-  box-shadow: 0 0 0 1px rgba(31, 123, 193, 0.4);
+  border-color: #42c2ff;
+  border-width: 2px;
+  background: linear-gradient(180deg, rgba(31, 123, 193, 0.35), rgba(31, 123, 193, 0.12));
+  box-shadow:
+    0 0 0 2px rgba(66, 194, 255, 0.35),
+    0 10px 24px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+.craft-recipe.active::after {
+  content: none;
+}
+
+.craft-recipe:hover {
+  border-color: rgba(66, 194, 255, 0.6);
 }
 
 .craft-recipe header {
