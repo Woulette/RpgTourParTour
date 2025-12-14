@@ -2,6 +2,7 @@ import { PLAYER_SPEED } from "../../config/constants.js";
 import { applyMoveCost } from "../../core/combat.js";
 import { maybeHandleMapExit } from "../../maps/world.js";
 import { isTileBlocked } from "../../collision/collisionGrid.js";
+import { recalcDepths } from "../../maps/world/decor.js";
 
 // Détermine le nom de direction d'animation à partir d'un vecteur.
 function getDirectionName(dx, dy) {
@@ -115,9 +116,7 @@ export function movePlayerAlongPath(
   const targetX = worldPos.x + map.tileWidth / 2;
   const targetY = worldPos.y + map.tileHeight / 2;
 
-  if (player.setDepth) {
-    player.setDepth(player.y);
-  }
+  updatePlayerDepth(scene, player);
 
   const dxWorld = targetX - player.x;
   const dyWorld = targetY - player.y;
@@ -150,9 +149,7 @@ export function movePlayerAlongPath(
       player.y = targetY;
       player.currentTileX = nextTile.x;
       player.currentTileY = nextTile.y;
-      if (player.setDepth) {
-        player.setDepth(player.y);
-      }
+      updatePlayerDepth(scene, player);
 
       if (path.length > 0) {
         movePlayerAlongPath(
@@ -187,4 +184,8 @@ export function movePlayerAlongPath(
       }
     },
   });
+}
+
+function updatePlayerDepth(scene, player) {
+  recalcDepths(scene);
 }

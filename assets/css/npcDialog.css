@@ -31,6 +31,9 @@ body.npc-dialog-open #npc-dialog-panel {
 }
 
 .npc-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
   padding-bottom: 0.4rem;
 }
@@ -38,6 +41,21 @@ body.npc-dialog-open #npc-dialog-panel {
 .npc-dialog-name {
   margin: 0;
   font-size: clamp(16px, 1.6vw, 20px);
+}
+
+.npc-dialog-close-btn {
+  border: none;
+  background: transparent;
+  color: #f97373;
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.npc-dialog-close-btn:hover {
+  color: #fecaca;
 }
 
 .npc-dialog-body {

@@ -9,6 +9,7 @@ export const baseStats = {
   chance: 0,
   vitalite: 0,
   initiative: 0,
+  sagesse: 0,
 
   // Points de vie (max et actuels)
   hpMax: 200,

@@ -10,8 +10,17 @@ function getElements() {
   const textEl = document.getElementById("npc-dialog-text");
   const choiceBtn = document.getElementById("npc-dialog-choice-1");
   const questBadge = document.getElementById("npc-dialog-quest-badge");
+  const closeBtn = document.getElementById("npc-dialog-close");
 
-  return { panel, nameEl, speakerNpcEl, textEl, choiceBtn, questBadge };
+  return {
+    panel,
+    nameEl,
+    speakerNpcEl,
+    textEl,
+    choiceBtn,
+    questBadge,
+    closeBtn,
+  };
 }
 
 function closeNpcDialog() {
@@ -25,7 +34,15 @@ function closeNpcDialog() {
 export function openNpcDialog(npc, player, dialogData) {
   const els = getElements();
   if (!els) return;
-  const { panel, nameEl, speakerNpcEl, textEl, choiceBtn, questBadge } = els;
+  const {
+    panel,
+    nameEl,
+    speakerNpcEl,
+    textEl,
+    choiceBtn,
+    questBadge,
+    closeBtn,
+  } = els;
 
   currentNpc = npc || null;
   currentDialog = dialogData || null;
@@ -49,6 +66,14 @@ export function openNpcDialog(npc, player, dialogData) {
       if (dialogData && typeof dialogData.onChoice === "function") {
         dialogData.onChoice();
       }
+      if (dialogData?.closeOnChoice !== false) {
+        closeNpcDialog();
+      }
+    };
+  }
+
+  if (closeBtn) {
+    closeBtn.onclick = () => {
       closeNpcDialog();
     };
   }
@@ -69,3 +94,4 @@ export function openNpcDialog(npc, player, dialogData) {
   panel.setAttribute("aria-hidden", "false");
   document.body.classList.add("npc-dialog-open");
 }
+

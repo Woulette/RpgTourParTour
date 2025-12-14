@@ -5,7 +5,7 @@ import { spawnNpcsForMap } from "../../npc/spawn.js";
 import { spawnTestTrees } from "../../metier/bucheron/trees.js";
 import { createMapExits } from "../exits.js";
 import { rebuildCollisionGridFromMap } from "./collision.js";
-import { spawnObjectLayerTrees } from "./decor.js";
+import { spawnObjectLayerTrees, recalcDepths } from "./decor.js";
 import { initWorldExitsForScene } from "./exits.js";
 import { getNeighbor } from "./util.js";
 import { setupWorkstations } from "../../metier/workstations.js";
@@ -145,7 +145,14 @@ export function loadMapLikeMain(scene, mapDef) {
     scene.player.y = startY;
     scene.player.currentTileX = centerTileX;
     scene.player.currentTileY = centerTileY;
+    if (typeof scene.player.setDepth === "function") {
+      // Recalcule la depth selon la nouvelle position
+      scene.player.setDepth(startY);
+    }
   }
+
+  // Re-synchronise les decor/trees dependants du joueur
+  recalcDepths(scene);
 
   setupCamera(scene, map, startX, startY, mapDef.cameraOffsets);
 
@@ -160,8 +167,8 @@ export function loadMapLikeMain(scene, mapDef) {
       mapDef
     );
     spawnTestTrees(scene, map, scene.player, mapDef);
-    spawnNpcsForMap(scene, map, scene.groundLayer, mapDef.key);
   }
+  spawnNpcsForMap(scene, map, scene.groundLayer, mapDef.key);
   createMapExits(scene);
 }
 

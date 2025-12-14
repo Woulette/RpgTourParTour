@@ -2,6 +2,7 @@ import { createCharacter } from "./character.js";
 import { classes } from "../config/classes.js";
 import { createStats, applyBonuses } from "../core/stats.js";
 import { createLevelState, ajouterXp } from "../core/level.js";
+import { XP_CONFIG } from "../config/xp.js";
 import { createPlayerInventory } from "../inventory/inventoryContainers.js";
 import {
   createEmptyEquipment,
@@ -58,9 +59,15 @@ export function createPlayer(scene, x, y, classId) {
 export function addXpToPlayer(player, montantXp) {
   if (!player.levelState || !player.stats) return;
 
+  // Bonus XP via la sagesse (1 sagesse = +1% XP)
+  const sagesse = player.stats.sagesse ?? 0;
+  const wisdomPerPoint = XP_CONFIG.wisdomPerPoint ?? 0.01;
+  const xpMultiplier = 1 + Math.max(0, sagesse) * wisdomPerPoint;
+  const finalXp = Math.round(montantXp * xpMultiplier);
+
   const { nouveauState, niveauxGagnes } = ajouterXp(
     player.levelState,
-    montantXp
+    finalXp
   );
   player.levelState = { ...player.levelState, ...nouveauState };
 

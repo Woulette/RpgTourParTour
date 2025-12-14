@@ -4,7 +4,11 @@ export {
   maybeHandleMapExit,
 } from "./load.js";
 export { rebuildCollisionGridFromMap } from "./collision.js";
-export { spawnObjectLayerTrees } from "./decor.js";
+export {
+  spawnObjectLayerTrees,
+  refreshObjectLayerDepths,
+  recalcDepths,
+} from "./decor.js";
 export {
   computePlayableBounds,
   buildWorldExits,

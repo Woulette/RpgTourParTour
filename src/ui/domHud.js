@@ -123,6 +123,7 @@ function mettreAJourStatsPanel(player) {
     agilite: byId("stat-agilite-input"),
     chance: byId("stat-chance-input"),
     vitalite: byId("stat-vitalite-input"),
+    sagesse: byId("stat-sagesse-input"),
   };
 
   Object.entries(inputs).forEach(([key, input]) => {
@@ -163,7 +164,17 @@ function initStatControls(player) {
     return player.levelState;
   };
 
-  const statKeys = ["force", "intelligence", "agilite", "chance", "vitalite"];
+  const statKeys = [
+    "force",
+    "intelligence",
+    "agilite",
+    "chance",
+    "vitalite",
+    "sagesse",
+  ];
+  const statCosts = {
+    sagesse: 2,
+  };
 
   const getInput = (key) =>
     document.getElementById(`stat-${key}-input`);
@@ -185,8 +196,11 @@ function initStatControls(player) {
       if ((levelState.pointsCaracLibres ?? 0) <= 0) return;
       const base = getBaseStats();
       const current = base[key] ?? 0;
+      const cost = statCosts[key] ?? 1;
+      if ((levelState.pointsCaracLibres ?? 0) < cost) return;
       base[key] = current + 1;
-      levelState.pointsCaracLibres = (levelState.pointsCaracLibres ?? 0) - 1;
+      levelState.pointsCaracLibres =
+        (levelState.pointsCaracLibres ?? 0) - cost;
       if (typeof player.recomputeStatsWithEquipment === "function") {
         player.recomputeStatsWithEquipment();
       }
@@ -203,8 +217,10 @@ function initStatControls(player) {
       const base = getBaseStats();
       const current = base[key] ?? 0;
       if (current <= 0) return; // on ne descend pas en dessous de 0 pour l'instant
+      const cost = statCosts[key] ?? 1;
       base[key] = current - 1;
-      levelState.pointsCaracLibres = (levelState.pointsCaracLibres ?? 0) + 1;
+      levelState.pointsCaracLibres =
+        (levelState.pointsCaracLibres ?? 0) + cost;
       if (typeof player.recomputeStatsWithEquipment === "function") {
         player.recomputeStatsWithEquipment();
       }
@@ -227,13 +243,14 @@ function initStatControls(player) {
 
       const current = base[key] ?? 0;
       let delta = newValue - current;
-
+      const costPerPoint = statCosts[key] ?? 1;
       const pointsLibres = levelState.pointsCaracLibres ?? 0;
 
       if (delta > 0) {
         // On veut augmenter la stat
-        if (delta > pointsLibres) {
-          delta = pointsLibres;
+        const maxIncrease = Math.floor(pointsLibres / costPerPoint);
+        if (delta > maxIncrease) {
+          delta = maxIncrease;
         }
       }
 
@@ -250,7 +267,7 @@ function initStatControls(player) {
 
       base[key] = current + delta;
       levelState.pointsCaracLibres =
-        (levelState.pointsCaracLibres ?? 0) - delta;
+        (levelState.pointsCaracLibres ?? 0) - delta * costPerPoint;
 
       if (typeof player.recomputeStatsWithEquipment === "function") {
         player.recomputeStatsWithEquipment();

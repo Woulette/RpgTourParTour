@@ -1,7 +1,9 @@
 import { papiDialog } from "./papi.js";
+import { memeDialog } from "./meme.js";
 
 const NPC_DIALOGS = {
   papi_bucheron: papiDialog,
+  meme_village: memeDialog,
 };
 
 export function getNpcDialog(npcId, questId, questState, stageId) {

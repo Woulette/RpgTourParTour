@@ -1,7 +1,8 @@
 // Gestion d'une petite fiche d'infos au-dessus du monstre survolé.
-// Affiche : niveau, nom, XP gagnée.
+// Affiche : XP (estimée), niveau total du groupe, niveaux individuels.
 
 import { monsters } from "../config/monsters.js";
+import { XP_CONFIG } from "../config/xp.js";
 
 export function attachMonsterTooltip(scene) {
   if (!scene) return;
@@ -11,35 +12,40 @@ export function attachMonsterTooltip(scene) {
 
   scene.showMonsterTooltip = (monster) => {
     if (!monster) {
-      scene.hideMonsterTooltip && scene.hideMonsterTooltip();
+      if (scene.hideMonsterTooltip) scene.hideMonsterTooltip();
       return;
     }
 
     const baseName =
       monster.displayName || monster.label || monster.monsterId || "Monstre";
-    const level =
-      monster.level ?? (monster.stats && monster.stats.niveau) ?? 1;
 
     const baseDef = monsters[monster.monsterId] || null;
-    const baseXp =
-      (baseDef && baseDef.xpReward) ?? monster.xpReward ?? 0;
-
     const groupSize =
       typeof monster.groupSize === "number" && monster.groupSize > 1
         ? monster.groupSize
         : 1;
+    const levels =
+      Array.isArray(monster.groupLevels) && monster.groupLevels.length > 0
+        ? monster.groupLevels
+        : Array.from({ length: groupSize }, () => monster.level ?? 1);
 
-    const totalXp = baseXp * groupSize;
+    const xpTotal = computeGroupXp(monster, scene, baseDef, levels);
 
-    const name = groupSize > 1 ? `${baseName} x${groupSize}` : baseName;
+    const totalLevel = levels.reduce((sum, lvl) => sum + lvl, 0);
 
-    const titleLine = `Niv. ${level} - ${name}`;
-    const xpLine = `XP : ${totalXp}`;
-    const text = `${titleLine}\n${xpLine}`;
+    const lines = [];
+    lines.push(`XP : ${xpTotal}`);
+    lines.push(`Niv. total : ${totalLevel}`);
+    for (let i = 0; i < groupSize; i += 1) {
+      const lvl = levels[i] ?? monster.level ?? 1;
+      lines.push(`${baseName} - Niv. ${lvl}`);
+    }
+    const text = lines.join("\n");
 
     const bubbleCenterX = monster.x;
-    // Légèrement au-dessus de la tête du monstre
-    const bubbleCenterY = monster.y - 70;
+    const lineCount = lines.length;
+    // Décale vers le haut en fonction de la taille pour éviter de masquer le monstre
+    const bubbleCenterY = monster.y - 40 - lineCount * 8;
 
     if (scene.monsterTooltipText) {
       scene.monsterTooltipText.destroy();
@@ -60,7 +66,6 @@ export function attachMonsterTooltip(scene) {
       align: "center",
     });
     tooltipText.setOrigin(0.5, 0.5);
-    // Meilleure définition pour un texte plus net
     if (tooltipText.setResolution) {
       tooltipText.setResolution(2);
     }
@@ -84,8 +89,9 @@ export function attachMonsterTooltip(scene) {
       scene.hudCamera.ignore(bg);
       scene.hudCamera.ignore(tooltipText);
     }
-    bg.setDepth(9);
-    tooltipText.setDepth(10);
+    // Très au-dessus du monde (dépasse le joueur et les calques)
+    bg.setDepth(200000);
+    tooltipText.setDepth(200001);
 
     scene.monsterTooltipBg = bg;
     scene.monsterTooltipText = tooltipText;
@@ -101,4 +107,76 @@ export function attachMonsterTooltip(scene) {
       scene.monsterTooltipBg = null;
     }
   };
+}
+
+// XP totale du groupe estimée avec montée douce + pénalité d'écart + sagesse
+function computeGroupXp(monster, scene, baseDef, levels) {
+  const baseXp =
+    monster.xpRewardBase ??
+    monster.xpReward ??
+    baseDef?.xpReward ??
+    0;
+  const playerLevel = scene?.player?.levelState?.niveau ?? 1;
+  const sagesse = scene?.player?.stats?.sagesse ?? 0;
+  const wisdomFactor =
+    1 + Math.max(0, sagesse) * (XP_CONFIG.wisdomPerPoint ?? 0.01);
+
+  const levelBonus = computeHighestLevelBonus(levels);
+  const groupBonus = computeGroupBonus(monster.groupSize);
+  const factor = computeXpFactor(levels, playerLevel);
+
+  const rawXp = baseXp * levelBonus * groupBonus;
+  const xpTotal = rawXp * factor * wisdomFactor;
+  return Math.max(1, Math.round(xpTotal));
+}
+
+function computeHighestLevelBonus(levels) {
+  const highest = levels.reduce(
+    (max, lvl) => (lvl > max ? lvl : max),
+    levels[0] ?? 1
+  );
+  const table = XP_CONFIG.baseLevelBonus || {};
+  if (table[highest] != null) {
+    return table[highest];
+  }
+  const keys = Object.keys(table)
+    .map((k) => Number(k))
+    .filter((n) => !Number.isNaN(n));
+  if (keys.length === 0) return 1.0;
+  const maxKey = keys.reduce((m, v) => (v > m ? v : m), keys[0]);
+  return table[maxKey] ?? 1.0;
+}
+
+function computeXpFactor(levels, playerLevel) {
+  const total = levels.reduce((sum, lvl) => sum + (lvl ?? 1), 0);
+  const highest = levels.reduce(
+    (max, lvl) => (lvl > max ? lvl : max),
+    levels[0] ?? 1
+  );
+  // Niveau de référence : pas de pénalité si le total couvre (ou dépasse un peu) le niveau du joueur,
+  // mais on tient compte d'un monstre très HL (highest).
+  const effectiveLevel = Math.max(highest, Math.min(total, playerLevel));
+  const diff = Math.abs(effectiveLevel - playerLevel);
+
+  const tiers = XP_CONFIG.penaltyTiers || [];
+  for (const tier of tiers) {
+    if (diff <= tier.maxDiff) {
+      return tier.factor;
+    }
+  }
+  return tiers.length > 0 ? tiers[tiers.length - 1].factor : 1.0;
+}
+
+function computeGroupBonus(groupSize) {
+  const size = typeof groupSize === "number" && groupSize > 0 ? groupSize : 1;
+  const table = XP_CONFIG.groupBonusBySize || {};
+  if (table[size] != null) {
+    return table[size];
+  }
+  const keys = Object.keys(table)
+    .map((k) => Number(k))
+    .filter((n) => !Number.isNaN(n));
+  if (keys.length === 0) return 1.0;
+  const maxKey = keys.reduce((m, v) => (v > m ? v : m), keys[0]);
+  return table[maxKey] ?? 1.0;
 }

@@ -26,50 +26,50 @@ export const monsters = {
         itemId: "plume_corbeau",
         min: 1,
         max: 2,
-        dropRate: 1.0, // 100 % de chance pour les tests
+        dropRate: 0.4, // 100 % de chance pour les tests
       },
       {
         itemId: "patte_corbeau",
         min: 1,
         max: 1,
-        dropRate: 1.0,
+        dropRate: 0.4,
       },
       // Pièces d'équipement du Corbeau (rares)
       {
         itemId: "coiffe_corbeau",
         min: 1,
         max: 1,
-        dropRate: 0.12,
+        dropRate: 0.02,
       },
       {
         itemId: "cape_corbeau",
         min: 1,
         max: 1,
-        dropRate: 0.12,
+        dropRate: 0.02,
       },
       {
         itemId: "amulette_corbeau",
         min: 1,
         max: 1,
-        dropRate: 0.10,
+        dropRate: 0.02,
       },
       {
         itemId: "ceinture_corbeau",
         min: 1,
         max: 1,
-        dropRate: 0.10,
+        dropRate: 0.02,
       },
       {
         itemId: "bottes_corbeau",
         min: 1,
         max: 1,
-        dropRate: 0.10,
+        dropRate: 0.02,
       },
       {
         itemId: "anneau_corbeau",
         min: 1,
         max: 1,
-        dropRate: 0.08,
+        dropRate: 0.02,
       },
     ],
 

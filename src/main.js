@@ -17,6 +17,7 @@ import {
   rebuildCollisionGridFromMap,
   applyCustomLayerDepths,
   spawnObjectLayerTrees,
+  recalcDepths,
 } from "./maps/world.js";
 import { createHud, setupHudCamera } from "./ui/hud.js";
 import { initDomHud } from "./ui/domHud.js";
@@ -118,6 +119,9 @@ class MainScene extends Phaser.Scene {
     this.player = createPlayer(this, startX, startY, defaultClassId);
     setupPlayerAnimations(this);
     this.player.setDepth(startY);
+
+    // Recalcule les depth des decor/trees dependants du joueur
+    recalcDepths(this);
 
     // Initialise le store central avec le joueur.
     initStore(this.player);

@@ -195,10 +195,19 @@ export function startPrep(scene, player, monster, map, groundLayer) {
       worldPos.y + map.tileHeight / 2,
       monster.monsterId
     );
+    if (Array.isArray(monster.groupLevels) && monster.groupLevels[i]) {
+      extra.level = monster.groupLevels[i];
+    }
+    if (typeof monster.groupLevelTotal === "number") {
+      extra.groupLevelTotal = monster.groupLevelTotal;
+    }
     extra.tileX = tile.x;
     extra.tileY = tile.y;
     extra.groupId = monster.groupId;
     extra.groupSize = baseGroupSize;
+    if (Array.isArray(monster.groupLevels)) {
+      extra.groupLevels = monster.groupLevels.slice();
+    }
     extra.respawnEnabled = false;
     extra.isCombatMember = true;
 
@@ -366,4 +375,3 @@ export function startCombatFromPrep(scene) {
 
   startCombat(scene, prep.joueur, prep.monstre);
 }
-

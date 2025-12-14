@@ -281,6 +281,14 @@
               <button type="button" class="stat-btn stat-btn-plus" data-stat="vitalite">+</button>
             </div>
           </li>
+          <li class="stat-line" data-stat="sagesse">
+            <span class="label">Sagesse</span>
+            <div class="stat-controls">
+              <button type="button" class="stat-btn stat-btn-minus" data-stat="sagesse">-</button>
+              <input type="number" id="stat-sagesse-input" class="stat-input" min="0" step="1" />
+              <button type="button" class="stat-btn stat-btn-plus" data-stat="sagesse">+</button>
+            </div>
+          </li>
         </ul>
       </section>
 
@@ -357,6 +365,14 @@
     >
       <header class="npc-dialog-header">
         <h2 id="npc-dialog-name" class="npc-dialog-name">PNJ</h2>
+        <button
+          id="npc-dialog-close"
+          class="npc-dialog-close-btn"
+          type="button"
+          aria-label="Fermer le dialogue"
+        >
+          ×
+        </button>
       </header>
       <section class="npc-dialog-body">
         <div class="npc-dialog-block npc-dialog-npc-block">

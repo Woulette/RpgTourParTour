@@ -1,6 +1,7 @@
 import { createCharacter } from "./character.js";
 import { monsters } from "../config/monsters.js";
 import { createStats } from "../core/stats.js";
+import { XP_CONFIG } from "../config/xp.js";
 import { addXpToPlayer } from "./player.js";
 import { addItem } from "../inventory/inventoryCore.js";
 import { incrementKillProgress } from "../quests/index.js";
@@ -43,6 +44,7 @@ export function createMonster(scene, x, y, monsterId) {
   // Métadonnées utiles pour le système de combat / loot
   monster.monsterId = monsterId;
   monster.xpReward = def.xpReward || 0;
+  monster.xpRewardBase = def.xpReward || monster.xpReward || 0;
   monster.goldRewardMin = def.goldRewardMin ?? 0;
   monster.goldRewardMax = def.goldRewardMax ?? monster.goldRewardMin ?? 0;
   monster.lootTable = def.loot || [];
@@ -52,10 +54,12 @@ export function createMonster(scene, x, y, monsterId) {
   // Par défaut, les monstres "monde" respawnent, les clones de combat
   // pourront forcer monster.respawnEnabled = false.
   monster.respawnEnabled = monster.respawnEnabled ?? true;
+  // Niveau aléatoire par défaut (modifiable en amont si besoin)
+  monster.level = monster.level ?? Phaser.Math.Between(1, 4);
 
   // Callback standard quand le monstre meurt
   monster.onKilled = (sceneArg, killer) => {
-    const rewardXp = monster.xpReward || 0;
+    const rewardXp = computeMonsterXpReward(monster, killer);
     const goldMin = monster.goldRewardMin || 0;
     const goldMax = monster.goldRewardMax || goldMin;
 
@@ -169,6 +173,17 @@ export function createMonster(scene, x, y, monsterId) {
         const newMonster = createMonster(sceneArg, spawnX, spawnY, respawnId);
         newMonster.tileX = respawnTileX;
         newMonster.tileY = respawnTileY;
+        // Applique la logique de groupe/niveaux aléatoires au respawn
+        newMonster.groupSize = Phaser.Math.Between(1, 4);
+        newMonster.groupLevels = Array.from(
+          { length: newMonster.groupSize },
+          () => Phaser.Math.Between(1, 4)
+        );
+        newMonster.level = newMonster.groupLevels[0];
+        newMonster.groupLevelTotal = newMonster.groupLevels.reduce(
+          (sum, lvl) => sum + lvl,
+          0
+        );
 
         sceneArg.monsters = sceneArg.monsters || [];
         sceneArg.monsters.push(newMonster);
@@ -255,4 +270,80 @@ export function createMonster(scene, x, y, monsterId) {
   });
 
   return monster;
+}
+
+function computeMonsterXpReward(monster, killer) {
+  const baseXp = monster.xpRewardBase ?? monster.xpReward ?? 0;
+  const playerLevel = killer?.levelState?.niveau ?? 1;
+  const levels = Array.isArray(monster.groupLevels) && monster.groupLevels.length > 0
+    ? monster.groupLevels
+    : [monster.level ?? monster.stats?.niveau ?? 1];
+
+  const groupSize =
+    (Array.isArray(monster.groupLevels) && monster.groupLevels.length > 0
+      ? monster.groupLevels.length
+      : typeof monster.groupSize === "number" && monster.groupSize > 0
+        ? monster.groupSize
+        : 1);
+
+  const levelBonus = computeHighestLevelBonus(levels);
+  const groupBonus = computeGroupBonus(groupSize);
+
+  const factor = computeXpFactor(levels, playerLevel);
+  const totalGroupXp = baseXp * levelBonus * groupBonus * factor;
+
+  // On renvoie la part d'XP pour CE monstre.
+  const perMonsterXp =
+    groupSize > 0 ? totalGroupXp / groupSize : totalGroupXp;
+
+  return Math.max(1, Math.round(perMonsterXp));
+}
+
+function computeHighestLevelBonus(levels) {
+  const highest = levels.reduce(
+    (max, lvl) => (lvl > max ? lvl : max),
+    levels[0] ?? 1
+  );
+  const table = XP_CONFIG.baseLevelBonus || {};
+  // On cherche d'abord une entrée exacte
+  if (table[highest] != null) {
+    return table[highest];
+  }
+  // Sinon on prend la valeur correspondant au niveau défini le plus élevé
+  const keys = Object.keys(table).map((k) => Number(k)).filter((n) => !Number.isNaN(n));
+  if (keys.length === 0) return 1.0;
+  const maxKey = keys.reduce((m, v) => (v > m ? v : m), keys[0]);
+  return table[maxKey] ?? 1.0;
+}
+
+function computeXpFactor(levels, playerLevel) {
+  const total = levels.reduce((sum, lvl) => sum + (lvl ?? 1), 0);
+  const highest = levels.reduce(
+    (max, lvl) => (lvl > max ? lvl : max),
+    levels[0] ?? 1
+  );
+  // Niveau de référence : on évite de pénaliser un groupe faible mais nombreux,
+  // mais on tient compte d'un monstre très HL.
+  const effectiveLevel = Math.max(highest, Math.min(total, playerLevel));
+  const diff = Math.abs(effectiveLevel - playerLevel);
+
+  const tiers = XP_CONFIG.penaltyTiers || [];
+  for (const tier of tiers) {
+    if (diff <= tier.maxDiff) {
+      return tier.factor;
+    }
+  }
+  return tiers.length > 0 ? tiers[tiers.length - 1].factor : 1.0;
+}
+
+function computeGroupBonus(groupSize) {
+  const size = typeof groupSize === "number" && groupSize > 0 ? groupSize : 1;
+  const table = XP_CONFIG.groupBonusBySize || {};
+  if (table[size] != null) {
+    return table[size];
+  }
+  const keys = Object.keys(table).map((k) => Number(k)).filter((n) => !Number.isNaN(n));
+  if (keys.length === 0) return 1.0;
+  const maxKey = keys.reduce((m, v) => (v > m ? v : m), keys[0]);
+  return table[maxKey] ?? 1.0;
 }

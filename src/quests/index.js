@@ -7,6 +7,7 @@ import {
   getAllQuestStates,
   advanceQuestStage,
   getCurrentQuestStage,
+  isQuestCompleted,
 } from "./state.js";
 
 export {
@@ -26,29 +27,42 @@ export function getQuestContextForNpc(player, npcId) {
 
   const entries = Object.values(quests);
 
+  // 1) Priorité aux quêtes EN COURS dont l'étape actuelle cible ce PNJ.
+  const inProgress = entries.find((questDef) => {
+    const state = getQuestState(player, questDef.id, { emit: false });
+    if (state.state !== QUEST_STATES.IN_PROGRESS) return false;
+    const stage = getCurrentQuestStage(questDef, state);
+    return stage && stage.npcId === npcId;
+  });
+
+  if (inProgress) {
+    const state = getQuestState(player, inProgress.id);
+    const stage = getCurrentQuestStage(inProgress, state);
+    return { quest: inProgress, state, stage };
+  }
+
+  // 2) Sinon, proposer une nouvelle quête disponible chez ce PNJ.
   const offer = entries.find((questDef) => {
     if (questDef.giverNpcId !== npcId) return false;
     const state = getQuestState(player, questDef.id, { emit: false });
+
+    // Si la quête a des prérequis, on ne la propose que si tous sont complétés.
+    if (Array.isArray(questDef.requires) && questDef.requires.length > 0) {
+      const allDone = questDef.requires.every((reqId) =>
+        isQuestCompleted(player, reqId)
+      );
+      if (!allDone) return false;
+    }
+
     return state.state === QUEST_STATES.NOT_STARTED;
   });
+
   if (offer) {
     const state = getQuestState(player, offer.id);
     return { quest: offer, state, stage: getCurrentQuestStage(offer, state) };
   }
 
-  const stageMatch = entries.find((questDef) => {
-    const state = getQuestState(player, questDef.id, { emit: false });
-    if (state.state === QUEST_STATES.NOT_STARTED) return false;
-    const stage = getCurrentQuestStage(questDef, state);
-    return stage && stage.npcId === npcId;
-  });
-
-  if (stageMatch) {
-    const state = getQuestState(player, stageMatch.id);
-    const stage = getCurrentQuestStage(stageMatch, state);
-    return { quest: stageMatch, state, stage };
-  }
-
+  // 3) Sinon, si aucune quête en cours / disponible ne concerne ce PNJ, rien de spécial.
   return null;
 }
 

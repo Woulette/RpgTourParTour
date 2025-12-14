@@ -1,4 +1,4 @@
-// Instancie les objets "trees" (calque d'objets Tiled) en sprites Phaser triÈs par Y.
+// Instancie les objets "trees"/"decor" (calques d'objets Tiled) en sprites Phaser tries par Y.
 export function spawnObjectLayerTrees(
   scene,
   map,
@@ -9,7 +9,7 @@ export function spawnObjectLayerTrees(
   const objectLayer = map.getObjectLayer(layerName);
   if (!objectLayer || !Array.isArray(objectLayer.objects)) return;
 
-  // Nettoie un Èventuel prÈcÈdent chargement
+  // Nettoie un eventuel precedent chargement
   const storeName = storeKey || "staticTrees";
   if (Array.isArray(scene[storeName])) {
     scene[storeName].forEach((s) => s?.destroy?.());
@@ -22,13 +22,24 @@ export function spawnObjectLayerTrees(
     if (!obj || !obj.gid) return;
 
     const rawGid = obj.gid & ~FLIP_MASK;
-    const getProp = (name) =>
-      obj.properties?.find((p) => p.name === name)?.value;
+    const isTrue = (v) => v === true || v === "true" || v === 1;
+    const getProp = (name) => {
+      const p = obj.properties;
+      if (!p) return undefined;
+      if (Array.isArray(p)) return p.find((prop) => prop.name === name)?.value;
+      return p[name];
+    };
+
     const propTexture = getProp("textureKey");
     const propFrame =
       typeof getProp("frame") === "number" ? getProp("frame") : null;
+    const propOffsetX =
+      typeof getProp("offsetX") === "number" ? getProp("offsetX") : 0;
     const propOffsetY =
       typeof getProp("offsetY") === "number" ? getProp("offsetY") : 0;
+    const propOverPlayer = isTrue(getProp("overPlayer"));
+    const propUnderPlayer =
+      isTrue(getProp("underPlayer")) || isTrue(getProp("playerFront"));
 
     const ordered = [...(map.tilesets || [])]
       .filter((t) => typeof t.firstgid === "number")
@@ -76,10 +87,10 @@ export function spawnObjectLayerTrees(
       return;
     }
 
-    // Position : soit coordonnÈes monde de l'objet, soit coordonnÈes tuile (tileX/tileY)
+    // Position : soit coordonnees monde de l'objet, soit coordonnees tuile (tileX/tileY)
     const propTileX = Number.isFinite(getProp("tileX")) ? getProp("tileX") : null;
     const propTileY = Number.isFinite(getProp("tileY")) ? getProp("tileY") : null;
-    let posX = obj.x;
+    let posX = obj.x + propOffsetX;
     let posY = obj.y + propOffsetY;
 
     if (
@@ -96,15 +107,16 @@ export function spawnObjectLayerTrees(
         layerForWorld
       );
       if (wp) {
-        posX = wp.x + map.tileWidth / 2;
-        // Centre de la tuile iso (l‡ o— le joueur se positionne)
+        posX = wp.x + map.tileWidth / 2 + propOffsetX;
         posY = wp.y + map.tileHeight / 2 + propOffsetY;
       }
     }
 
     const sprite = scene.add.sprite(posX, posY, textureKey, frame);
     sprite.setOrigin(0.5, 1);
-    sprite.setDepth(sprite.y);
+    sprite.isOverPlayer = propOverPlayer;
+    sprite.isUnderPlayer = propUnderPlayer;
+    applyDepthRules(scene, sprite);
 
     if (scene.hudCamera) {
       scene.hudCamera.ignore(sprite);
@@ -112,4 +124,34 @@ export function spawnObjectLayerTrees(
 
     scene[storeName].push(sprite);
   });
+}
+
+function applyDepthRules(scene, sprite) {
+  if (!sprite) return;
+  if (sprite.isOverPlayer) {
+    sprite.setDepth(100000);
+    return;
+  }
+  if (sprite.isUnderPlayer) {
+    const playerDepth = scene?.player?.depth ?? sprite.y;
+    // Force strictly below the player, even if spawned after the player
+    sprite.setDepth(Math.min(playerDepth, sprite.y) - 1);
+    return;
+  }
+  sprite.setDepth(sprite.y);
+}
+
+export function refreshObjectLayerDepths(scene, storeName = "staticTrees") {
+  if (!scene || !Array.isArray(scene[storeName])) return;
+  scene[storeName].forEach((sprite) => applyDepthRules(scene, sprite));
+}
+
+// Recalcule la depth du joueur et des decors/arbres qui en dÃ©pendent.
+export function recalcDepths(scene) {
+  if (!scene) return;
+  if (scene.player?.setDepth) {
+    scene.player.setDepth(scene.player.y);
+  }
+  refreshObjectLayerDepths(scene, "staticDecor");
+  refreshObjectLayerDepths(scene, "staticTrees");
 }
