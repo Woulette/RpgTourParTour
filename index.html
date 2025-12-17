@@ -32,8 +32,62 @@
   <link rel="stylesheet" href="assets/css/quests.css" />
   <link rel="stylesheet" href="assets/css/questTracker.css" />
   <link rel="stylesheet" href="assets/css/chat.css" />
+  <link rel="stylesheet" href="assets/css/menu.css" />
 </head>
-<body>
+<body class="menu-open">
+  <!-- Menus (création / sélection personnage) -->
+  <div id="menu-overlay" class="menu-overlay" aria-label="Menu principal">
+    <div class="menu-panel">
+      <header class="menu-header">
+        <h1 class="menu-title">Andémia</h1>
+      </header>
+
+      <!-- Sélection personnage -->
+      <section id="menu-screen-select" class="menu-screen" aria-label="Sélection du personnage">
+        <h2 class="menu-screen-title">Choisir un personnage</h2>
+        <div id="character-list" class="character-list"></div>
+        <div class="menu-actions">
+          <button id="btn-go-create" class="menu-btn menu-btn-secondary" type="button">
+            Créer un personnage
+          </button>
+          <button id="btn-play" class="menu-btn menu-btn-primary" type="button" disabled>
+            Jouer
+          </button>
+        </div>
+      </section>
+
+      <!-- Création personnage -->
+      <section id="menu-screen-create" class="menu-screen" aria-label="Création du personnage" hidden>
+        <h2 class="menu-screen-title">Créer un personnage</h2>
+        <form id="character-create-form" class="create-form" autocomplete="off">
+          <label class="create-label">
+            Nom
+            <input id="character-name" class="create-input" type="text" maxlength="16" placeholder="Ex: Ntmav" />
+          </label>
+
+          <div class="class-picker">
+            <div class="class-picker-title">Classe</div>
+            <div id="class-list" class="class-list"></div>
+          </div>
+
+          <div class="menu-actions">
+            <button id="btn-back-select" class="menu-btn menu-btn-secondary" type="button">
+              Retour
+            </button>
+            <button id="btn-create" class="menu-btn menu-btn-primary" type="submit" disabled>
+              Créer
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <!-- Bouton en jeu : retour menu -->
+  <button id="ui-return-menu" class="ui-return-menu" type="button" aria-label="Retour au menu" title="Retour au menu">
+    MENU
+  </button>
+
   <div id="quest-tracker" class="quest-tracker" aria-label="Suivi des quetes">
     <button
       id="quest-tracker-toggle"
@@ -169,6 +223,29 @@
           <div class="hud-spell-toggle-slot hud-spell-toggle-items">Obj.</div>
         </div>
       </div>
+
+      <!-- Fiche cible (combat uniquement) : remplace visuellement la barre de sorts au survol -->
+      <div id="combat-target-panel" aria-label="Fiche cible (combat)">
+        <div class="combat-target-header">
+          <span id="combat-target-name">-</span>
+        </div>
+        <div class="combat-target-hp">
+          <div class="combat-target-hp-bar" aria-hidden="true">
+            <div id="combat-target-hp-fill" class="combat-target-hp-fill"></div>
+          </div>
+          <div id="combat-target-hp-text" class="combat-target-hp-text">PV : -/-</div>
+        </div>
+        <div class="combat-target-stats">
+          <div class="combat-target-stat">
+            <span class="combat-target-stat-label">PA</span>
+            <span id="combat-target-pa" class="combat-target-stat-value">-</span>
+          </div>
+          <div class="combat-target-stat">
+            <span class="combat-target-stat-label">PM</span>
+            <span id="combat-target-pm" class="combat-target-stat-value">-</span>
+          </div>
+        </div>
+      </div>
       </section>
 
       <!-- PA / PM toujours visibles dans le HUD bas -->
@@ -181,17 +258,7 @@
         <span id="hud-hp-value">50</span>
       </div>
 
-      <!-- Infos de la cible (monstre survolé) -->
-      <div id="hud-target-info">
-        <span class="hud-target-label">Cible :</span>
-        <span id="hud-target-name">-</span>
-        <span class="hud-target-stat-label">PV :</span>
-        <span class="hud-target-stat-value" id="hud-target-hp">-</span>
-        <span class="hud-target-stat-label">PA :</span>
-        <span class="hud-target-stat-value" id="hud-target-pa">-</span>
-        <span class="hud-target-stat-label">PM :</span>
-        <span class="hud-target-stat-value" id="hud-target-pm">-</span>
-      </div>
+
     </div>
 
     <!-- Fenêtre d'inventaire -->
@@ -470,6 +537,12 @@
 
   <!-- UI de combat (bouton passer le tour, indicateur) -->
   <div id="combat-ui-root">
+    <div id="combat-turn-order" aria-label="Ordre des tours">
+      <div id="combat-turn-order-list" role="list"></div>
+      <div id="combat-round-indicator">
+        Tour : <span id="combat-round-value">1</span>
+      </div>
+    </div>
     <div id="combat-turn-indicator">
       Tour : <span id="combat-turn-label">Joueur</span>
     </div>

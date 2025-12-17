@@ -112,7 +112,20 @@ export function spawnObjectLayerTrees(
       }
     }
 
-    const sprite = scene.add.sprite(posX, posY, textureKey, frame);
+    // Les tilesets "1 PNG" (load.image) n'ont pas de frames numérotées.
+    // On ne passe la frame que si elle existe réellement sur la texture.
+    if (scene?.textures?.exists?.(textureKey)) {
+      const tex = scene.textures.get(textureKey);
+      const frameName = frame === null || frame === undefined ? null : String(frame);
+      if (frameName && tex && typeof tex.has === "function" && !tex.has(frameName)) {
+        frame = null;
+      }
+    }
+
+    const sprite =
+      frame === null || frame === undefined
+        ? scene.add.sprite(posX, posY, textureKey)
+        : scene.add.sprite(posX, posY, textureKey, frame);
     sprite.setOrigin(0.5, 1);
     sprite.isOverPlayer = propOverPlayer;
     sprite.isUnderPlayer = propUnderPlayer;

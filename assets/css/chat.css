@@ -1,9 +1,10 @@
 .hud-chat {
   position: absolute;
   left: var(--hud-pane-gap, 0.8%);
-  bottom: var(--hud-pane-bottom, 3%);
-  width: var(--hud-pane-width, 38%);
-  height: var(--hud-pane-height, 92%);
+  bottom: var(--hud-chat-bottom, 3%);
+  width: var(--hud-chat-width, var(--hud-pane-width, 38%));
+  /* Grandit vers le haut (bas fixe) pour coller au haut du HUD */
+  height: calc(97% - var(--hud-chat-bottom, 3%));
 
   display: flex;
   flex-direction: column;

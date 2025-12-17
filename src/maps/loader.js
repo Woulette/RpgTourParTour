@@ -15,15 +15,34 @@ export function preloadMap(scene, mapDef) {
 export function buildMap(scene, mapDef) {
   const map = scene.make.tilemap({ key: mapDef.key });
 
-  // On ne crée des tilesets Phaser que pour ceux
-  // qui existent réellement dans la carte Tiled.
+  // Create Phaser tilesets only for those that exist in Tiled JSON.
   const tilesets = map.tilesets.map((tsData) => {
     const def = mapDef.tilesets.find((ts) => ts.name === tsData.name);
-    if (def) {
-      return map.addTilesetImage(def.name, def.imageKey);
+    const textureKey = def ? def.imageKey : tsData.name;
+
+    // Safety: if a tileset texture isn't loaded (missing PNG), create a small
+    // placeholder texture so the map can still load.
+    if (scene && scene.textures && !scene.textures.exists(textureKey)) {
+      const w = tsData.tileWidth || tsData.tilewidth || 16;
+      const h = tsData.tileHeight || tsData.tileheight || 16;
+      const canvasTex = scene.textures.createCanvas(textureKey, w, h);
+      const ctx = canvasTex.getContext();
+      ctx.fillStyle = "#ff00ff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(
+        0,
+        0,
+        Math.max(1, Math.floor(w / 4)),
+        Math.max(1, Math.floor(h / 4))
+      );
+      canvasTex.refresh();
     }
-    // Fallback : tente avec le même nom pour la texture.
-    return map.addTilesetImage(tsData.name);
+
+    if (def) {
+      return map.addTilesetImage(def.name, textureKey);
+    }
+    return map.addTilesetImage(tsData.name, textureKey);
   });
 
   const createdLayers = map.layers.map((layerData, index) => {
@@ -36,3 +55,4 @@ export function buildMap(scene, mapDef) {
   const groundLayer = createdLayers[0];
   return { map, groundLayer, layers: createdLayers };
 }
+

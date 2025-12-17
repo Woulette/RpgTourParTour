@@ -15,11 +15,34 @@ export function createPlayer(scene, x, y, classId) {
   const baseStats = createStats();
   const stats = applyBonuses(baseStats, classDef.statBonuses || []);
 
+  const textureKey = classId === "tank" ? "tank" : "player";
   const player = createCharacter(scene, x, y, {
-    textureKey: "player",
+    textureKey,
     classId,
     stats,
   });
+
+  // Utilisés par le système d'animation/déplacement.
+  player.animPrefix = textureKey;
+  player.baseTextureKey = textureKey;
+
+  // Rend le joueur survolable (en combat) pour afficher la fiche cible.
+  if (player && typeof player.setInteractive === "function") {
+    player.setInteractive({ useHandCursor: false });
+    player.on("pointerover", () => {
+      if (
+        scene?.combatState?.enCours &&
+        typeof scene.showCombatTargetPanel === "function"
+      ) {
+        scene.showCombatTargetPanel(player);
+      }
+    });
+    player.on("pointerout", () => {
+      if (typeof scene?.hideCombatTargetPanel === "function") {
+        scene.hideCombatTargetPanel();
+      }
+    });
+  }
 
   // Stats de base "nues" du joueur (classe + points investis, sans équipement)
   player.baseStats = { ...stats };

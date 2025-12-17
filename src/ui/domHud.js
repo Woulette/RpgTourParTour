@@ -1,7 +1,7 @@
 // Gestion du HUD HTML (en dehors de Phaser).
 // - Bouton STATS + panneau de stats
 // - Affichage PA / PM / PV du joueur dans le HUD bas
-// - Affichage des infos de la cible (monstre survolé)
+// - (Ancien HUD "cible survolée" supprimé)
 // - Répartition des points de caractéristiques (force, intel, agi, chance, vita)
 
 export function initDomHud(player) {
@@ -11,11 +11,6 @@ export function initDomHud(player) {
   const apValueEl = document.getElementById("hud-ap-value");
   const mpValueEl = document.getElementById("hud-mp-value");
   const hpValueEl = document.getElementById("hud-hp-value");
-
-  const targetNameEl = document.getElementById("hud-target-name");
-  const targetHpEl = document.getElementById("hud-target-hp");
-  const targetPaEl = document.getElementById("hud-target-pa");
-  const targetPmEl = document.getElementById("hud-target-pm");
 
   if (!statsButtonEl || !statsPanelEl || !player) {
     return;
@@ -58,35 +53,6 @@ export function initDomHud(player) {
     if (hpValueEl) hpValueEl.textContent = `${hp}/${hpMax}`;
   };
 
-  // --- Infos de la cible (monstre survolé) ---
-  const updateTargetHud = (monster) => {
-    if (!targetNameEl || !targetHpEl || !targetPaEl || !targetPmEl) return;
-
-    if (!monster) {
-      targetNameEl.textContent = "";
-      targetHpEl.textContent = "";
-      targetPaEl.textContent = "";
-      targetPmEl.textContent = "";
-      document.body.classList.remove("hud-target-visible");
-      return;
-    }
-
-    const stats = monster.stats || {};
-
-    targetNameEl.textContent = monster.monsterId || "Cible";
-    const hp = stats.hp ?? stats.hpMax ?? 0;
-    const hpMax = stats.hpMax ?? hp;
-    targetHpEl.textContent = `${hp}/${hpMax}`;
-    targetPaEl.textContent = stats.pa ?? 0;
-    targetPmEl.textContent = stats.pm ?? 0;
-
-    document.body.classList.add("hud-target-visible");
-  };
-
-  // On expose cette fonction sur la scène pour que les monstres puissent l'appeler
-  if (player.scene) {
-    player.scene.updateHudTargetInfo = updateTargetHud;
-  }
 }
 
 function mountHudDockMenu() {

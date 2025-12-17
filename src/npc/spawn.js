@@ -29,6 +29,11 @@ export function preloadNpcs(scene) {
   });
 
   // Icônes de quêtes
+  scene.load.image(
+    "npc_aluineeks_keeper",
+    "assets/npc/PnjAluineeksSouth-west.png"
+  );
+
   scene.load.image("quest_exclamation", "assets/exclamations.png");
   scene.load.image("quest_question", "assets/interogations.png");
 }

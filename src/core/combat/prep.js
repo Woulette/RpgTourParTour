@@ -70,6 +70,33 @@ export function startPrep(scene, player, monster, map, groundLayer) {
   scene.combatMap = map;
   scene.combatGroundLayer = groundLayer;
 
+  // Pendant la prÃ©paration, on fige les dÃ©placements automatiques des monstres (roaming).
+  // Sinon leurs timers peuvent les faire bouger pendant le placement.
+  if (Array.isArray(scene.monsters) && map && groundLayer) {
+    scene.monsters.forEach((m) => {
+      if (!m || !m.active) return;
+      if (m.roamTween?.stop) m.roamTween.stop();
+      m.roamTween = null;
+      m.isMoving = false;
+      m.targetTileX = null;
+      m.targetTileY = null;
+
+      if (typeof m.tileX === "number" && typeof m.tileY === "number") {
+        const wp = map.tileToWorldXY(
+          m.tileX,
+          m.tileY,
+          undefined,
+          undefined,
+          groundLayer
+        );
+        const offX = typeof m.renderOffsetX === "number" ? m.renderOffsetX : 0;
+        const offY = typeof m.renderOffsetY === "number" ? m.renderOffsetY : 0;
+        m.x = wp.x + map.tileWidth / 2 + offX;
+        m.y = wp.y + map.tileHeight + offY;
+      }
+    });
+  }
+
   // Petit fondu noir à l'entrée en préparation (au clic sur le monstre)
   const cam = scene.cameras && scene.cameras.main;
   if (cam && cam.fadeOut && cam.fadeIn) {
@@ -172,7 +199,13 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     groundLayer
   );
   monster.x = worldPos.x + map.tileWidth / 2;
-  monster.y = worldPos.y + map.tileHeight / 2;
+  monster.y =
+    worldPos.y +
+    map.tileHeight +
+    (typeof monster.renderOffsetY === "number" ? monster.renderOffsetY : 0);
+  monster.x =
+    monster.x +
+    (typeof monster.renderOffsetX === "number" ? monster.renderOffsetX : 0);
   monster.isCombatMember = true;
 
   combatMonsters.push(monster);
@@ -192,9 +225,15 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     const extra = createMonster(
       scene,
       worldPos.x + map.tileWidth / 2,
-      worldPos.y + map.tileHeight / 2,
+      worldPos.y + map.tileHeight,
       monster.monsterId
     );
+    extra.x =
+      extra.x +
+      (typeof extra.renderOffsetX === "number" ? extra.renderOffsetX : 0);
+    extra.y =
+      extra.y +
+      (typeof extra.renderOffsetY === "number" ? extra.renderOffsetY : 0);
     if (Array.isArray(monster.groupLevels) && monster.groupLevels[i]) {
       extra.level = monster.groupLevels[i];
     }
@@ -219,10 +258,7 @@ export function startPrep(scene, player, monster, map, groundLayer) {
   // Sauvegarde la liste des monstres engagés dans ce combat.
   scene.combatMonsters = combatMonsters;
 
-  // Nettoyage visuel de base (ancienne cible, previews, tooltips)
-  if (scene.updateHudTargetInfo) {
-    scene.updateHudTargetInfo(null);
-  }
+  // Nettoyage visuel de base (previews, tooltips)
   if (scene.clearDamagePreview) {
     scene.clearDamagePreview();
   }

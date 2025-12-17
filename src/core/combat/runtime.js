@@ -2,6 +2,7 @@
 
 import { startOutOfCombatRegen } from "../regen.js";
 import { createCombatState, buildTurnOrder } from "./state.js";
+import { onAfterCombatEnded } from "../../dungeons/runtime.js";
 
 // Commence un combat : on crée l'état et on active l'UI.
 export function startCombat(scene, player, monster) {
@@ -24,6 +25,10 @@ export function startCombat(scene, player, monster) {
 
   // Construit l'ordre de tour multi‑acteurs (joueur + monstres).
   buildTurnOrder(scene);
+
+  if (scene && typeof scene.updateCombatUi === "function") {
+    scene.updateCombatUi();
+  }
 }
 
 // Termine le combat, nettoie l'état et l'UI.
@@ -111,14 +116,14 @@ export function endCombat(scene) {
   }
 
   // Nettoyage des �l�ments d'interface li�s � la cible.
-  if (scene.updateHudTargetInfo) {
-    scene.updateHudTargetInfo(null);
-  }
   if (scene.clearDamagePreview) {
     scene.clearDamagePreview();
   }
   if (scene.hideMonsterTooltip) {
     scene.hideMonsterTooltip();
+  }
+  if (scene.hideCombatTargetPanel) {
+    scene.hideCombatTargetPanel();
   }
 
   // Supprime les effets de survol restants sur les monstres.
@@ -155,5 +160,12 @@ export function endCombat(scene) {
     scene.showCombatResult(result);
   }
 
+  if (scene && typeof scene.updateCombatUi === "function") {
+    scene.updateCombatUi();
+  }
+
   scene.combatState = null;
+
+  // Donjons : auto-exit after boss kill.
+  onAfterCombatEnded(scene, result);
 }

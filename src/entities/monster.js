@@ -5,6 +5,8 @@ import { XP_CONFIG } from "../config/xp.js";
 import { addXpToPlayer } from "./player.js";
 import { addItem } from "../inventory/inventoryCore.js";
 import { incrementKillProgress } from "../quests/index.js";
+import { createCalibratedWorldToTile } from "../maps/world/util.js";
+import { queueMonsterRespawn } from "../monsters/respawnState.js";
 
 /**
  * Crée un monstre sur la carte.
@@ -28,9 +30,15 @@ export function createMonster(scene, x, y, monsterId) {
     stats,
   });
 
-  // Aligne visuellement le monstre sur le centre de sa tuile
+  // Réglages de rendu spécifiques au monstre (origin/offset).
+  const render = def.render || {};
+  monster.renderOffsetX = typeof render.offsetX === "number" ? render.offsetX : 0;
+  monster.renderOffsetY = typeof render.offsetY === "number" ? render.offsetY : 0;
+
   if (monster.setOrigin) {
-    monster.setOrigin(0.5, 0.85);
+    const ox = typeof render.originX === "number" ? render.originX : 0.5;
+    const oy = typeof render.originY === "number" ? render.originY : 1;
+    monster.setOrigin(ox, oy);
   }
 
   // Place le monstre au-dessus de la grille debug
@@ -54,6 +62,8 @@ export function createMonster(scene, x, y, monsterId) {
   // Par défaut, les monstres "monde" respawnent, les clones de combat
   // pourront forcer monster.respawnEnabled = false.
   monster.respawnEnabled = monster.respawnEnabled ?? true;
+  // Clé de map pour scoper les respawns (empêche le respawn sur une autre map).
+  monster.spawnMapKey = monster.spawnMapKey ?? scene.currentMapKey ?? null;
   // Niveau aléatoire par défaut (modifiable en amont si besoin)
   monster.level = monster.level ?? Phaser.Math.Between(1, 4);
 
@@ -119,9 +129,6 @@ export function createMonster(scene, x, y, monsterId) {
     }
 
     if (sceneArg) {
-      if (typeof sceneArg.updateHudTargetInfo === "function") {
-        sceneArg.updateHudTargetInfo(null);
-      }
       // Nettoie immédiatement tous les overlays liés à ce monstre mort
       if (typeof sceneArg.clearDamagePreview === "function") {
         sceneArg.clearDamagePreview();
@@ -142,77 +149,60 @@ export function createMonster(scene, x, y, monsterId) {
     const allowRespawn =
       monster.respawnEnabled === undefined || monster.respawnEnabled === true;
 
-    if (
-      allowRespawn &&
-      sceneArg &&
-      sceneArg.time &&
-      sceneArg.map &&
-      sceneArg.groundLayer &&
-      typeof monster.tileX === "number" &&
-      typeof monster.tileY === "number"
-    ) {
-      const respawnDelayMs = 5000;
-      const respawnTileX = monster.tileX;
-      const respawnTileY = monster.tileY;
-      const respawnId = monster.monsterId;
-
-      sceneArg.time.delayedCall(respawnDelayMs, () => {
-        // Si la scène n'est plus active, on ne fait rien
-        if (!sceneArg.scene.isActive()) return;
-
-        const worldPos = sceneArg.map.tileToWorldXY(
-          respawnTileX,
-          respawnTileY,
-          undefined,
-          undefined,
-          sceneArg.groundLayer
-        );
-        const spawnX = worldPos.x + sceneArg.map.tileWidth / 2;
-        const spawnY = worldPos.y + sceneArg.map.tileHeight / 2;
-
-        const newMonster = createMonster(sceneArg, spawnX, spawnY, respawnId);
-        newMonster.tileX = respawnTileX;
-        newMonster.tileY = respawnTileY;
-        // Applique la logique de groupe/niveaux aléatoires au respawn
-        newMonster.groupSize = Phaser.Math.Between(1, 4);
-        newMonster.groupLevels = Array.from(
-          { length: newMonster.groupSize },
-          () => Phaser.Math.Between(1, 4)
-        );
-        newMonster.level = newMonster.groupLevels[0];
-        newMonster.groupLevelTotal = newMonster.groupLevels.reduce(
-          (sum, lvl) => sum + lvl,
-          0
-        );
-
-        sceneArg.monsters = sceneArg.monsters || [];
-        sceneArg.monsters.push(newMonster);
-
-        // Si un combat est en cours, ce monstre respawné
-        // doit être hors combat : on le cache et on le rend non interactif
-        // jusqu'à la fin du combat.
-        if (sceneArg.combatState && sceneArg.combatState.enCours) {
-          newMonster.setVisible(false);
-          if (newMonster.disableInteractive) {
-            newMonster.disableInteractive();
-          }
-          sceneArg.hiddenWorldMonsters = sceneArg.hiddenWorldMonsters || [];
-          sceneArg.hiddenWorldMonsters.push(newMonster);
-        }
-
-        // La caméra HUD doit ignorer le nouveau monstre également
-        if (sceneArg.hudCamera) {
-          sceneArg.hudCamera.ignore(newMonster);
-        }
-      });
+    if (allowRespawn && sceneArg) {
+      // Respawn scoppé par map : empêche les respawns sur une autre map.
+      queueMonsterRespawn(sceneArg, monster, 5000);
     }
   };
 
   // Rendre le monstre cliquable pour entrer en combat
   monster.setInteractive({ useHandCursor: true });
 
-  // Affichage des infos de la cible dans le HUD lors du survol
-  monster.on("pointerover", () => {
+  const getCombatWorldToTile = () => {
+    const map = scene.combatMap || scene.map;
+    const layer = scene.combatGroundLayer || scene.groundLayer;
+    if (!map || !layer) return null;
+
+    const cacheKey = map.key || scene.currentMapKey || "default";
+    scene._worldToTileCache = scene._worldToTileCache || {};
+    if (!scene._worldToTileCache[cacheKey]) {
+      scene._worldToTileCache[cacheKey] = createCalibratedWorldToTile(map, layer);
+    }
+    return scene._worldToTileCache[cacheKey];
+  };
+
+  const clearHoverUi = () => {
+    if (monster.hoverHighlight) {
+      monster.hoverHighlight.destroy();
+      monster.hoverHighlight = null;
+    }
+    if (scene.clearDamagePreview) {
+      scene.clearDamagePreview();
+    }
+    if (scene.hideMonsterTooltip) {
+      scene.hideMonsterTooltip();
+    }
+    if (scene.hideCombatTargetPanel) {
+      scene.hideCombatTargetPanel();
+    }
+  };
+
+  // Effets de survol (highlight + tooltip)
+  const shouldGateHoverByTile = () =>
+    (scene.combatState && scene.combatState.enCours) ||
+    (scene.prepState && scene.prepState.actif);
+
+  monster.on("pointerover", (pointer) => {
+    if (shouldGateHoverByTile()) {
+      const worldToTile = getCombatWorldToTile();
+      const t =
+        worldToTile && pointer
+          ? worldToTile(pointer.worldX, pointer.worldY)
+          : null;
+      if (!t || t.x !== monster.tileX || t.y !== monster.tileY) {
+        return;
+      }
+    }
     // Effet de lumière directement sur le sprite :
     // on ajoute un doublon du sprite en mode ADD par‑dessus lui.
     if (!monster.hoverHighlight && scene.add) {
@@ -241,31 +231,50 @@ export function createMonster(scene, x, y, monsterId) {
       monster.hoverHighlight = overlay;
     }
 
-    if (scene.updateHudTargetInfo) {
-      scene.updateHudTargetInfo(monster);
-    }
     if (scene.showDamagePreview) {
       scene.showDamagePreview(monster);
     }
     if (scene.showMonsterTooltip) {
       scene.showMonsterTooltip(monster);
     }
+    if (scene.combatState && scene.combatState.enCours) {
+      if (scene.showCombatTargetPanel) {
+        scene.showCombatTargetPanel(monster);
+      }
+    }
+  });
+
+  monster.on("pointermove", (pointer) => {
+    if (!shouldGateHoverByTile()) return;
+
+    const worldToTile = getCombatWorldToTile();
+    const t =
+      worldToTile && pointer ? worldToTile(pointer.worldX, pointer.worldY) : null;
+    if (t && t.x === monster.tileX && t.y === monster.tileY) {
+      monster.emit("pointerover", pointer);
+      return;
+    }
+
+    clearHoverUi();
   });
 
   monster.on("pointerout", () => {
+    // En combat, la hitbox peut couvrir plusieurs cases : on force l'effacement.
+    clearHoverUi();
+    if (scene.combatState && scene.combatState.enCours) return;
     // Retire le doublon lumineux s'il existe
     if (monster.hoverHighlight) {
       monster.hoverHighlight.destroy();
       monster.hoverHighlight = null;
-    }
-    if (scene.updateHudTargetInfo) {
-      scene.updateHudTargetInfo(null);
     }
     if (scene.clearDamagePreview) {
       scene.clearDamagePreview();
     }
     if (scene.hideMonsterTooltip) {
       scene.hideMonsterTooltip();
+    }
+    if (scene.hideCombatTargetPanel) {
+      scene.hideCombatTargetPanel();
     }
   });
 

@@ -2,6 +2,57 @@
 // Pour l'instant : un seul sort de test pour l'archer.
 
 export const spells = {
+  punch_furtif: {
+    id: "punch_furtif",
+    label: "Punch furtif",
+    // Coût en PA (pas de mana dans ton jeu)
+    paCost: 3,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 3,
+    lineOfSight: true,
+    zone: "cell",
+    element: "terre",
+    damageMin: 11,
+    damageMax: 14,
+    description: "Un coup de poing terre, rapide et précis.",
+  },
+  traction_aerienne: {
+    id: "traction_aerienne",
+    label: "Traction aerienne",
+    paCost: 3,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 4,
+    lineOfSight: true,
+    zone: "cell",
+    element: "air",
+    damageMin: 8,
+    damageMax: 11,
+    maxCastsPerTurn: 1,
+    castPattern: "line4",
+    pullCasterToMeleeOnHit: true,
+    description:
+      "Lance un tir d'air en ligne, puis rapproche au corps a corps si la cible est touchee.",
+  },
+  punch_enflamme: {
+    id: "punch_enflamme",
+    label: "Punch enflamme",
+    paCost: 4,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 2,
+    lineOfSight: true,
+    zone: "cell",
+    element: "feu",
+    damageMin: 11,
+    damageMax: 15,
+    maxCastsPerTurn: 2,
+    castPattern: "line4",
+    effectPattern: "front_cross",
+    description:
+      "Un punch de feu en ligne qui frappe en croix devant le lanceur.",
+  },
   tir_simple: {
     id: 'tir_simple',
     label: 'Tir simple',
@@ -56,8 +107,4 @@ export const spells = {
     description: "Une fleche d eau a faible degats qui vole la vie.",
   },
 };
-
-
-
-
 

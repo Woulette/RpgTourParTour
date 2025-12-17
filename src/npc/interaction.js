@@ -8,6 +8,7 @@ import {
 import { getNpcDialog } from "../dialog/npcs/index.js";
 import { DIALOG_STATES } from "../dialog/npcs/dialogStates.js";
 import { tryTurnInStage } from "../quests/runtime/objectives.js";
+import { enterDungeon } from "../dungeons/runtime.js";
 
 function openDialogSequence(npc, player, screens, onDone) {
   const list = Array.isArray(screens) ? screens : [];
@@ -58,6 +59,21 @@ function openDialog(npc, player, dialogData, onDone) {
 
 export function startNpcInteraction(scene, player, npc) {
   if (!scene || !player || !npc || !npc.sprite) return;
+
+  // Donjon Aluineeks (entrée)
+  if (npc.id === "donjon_aluineeks_keeper") {
+    openNpcDialog(npc, player, {
+      text:
+        "Le donjon est dangereux.\n" +
+        "Entre seulement si tu es prêt.",
+      choice: "Entrer dans le donjon",
+      closeOnChoice: true,
+      onChoice: () => {
+        enterDungeon(scene, "aluineeks");
+      },
+    });
+    return;
+  }
 
   const questContext = getQuestContextForNpc(player, npc.id);
 

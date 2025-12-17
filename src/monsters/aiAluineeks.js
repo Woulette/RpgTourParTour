@@ -238,10 +238,6 @@ export function runTurn(
     // Mets a jour les PM restants
     state.pmRestants = Math.max(0, state.pmRestants - pathTiles.length);
 
-    if (scene.updateHudTargetInfo) {
-      scene.updateHudTargetInfo(monster);
-    }
-
     // Enchaine jusqu'a 2 lancers de Fissure avec un delai,
     // pour que les degats visuels aient le temps d'apparaitre.
     const castSequence = (castIndex) => {

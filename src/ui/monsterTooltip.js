@@ -19,6 +19,62 @@ export function attachMonsterTooltip(scene) {
     const baseName =
       monster.displayName || monster.label || monster.monsterId || "Monstre";
 
+    // En combat : affichage minimal (nom uniquement).
+    if (scene.combatState && scene.combatState.enCours) {
+      const text = `${baseName}`;
+      const bubbleCenterX = monster.x;
+      const bubbleCenterY = monster.y - 56;
+
+      if (scene.monsterTooltipText) {
+        scene.monsterTooltipText.destroy();
+        scene.monsterTooltipText = null;
+      }
+      if (scene.monsterTooltipBg) {
+        scene.monsterTooltipBg.destroy();
+        scene.monsterTooltipBg = null;
+      }
+
+      const tooltipText = scene.add.text(bubbleCenterX, bubbleCenterY, text, {
+        fontFamily: "Arial",
+        fontSize: 13,
+        fontStyle: "bold",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 3,
+        align: "center",
+      });
+      tooltipText.setOrigin(0.5, 0.5);
+      if (tooltipText.setResolution) {
+        tooltipText.setResolution(2);
+      }
+
+      const paddingX = 8;
+      const paddingY = 4;
+      const bgWidth = tooltipText.width + paddingX * 2;
+      const bgHeight = tooltipText.height + paddingY * 2;
+
+      const bg = scene.add.graphics();
+      bg.fillStyle(0x000000, 0.7);
+      bg.lineStyle(1, 0xffffff, 0.9);
+      const radius = 6;
+      const bgX = bubbleCenterX - bgWidth / 2;
+      const bgY = bubbleCenterY - bgHeight / 2;
+
+      bg.fillRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+      bg.strokeRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+
+      if (scene.hudCamera) {
+        scene.hudCamera.ignore(bg);
+        scene.hudCamera.ignore(tooltipText);
+      }
+      bg.setDepth(200000);
+      tooltipText.setDepth(200001);
+
+      scene.monsterTooltipBg = bg;
+      scene.monsterTooltipText = tooltipText;
+      return;
+    }
+
     const baseDef = monsters[monster.monsterId] || null;
     const groupSize =
       typeof monster.groupSize === "number" && monster.groupSize > 1
@@ -29,13 +85,15 @@ export function attachMonsterTooltip(scene) {
         ? monster.groupLevels
         : Array.from({ length: groupSize }, () => monster.level ?? 1);
 
-    const xpTotal = computeGroupXp(monster, scene, baseDef, levels);
-
-    const totalLevel = levels.reduce((sum, lvl) => sum + lvl, 0);
-
     const lines = [];
-    lines.push(`XP : ${xpTotal}`);
-    lines.push(`Niv. total : ${totalLevel}`);
+    // En préparation de combat : affichage simplifié (nom + niveaux individuels).
+    const inPrep = scene.prepState && scene.prepState.actif;
+    if (!inPrep) {
+      const xpTotal = computeGroupXp(monster, scene, baseDef, levels);
+      const totalLevel = levels.reduce((sum, lvl) => sum + lvl, 0);
+      lines.push(`XP : ${xpTotal}`);
+      lines.push(`Niv. total : ${totalLevel}`);
+    }
     for (let i = 0; i < groupSize; i += 1) {
       const lvl = levels[i] ?? monster.level ?? 1;
       lines.push(`${baseName} - Niv. ${lvl}`);

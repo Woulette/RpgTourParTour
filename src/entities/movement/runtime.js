@@ -1,6 +1,7 @@
 import { PLAYER_SPEED } from "../../config/constants.js";
 import { applyMoveCost } from "../../core/combat.js";
 import { maybeHandleMapExit } from "../../maps/world.js";
+import { maybeHandleDungeonExit } from "../../dungeons/runtime.js";
 import { isTileBlocked } from "../../collision/collisionGrid.js";
 import { recalcDepths } from "../../maps/world/decor.js";
 
@@ -121,13 +122,14 @@ export function movePlayerAlongPath(
   const dxWorld = targetX - player.x;
   const dyWorld = targetY - player.y;
   const dir = getDirectionName(dxWorld, dyWorld);
+  const animPrefix = player.animPrefix || "player";
   if (
     player.anims &&
     scene.anims &&
     scene.anims.exists &&
-    scene.anims.exists(`player_run_${dir}`)
+    scene.anims.exists(`${animPrefix}_run_${dir}`)
   ) {
-    player.anims.play(`player_run_${dir}`, true);
+    player.anims.play(`${animPrefix}_run_${dir}`, true);
   }
 
   const distance = Phaser.Math.Distance.Between(
@@ -171,12 +173,13 @@ export function movePlayerAlongPath(
 
         if (player.anims && player.anims.currentAnim) {
           player.anims.stop();
-          player.setTexture("player");
+          player.setTexture(player.baseTextureKey || animPrefix);
         }
 
         // Si une sortie de map est en attente et que le joueur est sur
         // la tuile cible, on laisse world.js gérer la transition.
         maybeHandleMapExit(scene);
+        maybeHandleDungeonExit(scene);
 
         if (typeof onCompleteAll === "function") {
           onCompleteAll();

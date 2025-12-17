@@ -23,8 +23,12 @@ export function moveMonsterAlongPath(
     undefined,
     groundLayer
   );
-  const targetX = worldPos.x + map.tileWidth / 2;
-  const targetY = worldPos.y + map.tileHeight / 2;
+  const offX =
+    typeof monster.renderOffsetX === "number" ? monster.renderOffsetX : 0;
+  const offY =
+    typeof monster.renderOffsetY === "number" ? monster.renderOffsetY : 0;
+  const targetX = worldPos.x + map.tileWidth / 2 + offX;
+  const targetY = worldPos.y + map.tileHeight + offY;
 
   const dist = Phaser.Math.Distance.Between(
     monster.x,

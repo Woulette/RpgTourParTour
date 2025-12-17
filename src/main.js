@@ -10,7 +10,7 @@ import { setupCamera } from "./maps/camera.js";
 import { createPlayer } from "./entities/player.js";
 import { enableClickToMove } from "./entities/playerMovement.js";
 import { createMapExits } from "./maps/exits.js";
-import { setupPlayerAnimations } from "./entities/animation.js";
+import { setupPlayerAnimations, setupCharacterAnimations } from "./entities/animation.js";
 import {
   loadMapLikeMain,
   initWorldExitsForScene,
@@ -29,10 +29,16 @@ import { initDomMetiers } from "./ui/domMetiers.js";
 import { initDomQuests } from "./ui/domQuests.js";
 import { initQuestTracker } from "./ui/domQuestTracker.js";
 import { initDomChat } from "./ui/domChat.js";
-import { preloadMonsters, spawnInitialMonsters } from "./monsters/index.js";
+import {
+  preloadMonsters,
+  processPendingRespawnsForCurrentMap,
+  spawnInitialMonsters,
+} from "./monsters/index.js";
 import { defaultClassId } from "./config/classes.js";
 import { attachCombatPreview } from "./ui/combatPreview.js";
 import { attachMonsterTooltip } from "./ui/monsterTooltip.js";
+import { initCharacterMenus } from "./ui/characterMenus.js";
+import { onAfterMapLoaded } from "./dungeons/hooks.js";
 import { spawnTestTrees } from "./metier/bucheron/trees.js";
 import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
 import { initStore } from "./state/store.js";
@@ -51,7 +57,42 @@ class MainScene extends Phaser.Scene {
       preloadMap(this, mapDef);
     });
 
+    const loadRunFrames = (prefix, basePath) => {
+      const animDirs = [
+        "south",
+        "south-east",
+        "east",
+        "north-east",
+        "north",
+        "north-west",
+        "west",
+        "south-west",
+      ];
+
+      animDirs.forEach((dir) => {
+        for (let i = 0; i < 6; i += 1) {
+          const index = i.toString().padStart(3, "0");
+          this.load.image(
+            `${prefix}_run_${dir}_${i}`,
+            `${basePath}/${dir}/frame_${index}.png`
+          );
+        }
+      });
+    };
+
+    // Archer (actuel)
     this.load.image("player", "assets/rotations/south-east.png");
+    loadRunFrames("player", "assets/animations/running-6-frames");
+
+    // Tank (nouveau perso) - assets dans "assets/animations/animation tank"
+    this.load.image(
+      "tank",
+      "assets/animations/animation tank/rotations/south-east.png"
+    );
+    loadRunFrames(
+      "tank",
+      "assets/animations/animation tank/animations/running-6-frames"
+    );
     this.load.image("tree_chene", "assets/metier/bucheron/Chene.png");
     this.load.image(
       "tree_chene_stump",
@@ -59,26 +100,6 @@ class MainScene extends Phaser.Scene {
     );
     this.load.image("chene", "assets/tileset/chene.png");
     this.load.image("boulleau_single", "assets/tileset/Boulleau.png");
-
-    const animDirs = [
-      "south",
-      "south-east",
-      "east",
-      "north-east",
-      "north",
-      "north-west",
-      "west",
-      "south-west",
-    ];
-    animDirs.forEach((dir) => {
-      for (let i = 0; i < 6; i += 1) {
-        const index = i.toString().padStart(3, "0");
-        this.load.image(
-          `player_run_${dir}_${i}`,
-          `assets/animations/running-6-frames/${dir}/frame_${index}.png`
-        );
-      }
-    });
 
     preloadMonsters(this);
     preloadNpcs(this);
@@ -119,8 +140,19 @@ class MainScene extends Phaser.Scene {
     const startX = centerWorld.x + map.tileWidth / 2;
     const startY = centerWorld.y + map.tileHeight / 2;
 
-    this.player = createPlayer(this, startX, startY, defaultClassId);
+    const selected = window.__andemiaSelectedCharacter || null;
+    const classId = selected?.classId || defaultClassId;
+    const displayName = selected?.name || "Joueur";
+
+    this.player = createPlayer(this, startX, startY, classId);
+    this.player.displayName = displayName;
+    // Important : certains systèmes (PNJ donjon, quêtes, etc.) lisent la tuile courante.
+    // Au premier spawn (sans transition de map), il faut l'initialiser.
+    this.player.currentTileX = centerTileX;
+    this.player.currentTileY = centerTileY;
+    // Animations pour archer + tank (chargées en preload)
     setupPlayerAnimations(this);
+    setupCharacterAnimations(this, "tank");
     this.player.setDepth(startY);
 
     // Recalcule les depth des decor/trees dependants du joueur
@@ -135,6 +167,15 @@ class MainScene extends Phaser.Scene {
     // Initialise les tuiles de sortie pour cette premiÃ¨re map.
     initWorldExitsForScene(this);
 
+    // Tick léger pour traiter les respawns dus sur la map courante.
+    if (!this.respawnTick && this.time?.addEvent) {
+      this.respawnTick = this.time.addEvent({
+        delay: 1000,
+        loop: true,
+        callback: () => processPendingRespawnsForCurrentMap(this),
+      });
+    }
+
     if (mapDef.spawnDefaults) {
       // --- MONSTRES DE TEST ---
       spawnInitialMonsters(
@@ -145,6 +186,8 @@ class MainScene extends Phaser.Scene {
         centerTileY,
         mapDef
       );
+      // Si des respawns ont été planifiés sur cette map avant le chargement.
+      processPendingRespawnsForCurrentMap(this);
 
       // --- ARBRES DE TEST (M?TIER B?CHERON) ---
       spawnTestTrees(this, map, this.player, mapDef);
@@ -219,6 +262,9 @@ class MainScene extends Phaser.Scene {
     // Bandes visuelles de sortie de map (bord droit + haut).
     createMapExits(this);
 
+    // Donjons : hooks de map (PNJ d'entrée, exits, etc.)
+    onAfterMapLoaded(this);
+
     // --- CLICK-TO-MOVE simple ---
     enableClickToMove(this, this.player, hudY, map, groundLayer);
 
@@ -278,4 +324,50 @@ const config = {
   scene: [MainScene],
 };
 
-new Phaser.Game(config);
+let gameInstance = null;
+
+function destroyGame() {
+  if (!gameInstance) return;
+  try {
+    gameInstance.destroy(true);
+  } finally {
+    gameInstance = null;
+  }
+}
+
+function startGame(character) {
+  window.__andemiaSelectedCharacter = character || null;
+  destroyGame();
+  gameInstance = new Phaser.Game(config);
+  document.body.classList.add("game-running");
+  document.body.classList.remove("menu-open");
+}
+
+function openMenu() {
+  destroyGame();
+  document.body.classList.remove("game-running");
+  document.body.classList.add("menu-open");
+}
+
+// Bouton en jeu : retour menu
+const returnMenuBtn = document.getElementById("ui-return-menu");
+if (returnMenuBtn) {
+  returnMenuBtn.addEventListener("click", () => {
+    if (typeof window.__andemiaUi?.openMenu === "function") {
+      window.__andemiaUi.openMenu();
+      return;
+    }
+    openMenu();
+  });
+}
+
+// Init menus (2 écrans) + démarrage jeu au choix perso
+const menus = initCharacterMenus({
+  onStartGame: (character) => startGame(character),
+});
+window.__andemiaUi = {
+  openMenu: () => {
+    openMenu();
+    if (menus && typeof menus.openMenu === "function") menus.openMenu();
+  },
+};

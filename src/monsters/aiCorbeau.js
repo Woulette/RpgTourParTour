@@ -150,10 +150,6 @@ export function runTurn(
   moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
     state.pmRestants = Math.max(0, state.pmRestants - stepsUsed);
 
-    if (scene.updateHudTargetInfo) {
-      scene.updateHudTargetInfo(monster);
-    }
-
     const finalMx = monster.tileX ?? mx;
     const finalMy = monster.tileY ?? my;
     const distAfterMove =
@@ -206,10 +202,6 @@ export function runTurn(
 
   moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
     state.pmRestants = Math.max(0, state.pmRestants - stepsUsed);
-
-    if (scene.updateHudTargetInfo) {
-      scene.updateHudTargetInfo(monster);
-    }
 
     const finalMx = monster.tileX ?? mx;
     const finalMy = monster.tileY ?? my;

@@ -57,6 +57,24 @@ const entreeDonjonTileset = {
   frameHeight: 124,
 };
 
+const donjonDecorOssementTileset = {
+  name: "Ossement",
+  imageKey: "Ossement",
+  imagePath: "assets/Ossement.png",
+};
+
+const donjonDecorStatueBossTileset = {
+  name: "StatueBossDonjonAluineeks",
+  imageKey: "StatueBossDonjonAluineeks",
+  imagePath: "assets/StatueBossDonjonAluineeks.png",
+};
+
+const donjonDecorTroneBossTileset = {
+  name: "TroneBossAluineeks",
+  imageKey: "TroneBossAluineeks",
+  imagePath: "assets/TroneBossAluineeks.png",
+};
+
 export const maps = {
   Map1Andemia: {
     key: "Map1Andemia",
@@ -89,6 +107,14 @@ export const maps = {
     spawnDefaults: false,
     monsterSpawns: [],
     treePositions: [],
+    // Placement manuel du PNJ d'entrée du donjon (src/dungeons/entranceNpc.js)
+    // Ajuste ces tuiles comme tu veux.
+    entranceNpcTile: { x: 15, y: 6 },
+    // Offset en pixels (affinage visuel) pour le PNJ d'entrée.
+    entranceNpcOffset: { x: 0, y: -20 },
+    // Où replacer le joueur en sortant du donjon (si tu veux forcer un point précis).
+    // Sinon, le jeu se base sur entranceNpcTile et cherche une case libre autour.
+    dungeonReturnTile: { x: 15, y: 7 },
     exitBounds: null,
   },
   Map2Andemia: {
@@ -144,6 +170,78 @@ export const maps = {
     ],
     exitBounds: null,
   },
+
+  // --- Donjon Aluineeks (4 salles) ---
+  // Note : pas de worldPos => inaccessible via les bandes de sortie (uniquement via PNJ).
+  Map1DonjonAluineeks: {
+    key: "Map1DonjonAluineeks",
+    jsonPath: "assets/maps/Map1DonjonAluineeks.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, donjonDecorOssementTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    isDungeon: true,
+    dungeonId: "aluineeks",
+    dungeonRoomIndex: 1,
+    monsterSpawns: [
+      // Un seul pack de 4 (les membres supplémentaires apparaissent en combat)
+      { type: "chibone", groupSize: 4, offsetFromCenter: { x: 0, y: 0 } },
+    ],
+    treePositions: [],
+    exitBounds: null,
+  },
+  Map2DonjonAluineeks: {
+    key: "Map2DonjonAluineeks",
+    jsonPath: "assets/maps/Map2DonjonAluineeks.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, donjonDecorOssementTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    isDungeon: true,
+    dungeonId: "aluineeks",
+    dungeonRoomIndex: 2,
+    monsterSpawns: [
+      // Un seul pack de 4
+      { type: "chibone", groupSize: 4, offsetFromCenter: { x: 0, y: 0 } },
+    ],
+    treePositions: [],
+    exitBounds: null,
+  },
+  Map3DonjonAluineeks: {
+    key: "Map3DonjonAluineeks",
+    jsonPath: "assets/maps/Map3DonjonAluineeks.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, donjonDecorOssementTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    isDungeon: true,
+    dungeonId: "aluineeks",
+    dungeonRoomIndex: 3,
+    monsterSpawns: [
+      // Un seul pack de 4
+      { type: "skelbone", groupSize: 4, offsetFromCenter: { x: 0, y: 0 } },
+    ],
+    treePositions: [],
+    exitBounds: null,
+  },
+  Map4DonjonAluineeks: {
+    key: "Map4DonjonAluineeks",
+    jsonPath: "assets/maps/Map4DonjonAluineeks.json",
+    tilesets: [
+      ...tilesetNew,
+      entreeDonjonTileset,
+      donjonDecorOssementTileset,
+      donjonDecorStatueBossTileset,
+      donjonDecorTroneBossTileset,
+    ],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    isDungeon: true,
+    dungeonId: "aluineeks",
+    dungeonRoomIndex: 4,
+    monsterSpawns: [
+      { type: "senbone", groupSize: 1, offsetFromCenter: { x: 0, y: 0 } },
+    ],
+    treePositions: [],
+    exitBounds: null,
+  },
 };
 
-export const defaultMapKey = "Map1Andemia";
+export const defaultMapKey = "Map4DonjonAluineeks";

@@ -5,6 +5,9 @@ import { runTurn as runAluineeksTurn } from "./aiAluineeks.js";
 const AI_HANDLERS = {
   corbeau: runCorbeauTurn,
   aluineeks: runAluineeksTurn,
+  chibone: runCorbeauTurn,
+  skelbone: runCorbeauTurn,
+  senbone: runAluineeksTurn,
 };
 
 // Point d'entrée générique : choisit l'IA en fonction du monsterId.
@@ -25,8 +28,9 @@ export function runMonsterTurn(scene) {
   state.paRestants = state.paBaseMonstre;
   state.pmRestants = state.pmBaseMonstre;
 
-  const lbl = document.getElementById("combat-turn-label");
-  if (lbl) lbl.textContent = "Monstre";
+  if (typeof scene.updateCombatUi === "function") {
+    scene.updateCombatUi();
+  }
 
   const handler = AI_HANDLERS[monster.monsterId];
 
@@ -34,11 +38,6 @@ export function runMonsterTurn(scene) {
     if (!state.enCours) return;
 
     const newTurn = passerTour(scene);
-    const turnLabel = document.getElementById("combat-turn-label");
-    if (turnLabel) {
-      turnLabel.textContent =
-        newTurn === "monstre" ? "Monstre" : "Joueur";
-    }
 
     // Si le prochain acteur est encore un monstre (ex: C3 -> C4),
     // on enchaîne immédiatement son tour.

@@ -83,8 +83,8 @@
   padding: 0;
 
   border-radius: 0;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(5, 15, 30, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(35, 38, 44, 0.85);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.35);
 
   color: transparent;
@@ -93,7 +93,7 @@
 }
 
 #hud-dock-menu .hud-pill:hover {
-  background: rgba(10, 22, 40, 0.82);
+  background: rgba(50, 54, 62, 0.90);
   transform: none;
 }
 
@@ -110,7 +110,7 @@
   height: 20px;
   transform: translate(-50%, -50%);
 
-  background: rgba(245, 247, 255, 0.92);
+  background: rgba(236, 236, 232, 0.92);
   -webkit-mask-image: var(--hud-icon);
   mask-image: var(--hud-icon);
   -webkit-mask-repeat: no-repeat;

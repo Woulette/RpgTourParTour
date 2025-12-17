@@ -7,6 +7,11 @@ export const monsters = {
     label: "Corbeau",
     textureKey: "corbeau",                 // clé de texture Phaser
     spritePath: "assets/monsters/corbeau.png", // chemin de l'image
+    render: {
+      originX: 0.45,
+      originY: 1.2,
+      offsetY: 0,
+    },
 
     // Overrides de stats par rapport au modèle de base (src/core/stats.js)
     // Ici on laisse volontairement quelque chose de simple.
@@ -83,6 +88,11 @@ export const monsters = {
     label: "Aluineeks",
     textureKey: "aluineeks",
     spritePath: "assets/monsters/aluineeks.png",
+    render: {
+      originX: 0.5,
+      originY: 1,
+      offsetY: 0,
+    },
 
     // Monstre terre, plus costaud que le corbeau
     statsOverrides: {
@@ -101,5 +111,88 @@ export const monsters = {
     loot: [],
 
     xpReward: 80,
+  },
+
+
+  chibone: {
+    id: "chibone",
+    label: "Chibone",
+    textureKey: "chibone",
+    spritePath: "assets/monsters/Chibone/rotations/south-west.png",
+    render: {
+      originX: 0.55,
+      originY: 0.9,
+      offsetY: 0,
+    },
+
+    statsOverrides: {
+      hpMax: 40,
+      hp: 40,
+      pa: 6,
+      pm: 3,
+      force: 12,
+      agilite: 8,
+      initiative: 5,
+    },
+
+    spells: ["coup_de_bec"],
+    loot: [],
+    xpReward: 60,
+    goldRewardMin: 10,
+    goldRewardMax: 25,
+  },
+
+  skelbone: {
+    id: "skelbone",
+    label: "Skelbone",
+    textureKey: "skelbone",
+    spritePath: "assets/monsters/Skelbone/rotations/south-west.png",
+    render: {
+      originX: 0.5,
+      originY: 1,
+      offsetY: 0,
+    },
+
+    statsOverrides: {
+      hpMax: 55,
+      hp: 55,
+      pa: 7,
+      pm: 3,
+      force: 16,
+      initiative: 6,
+    },
+
+    spells: ["coup_de_bec"],
+    loot: [],
+    xpReward: 90,
+    goldRewardMin: 15,
+    goldRewardMax: 35,
+  },
+
+  senbone: {
+    id: "senbone",
+    label: "Senbone",
+    textureKey: "senbone",
+    spritePath: "assets/monsters/Senbone/rotations/south-west.png",
+    render: {
+      originX: 0.5,
+      originY: 1,
+      offsetY: 0,
+    },
+
+    statsOverrides: {
+      hpMax: 220,
+      hp: 220,
+      pa: 10,
+      pm: 4,
+      force: 30,
+      initiative: 10,
+    },
+
+    spells: ["fissure"],
+    loot: [],
+    xpReward: 400,
+    goldRewardMin: 60,
+    goldRewardMax: 130,
   },
 };

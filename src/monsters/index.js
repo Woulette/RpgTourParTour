@@ -1,12 +1,112 @@
 import { monsters } from "../config/monsters.js";
 import { createMonster } from "../entities/monster.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
+import { getRespawnsForMap, setRespawnsForMap } from "./respawnState.js";
 
 // Précharge toutes les textures de monstres déclarées dans la config
 export function preloadMonsters(scene) {
   Object.values(monsters).forEach((m) => {
     scene.load.image(m.textureKey, m.spritePath);
   });
+}
+
+export function processPendingRespawnsForCurrentMap(scene) {
+  if (!scene || !scene.map || !scene.groundLayer) return;
+  const mapKey =
+    scene.currentMapKey || (scene.currentMapDef && scene.currentMapDef.key);
+  if (!mapKey) return;
+  // Pendant un combat ou la préparation, on ne fait pas respawn (évite des interactions UI/clics).
+  if (scene.combatState?.enCours || scene.prepState?.actif) return;
+
+  const now = Date.now();
+  const list = getRespawnsForMap(scene, mapKey);
+  if (!Array.isArray(list) || list.length === 0) return;
+
+  const remaining = [];
+
+  list.forEach((entry) => {
+    if (!entry || entry.mapKey !== mapKey) return;
+    // Dungeon: ignore respawns from previous runs.
+    if (scene.currentMapDef?.isDungeon) {
+      const currentRunId = scene.dungeonState?.runId ?? null;
+      const entryRunId = entry.dungeonRunId ?? null;
+      if (currentRunId && entryRunId && entryRunId !== currentRunId) {
+        return;
+      }
+      if (currentRunId && !entryRunId) {
+        // Old entries created before runId support
+        return;
+      }
+    }
+    if (typeof entry.atTime === "number" && entry.atTime > now) {
+      remaining.push(entry);
+      return;
+    }
+
+    const tileX = entry.tileX;
+    const tileY = entry.tileY;
+    if (
+      typeof tileX !== "number" ||
+      typeof tileY !== "number" ||
+      tileX < 0 ||
+      tileY < 0 ||
+      tileX >= scene.map.width ||
+      tileY >= scene.map.height
+    ) {
+      return;
+    }
+
+    // If something currently occupies that tile, postpone.
+    const occupied = (scene.monsters || []).some(
+      (m) => m && m.active && m.tileX === tileX && m.tileY === tileY
+    );
+    if (occupied) {
+      remaining.push({ ...entry, atTime: now + 1500 });
+      return;
+    }
+
+    const def = monsters[entry.monsterId] || null;
+    const offX =
+      def && def.render && typeof def.render.offsetX === "number"
+        ? def.render.offsetX
+        : 0;
+    const offY =
+      def && def.render && typeof def.render.offsetY === "number"
+        ? def.render.offsetY
+        : 0;
+
+    const wp = scene.map.tileToWorldXY(
+      tileX,
+      tileY,
+      undefined,
+      undefined,
+      scene.groundLayer
+    );
+    const x = wp.x + scene.map.tileWidth / 2 + offX;
+    const y = wp.y + scene.map.tileHeight + offY;
+
+    const monster = createMonster(scene, x, y, entry.monsterId);
+    monster.tileX = tileX;
+    monster.tileY = tileY;
+    monster.spawnMapKey = mapKey;
+
+    if (typeof entry.groupSize === "number") {
+      monster.groupSize = entry.groupSize;
+    }
+    if (Array.isArray(entry.groupLevels) && entry.groupLevels.length > 0) {
+      monster.groupLevels = entry.groupLevels.slice();
+      monster.level = entry.groupLevels[0];
+      monster.groupLevelTotal = entry.groupLevels.reduce((s, v) => s + v, 0);
+    } else if (typeof entry.level === "number") {
+      monster.level = entry.level;
+    }
+
+    scene.monsters = scene.monsters || [];
+    scene.monsters.push(monster);
+    startMonsterRoaming(scene, scene.map, scene.groundLayer, monster);
+  });
+
+  setRespawnsForMap(scene, mapKey, remaining);
 }
 
 // Place les monstres déclarés dans la définition de la map (mapDef.monsterSpawns).
@@ -63,13 +163,27 @@ export function spawnInitialMonsters(
       groundLayer
     );
 
-    const x = worldPos.x + map.tileWidth / 2;
-    const y = worldPos.y + map.tileHeight / 2;
-
     const type = spawn.type || "corbeau";
+    const def = monsters[type] || null;
+    const offX =
+      def && def.render && typeof def.render.offsetX === "number"
+        ? def.render.offsetX
+        : 0;
+    const offY =
+      def && def.render && typeof def.render.offsetY === "number"
+        ? def.render.offsetY
+        : 0;
+
+    const x = worldPos.x + map.tileWidth / 2 + offX;
+    const y = worldPos.y + map.tileHeight + offY;
+
     const monster = createMonster(scene, x, y, type);
     // Taille de groupe aléatoire 1..4 pour le combat
-    monster.groupSize = Phaser.Math.Between(1, 4);
+    const desiredGroupSize =
+      typeof spawn.groupSize === "number" && spawn.groupSize > 0
+        ? Math.round(spawn.groupSize)
+        : Phaser.Math.Between(1, 4);
+    monster.groupSize = Math.max(1, desiredGroupSize);
     // Niveaux individuels aléatoires pour les membres du groupe
     monster.groupLevels = Array.from(
       { length: monster.groupSize },
@@ -83,6 +197,8 @@ export function spawnInitialMonsters(
     );
     monster.tileX = tileX;
     monster.tileY = tileY;
+    monster.groupId = nextGroupId;
+    monster.spawnMapKey = mapDef?.key || scene.currentMapKey || null;
     scene.monsters.push(monster);
     startMonsterRoaming(scene, map, groundLayer, monster);
     nextGroupId += 1;
@@ -121,7 +237,12 @@ function startMonsterRoaming(scene, map, groundLayer, monster) {
       delay: delayMs,
       loop: false,
       callback: () => {
-        if (!monster.active || monster.isMoving || scene.combatState?.enCours) {
+        if (
+          !monster.active ||
+          monster.isMoving ||
+          scene.combatState?.enCours ||
+          scene.prepState?.actif
+        ) {
           scheduleNext();
           return;
         }
@@ -259,10 +380,12 @@ function tweenAlongPath(scene, monster, map, groundLayer, steps, onComplete) {
     if (onComplete) onComplete();
     return;
   }
-  const targetX = wp.x + map.tileWidth / 2;
-  const targetY = wp.y + map.tileHeight / 2;
+  const offX = typeof monster.renderOffsetX === "number" ? monster.renderOffsetX : 0;
+  const offY = typeof monster.renderOffsetY === "number" ? monster.renderOffsetY : 0;
+  const targetX = wp.x + map.tileWidth / 2 + offX;
+  const targetY = wp.y + map.tileHeight + offY;
 
-  monster.scene.tweens.add({
+  monster.roamTween = monster.scene.tweens.add({
     targets: monster,
     x: targetX,
     y: targetY,

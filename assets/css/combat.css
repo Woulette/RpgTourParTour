@@ -87,3 +87,231 @@ body.combat-prep #combat-turn-indicator {
   opacity: 0;
   pointer-events: none;
 }
+
+/* Panneau "fiche cible" (remplace la zone sorts au survol en combat) */
+#combat-target-panel {
+  position: absolute;
+  left: 50%;
+  bottom: -1%;
+  transform: translateX(-50%);
+
+  width: min(485px, 49vw);
+  min-height: 92px;
+  padding: 12px 14px;
+  border-radius: 0;
+  background: rgba(8, 20, 40, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.65);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+body.combat-active.combat-target-panel-visible #combat-target-panel {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+body.combat-active.combat-target-panel-visible #hud-spell-container {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.combat-target-header {
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.combat-target-hp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.combat-target-hp-bar {
+  height: 10px;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+.combat-target-hp-fill {
+  height: 100%;
+  width: 0%;
+  background: rgba(220, 60, 60, 0.95);
+}
+
+.combat-target-ally .combat-target-hp-fill {
+  background: rgba(60, 140, 255, 0.95);
+}
+
+.combat-target-enemy .combat-target-hp-fill {
+  background: rgba(220, 60, 60, 0.95);
+}
+
+.combat-target-hp-text {
+  color: rgba(255, 255, 255, 0.92);
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+}
+
+.combat-target-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.combat-target-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 0;
+  background: rgba(15, 30, 55, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.combat-target-stat-label {
+  color: rgba(255, 255, 255, 0.75);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.combat-target-stat-value {
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* Barre d'ordre des tours (style Dofus-like, visible uniquement en combat) */
+#combat-turn-order {
+  position: absolute;
+  /* On colle la barre au bord droit de la zone de jeu (pas au bord de l'écran). */
+  --game-width: min(100vw, calc(100vh * 1282 / 900));
+  --edge-gap: max(6px, 0.6vw);
+  right: calc((100vw - var(--game-width)) / 2 + var(--edge-gap));
+  bottom: calc(21.3vh + 1vh); /* au-dessus du HUD bas */
+  transform: translateY(6px);
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  max-width: calc(var(--game-width) - 4vw);
+  padding: 0.5rem 0.65rem;
+  border-radius: 14px;
+  background: rgba(8, 20, 40, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.55);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+body.combat-active #combat-turn-order {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto; /* permet le survol des portraits */
+}
+
+#combat-turn-order-list {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 70vw; /* grandit vers la gauche, puis scroll si trop long */
+}
+
+.combat-turn-actor {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background: rgba(15, 30, 55, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+}
+
+.combat-turn-actor.is-active {
+  border-color: #ffd34d;
+  box-shadow: 0 0 10px rgba(255, 211, 77, 0.75);
+  transform: translateY(-1px);
+}
+
+.combat-turn-actor.is-dead {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.combat-turn-hp {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  top: 6px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.combat-turn-hp-fill {
+  height: 100%;
+  width: 0%;
+  background: rgba(220, 60, 60, 0.95); /* monstre par défaut */
+}
+
+.combat-turn-actor.is-player .combat-turn-hp-fill {
+  background: rgba(60, 140, 255, 0.95);
+}
+
+.combat-turn-avatar {
+  position: absolute;
+  inset: 0;
+  padding-top: 8px; /* garde un peu de place pour la barre de vie */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.combat-turn-avatar-img {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+
+.combat-turn-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#combat-round-indicator {
+  color: #f5f7ff;
+  font-family: system-ui, sans-serif;
+  font-size: clamp(10px, 1vw, 13px);
+  opacity: 0.92;
+  white-space: nowrap;
+}

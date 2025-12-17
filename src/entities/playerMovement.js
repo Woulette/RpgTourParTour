@@ -98,10 +98,21 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
       return;
     }
 
-    // Si un sort est sélectionné : on affiche uniquement la portée du sort
+    // Si un sort est sélectionné : on affiche la portée + la zone (si applicable)
     if (activeSpell) {
       updateCombatPreview(scene, map, groundLayer, null);
-      updateSpellRangePreview(scene, map, groundLayer, player, activeSpell);
+      const t = worldToTile(pointer.worldX, pointer.worldY);
+      const mapForPreview = scene.combatMap || map;
+      const layerForPreview = scene.combatGroundLayer || groundLayer;
+      updateSpellRangePreview(
+        scene,
+        mapForPreview,
+        layerForPreview,
+        player,
+        activeSpell,
+        t ? t.x : null,
+        t ? t.y : null
+      );
       return;
     }
 
@@ -196,7 +207,14 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     // Si on clique sur un monstre, on utilise sa tuile
     // plutôt que la tuile "derrière" détectée par le clic.
     let clickedMonster = null;
-    if (scene.monsters && scene.monsters.length > 0) {
+    if (
+      // On ignore la hitbox des monstres en combat et en préparation
+      // (les sprites débordent sur d'autres cases, ça gêne le placement / ciblage).
+      !(scene.combatState && scene.combatState.enCours) &&
+      !(scene.prepState && scene.prepState.actif) &&
+      scene.monsters &&
+      scene.monsters.length > 0
+    ) {
       const worldXForHit = pointer.worldX;
       const worldYForHit = pointer.worldY;
       clickedMonster = scene.monsters.find((m) => {
@@ -373,13 +391,15 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
     // Si un sort est sélectionné et qu'on est en combat,
     // on tente de lancer le sort sur cette tuile.
     if (state && state.enCours && activeSpell) {
+      const mapForCast = scene.combatMap || map;
+      const layerForCast = scene.combatGroundLayer || groundLayer;
       const cast = tryCastActiveSpellAtTile(
         scene,
         player,
         tileX,
         tileY,
-        map,
-        groundLayer
+        mapForCast,
+        layerForCast
       );
 
       // Sort lancé avec succès : pas de déplacement pour ce clic.

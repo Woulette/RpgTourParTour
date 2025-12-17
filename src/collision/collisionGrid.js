@@ -19,8 +19,8 @@ export function unblockTile(scene, tileX, tileY) {
   state.blockedTiles.delete(KEY(tileX, tileY));
 }
 
+
 export function isTileBlocked(scene, tileX, tileY) {
   const state = ensureCollisionState(scene);
   return state.blockedTiles.has(KEY(tileX, tileY));
 }
-

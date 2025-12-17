@@ -1,0 +1,207 @@
+/* Menu principal (création / sélection perso) */
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(
+      900px 500px at 20% 10%,
+      rgba(30, 90, 140, 0.18),
+      rgba(0, 0, 0, 0)
+    ),
+    rgba(0, 0, 0, 0.75);
+}
+
+body.menu-open .menu-overlay {
+  display: flex;
+}
+
+/* Cache l'UI de jeu quand le menu est ouvert */
+body.menu-open #hud-root,
+body.menu-open #quest-tracker,
+body.menu-open #combat-ui-root,
+body.menu-open #combat-result-overlay {
+  display: none !important;
+}
+
+.menu-panel {
+  width: min(720px, 92vw);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(8, 20, 40, 0.92);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.menu-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 30, 55, 0.6);
+}
+
+.menu-title {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+
+.menu-screen {
+  padding: 16px 18px 18px;
+}
+
+.menu-screen-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  opacity: 0.92;
+}
+
+.menu-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.menu-btn {
+  border: 0;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.menu-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.menu-btn-primary {
+  background: rgba(60, 140, 255, 0.92);
+  color: #0a1020;
+}
+
+.menu-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.character-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.character-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 30, 55, 0.55);
+  padding: 12px 12px;
+  cursor: pointer;
+}
+
+.character-card.is-selected {
+  outline: 2px solid rgba(255, 211, 77, 0.9);
+}
+
+.character-name {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.character-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.create-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.92;
+}
+
+.create-input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+  outline: none;
+}
+
+.class-picker-title {
+  font-size: 13px;
+  opacity: 0.92;
+  margin-bottom: 8px;
+}
+
+.class-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.class-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 30, 55, 0.55);
+  padding: 12px 12px;
+  cursor: pointer;
+}
+
+.class-card.is-selected {
+  outline: 2px solid rgba(60, 140, 255, 0.9);
+}
+
+.class-card-title {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.class-card-desc {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.ui-return-menu {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 8500;
+  display: none;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(8, 20, 40, 0.75);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+body.game-running .ui-return-menu {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .character-list,
+  .class-list {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -33,6 +33,7 @@ export function createCombatState(player, monster) {
     issue: null, // "victoire" | "defaite"
 
     tour: premierTour, // "joueur" ou "monstre"
+    round: 1,
     joueur: player,
     monstre: monster,
     paRestants: paInit,
@@ -166,6 +167,10 @@ export function passerTour(scene) {
   if (!state || !state.enCours) return;
 
   const actors = state.actors;
+  const previousTour = state.tour;
+  const previousIndex =
+    typeof state.actorIndex === "number" ? state.actorIndex : 0;
+  const currentRound = typeof state.round === "number" ? state.round : 1;
   if (!actors || !actors.length) {
     // Fallback ancien comportement 1v1
     if (state.tour === "joueur") {
@@ -176,6 +181,13 @@ export function passerTour(scene) {
       state.tour = "joueur";
       state.paRestants = state.paBaseJoueur;
       state.pmRestants = state.pmBaseJoueur;
+    }
+
+    // On considère un "nouveau tour" quand on repasse au joueur.
+    if (previousTour === "monstre" && state.tour === "joueur") {
+      state.round = currentRound + 1;
+    } else if (typeof state.round !== "number") {
+      state.round = currentRound;
     }
   } else {
     const isAlive = (actor) => {
@@ -196,6 +208,13 @@ export function passerTour(scene) {
       if (isAlive(candidate)) break;
       loops += 1;
     } while (loops < actors.length);
+
+    const wrapped = nextIndex <= previousIndex;
+    if (wrapped) {
+      state.round = currentRound + 1;
+    } else if (typeof state.round !== "number") {
+      state.round = currentRound;
+    }
 
     state.actorIndex = nextIndex;
     const current = actors[nextIndex];
@@ -223,6 +242,11 @@ export function passerTour(scene) {
     typeof state.joueur.updateHudApMp === "function"
   ) {
     state.joueur.updateHudApMp(state.paRestants, state.pmRestants);
+  }
+
+  // Rafraîchit l'UI HTML de combat si elle est branchée.
+  if (scene && typeof scene.updateCombatUi === "function") {
+    scene.updateCombatUi();
   }
 
   return state.tour;

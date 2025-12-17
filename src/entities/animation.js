@@ -1,4 +1,4 @@
-export function setupPlayerAnimations(scene) {
+export function setupCharacterAnimations(scene, prefix) {
   const directions = [
     "south",
     "south-east",
@@ -13,14 +13,19 @@ export function setupPlayerAnimations(scene) {
   directions.forEach((dir) => {
     const frames = [];
     for (let i = 0; i < 6; i += 1) {
-      frames.push({ key: `player_run_${dir}_${i}` });
+      frames.push({ key: `${prefix}_run_${dir}_${i}` });
     }
 
     scene.anims.create({
-      key: `player_run_${dir}`,
+      key: `${prefix}_run_${dir}`,
       frames,
       frameRate: 10,
       repeat: -1,
     });
   });
+}
+
+// Back-compat: l'archer actuel utilise le préfixe "player".
+export function setupPlayerAnimations(scene) {
+  setupCharacterAnimations(scene, "player");
 }
