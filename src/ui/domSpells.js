@@ -64,7 +64,9 @@ export function initDomSpells(player) {
       const p = player?.stats || {};
 
       const baseHp = base.hpMax ?? base.hp ?? 1;
-      const hpMax = Math.max(1, Math.round(baseHp * mult));
+      const hpMax =
+        Math.max(1, Math.round(baseHp * mult)) +
+        Math.floor((p.hpMax ?? p.hp ?? 0) * 0.5);
       const initiative = Math.max(0, Math.round((base.initiative ?? 0) * mult));
       const force =
         Math.max(0, Math.round((base.force ?? 0) * mult)) + Math.floor((p.force ?? 0) * 0.5);

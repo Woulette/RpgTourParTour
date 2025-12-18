@@ -1,7 +1,17 @@
 import { monsters } from "../content/monsters/index.js";
 import { createMonster } from "../entities/monster.js";
+import { computeScaledMonsterOverrides } from "../entities/monster.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { getRespawnsForMap, setRespawnsForMap } from "./respawnState.js";
+import { createStats } from "../core/stats.js";
+
+function syncMonsterStatsToDisplayedLevel(monster) {
+  if (!monster) return;
+  const def = monsters[monster.monsterId] || null;
+  if (!def) return;
+  const lvl = monster.level ?? def.baseLevel ?? 1;
+  monster.stats = createStats(computeScaledMonsterOverrides(def, lvl));
+}
 
 // Précharge toutes les textures de monstres déclarées dans la config
 export function preloadMonsters(scene) {
@@ -127,6 +137,12 @@ export function processPendingRespawnsForCurrentMap(scene) {
             if (monster.setTexture) {
               monster.setTexture(leaderDef.textureKey);
             }
+            monster.xpReward = leaderDef.xpReward || 0;
+            monster.xpRewardBase = leaderDef.xpReward || monster.xpReward || 0;
+            monster.goldRewardMin = leaderDef.goldRewardMin ?? 0;
+            monster.goldRewardMax = leaderDef.goldRewardMax ?? monster.goldRewardMin ?? 0;
+            monster.lootTable = leaderDef.loot || [];
+            monster.spellIds = leaderDef.spells || [];
           }
         }
 
@@ -152,6 +168,7 @@ export function processPendingRespawnsForCurrentMap(scene) {
           Phaser.Math.Between(1, 4)
         );
         monster.level = monster.groupLevels[0];
+        syncMonsterStatsToDisplayedLevel(monster);
         monster.groupLevelTotal = monster.groupLevels.reduce((s, v) => s + v, 0);
         monster.respawnTemplate = { ...tpl, groupPool: pool.slice() };
       }
@@ -168,9 +185,11 @@ export function processPendingRespawnsForCurrentMap(scene) {
     if (Array.isArray(entry.groupLevels) && entry.groupLevels.length > 0) {
       monster.groupLevels = entry.groupLevels.slice();
       monster.level = entry.groupLevels[0];
+      syncMonsterStatsToDisplayedLevel(monster);
       monster.groupLevelTotal = entry.groupLevels.reduce((s, v) => s + v, 0);
     } else if (typeof entry.level === "number") {
       monster.level = entry.level;
+      syncMonsterStatsToDisplayedLevel(monster);
     }
 
     if (Array.isArray(entry.groupMonsterIds) && entry.groupMonsterIds.length > 0) {
@@ -349,6 +368,7 @@ export function spawnInitialMonsters(
     }
     // Le leader hérite du premier niveau
     monster.level = monster.groupLevels[0];
+    syncMonsterStatsToDisplayedLevel(monster);
     monster.groupLevelTotal = monster.groupLevels.reduce(
       (sum, lvl) => sum + lvl,
       0

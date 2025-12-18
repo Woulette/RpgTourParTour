@@ -9,12 +9,61 @@ import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { queueMonsterRespawn } from "../monsters/respawnState.js";
 import { tryResolveCaptureOnMonsterDeath } from "../systems/combat/summons/capture.js";
 
+export function computeScaledMonsterOverrides(def, level) {
+  if (!def) return {};
+  const overrides = def.statsOverrides || {};
+
+  const baseLevel = typeof def.baseLevel === "number" ? def.baseLevel : 1;
+  const safeLevel =
+    typeof level === "number" && Number.isFinite(level) ? level : baseLevel;
+  const delta = Math.max(0, safeLevel - baseLevel);
+  if (!overrides || delta <= 0) return overrides;
+
+  const HP_PCT_PER_LEVEL = 0.08;
+  const HP_CAP_PER_LEVEL = 40;
+  const STAT_PCT_PER_LEVEL = 0.05;
+  const STAT_CAP_PER_LEVEL = 10;
+  const STAT_MIN_PER_LEVEL = 1;
+
+  const result = { ...overrides };
+
+  const baseHp =
+    typeof overrides.hpMax === "number"
+      ? overrides.hpMax
+      : typeof overrides.hp === "number"
+        ? overrides.hp
+        : null;
+
+  if (typeof baseHp === "number") {
+    const perLevel = Math.min(
+      HP_CAP_PER_LEVEL,
+      Math.max(1, Math.round(baseHp * HP_PCT_PER_LEVEL))
+    );
+    const scaledHpMax = baseHp + perLevel * delta;
+    result.hpMax = scaledHpMax;
+    result.hp = scaledHpMax;
+  }
+
+  for (const [key, baseVal] of Object.entries(overrides)) {
+    if (key === "hp" || key === "hpMax") continue;
+    if (typeof baseVal !== "number") continue;
+
+    const perLevel = Math.min(
+      STAT_CAP_PER_LEVEL,
+      Math.max(STAT_MIN_PER_LEVEL, Math.round(baseVal * STAT_PCT_PER_LEVEL))
+    );
+    result[key] = baseVal + perLevel * delta;
+  }
+
+  return result;
+}
+
 /**
  * Crée un monstre sur la carte.
  * - stats basées sur le même modèle que le joueur
  * - pas de système de niveau pour le monstre lui‑même
  */
-export function createMonster(scene, x, y, monsterId) {
+export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
   const def = monsters[monsterId];
   if (!def) {
     throw new Error(`Monstre inconnu: ${monsterId}`);
@@ -25,7 +74,10 @@ export function createMonster(scene, x, y, monsterId) {
     typeof def.levelMin === "number" ? def.levelMin : baseLevel;
   const levelMax =
     typeof def.levelMax === "number" ? def.levelMax : Math.max(levelMin, 4);
-  const level = Phaser.Math.Between(levelMin, levelMax);
+  const level =
+    typeof forcedLevel === "number" && Number.isFinite(forcedLevel)
+      ? Math.max(levelMin, Math.min(levelMax, Math.round(forcedLevel)))
+      : Phaser.Math.Between(levelMin, levelMax);
 
   const computeScaledOverrides = () => {
     const overrides = def.statsOverrides || {};

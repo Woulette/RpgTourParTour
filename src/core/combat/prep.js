@@ -226,12 +226,17 @@ export function startPrep(scene, player, monster, map, groundLayer) {
       Array.isArray(monster.groupMonsterIds) && monster.groupMonsterIds[i]
         ? monster.groupMonsterIds[i]
         : monster.monsterId;
+    const memberLevel =
+      Array.isArray(monster.groupLevels) && typeof monster.groupLevels[i] === "number"
+        ? monster.groupLevels[i]
+        : null;
 
     const extra = createMonster(
       scene,
       worldPos.x + map.tileWidth / 2,
       worldPos.y + map.tileHeight,
-      memberMonsterId
+      memberMonsterId,
+      memberLevel
     );
     extra.x =
       extra.x +
@@ -239,8 +244,8 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     extra.y =
       extra.y +
       (typeof extra.renderOffsetY === "number" ? extra.renderOffsetY : 0);
-    if (Array.isArray(monster.groupLevels) && monster.groupLevels[i]) {
-      extra.level = monster.groupLevels[i];
+    if (typeof memberLevel === "number") {
+      extra.level = memberLevel;
     }
     if (typeof monster.groupLevelTotal === "number") {
       extra.groupLevelTotal = monster.groupLevelTotal;

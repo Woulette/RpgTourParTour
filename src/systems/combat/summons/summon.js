@@ -33,15 +33,19 @@ function applySummonScaling(stats, owner, capturedLevel) {
 
   // Scale des stats de base du monstre (PV + initiative + 4 stats élémentaires).
   stats.hpMax = scaleStat(stats.hpMax ?? stats.hp ?? 1, mult);
-  stats.hp = stats.hpMax;
   stats.initiative = scaleStat(stats.initiative ?? 0, mult);
   stats.force = scaleStat(stats.force ?? 0, mult);
   stats.agilite = scaleStat(stats.agilite ?? 0, mult);
   stats.intelligence = scaleStat(stats.intelligence ?? 0, mult);
   stats.chance = scaleStat(stats.chance ?? 0, mult);
 
-  // Transfert : +50% des 4 stats du joueur (force/agi/int/chance) uniquement.
+  // Transfert : +50% des PV max du joueur.
   const p = owner.stats || {};
+  const pHpMax = p.hpMax ?? p.hp ?? 0;
+  stats.hpMax = clampNonNegative(stats.hpMax) + Math.floor(clampNonNegative(pHpMax) * 0.5);
+  stats.hp = stats.hpMax;
+
+  // Transfert : +50% des 4 stats du joueur (force/agi/int/chance) uniquement.
   stats.force =
     clampNonNegative(stats.force) + Math.floor(clampNonNegative(p.force) * 0.5);
   stats.agilite =
@@ -214,6 +218,44 @@ export function spawnSummonFromCaptured(
   summon.tileY = spawnTile.y;
   summon.currentTileX = spawnTile.x;
   summon.currentTileY = spawnTile.y;
+
+  // Survol direct sur le sprite (plus fiable que le calcul par tuile)
+  // pour afficher la bulle + panneau cible.
+  if (typeof summon.setInteractive === "function") {
+    const w = (summon.displayWidth ?? summon.width ?? 48) * 1.35;
+    const h = (summon.displayHeight ?? summon.height ?? 48) * 1.35;
+    const ox = typeof summon.originX === "number" ? summon.originX : 0.5;
+    const oy = typeof summon.originY === "number" ? summon.originY : 1;
+    const rect = new Phaser.Geom.Rectangle(-w * ox, -h * oy, w, h);
+    summon.setInteractive(rect, Phaser.Geom.Rectangle.Contains);
+
+    summon.on("pointerover", (pointer) => {
+      const cs = scene?.combatState;
+      if (!cs || !cs.enCours) return;
+
+      if (typeof scene.showDamagePreview === "function") {
+        scene.showDamagePreview(summon);
+      }
+      if (typeof scene.showMonsterTooltip === "function") {
+        scene.showMonsterTooltip(summon);
+      }
+      if (typeof scene.showCombatTargetPanel === "function") {
+        scene.showCombatTargetPanel(summon);
+      }
+    });
+
+    summon.on("pointerout", () => {
+      if (typeof scene.clearDamagePreview === "function") {
+        scene.clearDamagePreview();
+      }
+      if (typeof scene.hideMonsterTooltip === "function") {
+        scene.hideMonsterTooltip();
+      }
+      if (typeof scene.hideCombatTargetPanel === "function") {
+        scene.hideCombatTargetPanel();
+      }
+    });
+  }
 
   scene.combatSummons = scene.combatSummons || [];
   scene.combatSummons.push(summon);
