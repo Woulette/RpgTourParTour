@@ -114,6 +114,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
       summon.onKilled = (sceneArg) => {
         const owner = summon.owner;
         if (owner) {
+          owner.hasAliveSummon = false;
           owner.spellCooldowns = owner.spellCooldowns || {};
           const cdTurns = spell.summon.cooldownAfterDeathTurns ?? 2;
           owner.spellCooldowns[spell.id] = Math.max(0, cdTurns | 0);

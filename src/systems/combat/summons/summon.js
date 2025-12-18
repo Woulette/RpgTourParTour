@@ -199,6 +199,7 @@ export function spawnSummonFromCaptured(
   summon.monsterId = capturedId;
   summon.isSummon = true;
   summon.owner = owner;
+  owner.hasAliveSummon = true;
   summon.spellIds = def.spells || [];
   summon.displayName = def.displayName || def.label || capturedId;
   summon.level = capturedLevel;
@@ -268,6 +269,10 @@ export function clearAllSummons(scene) {
     scene?.combatSummons && Array.isArray(scene.combatSummons)
       ? scene.combatSummons
       : [];
+  // Reset des flags propriétaires
+  list.forEach((s) => {
+    if (s?.owner) s.owner.hasAliveSummon = false;
+  });
   list.forEach((s) => {
     if (!s) return;
     if (typeof s.destroy === "function") {

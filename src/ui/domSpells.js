@@ -255,6 +255,54 @@ export function initDomSpells(player) {
 
   // Map index de slot -> element DOM (pour les raccourcis clavier)
   const slotByIndex = {};
+  const slotSpellByIndex = {};
+  const cooldownBadgeByIndex = {};
+
+  const ensureCooldownBadge = (slot) => {
+    if (!slot) return null;
+    let badge = slot.querySelector(".hud-spell-cd");
+    if (badge) return badge;
+    badge = document.createElement("span");
+    badge.className = "hud-spell-cd";
+    badge.textContent = "";
+    slot.appendChild(badge);
+    return badge;
+  };
+
+  const computeDisableInfo = (spell) => {
+    const cooldowns = player?.spellCooldowns || {};
+    const cd = cooldowns[spell.id] || 0;
+
+    // Règles spéciales Animiste
+    if (spell.id === "invocation_capturee") {
+      if (!player?.capturedMonsterId) {
+        return { disabled: true, label: "—" };
+      }
+      if (player?.hasAliveSummon) {
+        return { disabled: true, label: "INV" };
+      }
+    }
+
+    if (cd > 0) return { disabled: true, label: `${cd}t` };
+    return { disabled: false, label: "" };
+  };
+
+  const updateSpellBarState = () => {
+    slots.forEach((slot, index) => {
+      const spell = slotSpellByIndex[index] || null;
+      if (!slot || !spell) return;
+      const badge = cooldownBadgeByIndex[index];
+      const info = computeDisableInfo(spell);
+      slot.classList.toggle("is-disabled", !!info.disabled);
+      if (badge) {
+        badge.textContent = info.label || "";
+        badge.classList.toggle("is-visible", !!info.label);
+      }
+    });
+  };
+
+  // Permet à l'UI combat de rafraîchir les compteurs à chaque tick de tour.
+  player.updateSpellBar = updateSpellBarState;
 
   slots.forEach((slot, index) => {
     const slotIndex = parseInt(slot.dataset.slot, 10);
@@ -275,6 +323,8 @@ export function initDomSpells(player) {
     if (nameEl) {
       nameEl.textContent = spell.label;
     }
+    slotSpellByIndex[index] = spell;
+    cooldownBadgeByIndex[index] = ensureCooldownBadge(slot);
 
     // Selection du sort au clic sur le slot
     slot.addEventListener("click", (event) => {
@@ -286,8 +336,12 @@ export function initDomSpells(player) {
 
       // Sort actif cote joueur
       setActiveSpell(player, spell.id);
+      updateSpellBarState();
     });
   });
+
+  // Init visuel
+  updateSpellBarState();
 
   // --- Raccourcis clavier pour selectionner un slot ---
   // Mapping AZERTY : 1/& -> slot 1, 2/� -> slot 2, etc. jusqu'a 8
@@ -328,6 +382,7 @@ export function initDomSpells(player) {
 
     // Simule un clic sur le slot pour reutiliser toute la logique existante
     slot.click();
+    updateSpellBarState();
   });
 
   // boutons de tiers (Tier 1 / 2 / 3)

@@ -488,6 +488,10 @@ export function initDomCombat(scene) {
     updateIndicators();
     renderTurnOrder();
     updateTargetPanel();
+    const state = scene.combatState;
+    if (state?.joueur && typeof state.joueur.updateSpellBar === "function") {
+      state.joueur.updateSpellBar();
+    }
     if (typeof scene.updateCombatInspector === "function") {
       scene.updateCombatInspector();
     }
