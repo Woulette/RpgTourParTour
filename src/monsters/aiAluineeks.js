@@ -4,7 +4,9 @@ import {
   isSpellInRangeFromPosition,
   canCastSpellOnTile,
 } from "../core/spellSystem.js";
+import { showFloatingTextOverEntity } from "../core/combat/floatingText.js";
 import {
+  delay,
   moveMonsterAlongPath,
   isTileOccupiedByMonster,
 } from "./aiUtils.js";
@@ -234,9 +236,14 @@ export function runTurn(
     }
   }
 
-  const afterMoveAndCast = () => {
+  const afterMoveAndCast = (moved) => {
     // Mets a jour les PM restants
     state.pmRestants = Math.max(0, state.pmRestants - pathTiles.length);
+    if (pathTiles.length > 0) {
+      showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
+        color: "#22c55e",
+      });
+    }
 
     // Enchaine jusqu'a 2 lancers de Fissure avec un delai,
     // pour que les degats visuels aient le temps d'apparaitre.
@@ -270,12 +277,12 @@ export function runTurn(
       }
     };
 
-    castSequence(0);
+    delay(scene, moved ? 520 : 260, () => castSequence(0));
   };
 
   if (pathTiles.length === 0) {
     // Pas de deplacement (ou deja a portee) -> juste tenter le sort
-    afterMoveAndCast();
+    delay(scene, 160, () => afterMoveAndCast(false));
     return;
   }
 
@@ -285,6 +292,6 @@ export function runTurn(
     map,
     groundLayer,
     pathTiles,
-    afterMoveAndCast
+    () => afterMoveAndCast(true)
   );
 }

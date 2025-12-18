@@ -194,6 +194,15 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
       return;
     }
 
+    // En combat : pas d'action pendant un dÇ¸placement (sinon on peut dÇ¸passer PM/PA).
+    if (
+      scene.combatState &&
+      scene.combatState.enCours &&
+      (player.isMoving || player.currentMoveTween)
+    ) {
+      return;
+    }
+
     // Stop mouvement en cours
     if (player.currentMoveTween) {
       player.currentMoveTween.stop();

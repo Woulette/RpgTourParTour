@@ -104,6 +104,15 @@ export function initDevCheats(scene) {
     player() {
       return ensurePlayer();
     },
+    pos() {
+      const player = ensurePlayer();
+      const sc = window.__scene;
+      return {
+        mapKey: sc?.currentMapKey ?? sc?.currentMapDef?.key ?? null,
+        tile: { x: player.currentTileX ?? null, y: player.currentTileY ?? null },
+        world: { x: player.x ?? null, y: player.y ?? null },
+      };
+    },
     quests: {
       list() {
         return Object.keys(quests);
@@ -164,4 +173,3 @@ export function initDevCheats(scene) {
   // eslint-disable-next-line no-console
   console.log("Dev cheats actifs: window.cheat (tape cheat.help())");
 }
-

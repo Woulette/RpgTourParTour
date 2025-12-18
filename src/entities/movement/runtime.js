@@ -1,5 +1,6 @@
 import { PLAYER_SPEED } from "../../config/constants.js";
 import { applyMoveCost } from "../../core/combat.js";
+import { showFloatingTextOverEntity } from "../../core/combat/floatingText.js";
 import { maybeHandleMapExit } from "../../maps/world.js";
 import { maybeHandleDungeonExit } from "../../dungeons/runtime.js";
 import { isTileBlocked } from "../../collision/collisionGrid.js";
@@ -170,6 +171,11 @@ export function movePlayerAlongPath(
 
         // Applique le coût de déplacement au système de combat (PM, HUD)
         applyMoveCost(scene, player, moveCost);
+        if (moveCost > 0 && scene.combatState && scene.combatState.enCours) {
+          showFloatingTextOverEntity(scene, player, `${moveCost}`, {
+            color: "#22c55e",
+          });
+        }
 
         if (player.anims && player.anims.currentAnim) {
           player.anims.stop();

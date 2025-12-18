@@ -3,6 +3,33 @@
 import { startOutOfCombatRegen } from "../regen.js";
 import { createCombatState, buildTurnOrder } from "./state.js";
 import { onAfterCombatEnded } from "../../dungeons/runtime.js";
+import { addChatMessage } from "../../chat/chat.js";
+import { items } from "../../inventory/itemsConfig.js";
+
+function joinPartsWrapped(parts, maxLineLength = 70) {
+  const safeMax = Math.max(20, maxLineLength | 0);
+  const lines = [];
+  let current = "";
+
+  for (const raw of parts) {
+    const part = String(raw || "").trim();
+    if (!part) continue;
+    if (!current) {
+      current = part;
+      continue;
+    }
+    const candidate = `${current}, ${part}`;
+    if (candidate.length <= safeMax) {
+      current = candidate;
+      continue;
+    }
+    lines.push(current);
+    current = part;
+  }
+
+  if (current) lines.push(current);
+  return lines.join("\n");
+}
 
 // Commence un combat : on crée l'état et on active l'UI.
 export function startCombat(scene, player, monster) {
@@ -10,6 +37,11 @@ export function startCombat(scene, player, monster) {
   if (scene.playerRegenEvent) {
     scene.playerRegenEvent.remove(false);
     scene.playerRegenEvent = null;
+  }
+
+  // Nettoie les effets temporaires (ex: poison) d'un combat précédent
+  if (player) {
+    player.statusEffects = [];
   }
 
   scene.combatState = createCombatState(player, monster);
@@ -37,6 +69,11 @@ export function endCombat(scene) {
 
   const state = scene.combatState;
   state.enCours = false;
+
+  // Nettoie les effets temporaires restants sur le joueur
+  if (state.joueur) {
+    state.joueur.statusEffects = [];
+  }
 
   // Petit fondu noir � la sortie de combat (retour exploration)
   const cam = scene.cameras && scene.cameras.main;
@@ -76,6 +113,34 @@ export function endCombat(scene) {
     monsterId: state.monstre?.monsterId || null,
     monsterHpEnd: state.monstre?.stats?.hp ?? 0,
   };
+
+  // Chat (général) : récap XP/or en fin de combat.
+  const playerForChat = state.joueur;
+  if (playerForChat && result.issue === "victoire") {
+    const xp = result.xpGagne ?? 0;
+    const gold = result.goldGagne ?? 0;
+    const loot = Array.isArray(result.loot) ? result.loot : [];
+
+    const parts = [];
+    if (xp > 0) parts.push(`+${xp} XP`);
+    if (gold > 0) parts.push(`+${gold} or`);
+    loot.forEach((entry) => {
+      if (!entry || !entry.itemId) return;
+      const qty = entry.qty ?? 0;
+      if (qty <= 0) return;
+      const def = items?.[entry.itemId];
+      const label = def?.label || entry.itemId;
+      parts.push(`${label} x${qty}`);
+    });
+
+    if (parts.length > 0) {
+      const text = `Gains : ${joinPartsWrapped(parts, 70)}`;
+      addChatMessage(
+        { kind: "combat", channel: "global", author: "Combat", text },
+        { player: playerForChat }
+      );
+    }
+  }
 
   // Nettoyage éventuel d'une phase de préparation restante
   if (scene.prepState) {

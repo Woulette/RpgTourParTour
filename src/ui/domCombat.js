@@ -174,6 +174,14 @@ export function initDomCombat(scene) {
         }
       });
 
+      // Clic : ouvre une fiche d'infos (effets, PV, etc.)
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        if (typeof scene.showCombatInspector === "function") {
+          scene.showCombatInspector(actor.entity);
+        }
+      });
+
       const { hp, hpMax } = getActorHp(actor);
       const pct =
         hpMax > 0 ? Math.max(0, Math.min(1, hp / hpMax)) : 0;
@@ -294,6 +302,9 @@ export function initDomCombat(scene) {
     updateIndicators();
     renderTurnOrder();
     updateTargetPanel();
+    if (typeof scene.updateCombatInspector === "function") {
+      scene.updateCombatInspector();
+    }
   };
 
   // Bouton "FIN DU TOUR" (combat en cours)

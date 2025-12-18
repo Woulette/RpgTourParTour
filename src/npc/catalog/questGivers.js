@@ -21,4 +21,19 @@ export const questGiverNpcs = [
     type: "quest_giver",
     questIds: [],
   },
+  {
+    id: "mentor_map5",
+    name: "Maître",
+    mapId: "MapAndemia5",
+    tileX: 17,
+    tileY: 17,
+    textureKey: "npc_provisoire",
+    spritePath: "assets/npc/Provisoiresouth-east.png",
+    type: "quest_giver",
+    questIds: [
+      "mentor_epreuve_corbeaux_1",
+      "mentor_epreuve_goush_liburion_1",
+      "mentor_epreuve_aluineeks_1",
+    ],
+  },
 ];

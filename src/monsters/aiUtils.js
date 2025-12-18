@@ -1,6 +1,21 @@
 import { PLAYER_SPEED } from "../config/constants.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 
+export function delay(scene, ms, fn) {
+  const duration = Math.max(0, ms | 0);
+  if (duration <= 0) {
+    if (typeof fn === "function") fn();
+    return null;
+  }
+  if (scene && scene.time && typeof scene.time.delayedCall === "function") {
+    return scene.time.delayedCall(duration, () => {
+      if (typeof fn === "function") fn();
+    });
+  }
+  if (typeof fn === "function") fn();
+  return null;
+}
+
 // Déplacement fluide case par case en chaînant les tweens.
 export function moveMonsterAlongPath(
   scene,
@@ -10,53 +25,59 @@ export function moveMonsterAlongPath(
   path,
   onDone
 ) {
-  if (!path || path.length === 0) {
+  const queue = Array.isArray(path) ? path.slice() : [];
+
+  if (queue.length === 0) {
     if (typeof onDone === "function") onDone();
     return;
   }
 
-  const next = path.shift();
-  const worldPos = map.tileToWorldXY(
-    next.x,
-    next.y,
-    undefined,
-    undefined,
-    groundLayer
-  );
-  const offX =
-    typeof monster.renderOffsetX === "number" ? monster.renderOffsetX : 0;
-  const offY =
-    typeof monster.renderOffsetY === "number" ? monster.renderOffsetY : 0;
-  const targetX = worldPos.x + map.tileWidth / 2 + offX;
-  const targetY = worldPos.y + map.tileHeight + offY;
+  const stepNext = () => {
+    if (queue.length === 0) {
+      if (typeof onDone === "function") onDone();
+      return;
+    }
 
-  const dist = Phaser.Math.Distance.Between(
-    monster.x,
-    monster.y,
-    targetX,
-    targetY
-  );
-  const duration = (dist / PLAYER_SPEED) * 1000;
+    const next = queue.shift();
+    const worldPos = map.tileToWorldXY(
+      next.x,
+      next.y,
+      undefined,
+      undefined,
+      groundLayer
+    );
+    const offX =
+      typeof monster.renderOffsetX === "number" ? monster.renderOffsetX : 0;
+    const offY =
+      typeof monster.renderOffsetY === "number" ? monster.renderOffsetY : 0;
+    const targetX = worldPos.x + map.tileWidth / 2 + offX;
+    const targetY = worldPos.y + map.tileHeight + offY;
 
-  scene.tweens.add({
-    targets: monster,
-    x: targetX,
-    y: targetY,
-    duration,
-    ease: "Linear",
-    onComplete: () => {
-      monster.x = targetX;
-      monster.y = targetY;
-      monster.tileX = next.x;
-      monster.tileY = next.y;
+    const dist = Phaser.Math.Distance.Between(
+      monster.x,
+      monster.y,
+      targetX,
+      targetY
+    );
+    const duration = (dist / PLAYER_SPEED) * 1000;
 
-      if (path.length > 0) {
-        moveMonsterAlongPath(scene, monster, map, groundLayer, path, onDone);
-      } else if (typeof onDone === "function") {
-        onDone();
-      }
-    },
-  });
+    scene.tweens.add({
+      targets: monster,
+      x: targetX,
+      y: targetY,
+      duration,
+      ease: "Linear",
+      onComplete: () => {
+        monster.x = targetX;
+        monster.y = targetY;
+        monster.tileX = next.x;
+        monster.tileY = next.y;
+        stepNext();
+      },
+    });
+  };
+
+  stepNext();
 }
 
 // Retourne tous les monstres de combat encore en vie.

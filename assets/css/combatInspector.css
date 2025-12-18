@@ -1,0 +1,114 @@
+.combat-inspector {
+  position: fixed;
+  right: 18px;
+  bottom: 150px;
+  width: 260px;
+  max-height: 220px;
+  background: rgba(20, 24, 28, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: #e9eef5;
+  font-family: Arial, sans-serif;
+  z-index: 1002;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  display: none;
+}
+
+body.combat-active .combat-inspector.combat-inspector-visible {
+  display: block;
+}
+
+.combat-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.combat-inspector-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+
+.combat-inspector-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.combat-inspector-btn {
+  width: 26px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.25);
+  color: #e9eef5;
+  cursor: pointer;
+  line-height: 20px;
+  font-size: 14px;
+  padding: 0;
+}
+
+.combat-inspector-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.combat-inspector-body {
+  padding: 10px;
+  overflow: auto;
+  max-height: 180px;
+}
+
+.combat-inspector-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.combat-inspector-row:last-child {
+  border-bottom: none;
+}
+
+.combat-inspector-section {
+  margin-top: 10px;
+}
+
+.combat-inspector-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(233, 238, 245, 0.9);
+  margin-bottom: 6px;
+}
+
+.combat-inspector-effect {
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 7px 8px;
+  margin-bottom: 6px;
+}
+
+.combat-inspector-effect:last-child {
+  margin-bottom: 0;
+}
+
+.combat-inspector-effect-name {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.combat-inspector-effect-meta {
+  opacity: 0.9;
+}
+
+/* Toujours afficher les effets : pas de mode compact */

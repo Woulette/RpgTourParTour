@@ -222,11 +222,16 @@ export function startPrep(scene, player, monster, map, groundLayer) {
       groundLayer
     );
 
+    const memberMonsterId =
+      Array.isArray(monster.groupMonsterIds) && monster.groupMonsterIds[i]
+        ? monster.groupMonsterIds[i]
+        : monster.monsterId;
+
     const extra = createMonster(
       scene,
       worldPos.x + map.tileWidth / 2,
       worldPos.y + map.tileHeight,
-      monster.monsterId
+      memberMonsterId
     );
     extra.x =
       extra.x +
@@ -246,6 +251,9 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     extra.groupSize = baseGroupSize;
     if (Array.isArray(monster.groupLevels)) {
       extra.groupLevels = monster.groupLevels.slice();
+    }
+    if (Array.isArray(monster.groupMonsterIds)) {
+      extra.groupMonsterIds = monster.groupMonsterIds.slice();
     }
     extra.respawnEnabled = false;
     extra.isCombatMember = true;

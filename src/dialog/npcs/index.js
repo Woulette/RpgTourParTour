@@ -1,9 +1,17 @@
 import { papiDialog } from "./papi.js";
 import { memeDialog } from "./meme.js";
+import { memeQuestAddons } from "./memeQuestAddons.js";
+import { dungeonKeeperDialog } from "./dungeonKeeper.js";
+import { mentorMap5Dialog } from "./mentorMap5.js";
 
 const NPC_DIALOGS = {
   papi_bucheron: papiDialog,
-  meme_village: memeDialog,
+  meme_village: {
+    ...memeDialog,
+    questDialogs: { ...(memeDialog.questDialogs || {}), ...memeQuestAddons },
+  },
+  donjon_aluineeks_keeper: dungeonKeeperDialog,
+  mentor_map5: mentorMap5Dialog,
 };
 
 export function getNpcDialog(npcId, questId, questState, stageId) {

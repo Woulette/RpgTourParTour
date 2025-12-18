@@ -84,6 +84,10 @@ export function attachMonsterTooltip(scene) {
       Array.isArray(monster.groupLevels) && monster.groupLevels.length > 0
         ? monster.groupLevels
         : Array.from({ length: groupSize }, () => monster.level ?? 1);
+    const groupIds =
+      Array.isArray(monster.groupMonsterIds) && monster.groupMonsterIds.length > 0
+        ? monster.groupMonsterIds
+        : Array.from({ length: groupSize }, () => monster.monsterId);
 
     const lines = [];
     // En préparation de combat : affichage simplifié (nom + niveaux individuels).
@@ -96,7 +100,10 @@ export function attachMonsterTooltip(scene) {
     }
     for (let i = 0; i < groupSize; i += 1) {
       const lvl = levels[i] ?? monster.level ?? 1;
-      lines.push(`${baseName} - Niv. ${lvl}`);
+      const id = groupIds[i] || monster.monsterId;
+      const def = monsters[id] || null;
+      const name = def?.label || id || baseName;
+      lines.push(`${name} - Niv. ${lvl}`);
     }
     const text = lines.join("\n");
 

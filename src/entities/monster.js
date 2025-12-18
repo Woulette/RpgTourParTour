@@ -4,7 +4,7 @@ import { createStats } from "../core/stats.js";
 import { XP_CONFIG } from "../config/xp.js";
 import { addXpToPlayer } from "./player.js";
 import { addItem } from "../inventory/inventoryCore.js";
-import { incrementKillProgress } from "../quests/index.js";
+import { incrementKillProgressForAll } from "../quests/index.js";
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { queueMonsterRespawn } from "../monsters/respawnState.js";
 
@@ -80,7 +80,7 @@ export function createMonster(scene, x, y, monsterId) {
     // Progression des quêtes liées aux kills
     if (killer) {
       // Pour l'instant, on incrémente uniquement la quête papi_corbeaux_1.
-      incrementKillProgress(sceneArg, killer, "papi_corbeaux_1", monster.monsterId);
+      incrementKillProgressForAll(sceneArg, killer, monster.monsterId);
     }
 
     // Si un combat est en cours, on cumule l'XP gagnée et on gère le loot

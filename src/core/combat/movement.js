@@ -102,4 +102,3 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
     preview.strokePoints(points, true);
   }
 }
-

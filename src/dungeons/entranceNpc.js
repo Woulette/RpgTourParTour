@@ -2,6 +2,38 @@ import { blockTile } from "../collision/collisionGrid.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { startNpcInteraction } from "../npc/interaction.js";
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
+import { getNpcMarker } from "../quests/index.js";
+
+function refreshQuestMarkerForNpc(scene, player, npcInstance) {
+  if (!scene || !npcInstance) return;
+
+  if (npcInstance.questMarker && npcInstance.questMarker.destroy) {
+    npcInstance.questMarker.destroy();
+    npcInstance.questMarker = null;
+  }
+
+  const markerSymbol = getNpcMarker(player, npcInstance.id);
+  const markerTexture =
+    markerSymbol === "!"
+      ? "quest_exclamation"
+      : markerSymbol === "?"
+        ? "quest_question"
+        : null;
+
+  if (!markerTexture) return;
+  const sprite = npcInstance.sprite;
+  if (!sprite) return;
+
+  const margin = 0;
+  const markerY = sprite.y - sprite.displayHeight - margin;
+  const marker = scene.add.image(sprite.x, markerY, markerTexture);
+  marker.setOrigin(0.5, 1);
+  marker.setDepth((sprite.depth || 0) + 2);
+  if (scene.hudCamera) {
+    scene.hudCamera.ignore(marker);
+  }
+  npcInstance.questMarker = marker;
+}
 
 function findEntranceTileForTileset(scene, tilesetName) {
   if (!scene || !scene.map || !Array.isArray(scene.mapLayers)) return null;
@@ -178,5 +210,6 @@ export function ensureAluineeksDungeonEntranceNpc(scene) {
   });
 
   scene.npcs.push(npcInstance);
+  refreshQuestMarkerForNpc(scene, scene.player, npcInstance);
   blockTile(scene, npcTile.x, npcTile.y);
 }

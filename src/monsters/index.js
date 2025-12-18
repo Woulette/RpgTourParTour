@@ -6,6 +6,7 @@ import { getRespawnsForMap, setRespawnsForMap } from "./respawnState.js";
 // Précharge toutes les textures de monstres déclarées dans la config
 export function preloadMonsters(scene) {
   Object.values(monsters).forEach((m) => {
+    if (!m || !m.textureKey || !m.spritePath) return;
     scene.load.image(m.textureKey, m.spritePath);
   });
 }
@@ -90,6 +91,70 @@ export function processPendingRespawnsForCurrentMap(scene) {
     monster.tileY = tileY;
     monster.spawnMapKey = mapKey;
 
+    // Respawn "template" : reroll la composition/tailles à chaque respawn.
+    if (entry.respawnTemplate && typeof entry.respawnTemplate === "object") {
+      const tpl = entry.respawnTemplate;
+      const pool = Array.isArray(tpl.groupPool) ? tpl.groupPool.filter(Boolean) : [];
+      const sizeMin =
+        typeof tpl.groupSizeMin === "number" && tpl.groupSizeMin > 0
+          ? Math.round(tpl.groupSizeMin)
+          : 1;
+      const sizeMax =
+        typeof tpl.groupSizeMax === "number" && tpl.groupSizeMax > 0
+          ? Math.round(tpl.groupSizeMax)
+          : Math.max(1, sizeMin);
+
+      if (pool.length > 0) {
+        const leaderId = Phaser.Utils.Array.GetRandom(pool);
+        const desiredGroupSize = Phaser.Math.Between(
+          Math.min(sizeMin, sizeMax),
+          Math.max(sizeMin, sizeMax)
+        );
+
+        // Le leader affiché en monde doit correspondre au monstre créé.
+        if (leaderId !== monster.monsterId) {
+          const leaderDef = monsters[leaderId];
+          if (leaderDef) {
+            monster.monsterId = leaderId;
+            monster.classId = leaderId;
+            if (monster.setTexture) {
+              monster.setTexture(leaderDef.textureKey);
+            }
+          }
+        }
+
+        monster.groupSize = Math.max(1, desiredGroupSize);
+        const groupMonsterIds = Array.from(
+          { length: monster.groupSize },
+          () => Phaser.Utils.Array.GetRandom(pool)
+        );
+        groupMonsterIds[0] = monster.monsterId;
+
+        if (tpl.forceMixedGroup === true && monster.groupSize > 1) {
+          const hasDistinct = new Set(groupMonsterIds).size > 1;
+          if (!hasDistinct && pool.length > 1) {
+            const alternatives = pool.filter((id) => id !== monster.monsterId);
+            if (alternatives.length > 0) {
+              groupMonsterIds[1] = Phaser.Utils.Array.GetRandom(alternatives);
+            }
+          }
+        }
+
+        monster.groupMonsterIds = groupMonsterIds;
+        monster.groupLevels = Array.from({ length: monster.groupSize }, () =>
+          Phaser.Math.Between(1, 4)
+        );
+        monster.level = monster.groupLevels[0];
+        monster.groupLevelTotal = monster.groupLevels.reduce((s, v) => s + v, 0);
+        monster.respawnTemplate = { ...tpl, groupPool: pool.slice() };
+      }
+
+      scene.monsters = scene.monsters || [];
+      scene.monsters.push(monster);
+      startMonsterRoaming(scene, scene.map, scene.groundLayer, monster);
+      return;
+    }
+
     if (typeof entry.groupSize === "number") {
       monster.groupSize = entry.groupSize;
     }
@@ -99,6 +164,11 @@ export function processPendingRespawnsForCurrentMap(scene) {
       monster.groupLevelTotal = entry.groupLevels.reduce((s, v) => s + v, 0);
     } else if (typeof entry.level === "number") {
       monster.level = entry.level;
+    }
+
+    if (Array.isArray(entry.groupMonsterIds) && entry.groupMonsterIds.length > 0) {
+      monster.groupMonsterIds = entry.groupMonsterIds.slice();
+      monster.groupSize = entry.groupMonsterIds.length;
     }
 
     scene.monsters = scene.monsters || [];
@@ -163,7 +233,36 @@ export function spawnInitialMonsters(
       groundLayer
     );
 
-    const type = spawn.type || "corbeau";
+    const pool = Array.isArray(spawn.groupPool) ? spawn.groupPool.filter(Boolean) : [];
+
+    // Composition explicite du groupe (ex: { liburion: 1, goush: { min: 1, max: 3 } })
+    const counts = spawn.groupCounts && typeof spawn.groupCounts === "object" ? spawn.groupCounts : null;
+    const groupMonsterIdsFromCounts = (() => {
+      if (!counts) return null;
+      const ids = [];
+      Object.entries(counts).forEach(([monsterId, def]) => {
+        if (!monsterId) return;
+        let n = 0;
+        if (typeof def === "number") {
+          n = Math.max(0, Math.round(def));
+        } else if (def && typeof def === "object") {
+          const min = typeof def.min === "number" ? Math.round(def.min) : 0;
+          const max = typeof def.max === "number" ? Math.round(def.max) : min;
+          n = Phaser.Math.Between(Math.min(min, max), Math.max(min, max));
+        }
+        for (let i = 0; i < n; i += 1) ids.push(monsterId);
+      });
+      return ids.length > 0 ? ids : null;
+    })();
+
+    const type = (() => {
+      if (spawn.type) return spawn.type;
+      if (Array.isArray(groupMonsterIdsFromCounts) && groupMonsterIdsFromCounts[0]) {
+        return groupMonsterIdsFromCounts[0];
+      }
+      if (pool.length > 0) return Phaser.Utils.Array.GetRandom(pool);
+      return "corbeau";
+    })();
     const def = monsters[type] || null;
     const offX =
       def && def.render && typeof def.render.offsetX === "number"
@@ -179,16 +278,68 @@ export function spawnInitialMonsters(
 
     const monster = createMonster(scene, x, y, type);
     // Taille de groupe aléatoire 1..4 pour le combat
-    const desiredGroupSize =
-      typeof spawn.groupSize === "number" && spawn.groupSize > 0
-        ? Math.round(spawn.groupSize)
-        : Phaser.Math.Between(1, 4);
+    const sizeMin =
+      typeof spawn.groupSizeMin === "number" && spawn.groupSizeMin > 0
+        ? Math.round(spawn.groupSizeMin)
+        : 1;
+    const sizeMax =
+      typeof spawn.groupSizeMax === "number" && spawn.groupSizeMax > 0
+        ? Math.round(spawn.groupSizeMax)
+        : typeof spawn.groupSize === "number" && spawn.groupSize > 0
+          ? Math.round(spawn.groupSize)
+          : 4;
+    const desiredGroupSize = Phaser.Math.Between(
+      Math.min(sizeMin, sizeMax),
+      Math.max(sizeMin, sizeMax)
+    );
     monster.groupSize = Math.max(1, desiredGroupSize);
     // Niveaux individuels aléatoires pour les membres du groupe
-    monster.groupLevels = Array.from(
-      { length: monster.groupSize },
-      () => Phaser.Math.Between(1, 4)
+    if (Array.isArray(groupMonsterIdsFromCounts) && groupMonsterIdsFromCounts.length > 0) {
+      // Shuffle for randomness, then force leader's id to match the displayed sprite.
+      const shuffled = Phaser.Utils.Array.Shuffle(groupMonsterIdsFromCounts.slice());
+      const idx = shuffled.findIndex((id) => id === type);
+      if (idx > 0) {
+        const tmp = shuffled[0];
+        shuffled[0] = shuffled[idx];
+        shuffled[idx] = tmp;
+      }
+      monster.groupMonsterIds = shuffled;
+      monster.groupSize = shuffled.length;
+    } else if (pool.length > 0) {
+      const groupMonsterIds = Array.from(
+        { length: monster.groupSize },
+        () => Phaser.Utils.Array.GetRandom(pool)
+      );
+      groupMonsterIds[0] = type; // leader = sprite monde
+
+      // Optionnel : force un minimum de mixitÇ¸ si possible (au moins 2 types diffÇ¸rents).
+      if (spawn.forceMixedGroup === true && monster.groupSize > 1) {
+        const hasDistinct = new Set(groupMonsterIds).size > 1;
+        if (!hasDistinct && pool.length > 1) {
+          const alternatives = pool.filter((id) => id !== type);
+          if (alternatives.length > 0) {
+            groupMonsterIds[1] = Phaser.Utils.Array.GetRandom(alternatives);
+          }
+        }
+      }
+
+      monster.groupMonsterIds = groupMonsterIds;
+    } else {
+      monster.groupMonsterIds = Array.from({ length: monster.groupSize }, () => type);
+    }
+
+    monster.groupLevels = Array.from({ length: monster.groupSize }, () =>
+      Phaser.Math.Between(1, 4)
     );
+
+    if (pool.length > 0) {
+      monster.respawnTemplate = {
+        groupPool: pool.slice(),
+        groupSizeMin: sizeMin,
+        groupSizeMax: sizeMax,
+        forceMixedGroup: spawn.forceMixedGroup === true,
+      };
+    }
     // Le leader hérite du premier niveau
     monster.level = monster.groupLevels[0];
     monster.groupLevelTotal = monster.groupLevels.reduce(

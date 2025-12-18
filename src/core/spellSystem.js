@@ -9,6 +9,8 @@ import { findMonsterAtTile } from "../monsters/index.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { isTileOccupiedByMonster } from "../monsters/aiUtils.js";
 import { endCombat } from "./combat.js";
+import { addChatMessage } from "../chat/chat.js";
+import { showFloatingTextOverEntity } from "./combat/floatingText.js";
 
 // ---------- Gestion du sort actif (joueur) ----------
 
@@ -45,9 +47,14 @@ export function canCastSpell(scene, caster, spell) {
   const expectedTour = isPlayer ? "joueur" : "monstre";
   if (state.tour !== expectedTour) return false;
 
-  // limite de lancers par tour pour les sorts du joueur
+  // Cooldown (joueur ou monstre)
+  const cooldowns = caster.spellCooldowns || {};
+  const cd = cooldowns[spell.id] || 0;
+  if (cd > 0) return false;
+
+  // limite de lancers par tour (joueur ou monstre)
   const maxCasts = spell.maxCastsPerTurn ?? null;
-  if (maxCasts && isPlayer) {
+  if (maxCasts) {
     state.castsThisTurn = state.castsThisTurn || {};
     const used = state.castsThisTurn[spell.id] || 0;
     if (used >= maxCasts) {
@@ -87,8 +94,18 @@ export function canCastSpellAtTile(scene, caster, spell, tileX, tileY, map) {
   if (!canCastSpell(scene, caster, spell)) return false;
   if (!isTileAvailableForSpell(map, tileX, tileY)) return false;
 
-  const originX = caster.currentTileX ?? caster.tileX ?? 0;
-  const originY = caster.currentTileY ?? caster.tileY ?? 0;
+  const originX =
+    typeof caster.currentTileX === "number"
+      ? caster.currentTileX
+      : typeof caster.tileX === "number"
+      ? caster.tileX
+      : 0;
+  const originY =
+    typeof caster.currentTileY === "number"
+      ? caster.currentTileY
+      : typeof caster.tileY === "number"
+      ? caster.tileY
+      : 0;
 
   // Lancer "en ligne" : uniquement sur la même ligne/colonne (4 directions).
   if (spell.castPattern === "line4") {
@@ -350,6 +367,19 @@ export function castSpellAtTile(
     caster.updateHudApMp(state.paRestants, state.pmRestants);
   }
 
+  if (paCost > 0) {
+    showFloatingTextOverEntity(scene, caster, `${paCost}`, {
+      color: "#3b82f6",
+    });
+  }
+
+  // Active le cooldown du sort (si défini)
+  const cdTurns = spell.cooldownTurns ?? 0;
+  if (cdTurns > 0) {
+    caster.spellCooldowns = caster.spellCooldowns || {};
+    caster.spellCooldowns[spell.id] = cdTurns;
+  }
+
   // Effet visuel simple sur la tuile ciblée
   const worldPos = map.tileToWorldXY(
     tileX,
@@ -370,18 +400,54 @@ export function castSpellAtTile(
 
   const isPlayerCaster = state.joueur === caster;
 
-  // incremente le compteur de lancers pour les sorts du joueur
-  if (isPlayerCaster) {
-    state.castsThisTurn = state.castsThisTurn || {};
-    const prev = state.castsThisTurn[spell.id] || 0;
-    state.castsThisTurn[spell.id] = prev + 1;
+  // Chat (général) : annonce du sort lancé.
+  if (state.enCours && state.joueur) {
+    const spellLabel = spell?.label || spell?.id || "Sort";
+    if (isPlayerCaster) {
+      addChatMessage(
+        {
+          kind: "combat",
+          channel: "global",
+          author: "Combat",
+          text: `Vous lancez ${spellLabel}.`,
+        },
+        { player: state.joueur }
+      );
+    } else {
+      const casterName =
+        caster?.displayName || caster?.label || caster?.monsterId || "Monstre";
+      addChatMessage(
+        {
+          kind: "combat",
+          channel: "global",
+          author: "Combat",
+          text: `${casterName} lance ${spellLabel}.`,
+        },
+        { player: state.joueur }
+      );
+    }
   }
+
+  // incremente le compteur de lancers pour les sorts (joueur ou monstre)
+  state.castsThisTurn = state.castsThisTurn || {};
+  const prev = state.castsThisTurn[spell.id] || 0;
+  state.castsThisTurn[spell.id] = prev + 1;
 
   if (isPlayerCaster) {
     // --- Dégâts du joueur vers un monstre ---
     if (spell.effectPattern === "line_forward") {
-      const originX = caster.currentTileX ?? caster.tileX ?? 0;
-      const originY = caster.currentTileY ?? caster.tileY ?? 0;
+      const originX =
+        typeof caster.currentTileX === "number"
+          ? caster.currentTileX
+          : typeof caster.tileX === "number"
+          ? caster.tileX
+          : 0;
+      const originY =
+        typeof caster.currentTileY === "number"
+          ? caster.currentTileY
+          : typeof caster.tileY === "number"
+          ? caster.tileY
+          : 0;
       const dx = tileX === originX ? 0 : Math.sign(tileX - originX);
       const dy = tileY === originY ? 0 : Math.sign(tileY - originY);
       const length = spell.effectLength ?? 4;
@@ -432,29 +498,23 @@ export function castSpellAtTile(
           scene.updateCombatUi();
         }
 
-        const dmgText = scene.add.text(
-          hitX + 8,
-          hitY - map.tileHeight / 2,
-          `-${damage}`,
-          {
-            fontFamily: "Arial",
-            fontSize: 16,
-            color: "#ff4444",
-            stroke: "#000000",
-            strokeThickness: 2,
-          }
-        );
-        if (scene.hudCamera) {
-          scene.hudCamera.ignore(dmgText);
+        if (state.enCours && state.joueur) {
+          const spellLabel = spell?.label || spell?.id || "Sort";
+          const targetName =
+            victim.displayName || victim.label || victim.monsterId || "Monstre";
+          addChatMessage(
+            {
+              kind: "combat",
+              channel: "global",
+              author: "Combat",
+              text: `${spellLabel} : ${targetName} -${damage} PV`,
+            },
+            { player: state.joueur }
+          );
         }
-        dmgText.setDepth(10);
 
-        scene.tweens.add({
-          targets: dmgText,
-          y: dmgText.y - 20,
-          duration: 1000,
-          ease: "Cubic.easeOut",
-          onComplete: () => dmgText.destroy(),
+        showFloatingTextOverEntity(scene, victim, `-${damage}`, {
+          color: "#ff4444",
         });
 
         if (newHp <= 0) {
@@ -498,8 +558,18 @@ export function castSpellAtTile(
     }
 
     if (spell.effectPattern === "front_cross") {
-      const originX = caster.currentTileX ?? caster.tileX ?? 0;
-      const originY = caster.currentTileY ?? caster.tileY ?? 0;
+      const originX =
+        typeof caster.currentTileX === "number"
+          ? caster.currentTileX
+          : typeof caster.tileX === "number"
+          ? caster.tileX
+          : 0;
+      const originY =
+        typeof caster.currentTileY === "number"
+          ? caster.currentTileY
+          : typeof caster.tileY === "number"
+          ? caster.tileY
+          : 0;
       const dx = tileX === originX ? 0 : Math.sign(tileX - originX);
       const dy = tileY === originY ? 0 : Math.sign(tileY - originY);
       const perpX = dx !== 0 ? 0 : 1;
@@ -549,29 +619,23 @@ export function castSpellAtTile(
           scene.updateCombatUi();
         }
 
-        const dmgText = scene.add.text(
-          zx + 8,
-          zy - map.tileHeight / 2,
-          `-${damage}`,
-          {
-            fontFamily: "Arial",
-            fontSize: 16,
-            color: "#ff4444",
-            stroke: "#000000",
-            strokeThickness: 2,
-          }
-        );
-        if (scene.hudCamera) {
-          scene.hudCamera.ignore(dmgText);
+        if (state.enCours && state.joueur) {
+          const spellLabel = spell?.label || spell?.id || "Sort";
+          const targetName =
+            victim.displayName || victim.label || victim.monsterId || "Monstre";
+          addChatMessage(
+            {
+              kind: "combat",
+              channel: "global",
+              author: "Combat",
+              text: `${spellLabel} : ${targetName} -${damage} PV`,
+            },
+            { player: state.joueur }
+          );
         }
-        dmgText.setDepth(10);
 
-        scene.tweens.add({
-          targets: dmgText,
-          y: dmgText.y - 20,
-          duration: 1000,
-          ease: "Cubic.easeOut",
-          onComplete: () => dmgText.destroy(),
+        showFloatingTextOverEntity(scene, victim, `-${damage}`, {
+          color: "#ff4444",
         });
 
         if (newHp <= 0) {
@@ -628,10 +692,35 @@ export function castSpellAtTile(
         scene.updateCombatUi();
       }
 
+      if (state.enCours && state.joueur) {
+        const spellLabel = spell?.label || spell?.id || "Sort";
+        const targetName =
+          target.displayName || target.label || target.monsterId || "Monstre";
+        addChatMessage(
+          {
+            kind: "combat",
+            channel: "global",
+            author: "Combat",
+            text: `${spellLabel} : ${targetName} -${damage} PV`,
+          },
+          { player: state.joueur }
+        );
+      }
+
       // Effet: attire le lanceur au corps à corps (sur hit uniquement).
       if (spell.pullCasterToMeleeOnHit && caster) {
-        const casterTileX = caster.currentTileX ?? caster.tileX ?? null;
-        const casterTileY = caster.currentTileY ?? caster.tileY ?? null;
+        const casterTileX =
+          typeof caster.currentTileX === "number"
+            ? caster.currentTileX
+            : typeof caster.tileX === "number"
+            ? caster.tileX
+            : null;
+        const casterTileY =
+          typeof caster.currentTileY === "number"
+            ? caster.currentTileY
+            : typeof caster.tileY === "number"
+            ? caster.tileY
+            : null;
         const targetTileX = target.tileX ?? tileX;
         const targetTileY = target.tileY ?? tileY;
 
@@ -712,29 +801,8 @@ export function castSpellAtTile(
         }
 
         // texte flottant de soin au-dessus du lanceur
-        const healText = scene.add.text(
-          caster.x + 8,
-          caster.y - map.tileHeight / 2,
-          `+${heal}`,
-          {
-            fontFamily: "Arial",
-            fontSize: 16,
-            color: "#44ff44",
-            stroke: "#000000",
-            strokeThickness: 2,
-          }
-        );
-        if (scene.hudCamera) {
-          scene.hudCamera.ignore(healText);
-        }
-        healText.setDepth(10);
-
-        scene.tweens.add({
-          targets: healText,
-          y: healText.y - 20,
-          duration: 1000,
-          ease: "Cubic.easeOut",
-          onComplete: () => healText.destroy(),
+        showFloatingTextOverEntity(scene, caster, `+${heal}`, {
+          color: "#44ff44",
         });
       }
 
@@ -743,29 +811,8 @@ export function castSpellAtTile(
       );
 
       // Texte flottant de dégâts au-dessus du monstre
-      const dmgText = scene.add.text(
-        cx + 8,
-        cy - map.tileHeight / 2,
-        `-${damage}`,
-        {
-          fontFamily: "Arial",
-          fontSize: 16,
-          color: "#ff4444",
-          stroke: "#000000",
-          strokeThickness: 2,
-        }
-      );
-      if (scene.hudCamera) {
-        scene.hudCamera.ignore(dmgText);
-      }
-      dmgText.setDepth(10);
-
-      scene.tweens.add({
-        targets: dmgText,
-        y: dmgText.y - 20,
-        duration: 1000,
-        ease: "Cubic.easeOut",
-        onComplete: () => dmgText.destroy(),
+      showFloatingTextOverEntity(scene, target, `-${damage}`, {
+        color: "#ff4444",
       });
 
       if (newHp <= 0) {
@@ -810,59 +857,133 @@ export function castSpellAtTile(
     // --- Dégâts d'un monstre vers le joueur ---
     const player = state.joueur;
     if (player && player.stats) {
-      const pTx = player.currentTileX;
-      const pTy = player.currentTileY;
+      let pTx = player.currentTileX;
+      let pTy = player.currentTileY;
+      if (
+        (typeof pTx !== "number" || typeof pTy !== "number") &&
+        map &&
+        groundLayer &&
+        typeof map.worldToTileXY === "function"
+      ) {
+        const t = map.worldToTileXY(
+          player.x,
+          player.y,
+          true,
+          undefined,
+          undefined,
+          groundLayer
+        );
+        if (t) {
+          pTx = t.x;
+          pTy = t.y;
+        }
+      }
 
       // On ne touche que si la tuile visée est celle du joueur
       if (pTx === tileX && pTy === tileY) {
-        const damage = computeSpellDamage(caster, spell);
+        const damageOnHit = spell.damageOnHit !== false;
+        const damage = damageOnHit ? computeSpellDamage(caster, spell) : 0;
 
         const currentHp =
           typeof player.stats.hp === "number"
             ? player.stats.hp
             : player.stats.hpMax ?? 0;
-        const newHp = Math.max(0, currentHp - damage);
-        player.stats.hp = newHp;
+        const newHp = Math.max(0, currentHp - Math.max(0, damage));
+        if (damageOnHit && damage > 0) {
+          player.stats.hp = newHp;
+        }
         if (scene && typeof scene.updateCombatUi === "function") {
           scene.updateCombatUi();
+        }
+
+        if (state.enCours && state.joueur) {
+          const spellLabel = spell?.label || spell?.id || "Sort";
+          const casterName =
+            caster?.displayName || caster?.label || caster?.monsterId || "Monstre";
+          if (damageOnHit && damage > 0) {
+            addChatMessage(
+              {
+                kind: "combat",
+                channel: "global",
+                author: "Combat",
+                text: `${spellLabel} : vous subissez -${damage} PV (par ${casterName})`,
+              },
+              { player: state.joueur }
+            );
+          }
+        }
+
+        // Effet de statut (ex: poison)
+        const status = spell?.statusEffect;
+        if (status && status.type === "poison") {
+          const turns =
+            typeof status.turns === "number" ? status.turns : status.turnsLeft ?? 0;
+          const dmgMin =
+            typeof status.damageMin === "number"
+              ? status.damageMin
+              : spell.damageMin ?? 0;
+          const dmgMax =
+            typeof status.damageMax === "number"
+              ? status.damageMax
+              : spell.damageMax ?? dmgMin;
+
+          player.statusEffects = Array.isArray(player.statusEffects)
+            ? player.statusEffects
+            : [];
+
+          const id = status.id || spell.id || "poison";
+          const next = {
+            id,
+            type: "poison",
+            label: status.label || spell.label || spell.id || "Poison",
+            turnsLeft: Math.max(0, turns),
+            damageMin: dmgMin,
+            damageMax: dmgMax,
+            sourceName:
+              caster?.displayName ||
+              caster?.label ||
+              caster?.monsterId ||
+              "Monstre",
+          };
+
+          const idx = player.statusEffects.findIndex((e) => e && e.id === id);
+          if (idx >= 0) {
+            player.statusEffects[idx] = next;
+          } else {
+            player.statusEffects.push(next);
+          }
+
+          if (state.enCours && state.joueur) {
+            const spellLabel = spell?.label || spell?.id || "Sort";
+            addChatMessage(
+              {
+                kind: "combat",
+                channel: "global",
+                author: "Combat",
+                text: `${spellLabel} : vous etes empoisonne (${next.turnsLeft} tours).`,
+              },
+              { player: state.joueur }
+            );
+          }
         }
 
         console.log(
           `[SPELL] Dégâts infligés au joueur: ${damage}, hp restants = ${newHp}`
         );
 
-        if (typeof player.updateHudHp === "function") {
+        if (damageOnHit && damage > 0 && typeof player.updateHudHp === "function") {
           const hpMax = player.stats.hpMax ?? newHp;
           player.updateHudHp(newHp, hpMax);
         }
 
         // Texte flottant de dégâts au-dessus du joueur
-        const dmgText = scene.add.text(
-          cx + 8,
-          cy - map.tileHeight / 2,
-          `-${damage}`,
-          {
-            fontFamily: "Arial",
-            fontSize: 16,
+        if (damageOnHit && damage > 0) {
+          showFloatingTextOverEntity(scene, player, `-${damage}`, {
             color: "#ff4444",
-            stroke: "#000000",
-            strokeThickness: 2,
-          }
-        );
-        if (scene.hudCamera) {
-          scene.hudCamera.ignore(dmgText);
+          });
         }
-        dmgText.setDepth(10);
 
-        scene.tweens.add({
-          targets: dmgText,
-          y: dmgText.y - 20,
-          duration: 1000,
-          ease: "Cubic.easeOut",
-          onComplete: () => dmgText.destroy(),
-        });
-
-        if (newHp <= 0) {
+        if (damageOnHit && newHp <= 0) {
           console.log("[COMBAT] Le joueur est KO");
           if (scene.combatState) {
             scene.combatState.issue = "defaite";

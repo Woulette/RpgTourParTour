@@ -134,6 +134,35 @@ export function incrementKillProgress(scene, player, questId, monsterId) {
   }
 }
 
+export function incrementKillProgressForAll(scene, player, monsterId) {
+  if (!player || !monsterId) return;
+
+  Object.values(quests).forEach((questDef) => {
+    if (!questDef) return;
+
+    const state = getQuestState(player, questDef.id, { emit: false });
+    if (state.state !== QUEST_STATES.IN_PROGRESS) return;
+
+    const stage = getCurrentQuestStage(questDef, state);
+    if (!stage || !stage.objective || stage.objective.type !== "kill_monster") {
+      return;
+    }
+    if (stage.objective.monsterId !== monsterId) return;
+
+    const required = stage.objective.requiredCount || 1;
+    const current = state.progress?.currentCount || 0;
+    const next = Math.min(required, current + 1);
+
+    state.progress = state.progress || {};
+    state.progress.currentCount = next;
+    emitStoreEvent("quest:updated", { questId: questDef.id, state });
+
+    if (next >= required) {
+      advanceQuestStage(player, questDef.id, { scene });
+    }
+  });
+}
+
 export function incrementCraftProgress(player, itemId, qty = 1) {
   const craftedQty = qty || 1;
   if (!player || !itemId || craftedQty <= 0) return;

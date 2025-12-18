@@ -1,6 +1,11 @@
 import { passerTour } from "../core/combat.js";
 import { runTurn as runCorbeauTurn } from "./aiCorbeau.js";
 import { runTurn as runAluineeksTurn } from "./aiAluineeks.js";
+import { runTurn as runGoushTurn } from "./aiGoush.js";
+import { runTurn as runLiburionTurn } from "./aiLiburion.js";
+import { runTurn as runCazardTurn } from "./aiCazard.js";
+import { runTurn as runCedreTurn } from "./aiCedre.js";
+import { runTurn as runGumgobTurn } from "./aiGumgob.js";
 
 const AI_HANDLERS = {
   corbeau: runCorbeauTurn,
@@ -8,6 +13,11 @@ const AI_HANDLERS = {
   chibone: runCorbeauTurn,
   skelbone: runCorbeauTurn,
   senbone: runAluineeksTurn,
+  goush: runGoushTurn,
+  liburion: runLiburionTurn,
+  cazard: runCazardTurn,
+  cedre: runCedreTurn,
+  gumgob: runGumgobTurn,
 };
 
 // Point d'entrée générique : choisit l'IA en fonction du monsterId.
@@ -25,8 +35,8 @@ export function runMonsterTurn(scene) {
 
   // On passe officiellement au tour du monstre courant
   state.tour = "monstre";
-  state.paRestants = state.paBaseMonstre;
-  state.pmRestants = state.pmBaseMonstre;
+  state.paRestants = monster.stats?.pa ?? state.paBaseMonstre;
+  state.pmRestants = monster.stats?.pm ?? state.pmBaseMonstre;
 
   if (typeof scene.updateCombatUi === "function") {
     scene.updateCombatUi();

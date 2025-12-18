@@ -3,7 +3,9 @@ import {
   castSpellAtTile,
   canCastSpellOnTile,
 } from "../core/spellSystem.js";
+import { showFloatingTextOverEntity } from "../core/combat/floatingText.js";
 import {
+  delay,
   moveMonsterAlongPath,
   findPathToReachAdjacentToTarget,
   chooseStepTowardsTarget,
@@ -149,17 +151,25 @@ export function runTurn(
 
   moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
     state.pmRestants = Math.max(0, state.pmRestants - stepsUsed);
+    if (stepsUsed > 0) {
+      showFloatingTextOverEntity(scene, monster, `${stepsUsed}`, {
+        color: "#22c55e",
+      });
+    }
 
     const finalMx = monster.tileX ?? mx;
     const finalMy = monster.tileY ?? my;
     const distAfterMove =
       Math.abs(px - finalMx) + Math.abs(py - finalMy);
 
-    if (!fleeing && distAfterMove === 1) {
-      tryMeleeAttack();
-    }
-
-    if (typeof onComplete === "function") onComplete();
+    delay(scene, 520, () => {
+      if (!fleeing && distAfterMove === 1) {
+        tryMeleeAttack();
+      }
+      delay(scene, 140, () => {
+        if (typeof onComplete === "function") onComplete();
+      });
+    });
   });
 
   return;
@@ -202,6 +212,11 @@ export function runTurn(
 
   moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
     state.pmRestants = Math.max(0, state.pmRestants - stepsUsed);
+    if (stepsUsed > 0) {
+      showFloatingTextOverEntity(scene, monster, `${stepsUsed}`, {
+        color: "#22c55e",
+      });
+    }
 
     const finalMx = monster.tileX ?? mx;
     const finalMy = monster.tileY ?? my;

@@ -24,6 +24,7 @@ import { initDomHud } from "./ui/domHud.js";
 import { initDomCombat } from "./ui/domCombat.js";
 import { initDomSpells } from "./ui/domSpells.js";
 import { initDomCombatResult } from "./ui/domCombatResult.js";
+import { initDomCombatInspector } from "./ui/domCombatInspector.js";
 import { initDomInventory } from "./ui/domInventory.js";
 import { initDomMetiers } from "./ui/domMetiers.js";
 import { initDomQuests } from "./ui/domQuests.js";
@@ -44,6 +45,7 @@ import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
 import { initStore } from "./state/store.js";
 import { initQuestRuntime } from "./quests/runtime/init.js";
 import { initDevCheats } from "./dev/cheats.js";
+import { attachCombatTileHover } from "./ui/combatTileHover.js";
     
 
 class MainScene extends Phaser.Scene {
@@ -230,6 +232,7 @@ class MainScene extends Phaser.Scene {
 
     // --- HUD ---
     const { hudY, uiElements } = createHud(this);
+    this.hudY = hudY;
 
     // --- CamÃ©ras : sÃ©parer monde et HUD pour Ã©viter le zoom sur le HUD ---
     const worldElements = [...mapLayers, this.player];
@@ -272,6 +275,7 @@ class MainScene extends Phaser.Scene {
     initDomHud(this.player);
     // Initialisation de l'UI de combat (bouton fin de tour)
     initDomCombat(this);
+    initDomCombatInspector(this);
     // Initialisation de la barre de sorts
     initDomSpells(this.player);
     // Initialisation de la popup de fin de combat
@@ -293,6 +297,7 @@ class MainScene extends Phaser.Scene {
     // --- PREVIEW_BLOCK_START : hooks d'UI ---
     attachCombatPreview(this);
     attachMonsterTooltip(this);
+    attachCombatTileHover(this, hudY);
 
     // Clic sur un monstre = on demande au joueur d'aller vers lui,
     // et le combat sera lancÃ© quand le joueur atteindra sa case.

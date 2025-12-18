@@ -98,6 +98,119 @@ export const maps = {
     // Laisse null pour l’auto, ou mets { minX, minY, maxX, maxY } si tu veux régler à la main.
     exitBounds: null,
   },
+  MapAndemia5: {
+    key: "MapAndemia5",
+    worldPos: { x: 0, y: -1 }, // au-dessus de Map1Andemia (0,0)
+    jsonPath: "assets/maps/MapAndemia5.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [
+      {
+        groupPool: ["goush", "liburion"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        offsetFromCenter: { x: -6, y: 3 },
+      },
+      {
+        groupPool: ["goush", "liburion"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        offsetFromCenter: { x: 6, y: -2 },
+      },
+      {
+        groupPool: ["goush", "liburion"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        offsetFromCenter: { x: -3, y: -6 },
+      },
+      {
+        groupPool: ["goush", "liburion"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        offsetFromCenter: { x: 4, y: 6 },
+      },
+    ],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemia6: {
+    key: "MapAndemia6",
+    worldPos: { x: 1, y: -1 }, // à droite de MapAndemia5 (0,-1)
+    jsonPath: "assets/maps/MapAndemia6.json",
+    tilesets: [...tilesetNew],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemia7: {
+    key: "MapAndemia7",
+    worldPos: { x: -1, y: -2 }, // au-dessus de MapAndemia3 (-1,-1)
+    jsonPath: "assets/maps/MapAndemia7.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemia8: {
+    key: "MapAndemia8",
+    worldPos: { x: 0, y: -2 }, // au-dessus de MapAndemia5 (0,-1)
+    jsonPath: "assets/maps/MapAndemia8.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemia9: {
+    key: "MapAndemia9",
+    worldPos: { x: 1, y: -2 }, // au-dessus de MapAndemia6 (1,-1)
+    jsonPath: "assets/maps/MapAndemia9.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemia10: {
+    key: "MapAndemia10",
+    worldPos: { x: -2, y: 0 }, // à gauche de MapAndemia2 (-1,0)
+    jsonPath: "assets/maps/MapAndemia10.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemia11: {
+    key: "MapAndemia11",
+    worldPos: { x: -2, y: -1 }, // à gauche de MapAndemia3 (-1,-1)
+    jsonPath: "assets/maps/MapAndemia11.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemia12: {
+    key: "MapAndemia12",
+    worldPos: { x: -2, y: -2 }, // au-dessus de MapAndemia11 (-2,-1)
+    jsonPath: "assets/maps/MapAndemia12.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
   MapAndemia3: {
     key: "MapAndemia3",
     worldPos: { x: -1, y: -1 }, // au-dessus de MapAndemia2 (-1,0)
@@ -114,7 +227,7 @@ export const maps = {
     entranceNpcOffset: { x: 0, y: -20 },
     // Où replacer le joueur en sortant du donjon (si tu veux forcer un point précis).
     // Sinon, le jeu se base sur entranceNpcTile et cherche une case libre autour.
-    dungeonReturnTile: { x: 15, y: 7 },
+    dungeonReturnTile: { x: 17, y: 17 },
     exitBounds: null,
   },
   Map2Andemia: {
@@ -244,4 +357,4 @@ export const maps = {
   },
 };
 
-export const defaultMapKey = "Map4DonjonAluineeks";
+export const defaultMapKey = "Map1Andemia";

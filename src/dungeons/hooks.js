@@ -1,5 +1,6 @@
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { ensureAluineeksDungeonEntranceNpc } from "./entranceNpc.js";
+import { maps } from "../maps/index.js";
 
 export function onAfterMapLoaded(scene) {
   if (!scene || !scene.map || !scene.groundLayer) return;
@@ -19,12 +20,16 @@ export function onAfterMapLoaded(scene) {
     }
   } else if (scene.currentMapDef && scene.currentMapDef.isDungeon && !scene.dungeonState) {
     const roomIndexRaw = scene.currentMapDef.dungeonRoomIndex ?? 1;
+    const fallbackReturnTile =
+      maps?.MapAndemia3?.dungeonReturnTile || maps?.MapAndemia3?.entranceNpcTile || { x: 0, y: 0 };
     scene.dungeonState = {
       active: true,
       dungeonId: scene.currentMapDef.dungeonId || "aluineeks",
       roomIndex: Math.max(0, Number(roomIndexRaw) - 1),
       returnMapKey: scene._lastNonDungeonMapKey || "MapAndemia3",
-      returnTile: scene._lastNonDungeonTile || { x: 0, y: 0 },
+      // Si on charge une salle de donjon directement (reco/dev), on force une tuile de retour fixe
+      // pour éviter un retour "hors champ" en sortie.
+      returnTile: scene._lastNonDungeonTile || fallbackReturnTile,
     };
   }
 

@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="assets/css/metiers.css" />
   <link rel="stylesheet" href="assets/css/combat.css" />
   <link rel="stylesheet" href="assets/css/combatResult.css" />
+  <link rel="stylesheet" href="assets/css/combatInspector.css" />
   <link rel="stylesheet" href="assets/css/spellBook.css" />
   <link rel="stylesheet" href="assets/css/inventory.css" />
   <link rel="stylesheet" href="assets/css/map.css" />
@@ -105,6 +106,16 @@
       </div>
       <div id="quest-tracker-list" class="quest-tracker-list"></div>
     </div>
+  </div>
+
+  <div id="combat-inspector" class="combat-inspector compact" aria-label="Détails combat">
+    <div class="combat-inspector-header">
+      <div id="combat-inspector-title" class="combat-inspector-title">-</div>
+      <div class="combat-inspector-actions">
+        <button id="combat-inspector-close" class="combat-inspector-btn" type="button" title="Fermer">×</button>
+      </div>
+    </div>
+    <div id="combat-inspector-body" class="combat-inspector-body"></div>
   </div>
 
   <!-- HUD HTML en overlay par-dessus le canvas Phaser -->

@@ -31,9 +31,21 @@ export function queueMonsterRespawn(scene, monster, delayMs = DEFAULT_RESPAWN_DE
     atTime: now + Math.max(0, delayMs),
     // If we're in a dungeon, tie respawns to the current run to avoid carry-over.
     dungeonRunId: scene.dungeonState?.active ? scene.dungeonState.runId ?? null : null,
+    // If a monster was spawned from a random template, keep the template so the respawn can reroll.
+    respawnTemplate: monster.respawnTemplate && typeof monster.respawnTemplate === "object"
+      ? {
+          groupPool: Array.isArray(monster.respawnTemplate.groupPool)
+            ? monster.respawnTemplate.groupPool.slice()
+            : null,
+          groupSizeMin: monster.respawnTemplate.groupSizeMin ?? null,
+          groupSizeMax: monster.respawnTemplate.groupSizeMax ?? null,
+          forceMixedGroup: monster.respawnTemplate.forceMixedGroup === true,
+        }
+      : null,
     // Preserve group metadata if present
     groupSize: monster.groupSize ?? 1,
     groupLevels: Array.isArray(monster.groupLevels) ? monster.groupLevels.slice() : null,
+    groupMonsterIds: Array.isArray(monster.groupMonsterIds) ? monster.groupMonsterIds.slice() : null,
     groupLevelTotal: typeof monster.groupLevelTotal === "number" ? monster.groupLevelTotal : null,
     level: typeof monster.level === "number" ? monster.level : null,
   };
