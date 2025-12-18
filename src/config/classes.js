@@ -16,7 +16,7 @@ export const classes = {
     label: "Animiste",
     color: 0x66ccff,
     statBonuses: [],
-    spells: ["rayon_astral", "siphon_vital", "racines_ancestrales"],
+    spells: ["rayon_astral", "capture_essence", "invocation_capturee"],
   },
   assassin: {
     label: "Assassin",

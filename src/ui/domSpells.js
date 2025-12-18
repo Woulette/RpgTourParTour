@@ -1,6 +1,7 @@
 import { classes } from "../config/classes.js";
 import { spells } from "../config/spells.js";
 import { setActiveSpell } from "../core/spellSystem.js";
+import { monsters as monsterDefs } from "../content/monsters/index.js";
 
 // Initialise la barre de sorts en bas + la fenetre "grimoire" des sorts.
 export function initDomSpells(player) {
@@ -34,6 +35,67 @@ export function initDomSpells(player) {
     }
 
     const playerLevel = player.levelState?.niveau ?? 1;
+
+    const getCapturedMonsterPreview = () => {
+      const capturedId = player?.capturedMonsterId;
+      if (!capturedId) return null;
+      const def = monsterDefs[capturedId];
+      return {
+        id: capturedId,
+        label: def?.displayName || def?.label || capturedId,
+        level: player?.capturedMonsterLevel ?? def?.baseLevel ?? 1,
+        baseStats: def?.statsOverrides || null,
+      };
+    };
+
+    const buildInvocationCapturedExtraHtml = () => {
+      const cap = getCapturedMonsterPreview();
+      if (!cap) {
+        return `<div class="spell-detail-line"><strong>Monstre capturé :</strong> Aucun</div>`;
+      }
+
+      const playerLevel = player?.levelState?.niveau ?? 1;
+      const capturedLevel = cap.level ?? 1;
+      const levelGap = Math.max(0, (playerLevel ?? 1) - (capturedLevel ?? 1));
+      const bonus = 0.05 + 0.01 * levelGap;
+      const mult = 1 + bonus;
+
+      const base = cap.baseStats || {};
+      const p = player?.stats || {};
+
+      const baseHp = base.hpMax ?? base.hp ?? 1;
+      const hpMax = Math.max(1, Math.round(baseHp * mult));
+      const initiative = Math.max(0, Math.round((base.initiative ?? 0) * mult));
+      const force =
+        Math.max(0, Math.round((base.force ?? 0) * mult)) + Math.floor((p.force ?? 0) * 0.5);
+      const agilite =
+        Math.max(0, Math.round((base.agilite ?? 0) * mult)) +
+        Math.floor((p.agilite ?? 0) * 0.5);
+      const intelligence =
+        Math.max(0, Math.round((base.intelligence ?? 0) * mult)) +
+        Math.floor((p.intelligence ?? 0) * 0.5);
+      const chance =
+        Math.max(0, Math.round((base.chance ?? 0) * mult)) +
+        Math.floor((p.chance ?? 0) * 0.5);
+
+      const lines = [];
+      if (typeof hpMax === "number") lines.push(`PV: ${hpMax}`);
+      if (typeof force === "number") lines.push(`Force: ${force}`);
+      if (typeof agilite === "number") lines.push(`Agilité: ${agilite}`);
+      if (typeof intelligence === "number") lines.push(`Intelligence: ${intelligence}`);
+      if (typeof chance === "number") lines.push(`Chance: ${chance}`);
+      if (typeof initiative === "number") lines.push(`Initiative: ${initiative}`);
+
+      return `
+        <div class="spell-detail-line"><strong>Monstre capturé :</strong> ${cap.label} (Niv. ${capturedLevel})</div>
+        <div class="spell-detail-line"><strong>Bonus niv :</strong> ${Math.round(bonus * 100)}%</div>
+        ${
+          lines.length > 0
+            ? `<div class="spell-detail-line"><strong>Stats :</strong> ${lines.join(" Жњ ")}</div>`
+            : ""
+        }
+      `;
+    };
 
     let idsForTier;
     if (tier === 1) {
@@ -125,6 +187,10 @@ export function initDomSpells(player) {
 
             if (spellsDetailEl) {
               const elementClassDetail = elementLabel.toLowerCase();
+              const extra =
+                spell.id === "invocation_capturee"
+                  ? buildInvocationCapturedExtraHtml()
+                  : "";
 
               spellsDetailEl.innerHTML = `
                 <h3>${spell.label}</h3>
@@ -137,6 +203,7 @@ export function initDomSpells(player) {
                 <div class="spell-detail-line">
                   <strong>Portee :</strong> ${rangeMin}-${rangeMax}
                 </div>
+                ${extra}
                 ${
                   effectsText
                     ? `<div class="spell-detail-line"><strong>Effets :</strong> ${effectsText}</div>`

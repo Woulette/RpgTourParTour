@@ -4,6 +4,8 @@
 
 import { startCombatFromPrep, passerTour } from "../core/combat.js";
 import { runMonsterTurn } from "../monsters/ai.js";
+import { runSummonTurn } from "../systems/combat/summons/turn.js";
+import { getAliveSummon } from "../systems/combat/summons/summon.js";
 import { monsters as monsterDefs } from "../content/monsters/index.js";
 import { getActiveSpell } from "../systems/combat/spells/activeSpell.js";
 import { tryCastActiveSpellAtTile } from "../systems/combat/spells/cast.js";
@@ -29,6 +31,10 @@ export function initDomCombat(scene) {
   const getActorName = (actor) => {
     if (!actor) return "-";
     if (actor.kind === "joueur") return "Joueur";
+    if (actor.kind === "invocation") {
+      const id = actor.entity?.monsterId || "";
+      return id ? `Invoc. ${id}` : "Invocation";
+    }
     return actor.entity?.monsterId || "Monstre";
   };
 
@@ -64,7 +70,7 @@ export function initDomCombat(scene) {
       imgEl.src = encodeURI(raw);
       return true;
     }
-    if (actor?.kind === "monstre") {
+    if (actor?.kind === "monstre" || actor?.kind === "invocation") {
       const monsterId = actor?.entity?.monsterId;
       const def = monsterId ? monsterDefs[monsterId] : null;
       const src = def?.combatAvatarPath || def?.spritePath;
@@ -201,14 +207,38 @@ export function initDomCombat(scene) {
       activeIndex = state.tour === "joueur" ? 0 : 1;
     }
 
-    actors.forEach((actor, idx) => {
+    const aliveSummon = state?.joueur ? getAliveSummon(scene, state.joueur) : null;
+    let renderActors = actors;
+    let renderActiveIndex = activeIndex;
+
+    const alreadyListed =
+      !!aliveSummon &&
+      Array.isArray(actors) &&
+      actors.some((a) => a && a.entity === aliveSummon);
+
+    if (aliveSummon && !alreadyListed) {
+      const summonActor = { kind: "invocation", entity: aliveSummon };
+      const playerIdx = actors.findIndex((a) => a && a.kind === "joueur");
+      const insertAt = playerIdx >= 0 ? playerIdx + 1 : 0;
+      renderActors = [
+        ...actors.slice(0, insertAt),
+        summonActor,
+        ...actors.slice(insertAt),
+      ];
+
+      if (insertAt <= renderActiveIndex) renderActiveIndex += 1;
+      if (state?.summonActing) renderActiveIndex = insertAt;
+    }
+
+    renderActors.forEach((actor, idx) => {
       const el = document.createElement("div");
       el.setAttribute("role", "listitem");
       el.className = "combat-turn-actor";
 
-      if (idx === activeIndex) el.className += " is-active";
+      if (idx === renderActiveIndex) el.className += " is-active";
       if (!isActorAlive(actor)) el.className += " is-dead";
       if (actor.kind === "joueur") el.className += " is-player";
+      else if (actor.kind === "invocation") el.className += " is-summon";
       else el.className += " is-monster";
 
       el.title = getActorName(actor);
@@ -217,7 +247,7 @@ export function initDomCombat(scene) {
       el.addEventListener("mouseenter", () => {
         scene.__combatHudHoverLock = true;
         scene.__combatHudHoverEntity = actor.entity || null;
-        if (actor.kind === "monstre" && actor.entity) {
+        if ((actor.kind === "monstre" || actor.kind === "invocation") && actor.entity) {
           const tx =
             typeof actor.entity.currentTileX === "number"
               ? actor.entity.currentTileX
@@ -257,7 +287,7 @@ export function initDomCombat(scene) {
         if (typeof scene.showCombatTargetPanel === "function") {
           scene.showCombatTargetPanel(actor.entity);
         }
-        if (actor.kind === "monstre") {
+        if (actor.kind === "monstre" || actor.kind === "invocation") {
           if (typeof scene.showDamagePreview === "function") {
             scene.showDamagePreview(actor.entity);
           }
@@ -295,6 +325,7 @@ export function initDomCombat(scene) {
           state.joueur &&
           activeSpell &&
           actor?.entity &&
+          actor.kind === "monstre" &&
           isActorAlive(actor) &&
           !ev.shiftKey &&
           !ev.ctrlKey &&
@@ -367,6 +398,11 @@ export function initDomCombat(scene) {
     const round = typeof state.round === "number" ? state.round : 1;
     if (roundValueEl) roundValueEl.textContent = String(round);
 
+    if (state.summonActing) {
+      turnLabel.textContent = "Invocation";
+      return;
+    }
+
     const actors = state.actors;
     if (actors && actors.length) {
       const idx = typeof state.actorIndex === "number" ? state.actorIndex : 0;
@@ -392,6 +428,7 @@ export function initDomCombat(scene) {
 
     const isPlayerTarget =
       target === state.joueur ||
+      target?.isSummon === true ||
       (target && !target.monsterId && target.texture?.key === "player");
 
     const name =
@@ -475,7 +512,7 @@ export function initDomCombat(scene) {
 
     // Si c'est un monstre qui joue ensuite, on lance son tour.
     if (newTurn === "monstre") {
-      runMonsterTurn(scene);
+      runSummonTurn(scene, () => runMonsterTurn(scene));
     }
   });
 

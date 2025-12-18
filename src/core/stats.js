@@ -3,7 +3,7 @@
 
 export const baseStats = {
   // Caractéristiques principales
-  force: 200,
+  force: 0,
   intelligence: 0,
   agilite: 0,
   chance: 0,

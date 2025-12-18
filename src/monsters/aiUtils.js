@@ -72,6 +72,8 @@ export function moveMonsterAlongPath(
         monster.y = targetY;
         monster.tileX = next.x;
         monster.tileY = next.y;
+        monster.currentTileX = next.x;
+        monster.currentTileY = next.y;
         stepNext();
       },
     });
@@ -98,10 +100,20 @@ export function getAliveCombatMonsters(scene) {
 // True si une tuile est occupée par un autre monstre vivant.
 export function isTileOccupiedByMonster(scene, tileX, tileY, self) {
   const alive = getAliveCombatMonsters(scene);
+  const summons =
+    scene?.combatSummons && Array.isArray(scene.combatSummons)
+      ? scene.combatSummons
+      : [];
   return alive.some((m) => {
     if (!m) return false;
     if (self && m === self) return false;
     return m.tileX === tileX && m.tileY === tileY;
+  }) || summons.some((s) => {
+    if (!s || !s.stats) return false;
+    if (self && s === self) return false;
+    const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+    if (hp <= 0) return false;
+    return s.tileX === tileX && s.tileY === tileY;
   });
 }
 

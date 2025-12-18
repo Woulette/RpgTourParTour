@@ -284,6 +284,10 @@ body.combat-active #combat-turn-order {
   background: rgba(60, 140, 255, 0.95);
 }
 
+.combat-turn-actor.is-summon .combat-turn-hp-fill {
+  background: rgba(70, 220, 160, 0.95);
+}
+
 .combat-turn-avatar {
   position: absolute;
   inset: 0;

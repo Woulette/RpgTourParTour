@@ -36,6 +36,34 @@ export function runMonsterTurn(scene) {
 
   if (!monster || !player || !map || !groundLayer) return;
 
+  const pickTargetForMonster = () => {
+    const summons =
+      scene?.combatSummons && Array.isArray(scene.combatSummons)
+        ? scene.combatSummons
+        : [];
+    const aliveSummon = summons.find((s) => {
+      if (!s || !s.stats) return false;
+      const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+      return hp > 0;
+    });
+    if (!aliveSummon) return player;
+
+    const mx = monster.tileX ?? 0;
+    const my = monster.tileY ?? 0;
+
+    const pTx = typeof player.currentTileX === "number" ? player.currentTileX : player.tileX ?? 0;
+    const pTy = typeof player.currentTileY === "number" ? player.currentTileY : player.tileY ?? 0;
+    const sTx = aliveSummon.tileX ?? 0;
+    const sTy = aliveSummon.tileY ?? 0;
+
+    const dp = Math.abs(pTx - mx) + Math.abs(pTy - my);
+    const ds = Math.abs(sTx - mx) + Math.abs(sTy - my);
+
+    return ds <= dp ? aliveSummon : player;
+  };
+
+  const target = pickTargetForMonster();
+
   // On passe officiellement au tour du monstre courant
   state.tour = "monstre";
   state.paRestants = monster.stats?.pa ?? state.paBaseMonstre;
@@ -60,7 +88,7 @@ export function runMonsterTurn(scene) {
   };
 
   if (handler) {
-    handler(scene, state, monster, player, map, groundLayer, finishTurn);
+    handler(scene, state, monster, target, map, groundLayer, finishTurn);
   } else {
     finishTurn();
   }

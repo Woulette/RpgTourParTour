@@ -7,6 +7,7 @@ import { addItem } from "../inventory/inventoryCore.js";
 import { incrementKillProgressForAll } from "../quests/index.js";
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { queueMonsterRespawn } from "../monsters/respawnState.js";
+import { tryResolveCaptureOnMonsterDeath } from "../systems/combat/summons/capture.js";
 
 /**
  * Crée un monstre sur la carte.
@@ -123,6 +124,9 @@ export function createMonster(scene, x, y, monsterId) {
 
   // Callback standard quand le monstre meurt
   monster.onKilled = (sceneArg, killer) => {
+    // Capture : si ce monstre était marqué par le joueur, on enregistre la capture.
+    tryResolveCaptureOnMonsterDeath(sceneArg, monster);
+
     const rewardXp = computeMonsterXpReward(monster, killer);
     const goldMin = monster.goldRewardMin || 0;
     const goldMax = monster.goldRewardMax || goldMin;

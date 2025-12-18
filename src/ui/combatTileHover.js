@@ -1,4 +1,5 @@
 import { findMonsterAtTile } from "../monsters/index.js";
+import { findAliveSummonAtTile } from "../systems/combat/summons/summon.js";
 
 export function attachCombatTileHover(scene, hudY) {
   if (!scene || !scene.input) return;
@@ -64,6 +65,7 @@ export function attachCombatTileHover(scene, hudY) {
     scene.__combatTileHoverKey = key;
 
     const monster = findMonsterAtTile(scene, t.x, t.y);
+    const summon = !monster ? findAliveSummonAtTile(scene, t.x, t.y) : null;
     const player = state.joueur;
     const isPlayerTile =
       player &&
@@ -72,7 +74,7 @@ export function attachCombatTileHover(scene, hudY) {
       player.currentTileX === t.x &&
       player.currentTileY === t.y;
 
-    const entity = monster || (isPlayerTile ? player : null);
+    const entity = monster || summon || (isPlayerTile ? player : null);
     if (scene.__combatTileHoverEntity === entity) return;
     scene.__combatTileHoverEntity = entity;
 
@@ -81,14 +83,14 @@ export function attachCombatTileHover(scene, hudY) {
       return;
     }
 
-    if (monster && scene.showDamagePreview) {
-      scene.showDamagePreview(monster);
+    if ((monster || summon) && scene.showDamagePreview) {
+      scene.showDamagePreview(monster || summon);
     } else if (scene.clearDamagePreview) {
       scene.clearDamagePreview();
     }
 
-    if (monster && scene.showMonsterTooltip) {
-      scene.showMonsterTooltip(monster);
+    if ((monster || summon) && scene.showMonsterTooltip) {
+      scene.showMonsterTooltip(monster || summon);
     } else if (scene.hideMonsterTooltip) {
       scene.hideMonsterTooltip();
     }

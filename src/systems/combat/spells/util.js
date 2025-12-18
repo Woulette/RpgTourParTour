@@ -4,6 +4,18 @@
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 import { getAliveCombatMonsters } from "../../../monsters/aiUtils.js";
 
+function getAliveCombatSummons(scene) {
+  const list =
+    scene?.combatSummons && Array.isArray(scene.combatSummons)
+      ? scene.combatSummons
+      : [];
+  return list.filter((s) => {
+    if (!s || !s.stats) return false;
+    const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+    return hp > 0;
+  });
+}
+
 export function isTileInRange(spell, fromX, fromY, toX, toY) {
   const dx = Math.abs(toX - fromX);
   const dy = Math.abs(toY - fromY);
@@ -55,13 +67,24 @@ function isTileOccupiedByCombatEntity(scene, tileX, tileY) {
   }
 
   const monsters = getAliveCombatMonsters(scene);
-  return monsters.some(
+  const occupiedByMonster = monsters.some(
     (m) =>
       m &&
       typeof m.tileX === "number" &&
       typeof m.tileY === "number" &&
       m.tileX === tileX &&
       m.tileY === tileY
+  );
+  if (occupiedByMonster) return true;
+
+  const summons = getAliveCombatSummons(scene);
+  return summons.some(
+    (s) =>
+      s &&
+      typeof s.tileX === "number" &&
+      typeof s.tileY === "number" &&
+      s.tileX === tileX &&
+      s.tileY === tileY
   );
 }
 
@@ -107,4 +130,3 @@ export function hasLineOfSight(scene, fromX, fromY, toX, toY) {
 
   return true;
 }
-

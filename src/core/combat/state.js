@@ -5,6 +5,7 @@
 import { endCombat } from "./runtime.js";
 import { addChatMessage } from "../../chat/chat.js";
 import { showFloatingTextOverEntity } from "./floatingText.js";
+import { tickCaptureAttemptAtStartOfPlayerTurn } from "../../systems/combat/summons/capture.js";
 
 export function createCombatState(player, monster) {
   const paJoueur = player.stats?.pa ?? 6;
@@ -245,6 +246,9 @@ export function passerTour(scene) {
   if (activeEntity) {
     tickSpellCooldowns(activeEntity);
     applyStartOfTurnStatusEffects(scene, activeEntity);
+    if (activeEntity === state.joueur) {
+      tickCaptureAttemptAtStartOfPlayerTurn(scene, activeEntity);
+    }
     if (!state.enCours) return;
   }
 

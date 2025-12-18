@@ -51,6 +51,41 @@ export const spells = {
       "Un appel des racines en ligne, qui frappe en croix sur l'impact.",
   },
 
+  capture_essence: {
+    id: "capture_essence",
+    label: "Capture d'essence",
+    paCost: 3,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 4,
+    lineOfSight: true,
+    zone: "cell",
+    element: "neutre",
+    damageMin: 0,
+    damageMax: 0,
+    cooldownTurns: 5,
+    capture: { playerTurns: 2 },
+    description:
+      "Marque une cible pendant 2 tours. Si elle meurt dans ce délai, elle est capturée.",
+  },
+
+  invocation_capturee: {
+    id: "invocation_capturee",
+    label: "Invocation capturée",
+    paCost: 4,
+    requiredLevel: 1,
+    rangeMin: 0,
+    rangeMax: 6,
+    lineOfSight: false,
+    zone: "cell",
+    element: "neutre",
+    damageMin: 0,
+    damageMax: 0,
+    summon: { cooldownAfterDeathTurns: 2 },
+    description:
+      "Invoque le monstre capturé. Une seule invocation à la fois. Cooldown 2 tours après sa mort.",
+  },
+
   // --- Tank ---
   punch_furtif: {
     id: "punch_furtif",
@@ -148,4 +183,3 @@ export const spells = {
     description: "Une flèche d'eau à faible dégâts qui vole la vie.",
   },
 };
-

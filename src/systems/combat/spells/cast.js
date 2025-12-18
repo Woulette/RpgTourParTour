@@ -10,6 +10,8 @@ import { canCastSpellAtTile } from "./canCast.js";
 import { computeSpellDamage } from "./damage.js";
 import { clearSpellRangePreview } from "./preview.js";
 import { isTileAvailableForSpell, getCasterOriginTile } from "./util.js";
+import { canApplyCapture, startCaptureAttempt } from "../summons/capture.js";
+import { getAliveSummon, spawnSummonFromCaptured } from "../summons/summon.js";
 
 export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundLayer) {
   if (!canCastSpellAtTile(scene, caster, spell, tileX, tileY, map)) {
@@ -18,6 +20,21 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
   const state = scene.combatState;
   if (!state) return false;
+
+  const isPlayerCaster = state.joueur === caster;
+
+  // Pré-checks pour sorts spéciaux (évite de consommer des PA si c'est impossible)
+  if (isPlayerCaster && spell?.capture) {
+    const target = findMonsterAtTile(scene, tileX, tileY);
+    const check = canApplyCapture(scene, caster, target);
+    if (!check.ok) return false;
+  }
+
+  if (isPlayerCaster && spell?.summon) {
+    if (!caster?.capturedMonsterId) return false;
+    const alive = getAliveSummon(scene, caster);
+    if (alive) return false;
+  }
 
   const paCost = spell.paCost ?? 0;
   state.paRestants = Math.max(0, state.paRestants - paCost);
@@ -50,8 +67,6 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   }
   scene.time.delayedCall(200, () => fx.destroy());
 
-  const isPlayerCaster = state.joueur === caster;
-
   if (state.enCours && state.joueur) {
     const spellLabel = spell?.label || spell?.id || "Sort";
     if (isPlayerCaster) {
@@ -73,6 +88,49 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   state.castsThisTurn[spell.id] = prev + 1;
 
   if (isPlayerCaster) {
+    // --- Capture (0 dégâts) ---
+    if (spell?.capture) {
+      const target = findMonsterAtTile(scene, tileX, tileY);
+      if (!target) return false;
+      startCaptureAttempt(scene, caster, target, {
+        playerTurns: spell.capture.playerTurns ?? 2,
+      });
+      if (scene && typeof scene.updateCombatUi === "function") {
+        scene.updateCombatUi();
+      }
+      clearActiveSpell(caster);
+      clearSpellRangePreview(scene);
+      return true;
+    }
+
+    // --- Invocation capturée ---
+    if (spell?.summon) {
+      const summon = spawnSummonFromCaptured(scene, caster, map, groundLayer, {
+        preferTile: { x: tileX, y: tileY },
+      });
+      if (!summon) return false;
+
+      // Cooldown 2 tours après sa mort
+      summon.onKilled = (sceneArg) => {
+        const owner = summon.owner;
+        if (owner) {
+          owner.spellCooldowns = owner.spellCooldowns || {};
+          const cdTurns = spell.summon.cooldownAfterDeathTurns ?? 2;
+          owner.spellCooldowns[spell.id] = Math.max(0, cdTurns | 0);
+        }
+        if (sceneArg?.combatSummons && Array.isArray(sceneArg.combatSummons)) {
+          sceneArg.combatSummons = sceneArg.combatSummons.filter((s) => s !== summon);
+        }
+      };
+
+      clearActiveSpell(caster);
+      clearSpellRangePreview(scene);
+      if (scene && typeof scene.updateCombatUi === "function") {
+        scene.updateCombatUi();
+      }
+      return true;
+    }
+
     if (spell.effectPattern === "line_forward") {
       const { x: originX, y: originY } = getCasterOriginTile(caster);
       const dx = tileX === originX ? 0 : Math.sign(tileX - originX);
@@ -378,6 +436,21 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
     }
   } else if (state.monstre === caster) {
     const player = state.joueur;
+
+    const findAliveSummonAtTile = (x, y) => {
+      const list =
+        scene?.combatSummons && Array.isArray(scene.combatSummons)
+          ? scene.combatSummons
+          : [];
+      return (
+        list.find((s) => {
+          if (!s || !s.stats) return false;
+          const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+          return hp > 0 && s.tileX === x && s.tileY === y;
+        }) || null
+      );
+    };
+
     if (player && player.stats) {
       let pTx = player.currentTileX;
       let pTy = player.currentTileY;
@@ -394,14 +467,18 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         }
       }
 
-      if (pTx === tileX && pTy === tileY) {
+      const summonAt = findAliveSummonAtTile(tileX, tileY);
+      const isPlayerTile = pTx === tileX && pTy === tileY;
+      const victim = isPlayerTile ? player : summonAt;
+
+      if (victim && victim.stats) {
         const damageOnHit = spell.damageOnHit !== false;
         const damage = damageOnHit ? computeSpellDamage(caster, spell) : 0;
 
-        const currentHp = typeof player.stats.hp === "number" ? player.stats.hp : player.stats.hpMax ?? 0;
+        const currentHp = typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
         const newHp = Math.max(0, currentHp - Math.max(0, damage));
         if (damageOnHit && damage > 0) {
-          player.stats.hp = newHp;
+          victim.stats.hp = newHp;
         }
         if (scene && typeof scene.updateCombatUi === "function") {
           scene.updateCombatUi();
@@ -416,7 +493,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
                 kind: "combat",
                 channel: "global",
                 author: "Combat",
-                text: `${spellLabel} : vous subissez -${damage} PV (par ${casterName})`,
+                text: `${spellLabel} : ${isPlayerTile ? "vous subissez" : "l'invocation subit"} -${damage} PV (par ${casterName})`,
                 element: spell?.element ?? null,
               },
               { player: state.joueur }
@@ -425,7 +502,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         }
 
         const status = spell?.statusEffect;
-        if (status && status.type === "poison") {
+        if (isPlayerTile && status && status.type === "poison") {
           const turns = typeof status.turns === "number" ? status.turns : status.turnsLeft ?? 0;
           const dmgMin = typeof status.damageMin === "number" ? status.damageMin : spell.damageMin ?? 0;
           const dmgMax = typeof status.damageMax === "number" ? status.damageMax : spell.damageMax ?? dmgMin;
@@ -457,20 +534,33 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
           }
         }
 
-        if (damageOnHit && damage > 0 && typeof player.updateHudHp === "function") {
+        if (isPlayerTile && damageOnHit && damage > 0 && typeof player.updateHudHp === "function") {
           const hpMax = player.stats.hpMax ?? newHp;
           player.updateHudHp(newHp, hpMax);
         }
 
         if (damageOnHit && damage > 0) {
-          showFloatingTextOverEntity(scene, player, `-${damage}`, { color: "#ff4444" });
+          showFloatingTextOverEntity(scene, victim, `-${damage}`, { color: "#ff4444" });
         }
 
         if (damageOnHit && newHp <= 0) {
-          if (scene.combatState) {
-            scene.combatState.issue = "defaite";
+          if (isPlayerTile) {
+            if (scene.combatState) {
+              scene.combatState.issue = "defaite";
+            }
+            endCombat(scene);
+          } else {
+            // Mort de l'invocation : cooldown géré dans summon.onKilled
+            if (typeof victim.onKilled === "function") {
+              victim.onKilled(scene, caster);
+            }
+            if (typeof victim.destroy === "function") {
+              victim.destroy();
+            }
+            if (scene.combatSummons && Array.isArray(scene.combatSummons)) {
+              scene.combatSummons = scene.combatSummons.filter((s) => s !== victim);
+            }
           }
-          endCombat(scene);
         }
       }
     }

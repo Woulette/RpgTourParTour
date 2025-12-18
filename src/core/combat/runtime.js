@@ -5,6 +5,7 @@ import { createCombatState, buildTurnOrder } from "./state.js";
 import { onAfterCombatEnded } from "../../dungeons/runtime.js";
 import { addChatMessage } from "../../chat/chat.js";
 import { items } from "../../inventory/itemsConfig.js";
+import { clearAllSummons } from "../../systems/combat/summons/summon.js";
 
 function joinPartsWrapped(parts, maxLineLength = 70) {
   const safeMax = Math.max(20, maxLineLength | 0);
@@ -42,9 +43,13 @@ export function startCombat(scene, player, monster) {
   // Nettoie les effets temporaires (ex: poison) d'un combat précédent
   if (player) {
     player.statusEffects = [];
+    player.captureState = null;
+    player.spellCooldowns = player.spellCooldowns || {};
+    player.spellCooldowns.invocation_capturee = 0;
   }
 
   scene.combatState = createCombatState(player, monster);
+  scene.combatSummons = [];
   document.body.classList.add("combat-active");
 
   // Met à jour l'affichage des PA/PM du joueur dans le HUD, si dispo
@@ -69,6 +74,8 @@ export function endCombat(scene) {
 
   const state = scene.combatState;
   state.enCours = false;
+
+  clearAllSummons(scene);
 
   // Nettoie les effets temporaires restants sur le joueur
   if (state.joueur) {
