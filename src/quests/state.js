@@ -1,6 +1,7 @@
 import { QUEST_STATES, quests } from "./catalog.js";
 import { emit as emitStoreEvent } from "../state/store.js";
 import { addChatMessage } from "../chat/chat.js";
+import { items as itemDefs } from "../inventory/itemsConfig.js";
 
 function ensureQuestContainer(player) {
   if (!player.quests) {
@@ -174,28 +175,62 @@ export function incrementCraftProgress(player, itemId, qty = 1) {
 
     const stage = getCurrentQuestStage(questDef, state);
     const objective = stage?.objective;
-    if (!objective || objective.type !== "craft_items") return;
+    if (!objective || !objective.type) return;
 
-    const items = Array.isArray(objective.items) ? objective.items : [];
-    const target = items.find((it) => it && it.itemId === itemId);
-    if (!target) return;
+    if (objective.type === "craft_items") {
+      const items = Array.isArray(objective.items) ? objective.items : [];
+      const target = items.find((it) => it && it.itemId === itemId);
+      if (!target) return;
 
-    const required = target.qty || 1;
-    state.progress = state.progress || {};
-    state.progress.crafted = state.progress.crafted || {};
+      const required = target.qty || 1;
+      state.progress = state.progress || {};
+      state.progress.crafted = state.progress.crafted || {};
 
-    const current = state.progress.crafted[itemId] || 0;
-    const next = Math.min(required, current + craftedQty);
-    state.progress.crafted[itemId] = next;
+      const current = state.progress.crafted[itemId] || 0;
+      const next = Math.min(required, current + craftedQty);
+      state.progress.crafted[itemId] = next;
 
-    const totalRequired = items.reduce((acc, it) => acc + (it?.qty || 1), 0);
-    const totalCurrent = items.reduce(
-      (acc, it) => acc + Math.min(it?.qty || 1, state.progress.crafted[it.itemId] || 0),
-      0
-    );
-    state.progress.currentCount = Math.min(totalRequired, totalCurrent);
+      const totalRequired = items.reduce((acc, it) => acc + (it?.qty || 1), 0);
+      const totalCurrent = items.reduce(
+        (acc, it) =>
+          acc + Math.min(it?.qty || 1, state.progress.crafted[it.itemId] || 0),
+        0
+      );
+      state.progress.currentCount = Math.min(totalRequired, totalCurrent);
 
-    emitStoreEvent("quest:updated", { questId: questDef.id, state });
+      emitStoreEvent("quest:updated", { questId: questDef.id, state });
+      return;
+    }
+
+    if (objective.type === "craft_set") {
+      const def = itemDefs?.[itemId];
+      const setId = objective.setId;
+      if (!def || !setId || def.setId !== setId) return;
+
+      state.progress = state.progress || {};
+
+      const requiredSlots = Array.isArray(objective.requiredSlots)
+        ? objective.requiredSlots.filter(Boolean)
+        : [];
+
+      if (requiredSlots.length > 0) {
+        const slot = def.slot || null;
+        if (!slot || !requiredSlots.includes(slot)) return;
+        state.progress.craftedSlots = state.progress.craftedSlots || {};
+        state.progress.craftedSlots[slot] = true;
+        const current = requiredSlots.reduce(
+          (acc, s) => acc + (state.progress.craftedSlots[s] ? 1 : 0),
+          0
+        );
+        state.progress.currentCount = Math.min(requiredSlots.length, current);
+      } else {
+        const required = objective.requiredCount || 1;
+        const current = state.progress.currentCount || 0;
+        state.progress.currentCount = Math.min(required, current + craftedQty);
+      }
+
+      emitStoreEvent("quest:updated", { questId: questDef.id, state });
+    }
   });
 }
 

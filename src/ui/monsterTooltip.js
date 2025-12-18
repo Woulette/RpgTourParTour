@@ -1,7 +1,7 @@
 // Gestion d'une petite fiche d'infos au-dessus du monstre survolé.
 // Affiche : XP (estimée), niveau total du groupe, niveaux individuels.
 
-import { monsters } from "../config/monsters.js";
+import { monsters } from "../content/monsters/index.js";
 import { XP_CONFIG } from "../config/xp.js";
 
 export function attachMonsterTooltip(scene) {
@@ -9,6 +9,20 @@ export function attachMonsterTooltip(scene) {
 
   scene.monsterTooltipText = null;
   scene.monsterTooltipBg = null;
+
+  const getBounds = (entity) => {
+    if (!entity) return null;
+    if (typeof entity.getBounds === "function") {
+      try {
+        return entity.getBounds();
+      } catch {
+        // ignore
+      }
+    }
+    const x = entity.x ?? 0;
+    const y = entity.y ?? 0;
+    return { left: x, right: x, top: y, bottom: y, centerX: x, centerY: y };
+  };
 
   scene.showMonsterTooltip = (monster) => {
     if (!monster) {
@@ -18,11 +32,15 @@ export function attachMonsterTooltip(scene) {
 
     const baseName =
       monster.displayName || monster.label || monster.monsterId || "Monstre";
+    const bounds = getBounds(monster);
+    const bubbleCenterX = bounds?.centerX ?? monster.x;
 
     // En combat : affichage minimal (nom uniquement).
     if (scene.combatState && scene.combatState.enCours) {
-      const text = `${baseName}`;
-      const bubbleCenterX = monster.x;
+      const stats = monster.stats || {};
+      const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
+      const hpMax = typeof stats.hpMax === "number" ? stats.hpMax : hp;
+      const text = `${baseName} ${hp}/${hpMax}`;
       const bubbleCenterY = monster.y - 56;
 
       if (scene.monsterTooltipText) {
@@ -57,8 +75,13 @@ export function attachMonsterTooltip(scene) {
       bg.fillStyle(0x000000, 0.7);
       bg.lineStyle(1, 0xffffff, 0.9);
       const radius = 6;
+
+      const margin = 8;
+      const centerY = (bounds?.top ?? bubbleCenterY) - bgHeight / 2 - margin;
+      tooltipText.setPosition(bubbleCenterX, centerY);
+
       const bgX = bubbleCenterX - bgWidth / 2;
-      const bgY = bubbleCenterY - bgHeight / 2;
+      const bgY = centerY - bgHeight / 2;
 
       bg.fillRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
       bg.strokeRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
@@ -107,7 +130,7 @@ export function attachMonsterTooltip(scene) {
     }
     const text = lines.join("\n");
 
-    const bubbleCenterX = monster.x;
+    // bubbleCenterX calculé via bounds plus haut.
     const lineCount = lines.length;
     // Décale vers le haut en fonction de la taille pour éviter de masquer le monstre
     const bubbleCenterY = monster.y - 40 - lineCount * 8;
@@ -144,8 +167,13 @@ export function attachMonsterTooltip(scene) {
     bg.fillStyle(0x000000, 0.7);
     bg.lineStyle(1, 0xffffff, 0.9);
     const radius = 6;
+
+    const margin = 10;
+    const centerY = (bounds?.top ?? bubbleCenterY) - bgHeight / 2 - margin;
+    tooltipText.setPosition(bubbleCenterX, centerY);
+
     const bgX = bubbleCenterX - bgWidth / 2;
-    const bgY = bubbleCenterY - bgHeight / 2;
+    const bgY = centerY - bgHeight / 2;
 
     bg.fillRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
     bg.strokeRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);

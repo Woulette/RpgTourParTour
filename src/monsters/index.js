@@ -1,4 +1,4 @@
-import { monsters } from "../config/monsters.js";
+import { monsters } from "../content/monsters/index.js";
 import { createMonster } from "../entities/monster.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { getRespawnsForMap, setRespawnsForMap } from "./respawnState.js";
@@ -7,6 +7,13 @@ import { getRespawnsForMap, setRespawnsForMap } from "./respawnState.js";
 export function preloadMonsters(scene) {
   Object.values(monsters).forEach((m) => {
     if (!m || !m.textureKey || !m.spritePath) return;
+    if (m.spriteSheet && m.spriteSheet.frameWidth && m.spriteSheet.frameHeight) {
+      scene.load.spritesheet(m.textureKey, m.spritePath, {
+        frameWidth: m.spriteSheet.frameWidth,
+        frameHeight: m.spriteSheet.frameHeight,
+      });
+      return;
+    }
     scene.load.image(m.textureKey, m.spritePath);
   });
 }

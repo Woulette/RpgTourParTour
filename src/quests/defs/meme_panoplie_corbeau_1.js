@@ -12,15 +12,9 @@ export const meme_panoplie_corbeau_1 = {
       description:
         "Fabriquer toutes les pièces de la panoplie du Corbeau, puis retourner voir Mémé.",
       objective: {
-        type: "craft_items",
-        items: [
-          { itemId: "anneau_corbeau", qty: 1 },
-          { itemId: "amulette_corbeau", qty: 1 },
-          { itemId: "coiffe_corbeau", qty: 1 },
-          { itemId: "cape_corbeau", qty: 1 },
-          { itemId: "ceinture_corbeau", qty: 1 },
-          { itemId: "bottes_corbeau", qty: 1 },
-        ],
+        type: "craft_set",
+        setId: "corbeau",
+        requiredSlots: ["head", "cape", "amulet", "belt", "boots", "ring1"],
         label: "Panoplie du Corbeau fabriquée",
       },
     },
@@ -30,4 +24,3 @@ export const meme_panoplie_corbeau_1 = {
     gold: 60,
   },
 };
-

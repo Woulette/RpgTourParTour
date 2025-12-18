@@ -25,10 +25,66 @@ export const equipmentItems = {
     stackable: false,
     slot: "head",
     setId: "corbeau",
-    icon: "assets/equipment/coiffecorbeau.png",
+    icon: "assets/equipment/Coiffe/CoiffeCorbeauAir.png",
     statsBonus: {
       vitalite: 10,
       agilite: 5,
+    },
+  },
+
+  coiffe_corbeau_air: {
+    id: "coiffe_corbeau_air",
+    label: "Coiffe du corbeau (Air)",
+    category: "equipement",
+    stackable: false,
+    slot: "head",
+    setId: "corbeau",
+    icon: "assets/equipment/Coiffe/CoiffeCorbeauAir.png",
+    statsBonus: {
+      vitalite: 10,
+      agilite: 5,
+    },
+  },
+
+  coiffe_corbeau_eau: {
+    id: "coiffe_corbeau_eau",
+    label: "Coiffe du corbeau (Eau)",
+    category: "equipement",
+    stackable: false,
+    slot: "head",
+    setId: "corbeau",
+    icon: "assets/equipment/Coiffe/CoiffeCorbeauEau.png",
+    statsBonus: {
+      vitalite: 10,
+      chance: 5,
+    },
+  },
+
+  coiffe_corbeau_feu: {
+    id: "coiffe_corbeau_feu",
+    label: "Coiffe du corbeau (Feu)",
+    category: "equipement",
+    stackable: false,
+    slot: "head",
+    setId: "corbeau",
+    icon: "assets/equipment/Coiffe/CoiffeCorbeauFeu.png",
+    statsBonus: {
+      vitalite: 10,
+      intelligence: 5,
+    },
+  },
+
+  coiffe_corbeau_terre: {
+    id: "coiffe_corbeau_terre",
+    label: "Coiffe du corbeau (Terre)",
+    category: "equipement",
+    stackable: false,
+    slot: "head",
+    setId: "corbeau",
+    icon: "assets/equipment/Coiffe/CoiffeCorbeauTerre.png",
+    statsBonus: {
+      vitalite: 10,
+      force: 5,
     },
   },
 
@@ -39,10 +95,66 @@ export const equipmentItems = {
     stackable: false,
     slot: "cape",
     setId: "corbeau",
-    icon: "assets/equipment/capecorbeau.png",
+    icon: "assets/equipment/Cape/CapeCorbeauAir.png",
     statsBonus: {
       vitalite: 8,
       agilite: 4,
+    },
+  },
+
+  cape_corbeau_air: {
+    id: "cape_corbeau_air",
+    label: "Cape du corbeau (Air)",
+    category: "equipement",
+    stackable: false,
+    slot: "cape",
+    setId: "corbeau",
+    icon: "assets/equipment/Cape/CapeCorbeauAir.png",
+    statsBonus: {
+      vitalite: 8,
+      agilite: 4,
+    },
+  },
+
+  cape_corbeau_eau: {
+    id: "cape_corbeau_eau",
+    label: "Cape du corbeau (Eau)",
+    category: "equipement",
+    stackable: false,
+    slot: "cape",
+    setId: "corbeau",
+    icon: "assets/equipment/Cape/CapeCorbeauEau.png",
+    statsBonus: {
+      vitalite: 8,
+      chance: 4,
+    },
+  },
+
+  cape_corbeau_feu: {
+    id: "cape_corbeau_feu",
+    label: "Cape du corbeau (Feu)",
+    category: "equipement",
+    stackable: false,
+    slot: "cape",
+    setId: "corbeau",
+    icon: "assets/equipment/Cape/CapeCorbeauFeu.png",
+    statsBonus: {
+      vitalite: 8,
+      intelligence: 4,
+    },
+  },
+
+  cape_corbeau_terre: {
+    id: "cape_corbeau_terre",
+    label: "Cape du corbeau (Terre)",
+    category: "equipement",
+    stackable: false,
+    slot: "cape",
+    setId: "corbeau",
+    icon: "assets/equipment/Cape/CapeCorbeauTerre.png",
+    statsBonus: {
+      vitalite: 8,
+      force: 4,
     },
   },
 
@@ -53,10 +165,66 @@ export const equipmentItems = {
     stackable: false,
     slot: "amulet",
     setId: "corbeau",
-    icon: "assets/equipment/colliercorbeau.png",
+    icon: "assets/equipment/Amulette/CollierCorbeauAir.png",
     statsBonus: {
       vitalite: 6,
       agilite: 3,
+    },
+  },
+
+  amulette_corbeau_air: {
+    id: "amulette_corbeau_air",
+    label: "Collier du corbeau (Air)",
+    category: "equipement",
+    stackable: false,
+    slot: "amulet",
+    setId: "corbeau",
+    icon: "assets/equipment/Amulette/CollierCorbeauAir.png",
+    statsBonus: {
+      vitalite: 6,
+      agilite: 3,
+    },
+  },
+
+  amulette_corbeau_eau: {
+    id: "amulette_corbeau_eau",
+    label: "Collier du corbeau (Eau)",
+    category: "equipement",
+    stackable: false,
+    slot: "amulet",
+    setId: "corbeau",
+    icon: "assets/equipment/Amulette/CollierCorbeauEau.png",
+    statsBonus: {
+      vitalite: 6,
+      chance: 3,
+    },
+  },
+
+  amulette_corbeau_feu: {
+    id: "amulette_corbeau_feu",
+    label: "Collier du corbeau (Feu)",
+    category: "equipement",
+    stackable: false,
+    slot: "amulet",
+    setId: "corbeau",
+    icon: "assets/equipment/Amulette/CollierCorbeauFeu.png",
+    statsBonus: {
+      vitalite: 6,
+      intelligence: 3,
+    },
+  },
+
+  amulette_corbeau_terre: {
+    id: "amulette_corbeau_terre",
+    label: "Collier du corbeau (Terre)",
+    category: "equipement",
+    stackable: false,
+    slot: "amulet",
+    setId: "corbeau",
+    icon: "assets/equipment/Amulette/CollierCorbeauTerre.png",
+    statsBonus: {
+      vitalite: 6,
+      force: 3,
     },
   },
 
@@ -101,4 +269,3 @@ export const equipmentItems = {
     },
   },
 };
-

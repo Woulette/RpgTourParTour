@@ -1,5 +1,5 @@
 import { createCharacter } from "./character.js";
-import { monsters } from "../config/monsters.js";
+import { monsters } from "../content/monsters/index.js";
 import { createStats } from "../core/stats.js";
 import { XP_CONFIG } from "../config/xp.js";
 import { addXpToPlayer } from "./player.js";

@@ -83,6 +83,36 @@ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
   scene.input.on("pointermove", (pointer) => {
     // Pas de prévisu si la souris est sur le HUD
     if (pointer.y > hudY) {
+      const hudTile = scene.__combatHudHoverSpellTile;
+      const activeSpellHud = getActiveSpell(player);
+      const stateHud = scene.combatState;
+
+      // Survol d'un portrait (ordre de tour) : on veut quand mÇ¦me voir la prÇ¸visu du sort sur la tuile du monstre.
+      if (
+        stateHud &&
+        stateHud.enCours &&
+        stateHud.tour === "joueur" &&
+        activeSpellHud &&
+        scene.__combatHudHoverLock &&
+        hudTile &&
+        typeof hudTile.x === "number" &&
+        typeof hudTile.y === "number"
+      ) {
+        updateCombatPreview(scene, map, groundLayer, null);
+        const mapForPreview = scene.combatMap || map;
+        const layerForPreview = scene.combatGroundLayer || groundLayer;
+        updateSpellRangePreview(
+          scene,
+          mapForPreview,
+          layerForPreview,
+          player,
+          activeSpellHud,
+          hudTile.x,
+          hudTile.y
+        );
+        return;
+      }
+
       updateCombatPreview(scene, map, groundLayer, null);
       clearSpellRangePreview(scene);
       return;

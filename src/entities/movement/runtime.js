@@ -174,6 +174,7 @@ export function movePlayerAlongPath(
         if (moveCost > 0 && scene.combatState && scene.combatState.enCours) {
           showFloatingTextOverEntity(scene, player, `${moveCost}`, {
             color: "#22c55e",
+            depth: 0,
           });
         }
 

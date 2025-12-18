@@ -4,7 +4,10 @@
 
 import { startCombatFromPrep, passerTour } from "../core/combat.js";
 import { runMonsterTurn } from "../monsters/ai.js";
-import { monsters as monsterDefs } from "../config/monsters.js";
+import { monsters as monsterDefs } from "../content/monsters/index.js";
+import { getActiveSpell } from "../systems/combat/spells/activeSpell.js";
+import { tryCastActiveSpellAtTile } from "../systems/combat/spells/cast.js";
+import { updateSpellRangePreview, clearSpellRangePreview } from "../systems/combat/spells/preview.js";
 
 export function initDomCombat(scene) {
   const endTurnBtn = document.getElementById("combat-end-turn-button");
@@ -63,8 +66,9 @@ export function initDomCombat(scene) {
     if (actor?.kind === "monstre") {
       const monsterId = actor?.entity?.monsterId;
       const def = monsterId ? monsterDefs[monsterId] : null;
-      if (def?.spritePath) {
-        imgEl.src = encodeURI(def.spritePath);
+      const src = def?.combatAvatarPath || def?.spritePath;
+      if (src) {
+        imgEl.src = encodeURI(src);
         return true;
       }
     }
@@ -131,6 +135,52 @@ export function initDomCombat(scene) {
     return hp > 0;
   };
 
+  const getEntityTile = (entity) => {
+    if (!entity) return null;
+    const tx =
+      typeof entity.currentTileX === "number"
+        ? entity.currentTileX
+        : typeof entity.tileX === "number"
+          ? entity.tileX
+          : null;
+    const ty =
+      typeof entity.currentTileY === "number"
+        ? entity.currentTileY
+        : typeof entity.tileY === "number"
+          ? entity.tileY
+          : null;
+
+    if (typeof tx === "number" && typeof ty === "number") {
+      return { x: tx, y: ty };
+    }
+
+    const mapForCast = scene.combatMap || scene.map;
+    const layerForCast = scene.combatGroundLayer || scene.groundLayer;
+    if (
+      mapForCast &&
+      layerForCast &&
+      typeof mapForCast.worldToTileXY === "function"
+    ) {
+      try {
+        const t = mapForCast.worldToTileXY(
+          entity.x,
+          entity.y,
+          true,
+          undefined,
+          undefined,
+          layerForCast
+        );
+        if (t && typeof t.x === "number" && typeof t.y === "number") {
+          return { x: t.x, y: t.y };
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return null;
+  };
+
   const renderTurnOrder = () => {
     if (!turnOrderListEl) return;
     turnOrderListEl.innerHTML = "";
@@ -164,19 +214,109 @@ export function initDomCombat(scene) {
 
       // Hover sur l'ordre des tours => affiche la fiche cible comme en survol monde.
       el.addEventListener("mouseenter", () => {
+        scene.__combatHudHoverLock = true;
+        scene.__combatHudHoverEntity = actor.entity || null;
+        if (actor.kind === "monstre" && actor.entity) {
+          const tx =
+            typeof actor.entity.currentTileX === "number"
+              ? actor.entity.currentTileX
+              : typeof actor.entity.tileX === "number"
+                ? actor.entity.tileX
+                : null;
+          const ty =
+            typeof actor.entity.currentTileY === "number"
+              ? actor.entity.currentTileY
+              : typeof actor.entity.tileY === "number"
+                ? actor.entity.tileY
+                : null;
+          if (typeof tx === "number" && typeof ty === "number") {
+            scene.__combatHudHoverSpellTile = { x: tx, y: ty };
+
+            const state = scene.combatState;
+            const activeSpell = state?.joueur ? getActiveSpell(state.joueur) : null;
+            if (
+              state &&
+              state.enCours &&
+              state.tour === "joueur" &&
+              activeSpell &&
+              scene.combatMap &&
+              scene.combatGroundLayer
+            ) {
+              updateSpellRangePreview(
+                scene,
+                scene.combatMap,
+                scene.combatGroundLayer,
+                state.joueur,
+                activeSpell,
+                tx,
+                ty
+              );
+            }
+          }
+        }
         if (typeof scene.showCombatTargetPanel === "function") {
           scene.showCombatTargetPanel(actor.entity);
         }
+        if (actor.kind === "monstre") {
+          if (typeof scene.showMonsterTooltip === "function") {
+            scene.showMonsterTooltip(actor.entity);
+          }
+          if (typeof scene.showDamagePreview === "function") {
+            scene.showDamagePreview(actor.entity);
+          }
+        }
       });
       el.addEventListener("mouseleave", () => {
+        scene.__combatHudHoverEntity = null;
+        scene.__combatHudHoverLock = false;
+        scene.__combatHudHoverSpellTile = null;
+        clearSpellRangePreview(scene);
         if (typeof scene.hideCombatTargetPanel === "function") {
           scene.hideCombatTargetPanel();
+        }
+        if (typeof scene.hideMonsterTooltip === "function") {
+          scene.hideMonsterTooltip();
+        }
+        if (typeof scene.clearDamagePreview === "function") {
+          scene.clearDamagePreview();
         }
       });
 
       // Clic : ouvre une fiche d'infos (effets, PV, etc.)
       el.addEventListener("click", (ev) => {
         ev.stopPropagation();
+
+        const state = scene.combatState;
+        const activeSpell = state?.joueur ? getActiveSpell(state.joueur) : null;
+        const canTryCast =
+          state &&
+          state.enCours &&
+          state.tour === "joueur" &&
+          state.joueur &&
+          activeSpell &&
+          actor?.entity &&
+          isActorAlive(actor) &&
+          !ev.shiftKey &&
+          !ev.ctrlKey &&
+          !ev.altKey;
+
+        if (canTryCast) {
+          const tile = getEntityTile(actor.entity);
+          if (tile) {
+            const mapForCast = scene.combatMap || scene.map;
+            const layerForCast = scene.combatGroundLayer || scene.groundLayer;
+            const cast = tryCastActiveSpellAtTile(
+              scene,
+              state.joueur,
+              tile.x,
+              tile.y,
+              mapForCast,
+              layerForCast
+            );
+            if (cast) return;
+          }
+        }
+
         if (typeof scene.showCombatInspector === "function") {
           scene.showCombatInspector(actor.entity);
         }

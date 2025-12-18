@@ -28,6 +28,7 @@ export function addChatMessage(message, { player = null } = {}) {
     text: String(message?.text ?? ""),
     kind: message?.kind ?? "system",
     channel: message?.channel ?? "global",
+    element: message?.element ?? null,
   };
 
   chat.messages.push(msg);
@@ -39,4 +40,3 @@ export function addChatMessage(message, { player = null } = {}) {
   emitStoreEvent("chat:updated", { message: msg });
   return msg;
 }
-

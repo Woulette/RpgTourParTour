@@ -323,6 +323,7 @@ function applyStartOfTurnStatusEffects(scene, entity) {
           channel: "global",
           author: "Combat",
           text: `${label} : ${targetName} subit -${dmg} PV (poison)`,
+          element: effect.element ?? null,
         },
         { player: state.joueur }
       );

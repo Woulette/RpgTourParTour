@@ -206,6 +206,23 @@ export function initDomQuests(player) {
             `${percent}%`
           );
         }
+      } else if (objective && objective.type === "craft_set") {
+        const requiredSlots = Array.isArray(objective.requiredSlots)
+          ? objective.requiredSlots.filter(Boolean)
+          : [];
+        const required =
+          requiredSlots.length > 0
+            ? requiredSlots.length
+            : objective.requiredCount || 1;
+        const current = Math.min(required, state.progress?.currentCount || 0);
+        detailProgressEl.textContent = `${objective.label}: ${current}/${required}`;
+        if (detailProgressBarFillEl) {
+          const percent = required > 0 ? (current / required) * 100 : 0;
+          detailProgressBarFillEl.style.setProperty(
+            "--quest-progress-percent",
+            `${percent}%`
+          );
+        }
       } else {
         detailProgressEl.textContent = "";
         if (detailProgressBarFillEl) {
@@ -237,9 +254,32 @@ export function initDomQuests(player) {
     listCompleted.innerHTML = "";
 
     const all = getAllQuestStates(player);
+    const stateByQuestId = new Map(
+      all
+        .filter((entry) => entry && entry.def && entry.state)
+        .map((entry) => [entry.def.id, entry.state])
+    );
+
+    const isUnlocked = (questDef) => {
+      if (!questDef) return false;
+      const requires = Array.isArray(questDef.requires) ? questDef.requires : [];
+      if (requires.length === 0) return true;
+      return requires.every((reqId) => {
+        const reqState = stateByQuestId.get(reqId);
+        return reqState && reqState.state === QUEST_STATES.COMPLETED;
+      });
+    };
+
+    // Masque les quêtes "NOT_STARTED" dont les prérequis ne sont pas remplis.
+    // Les quêtes en cours / terminées restent visibles.
+    const visible = all.filter(({ def, state }) => {
+      if (!def || !state) return false;
+      if (state.state !== QUEST_STATES.NOT_STARTED) return true;
+      return isUnlocked(def);
+    });
 
     const counts = {
-      all: all.length,
+      all: visible.length,
       available: 0,
       active: 0,
       completed: 0,
@@ -247,7 +287,7 @@ export function initDomQuests(player) {
 
     let selectedEntry = null;
 
-    all.forEach(({ def, state, stage }) => {
+    visible.forEach(({ def, state, stage }) => {
       if (!def) return;
 
       const li = document.createElement("li");

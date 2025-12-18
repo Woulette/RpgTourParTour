@@ -1,14 +1,17 @@
 import { passerTour } from "../core/combat.js";
-import { runTurn as runCorbeauTurn } from "./aiCorbeau.js";
-import { runTurn as runAluineeksTurn } from "./aiAluineeks.js";
-import { runTurn as runGoushTurn } from "./aiGoush.js";
-import { runTurn as runLiburionTurn } from "./aiLiburion.js";
-import { runTurn as runCazardTurn } from "./aiCazard.js";
-import { runTurn as runCedreTurn } from "./aiCedre.js";
-import { runTurn as runGumgobTurn } from "./aiGumgob.js";
+import { runTurn as runCorbeauTurn } from "../systems/combat/ai/corbeau.js";
+import { runTurn as runAluineeksTurn } from "../systems/combat/ai/aluineeks.js";
+import { runTurn as runGoushTurn } from "../systems/combat/ai/goush.js";
+import { runTurn as runLiburionTurn } from "../systems/combat/ai/liburion.js";
+import { runTurn as runCazardTurn } from "../systems/combat/ai/cazard.js";
+import { runTurn as runCedreTurn } from "../systems/combat/ai/cedre.js";
+import { runTurn as runGumgobTurn } from "../systems/combat/ai/gumgob.js";
 
 const AI_HANDLERS = {
   corbeau: runCorbeauTurn,
+  gravorbeau: runCorbeauTurn,
+  flamorbeau: runCorbeauTurn,
+  ondoreau: runCorbeauTurn,
   aluineeks: runAluineeksTurn,
   chibone: runCorbeauTurn,
   skelbone: runCorbeauTurn,

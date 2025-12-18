@@ -84,10 +84,34 @@ export const maps = {
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,
     monsterSpawns: [
-      { type: "corbeau", groupSize: 1, offsetFromCenter: { x: -4, y: 6 } },
-      { type: "corbeau", groupSize: 2, offsetFromCenter: { x: -7, y: -3 } },
-      { type: "corbeau", groupSize: 3, offsetFromCenter: { x: 4, y: 2 } },
-      { type: "corbeau", groupSize: 4, offsetFromCenter: { x: 5, y: -3 } },
+      {
+        groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: -4, y: 6 },
+      },
+      {
+        groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: -7, y: -3 },
+      },
+      {
+        groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: 4, y: 2 },
+      },
+      {
+        groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: 5, y: -3 },
+      },
     ],
     treePositions: [
       { tileX: 8, tileY: 18 },

@@ -155,3 +155,23 @@
 .hud-chat-message-player .hud-chat-author {
   color: rgba(143, 208, 255, 0.98);
 }
+
+.hud-chat-damage {
+  font-weight: 900;
+}
+
+.hud-chat-damage-air {
+  color: #22c55e;
+}
+
+.hud-chat-damage-eau {
+  color: #3b82f6;
+}
+
+.hud-chat-damage-terre {
+  color: #a16207;
+}
+
+.hud-chat-damage-feu {
+  color: #ef4444;
+}

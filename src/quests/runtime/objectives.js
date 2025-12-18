@@ -52,6 +52,16 @@ export function isTurnInReadyAtNpc(player, questDef, state, stage, npcId) {
     });
   }
 
+  if (objective.type === "craft_set") {
+    const requiredSlots = Array.isArray(objective.requiredSlots)
+      ? objective.requiredSlots.filter(Boolean)
+      : [];
+    const required =
+      requiredSlots.length > 0 ? requiredSlots.length : objective.requiredCount || 1;
+    const current = state.progress?.currentCount || 0;
+    return current >= required;
+  }
+
   return false;
 }
 
@@ -109,6 +119,17 @@ export function tryTurnInStage(scene, player, questId, questDef, state, stage) {
       return current >= required;
     });
     if (!complete) return { ok: false, reason: "not_complete" };
+    return { ok: true, consumed: [] };
+  }
+
+  if (objective.type === "craft_set") {
+    const requiredSlots = Array.isArray(objective.requiredSlots)
+      ? objective.requiredSlots.filter(Boolean)
+      : [];
+    const required =
+      requiredSlots.length > 0 ? requiredSlots.length : objective.requiredCount || 1;
+    const current = state.progress?.currentCount || 0;
+    if (current < required) return { ok: false, reason: "not_complete" };
     return { ok: true, consumed: [] };
   }
 

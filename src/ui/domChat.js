@@ -42,6 +42,77 @@ function shouldAutoScroll(container) {
   );
 }
 
+function normalizeElement(rawElement) {
+  if (!rawElement) return null;
+  const normalized = String(rawElement)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (normalized === "air" || normalized === "agilite" || normalized === "agi") {
+    return "air";
+  }
+  if (normalized === "eau" || normalized === "chance" || normalized === "cha") {
+    return "eau";
+  }
+  if (
+    normalized === "terre" ||
+    normalized === "force" ||
+    normalized === "for"
+  ) {
+    return "terre";
+  }
+  if (
+    normalized === "feu" ||
+    normalized === "intelligence" ||
+    normalized === "int"
+  ) {
+    return "feu";
+  }
+
+  return null;
+}
+
+function appendTextWithColoredDamage(parent, text, element) {
+  if (!parent) return;
+  const raw = String(text || "");
+  const el = normalizeElement(element);
+  if (!el) {
+    parent.textContent = raw;
+    return;
+  }
+
+  const regex = /-\d+\s*PV/gi;
+  let lastIndex = 0;
+  let match = regex.exec(raw);
+
+  if (!match) {
+    parent.textContent = raw;
+    return;
+  }
+
+  while (match) {
+    const start = match.index;
+    const end = start + match[0].length;
+
+    if (start > lastIndex) {
+      parent.appendChild(document.createTextNode(raw.slice(lastIndex, start)));
+    }
+
+    const dmg = document.createElement("span");
+    dmg.className = `hud-chat-damage hud-chat-damage-${el}`;
+    dmg.textContent = match[0];
+    parent.appendChild(dmg);
+
+    lastIndex = end;
+    match = regex.exec(raw);
+  }
+
+  if (lastIndex < raw.length) {
+    parent.appendChild(document.createTextNode(raw.slice(lastIndex)));
+  }
+}
+
 function renderMessage(container, msg, { activeChannel } = {}) {
   if (!container || !msg) return;
 
@@ -73,7 +144,7 @@ function renderMessage(container, msg, { activeChannel } = {}) {
     content.appendChild(sep);
     content.appendChild(text);
   } else {
-    content.textContent = msg.text || "";
+    appendTextWithColoredDamage(content, msg.text || "", msg.element);
   }
 
   line.appendChild(time);

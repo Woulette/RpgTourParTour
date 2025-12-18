@@ -29,6 +29,15 @@ function pickObjectiveText(stage, state, questDef, player) {
     const current = Math.min(required, state.progress?.currentCount || 0);
     return `${objective.label}: ${current}/${required}`;
   }
+  if (objective && objective.type === "craft_set") {
+    const requiredSlots = Array.isArray(objective.requiredSlots)
+      ? objective.requiredSlots.filter(Boolean)
+      : [];
+    const required =
+      requiredSlots.length > 0 ? requiredSlots.length : objective.requiredCount || 1;
+    const current = Math.min(required, state.progress?.currentCount || 0);
+    return `${objective.label}: ${current}/${required}`;
+  }
   return stage?.description || questDef?.description || "";
 }
 

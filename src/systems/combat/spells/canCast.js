@@ -1,0 +1,75 @@
+import {
+  isTileAvailableForSpell,
+  isTileInRange,
+  getCasterOriginTile,
+  hasLineOfSight,
+} from "./util.js";
+
+// ---------- Conditions de lancement ----------
+
+// Vérifie si un lanceur (joueur ou monstre) peut lancer ce sort
+// dans l'état actuel du combat.
+export function canCastSpell(scene, caster, spell) {
+  if (!scene || !caster || !spell) return false;
+
+  const state = scene.combatState;
+  if (!state || !state.enCours) return false;
+
+  const isPlayer = caster === state.joueur;
+  const expectedTour = isPlayer ? "joueur" : "monstre";
+  if (state.tour !== expectedTour) return false;
+
+  // Cooldown (joueur ou monstre)
+  const cooldowns = caster.spellCooldowns || {};
+  const cd = cooldowns[spell.id] || 0;
+  if (cd > 0) return false;
+
+  // limite de lancers par tour (joueur ou monstre)
+  const maxCasts = spell.maxCastsPerTurn ?? null;
+  if (maxCasts) {
+    state.castsThisTurn = state.castsThisTurn || {};
+    const used = state.castsThisTurn[spell.id] || 0;
+    if (used >= maxCasts) return false;
+  }
+
+  const paCost = spell.paCost ?? 0;
+  if (state.paRestants < paCost) return false;
+
+  return true;
+}
+
+// Vérifie toutes les conditions pour lancer un sort sur une tuile donnée.
+export function canCastSpellAtTile(scene, caster, spell, tileX, tileY, map) {
+  if (!canCastSpell(scene, caster, spell)) return false;
+  if (!isTileAvailableForSpell(map, tileX, tileY)) return false;
+
+  const { x: originX, y: originY } = getCasterOriginTile(caster);
+
+  // Lancer "en ligne" : uniquement sur la même ligne/colonne (4 directions).
+  if (spell.lineOfSight) {
+    if (!hasLineOfSight(scene, originX, originY, tileX, tileY)) return false;
+  }
+
+  if (spell.castPattern === "line4") {
+    if (!(tileX === originX || tileY === originY)) {
+      return false;
+    }
+  }
+
+  if (!isTileInRange(spell, originX, originY, tileX, tileY)) {
+    return false;
+  }
+
+  // Ligne de vue : à gérer plus tard.
+  return true;
+}
+
+// Helpers génériques de portée / conditions de sort, utilisables
+// aussi bien par le joueur que par les IA de monstres.
+export function isSpellInRangeFromPosition(spell, fromX, fromY, toX, toY) {
+  return isTileInRange(spell, fromX, fromY, toX, toY);
+}
+
+export function canCastSpellOnTile(scene, caster, spell, tileX, tileY, map) {
+  return canCastSpellAtTile(scene, caster, spell, tileX, tileY, map);
+}

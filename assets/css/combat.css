@@ -13,7 +13,8 @@
   right: 2vw;
   bottom: 2vh;
 
-  pointer-events: auto;
+  /* Par défaut : caché ET non cliquable (sinon il capte les clics même à opacity:0) */
+  pointer-events: none;
   z-index: 8001;
 
   min-width: 60px;
@@ -32,6 +33,7 @@
 
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
   cursor: pointer;
+  visibility: hidden;
   opacity: 0.0; /* caché hors combat */
   transform: translateY(4px);
   transition: opacity 0.15s ease, transform 0.15s ease, background 0.1s ease;
@@ -61,6 +63,8 @@
 body.combat-active #combat-end-turn-button,
 body.combat-active #combat-turn-indicator {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -78,6 +82,8 @@ body.combat-active #combat-turn-indicator {
 /* Bouton "PRÊT" visible uniquement pendant la phase de préparation */
 body.combat-prep #combat-ready-button {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -85,6 +91,7 @@ body.combat-prep #combat-ready-button {
 body.combat-prep #combat-end-turn-button,
 body.combat-prep #combat-turn-indicator {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
 }
 

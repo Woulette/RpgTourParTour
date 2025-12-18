@@ -1,0 +1,31 @@
+export default {
+  griffure: {
+    id: "griffure",
+    label: "Griffure",
+    paCost: 3,
+    rangeMin: 1,
+    rangeMax: 1,
+    lineOfSight: true,
+    zone: "cell",
+    element: "agilite",
+    damageMin: 8,
+    damageMax: 12,
+    maxCastsPerTurn: 2,
+    description: "Un coup de griffes rapide au corps a corps.",
+  },
+  projectile_epineux: {
+    id: "projectile_epineux",
+    label: "Projectile épineux",
+    paCost: 4,
+    rangeMin: 2,
+    rangeMax: 4,
+    lineOfSight: true,
+    zone: "cell",
+    element: "agilite",
+    damageMin: 10,
+    damageMax: 14,
+    cooldownTurns: 2,
+    description: "Lance un projectile à moyenne portée (2-4 PO).",
+  },
+};
+

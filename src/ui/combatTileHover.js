@@ -13,6 +13,7 @@ export function attachCombatTileHover(scene, hudY) {
     const state = scene.combatState;
     const active = !!(state && state.enCours);
     if (!active && !force) return;
+    if (scene.__combatHudHoverLock && !force) return;
     if (scene.hideMonsterTooltip) scene.hideMonsterTooltip();
     if (scene.clearDamagePreview) scene.clearDamagePreview();
     if (scene.hideCombatTargetPanel) scene.hideCombatTargetPanel();
@@ -33,6 +34,7 @@ export function attachCombatTileHover(scene, hudY) {
     }
     scene.__combatTileHoverWasActive = true;
     if (isPointerOverHud(pointer)) {
+      if (scene.__combatHudHoverLock) return;
       clear();
       return;
     }

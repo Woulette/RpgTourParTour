@@ -36,6 +36,7 @@ export function recomputePlayerStatsWithEquipment(player) {
 
   const equipment = player.equipment || {};
   const setCounts = {};
+  const corbeauElementCounts = { air: 0, eau: 0, feu: 0, terre: 0 };
 
   // Bonus de chaque pièce + comptage des sets
   for (const slot of Object.keys(equipment)) {
@@ -51,8 +52,42 @@ export function recomputePlayerStatsWithEquipment(player) {
 
     if (def.setId) {
       setCounts[def.setId] = (setCounts[def.setId] || 0) + 1;
+      if (def.setId === "corbeau") {
+        const id = def.id || entry.itemId;
+        const match =
+          typeof id === "string" ? id.match(/_(air|eau|feu|terre)$/) : null;
+        const element = match ? match[1] : "air";
+        corbeauElementCounts[element] =
+          (corbeauElementCounts[element] || 0) + 1;
+      }
     }
   }
+
+  const pickDominantCorbeauElement = () => {
+    let best = "air";
+    let bestCount = -1;
+    for (const [el, count] of Object.entries(corbeauElementCounts)) {
+      if (count > bestCount) {
+        best = el;
+        bestCount = count;
+      }
+    }
+    return bestCount > 0 ? best : "air";
+  };
+
+  const corbeauElementToStat = (element) => {
+    switch (element) {
+      case "eau":
+        return "chance";
+      case "feu":
+        return "intelligence";
+      case "terre":
+        return "force";
+      case "air":
+      default:
+        return "agilite";
+    }
+  };
 
   // Bonus de panoplies (paliers)
   // On applique uniquement le palier le plus élevé atteint
@@ -74,7 +109,19 @@ export function recomputePlayerStatsWithEquipment(player) {
     }
 
     if (bestBonus) {
-      bonuses.push(bestBonus);
+      if (setId === "corbeau") {
+        const element = pickDominantCorbeauElement();
+        const statKey = corbeauElementToStat(element);
+        const adjusted = { ...bestBonus };
+        if (typeof adjusted.agilite === "number" && adjusted.agilite !== 0) {
+          const value = adjusted.agilite;
+          delete adjusted.agilite;
+          adjusted[statKey] = (adjusted[statKey] || 0) + value;
+        }
+        bonuses.push(adjusted);
+      } else {
+        bonuses.push(bestBonus);
+      }
     }
   }
 

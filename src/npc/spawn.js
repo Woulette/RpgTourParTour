@@ -1,8 +1,5 @@
 import { blockTile } from "../collision/collisionGrid.js";
-import { trainerNpcs } from "./catalog/trainers.js";
-import { merchantNpcs } from "./catalog/merchants.js";
 import { questGiverNpcs } from "./catalog/questGivers.js";
-import { flavorNpcs } from "./catalog/flavor.js";
 import { startNpcInteraction } from "./interaction.js";
 import {
   getNpcMarker,
@@ -10,10 +7,7 @@ import {
 import { on as onStoreEvent } from "../state/store.js";
 
 const ALL_NPCS = [
-  ...trainerNpcs,
-  ...merchantNpcs,
   ...questGiverNpcs,
-  ...flavorNpcs,
 ];
 
 let questMarkerUnsubscribe = null;

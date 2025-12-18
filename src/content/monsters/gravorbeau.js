@@ -1,0 +1,27 @@
+export default {
+  id: "gravorbeau",
+  label: "Gravorbeau",
+  textureKey: "gravorbeau",
+  spritePath: "assets/monsters/corbeau/corbeauWalkSouthWestMarron.png",
+  combatAvatarPath: "assets/monsters/corbeau/SpriteCorbeauTerre.png",
+  spriteSheet: { frameWidth: 48, frameHeight: 48 },
+  render: {
+    originX: 0.45,
+    originY: 1.2,
+    offsetY: 0,
+  },
+  statsOverrides: {
+    hpMax: 25,
+    hp: 25,
+    initiative: 5,
+    force: 5,
+  },
+  spells: ["bec_graveleux"],
+  loot: [
+    { itemId: "plume_corbeau", min: 1, max: 1, dropRate: 0.5 },
+    { itemId: "patte_corbeau", min: 1, max: 1, dropRate: 0.5 },
+  ],
+  xpReward: 20,
+  goldRewardMin: 8,
+  goldRewardMax: 21,
+};

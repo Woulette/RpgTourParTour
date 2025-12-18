@@ -58,7 +58,8 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
     if (scene.hudCamera) {
       scene.hudCamera.ignore(g);
     }
-    g.setDepth(5);
+    // Sous les monstres/objets (évite de recouvrir les sprites)
+    g.setDepth(0.8);
     scene.combatPreview = g;
   }
 
