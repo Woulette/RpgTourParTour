@@ -95,6 +95,16 @@ class MainScene extends Phaser.Scene {
       "tank",
       "assets/animations/animation tank/animations/running-6-frames"
     );
+
+    // Animiste (remplace le slot "mage")
+    this.load.image(
+      "animiste",
+      "assets/animations/animations-Animiste/rotations/south-east.png"
+    );
+    loadRunFrames(
+      "animiste",
+      "assets/animations/animations-Animiste/animations/running-6-frames"
+    );
     this.load.image("tree_chene", "assets/metier/bucheron/Chene.png");
     this.load.image(
       "tree_chene_stump",
@@ -155,6 +165,7 @@ class MainScene extends Phaser.Scene {
     // Animations pour archer + tank (chargées en preload)
     setupPlayerAnimations(this);
     setupCharacterAnimations(this, "tank");
+    setupCharacterAnimations(this, "animiste");
     this.player.setDepth(startY);
 
     // Recalcule les depth des decor/trees dependants du joueur

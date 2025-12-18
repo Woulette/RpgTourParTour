@@ -1,11 +1,60 @@
-// D�finition des sorts du jeu.
-// Pour l'instant : un seul sort de test pour l'archer.
+// Définition des sorts du jeu.
 
 export const spells = {
+  // --- Animiste (slot "mage") ---
+  rayon_astral: {
+    id: "rayon_astral",
+    label: "Rayon astral",
+    paCost: 3,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 6,
+    lineOfSight: true,
+    zone: "cell",
+    element: "air",
+    damageMin: 7,
+    damageMax: 10,
+    description: "Un rayon d'air condensé, précis et régulier.",
+  },
+  siphon_vital: {
+    id: "siphon_vital",
+    label: "Siphon vital",
+    paCost: 2,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 5,
+    lineOfSight: true,
+    zone: "cell",
+    element: "eau",
+    damageMin: 4,
+    damageMax: 6,
+    lifeSteal: true,
+    maxCastsPerTurn: 2,
+    description: "Draine la vie de la cible et soigne le lanceur.",
+  },
+  racines_ancestrales: {
+    id: "racines_ancestrales",
+    label: "Racines ancestrales",
+    paCost: 4,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 4,
+    lineOfSight: true,
+    zone: "cell",
+    element: "terre",
+    damageMin: 10,
+    damageMax: 14,
+    castPattern: "line4",
+    effectPattern: "front_cross",
+    maxCastsPerTurn: 1,
+    description:
+      "Un appel des racines en ligne, qui frappe en croix sur l'impact.",
+  },
+
+  // --- Tank ---
   punch_furtif: {
     id: "punch_furtif",
     label: "Punch furtif",
-    // Coût en PA (pas de mana dans ton jeu)
     paCost: 3,
     requiredLevel: 1,
     rangeMin: 1,
@@ -19,7 +68,7 @@ export const spells = {
   },
   traction_aerienne: {
     id: "traction_aerienne",
-    label: "Traction aerienne",
+    label: "Traction aérienne",
     paCost: 3,
     requiredLevel: 1,
     rangeMin: 1,
@@ -33,11 +82,11 @@ export const spells = {
     castPattern: "line4",
     pullCasterToMeleeOnHit: true,
     description:
-      "Lance un tir d'air en ligne, puis rapproche au corps a corps si la cible est touchee.",
+      "Lance un tir d'air en ligne, puis rapproche au corps à corps si la cible est touchée.",
   },
   punch_enflamme: {
     id: "punch_enflamme",
-    label: "Punch enflamme",
+    label: "Punch enflammé",
     paCost: 4,
     requiredLevel: 1,
     rangeMin: 1,
@@ -50,34 +99,27 @@ export const spells = {
     maxCastsPerTurn: 2,
     castPattern: "line4",
     effectPattern: "front_cross",
-    description:
-      "Un punch de feu en ligne qui frappe en croix devant le lanceur.",
-  },
-  tir_simple: {
-    id: 'tir_simple',
-    label: 'Tir simple',
-    // Co�t en PA (pas de mana dans ton jeu)
-    paCost: 3,
-    // Niveau minimum pour d�bloquer le sort
-    requiredLevel: 1,
-    // Port�e en cases (min / max)
-    rangeMin: 1,
-    rangeMax: 5,
-    // N�cessite une ligne de vue directe ou non (utile plus tard)
-    lineOfSight: true,
-    // Type de zone : une seule case pour l'instant
-    zone: 'cell',
-    // �l�ment principal du sort (utilis� plus tard pour les d�g�ts)
-    element: 'agilite',
-    // D�g�ts de base (fourchette min / max)
-    damageMin: 9,
-    damageMax: 15,
-    description: 'Un tir de base � distance.',
+    description: "Un punch de feu en ligne qui frappe en croix devant le lanceur.",
   },
 
+  // --- Archer ---
+  tir_simple: {
+    id: "tir_simple",
+    label: "Tir simple",
+    paCost: 3,
+    requiredLevel: 1,
+    rangeMin: 1,
+    rangeMax: 5,
+    lineOfSight: true,
+    zone: "cell",
+    element: "agilite",
+    damageMin: 9,
+    damageMax: 15,
+    description: "Un tir de base à distance.",
+  },
   fleche_carbonisee: {
     id: "fleche_carbonisee",
-    label: "Fleche carbonisee",
+    label: "Flèche carbonisée",
     paCost: 4,
     requiredLevel: 1,
     rangeMin: 1,
@@ -87,11 +129,11 @@ export const spells = {
     element: "feu",
     damageMin: 11,
     damageMax: 17,
-    description: "Une fleche de feu plus puissante mais plus couteuse.",
+    description: "Une flèche de feu plus puissante mais plus coûteuse.",
   },
   flumigene: {
     id: "flumigene",
-    label: "Flumigene",
+    label: "Flumigène",
     paCost: 2,
     requiredLevel: 1,
     rangeMin: 1,
@@ -101,10 +143,9 @@ export const spells = {
     element: "eau",
     damageMin: 5,
     damageMax: 7,
-    // meta for later logic
     lifeSteal: true,
     maxCastsPerTurn: 2,
-    description: "Une fleche d eau a faible degats qui vole la vie.",
+    description: "Une flèche d'eau à faible dégâts qui vole la vie.",
   },
 };
 
