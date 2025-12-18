@@ -3,6 +3,7 @@ import {
   isTileInRange,
   getCasterOriginTile,
   hasLineOfSight,
+  isTileTargetableForSpell,
 } from "./util.js";
 
 // ---------- Prévisualisation de portée (cases bleues) ----------
@@ -82,11 +83,11 @@ export function updateSpellRangePreview(
   const halfH = map.tileHeight / 2;
 
   const colorOk = 0x1d4ed8; // bleu foncé (attaquable)
-  const colorBlocked = 0x93c5fd; // bleu clair (ligne de vue bloquée)
+  const colorBlocked = 0x60a5fa; // bleu clair (ligne de vue bloquée)
 
   for (let ty = 0; ty < map.height; ty++) {
     for (let tx = 0; tx < map.width; tx++) {
-      if (!isTileAvailableForSpell(map, tx, ty)) continue;
+      if (!isTileTargetableForSpell(scene, map, tx, ty)) continue;
       if (spell.castPattern === "line4") {
         if (!(tx === originX || ty === originY)) continue;
       }
@@ -107,8 +108,8 @@ export function updateSpellRangePreview(
       ];
 
       const c = losOk ? colorOk : colorBlocked;
-      const outlineAlpha = losOk ? 0.95 : 0.55;
-      const fillAlpha = losOk ? 0.22 : 0.10;
+      const outlineAlpha = losOk ? 0.98 : 0.78;
+      const fillAlpha = losOk ? 0.30 : 0.18;
       g.lineStyle(1, c, outlineAlpha);
       g.fillStyle(c, fillAlpha);
       g.fillPoints(pts, true);
@@ -150,7 +151,7 @@ export function updateSpellRangePreview(
   if (typeof tx === "number" && typeof ty === "number") {
     const inBounds = tx >= 0 && ty >= 0 && tx < map.width && ty < map.height;
 
-    if (inBounds && isTileAvailableForSpell(map, tx, ty)) {
+    if (inBounds && isTileTargetableForSpell(scene, map, tx, ty)) {
       const isLineOk =
         spell.castPattern !== "line4" || tx === originX || ty === originY;
       const losOk =

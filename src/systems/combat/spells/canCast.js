@@ -1,5 +1,5 @@
 import {
-  isTileAvailableForSpell,
+  isTileTargetableForSpell,
   isTileInRange,
   getCasterOriginTile,
   hasLineOfSight,
@@ -41,7 +41,7 @@ export function canCastSpell(scene, caster, spell) {
 // Vérifie toutes les conditions pour lancer un sort sur une tuile donnée.
 export function canCastSpellAtTile(scene, caster, spell, tileX, tileY, map) {
   if (!canCastSpell(scene, caster, spell)) return false;
-  if (!isTileAvailableForSpell(map, tileX, tileY)) return false;
+  if (!isTileTargetableForSpell(scene, map, tileX, tileY)) return false;
 
   const { x: originX, y: originY } = getCasterOriginTile(caster);
 

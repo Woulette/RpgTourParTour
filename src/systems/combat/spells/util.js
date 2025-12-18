@@ -23,6 +23,13 @@ export function isTileAvailableForSpell(map, tileX, tileY) {
   return true;
 }
 
+// Une tuile est ciblable si elle est dans la carte ET n'est pas une tuile de collision.
+export function isTileTargetableForSpell(scene, map, tileX, tileY) {
+  if (!isTileAvailableForSpell(map, tileX, tileY)) return false;
+  if (scene && isTileBlocked(scene, tileX, tileY)) return false;
+  return true;
+}
+
 export function getCasterOriginTile(caster) {
   const originX =
     typeof caster?.currentTileX === "number"
