@@ -6,6 +6,7 @@ import { emit as emitStoreEvent } from "../../state/store.js";
 let panelEl = null;
 let isOpen = false;
 let lastCrafted = null;
+let activeRecipePreview = null;
 let xpRenderRequested = false;
 
 function labelForStatKey(key) {
@@ -243,10 +244,152 @@ function renderSlots(recipe, player) {
   }
 }
 
-function renderResult() {
+function renderResult(player) {
   const resultEl = panelEl.querySelector("#tailleur-result");
   if (!resultEl) return;
   resultEl.innerHTML = "";
+
+  // Preview (recette sélectionnée) ou résultat (si craft effectué)
+  const recipe = activeRecipePreview;
+  const showRecipe = !!recipe;
+  const showCrafted =
+    !!(showRecipe && lastCrafted && lastCrafted.itemId === recipe.output?.itemId);
+
+  const itemId = showRecipe ? recipe.output?.itemId : lastCrafted?.itemId;
+  const qty = showCrafted
+    ? lastCrafted?.qty
+    : showRecipe
+      ? recipe.output?.qty
+      : lastCrafted?.qty;
+
+  if (itemId) {
+    resultEl.classList.remove("empty");
+
+    const def = getItemDef(itemId);
+
+    const icon = document.createElement("img");
+    if (def?.icon) {
+      icon.src = def.icon;
+      icon.alt = def?.label || itemId;
+    }
+    resultEl.appendChild(icon);
+
+    const wrap = document.createElement("div");
+    wrap.style.display = "flex";
+    wrap.style.flexDirection = "column";
+    wrap.style.gap = "6px";
+    wrap.style.minWidth = "0";
+
+    const title = document.createElement("div");
+    title.innerHTML = `<strong>${def?.label || itemId}</strong>`;
+    wrap.appendChild(title);
+
+    const meta = document.createElement("div");
+    meta.style.opacity = "0.9";
+    meta.style.fontSize = "12px";
+    const parts = [];
+    if (showRecipe && typeof recipe.level === "number") parts.push(`Niv. ${recipe.level}`);
+    if (typeof qty === "number") parts.push(`x${qty}`);
+    meta.textContent = parts.join(" • ");
+    if (meta.textContent) wrap.appendChild(meta);
+
+    if (showRecipe) {
+      const xpLine = document.createElement("div");
+      xpLine.style.opacity = "0.9";
+      xpLine.style.fontSize = "12px";
+      xpLine.textContent = `XP gagné : ${recipe.xpGain ?? 0} XP`;
+      wrap.appendChild(xpLine);
+    }
+
+    const statsArr = formatStatsBonus(def?.statsBonus);
+    if (statsArr.length > 0) {
+      const statsBlock = document.createElement("div");
+      statsBlock.style.display = "flex";
+      statsBlock.style.flexDirection = "column";
+      statsBlock.style.gap = "2px";
+      statsBlock.style.marginTop = "2px";
+
+      statsArr.forEach((entry) => {
+        const line = document.createElement("div");
+        line.className = `inventory-bonus-stat ${entry.cls}`;
+        line.style.display = "flex";
+        line.style.alignItems = "center";
+        line.style.gap = "6px";
+        line.style.lineHeight = "1.2";
+        line.style.padding = "0";
+
+        const valSpan = document.createElement("span");
+        valSpan.textContent = entry.text.split(" ")[0];
+        const labelSpan = document.createElement("span");
+        labelSpan.textContent = entry.text.split(" ").slice(1).join(" ");
+
+        line.appendChild(valSpan);
+        line.appendChild(labelSpan);
+        statsBlock.appendChild(line);
+      });
+
+      wrap.appendChild(statsBlock);
+    }
+
+    if (showRecipe) {
+      const ingTitle = document.createElement("div");
+      ingTitle.style.marginTop = "6px";
+      ingTitle.innerHTML = "<strong>Ingrédients :</strong>";
+      wrap.appendChild(ingTitle);
+
+      const ingList = document.createElement("div");
+      ingList.style.display = "flex";
+      ingList.style.flexDirection = "column";
+      ingList.style.gap = "6px";
+      ingList.style.marginTop = "2px";
+
+      const inv = player?.inventory;
+      const ownedCount = (id) =>
+        inv?.slots?.reduce(
+          (acc, slot) => acc + (slot && slot.itemId === id ? slot.qty : 0),
+          0
+        ) || 0;
+
+      recipe.inputs.forEach((input) => {
+        if (!input || !input.itemId) return;
+        const inDef = getItemDef(input.itemId);
+        const row = document.createElement("div");
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.gap = "8px";
+
+        const img = document.createElement("img");
+        img.style.width = "22px";
+        img.style.height = "22px";
+        img.style.borderRadius = "6px";
+        img.style.objectFit = "cover";
+        if (inDef?.icon) {
+          img.src = inDef.icon;
+          img.alt = inDef?.label || input.itemId;
+        }
+        row.appendChild(img);
+
+        const txt = document.createElement("span");
+        const owned = ownedCount(input.itemId);
+        txt.textContent = `${owned}/${input.qty} x ${inDef?.label || input.itemId}`;
+        row.appendChild(txt);
+
+        ingList.appendChild(row);
+      });
+
+      wrap.appendChild(ingList);
+    }
+
+    const note = document.createElement("div");
+    note.style.marginTop = "6px";
+    note.style.opacity = "0.7";
+    note.style.fontSize = "12px";
+    note.textContent = showCrafted ? "Craft réalisé." : "Aperçu avant craft.";
+    wrap.appendChild(note);
+
+    resultEl.appendChild(wrap);
+    return;
+  }
   if (!lastCrafted) {
     resultEl.classList.add("empty");
     resultEl.textContent = "Aucun craft réalisé.";
@@ -419,9 +562,11 @@ function renderRecipes(player, selectedIdRef) {
       e.stopPropagation();
       currentSelected = recipe.id;
       selectedIdRef.value = recipe.id;
+      activeRecipePreview = recipe;
       renderRecipes(player, selectedIdRef);
       renderSlots(recipe, player);
       updateCraftButton(recipe, player);
+      renderResult(player);
     });
 
     list.appendChild(li);
@@ -460,11 +605,12 @@ export function openTailleurCraftPanel(scene, player) {
     tailleurRecipes.find((r) => r.id === selected) ||
     tailleurRecipes[0];
   const recipe = getActiveRecipe();
+  activeRecipePreview = recipe || null;
   renderXpHeader(player);
   renderSlots(recipe, player);
   renderInventory(player);
   updateCraftButton(recipe, player);
-  renderResult();
+  renderResult(player);
 
   const filters = panelEl.querySelectorAll(
     ".craft-inventory-filters button[data-filter]"
@@ -515,7 +661,8 @@ export function openTailleurCraftPanel(scene, player) {
       renderInventory(player);
       renderRecipes(player, selectedRef);
       renderSlots(activeRecipe, player);
-      renderResult();
+      activeRecipePreview = activeRecipe;
+      renderResult(player);
       updateCraftButton(activeRecipe, player);
     };
   }

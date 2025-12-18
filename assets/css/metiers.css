@@ -23,6 +23,9 @@
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   pointer-events: auto;
+
+  /* Ne laisse jamais un enfant dÃ©border visuellement du panneau */
+  overflow: hidden;
 }
 
 body.hud-metiers-open #hud-metiers-panel {
@@ -58,6 +61,7 @@ body.hud-metiers-open #hud-metiers-panel {
   grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
   gap: 1rem;
   margin-top: 0.3rem;
+  min-height: 0;
 }
 
 /* Liste de tous les mǸtiers */
@@ -131,6 +135,8 @@ body.hud-metiers-open #hud-metiers-panel {
   flex-direction: column;
   gap: 0.6rem;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .metier-detail-header {
@@ -191,6 +197,35 @@ body.hud-metiers-open #hud-metiers-panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* --- Craft: garder tout dans le cadre + scroll interne --- */
+.metier-craft {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.metier-craft-controls {
+  flex: 0 0 auto;
+}
+
+.metier-craft-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#metier-craft-list {
+  min-height: 0;
+  overflow: auto;
+  max-height: none;
+}
+
+#metier-craft-info {
+  min-height: 0;
+  overflow: auto;
+  max-height: none;
 }
 
 .metier-resources-title {
@@ -256,4 +291,56 @@ body.hud-metiers-open #hud-metiers-panel {
 
 .metier-resources-table td.metier-resource-xp {
   color: #fed7aa;
+}
+
+/* --- Craft (tailleur / bijoutier / cordonnier) --- */
+
+/* Important: dans un grid/flex, les enfants ont min-width:auto par défaut,
+   ce qui peut forcer un débordement quand un libellé est long. */
+.metier-craft-body {
+  min-width: 0;
+}
+
+.metier-craft-body > * {
+  min-width: 0;
+}
+
+/* Empêche le panneau de détails de "pousser" hors du cadre sur les longs titres */
+#metier-craft-info {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Le premier bloc est le header (icone + titre) : autorise le shrink + wrap */
+#metier-craft-info > div:first-child {
+  min-width: 0;
+}
+
+#metier-craft-info > div:first-child > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Sécurité : évite un débordement horizontal quand un nom n'a pas d'espaces */
+#metier-craft-info strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Cartes de recettes: autorise le texte à se réduire dans la ligne */
+.metier-craft-card {
+  min-width: 0;
+}
+
+.metier-craft-card > div {
+  min-width: 0;
+}
+
+/* Icônes (craft) : fond plus clair pour mieux voir les PNG */
+.metier-craft-card img,
+#metier-craft-info img {
+  background: rgba(248, 250, 252, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.55) !important;
 }

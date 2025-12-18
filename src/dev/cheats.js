@@ -96,7 +96,7 @@ export function initDevCheats(scene) {
           "cheat.quests.complete('papi_meme_1', { rewards: true|false })",
           "cheat.quests.reset('papi_meme_1')",
           "cheat.inv.give('bois_chene', 50)",
-          "cheat.craft.add('coiffe_corbeau', 1)",
+          "cheat.craft.add('coiffe_corbeau_air', 1)",
           "cheat.presets.afterWood()",
         ].join("\n")
       );

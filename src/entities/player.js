@@ -8,6 +8,7 @@ import {
   createEmptyEquipment,
   recomputePlayerStatsWithEquipment,
 } from "../inventory/equipmentCore.js";
+import { purgeDeprecatedItemsFromPlayer } from "../inventory/deprecatedItems.js";
 
 export function createPlayer(scene, x, y, classId) {
   const classDef = classes[classId] || classes.archer;
@@ -74,6 +75,8 @@ export function createPlayer(scene, x, y, classId) {
   player.recomputeStatsWithEquipment = () => {
     recomputePlayerStatsWithEquipment(player);
   };
+
+  purgeDeprecatedItemsFromPlayer(player);
 
   return player;
 }

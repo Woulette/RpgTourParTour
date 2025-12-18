@@ -20,6 +20,12 @@ export default {
   loot: [
     { itemId: "plume_corbeau", min: 1, max: 1, dropRate: 0.5 },
     { itemId: "patte_corbeau", min: 1, max: 1, dropRate: 0.5 },
+    { itemId: "coiffe_corbeau_feu", min: 1, max: 1, dropRate: 0.02 },
+    { itemId: "cape_corbeau_feu", min: 1, max: 1, dropRate: 0.02 },
+    { itemId: "amulette_corbeau_feu", min: 1, max: 1, dropRate: 0.02 },
+    { itemId: "ceinture_corbeau_feu", min: 1, max: 1, dropRate: 0.02 },
+    { itemId: "bottes_corbeau_feu", min: 1, max: 1, dropRate: 0.02 },
+    { itemId: "anneau_corbeau_feu", min: 1, max: 1, dropRate: 0.02 },
   ],
   xpReward: 20,
   goldRewardMin: 8,

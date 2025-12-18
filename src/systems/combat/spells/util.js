@@ -1,7 +1,8 @@
-// Helpers "briques" utilisées par le spell system
+// Helpers "briques" utilisees par le spell system
 
-// Distance en "cases" (Manhattan) pour la portée.
+// Distance en "cases" (Manhattan) pour la portee.
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
+import { getAliveCombatMonsters } from "../../../monsters/aiUtils.js";
 
 export function isTileInRange(spell, fromX, fromY, toX, toY) {
   const dx = Math.abs(toX - fromX);
@@ -46,8 +47,26 @@ export function getCasterOriginTile(caster) {
   return { x: originX, y: originY };
 }
 
-// Ligne de vue : bloquée par les tuiles en collision.
-// Retourne true si aucun obstacle n'est présent entre les 2 tuiles (exclut origine et cible).
+function isTileOccupiedByCombatEntity(scene, tileX, tileY) {
+  const state = scene?.combatState;
+  if (state?.joueur) {
+    const p = getCasterOriginTile(state.joueur);
+    if (p.x === tileX && p.y === tileY) return true;
+  }
+
+  const monsters = getAliveCombatMonsters(scene);
+  return monsters.some(
+    (m) =>
+      m &&
+      typeof m.tileX === "number" &&
+      typeof m.tileY === "number" &&
+      m.tileX === tileX &&
+      m.tileY === tileY
+  );
+}
+
+// Ligne de vue : bloquee par les tuiles en collision et par les entites (joueur/monstres).
+// Retourne true si aucun obstacle n'est present entre les 2 tuiles (exclut origine et cible).
 export function hasLineOfSight(scene, fromX, fromY, toX, toY) {
   if (!scene) return true;
   if (
@@ -83,7 +102,9 @@ export function hasLineOfSight(scene, fromX, fromY, toX, toY) {
 
     if (x === toX && y === toY) break;
     if (isTileBlocked(scene, x, y)) return false;
+    if (isTileOccupiedByCombatEntity(scene, x, y)) return false;
   }
 
   return true;
 }
+

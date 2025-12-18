@@ -17,21 +17,7 @@ export const equipmentItems = {
     },
   },
 
-  // --- Panoplie du Corbeau (6 pièces) ---
-  coiffe_corbeau: {
-    id: "coiffe_corbeau",
-    label: "Coiffe du corbeau",
-    category: "equipement",
-    stackable: false,
-    slot: "head",
-    setId: "corbeau",
-    icon: "assets/equipment/Coiffe/CoiffeCorbeauAir.png",
-    statsBonus: {
-      vitalite: 10,
-      agilite: 5,
-    },
-  },
-
+  // --- Panoplie du Corbeau (variantes elementaires uniquement) ---
   coiffe_corbeau_air: {
     id: "coiffe_corbeau_air",
     label: "Coiffe du corbeau (Air)",
@@ -85,20 +71,6 @@ export const equipmentItems = {
     statsBonus: {
       vitalite: 10,
       force: 5,
-    },
-  },
-
-  cape_corbeau: {
-    id: "cape_corbeau",
-    label: "Cape du corbeau",
-    category: "equipement",
-    stackable: false,
-    slot: "cape",
-    setId: "corbeau",
-    icon: "assets/equipment/Cape/CapeCorbeauAir.png",
-    statsBonus: {
-      vitalite: 8,
-      agilite: 4,
     },
   },
 
@@ -158,20 +130,6 @@ export const equipmentItems = {
     },
   },
 
-  amulette_corbeau: {
-    id: "amulette_corbeau",
-    label: "Collier du corbeau",
-    category: "equipement",
-    stackable: false,
-    slot: "amulet",
-    setId: "corbeau",
-    icon: "assets/equipment/Amulette/CollierCorbeauAir.png",
-    statsBonus: {
-      vitalite: 6,
-      agilite: 3,
-    },
-  },
-
   amulette_corbeau_air: {
     id: "amulette_corbeau_air",
     label: "Collier du corbeau (Air)",
@@ -228,44 +186,167 @@ export const equipmentItems = {
     },
   },
 
-  ceinture_corbeau: {
-    id: "ceinture_corbeau",
-    label: "Ceinture du corbeau",
+  ceinture_corbeau_air: {
+    id: "ceinture_corbeau_air",
+    label: "Ceinture du corbeau (Air)",
     category: "equipement",
     stackable: false,
     slot: "belt",
     setId: "corbeau",
-    icon: "assets/equipment/ceinturecorbeau.png",
+    icon: "assets/equipment/Ceinture/CeintureCorbeauAir.png",
     statsBonus: {
       vitalite: 6,
       agilite: 2,
     },
   },
 
-  bottes_corbeau: {
-    id: "bottes_corbeau",
-    label: "Bottes du corbeau",
+  ceinture_corbeau_eau: {
+    id: "ceinture_corbeau_eau",
+    label: "Ceinture du corbeau (Eau)",
+    category: "equipement",
+    stackable: false,
+    slot: "belt",
+    setId: "corbeau",
+    icon: "assets/equipment/Ceinture/CeintureCorbeauEau.png",
+    statsBonus: {
+      vitalite: 6,
+      chance: 2,
+    },
+  },
+
+  ceinture_corbeau_feu: {
+    id: "ceinture_corbeau_feu",
+    label: "Ceinture du corbeau (Feu)",
+    category: "equipement",
+    stackable: false,
+    slot: "belt",
+    setId: "corbeau",
+    icon: "assets/equipment/Ceinture/CeintureCorbeauFeu.png",
+    statsBonus: {
+      vitalite: 6,
+      intelligence: 2,
+    },
+  },
+
+  ceinture_corbeau_terre: {
+    id: "ceinture_corbeau_terre",
+    label: "Ceinture du corbeau (Terre)",
+    category: "equipement",
+    stackable: false,
+    slot: "belt",
+    setId: "corbeau",
+    icon: "assets/equipment/Ceinture/CeintureCorbeauTerre.png",
+    statsBonus: {
+      vitalite: 6,
+      force: 2,
+    },
+  },
+
+  bottes_corbeau_air: {
+    id: "bottes_corbeau_air",
+    label: "Bottes du corbeau (Air)",
     category: "equipement",
     stackable: false,
     slot: "boots",
     setId: "corbeau",
-    icon: "assets/equipment/bottecorbeau.png",
+    icon: "assets/equipment/Botte/BotteCorbeauAir.png",
     statsBonus: {
       vitalite: 6,
       agilite: 2,
     },
   },
 
-  anneau_corbeau: {
-    id: "anneau_corbeau",
-    label: "Anneau du corbeau",
+  bottes_corbeau_eau: {
+    id: "bottes_corbeau_eau",
+    label: "Bottes du corbeau (Eau)",
+    category: "equipement",
+    stackable: false,
+    slot: "boots",
+    setId: "corbeau",
+    icon: "assets/equipment/Botte/BotteCorbeauEau.png",
+    statsBonus: {
+      vitalite: 6,
+      chance: 2,
+    },
+  },
+
+  bottes_corbeau_feu: {
+    id: "bottes_corbeau_feu",
+    label: "Bottes du corbeau (Feu)",
+    category: "equipement",
+    stackable: false,
+    slot: "boots",
+    setId: "corbeau",
+    icon: "assets/equipment/Botte/BotteCorbeauFeu.png",
+    statsBonus: {
+      vitalite: 6,
+      intelligence: 2,
+    },
+  },
+
+  bottes_corbeau_terre: {
+    id: "bottes_corbeau_terre",
+    label: "Bottes du corbeau (Terre)",
+    category: "equipement",
+    stackable: false,
+    slot: "boots",
+    setId: "corbeau",
+    icon: "assets/equipment/Botte/BotteCorbeauTerre.png",
+    statsBonus: {
+      vitalite: 6,
+      force: 2,
+    },
+  },
+
+  anneau_corbeau_air: {
+    id: "anneau_corbeau_air",
+    label: "Anneau du corbeau (Air)",
     category: "equipement",
     stackable: false,
     slot: "ring1",
     setId: "corbeau",
-    icon: "assets/equipment/anneaucorbeau.png",
+    icon: "assets/equipment/Anneau/AnneauCorbeauAir.png",
     statsBonus: {
       agilite: 4,
+    },
+  },
+
+  anneau_corbeau_eau: {
+    id: "anneau_corbeau_eau",
+    label: "Anneau du corbeau (Eau)",
+    category: "equipement",
+    stackable: false,
+    slot: "ring1",
+    setId: "corbeau",
+    icon: "assets/equipment/Anneau/AnneauCorbeauEau.png",
+    statsBonus: {
+      chance: 4,
+    },
+  },
+
+  anneau_corbeau_feu: {
+    id: "anneau_corbeau_feu",
+    label: "Anneau du corbeau (Feu)",
+    category: "equipement",
+    stackable: false,
+    slot: "ring1",
+    setId: "corbeau",
+    icon: "assets/equipment/Anneau/AnneauCorbeauFeu.png",
+    statsBonus: {
+      intelligence: 4,
+    },
+  },
+
+  anneau_corbeau_terre: {
+    id: "anneau_corbeau_terre",
+    label: "Anneau du corbeau (Terre)",
+    category: "equipement",
+    stackable: false,
+    slot: "ring1",
+    setId: "corbeau",
+    icon: "assets/equipment/Anneau/AnneauCorbeauTerre.png",
+    statsBonus: {
+      force: 4,
     },
   },
 };

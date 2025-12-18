@@ -335,7 +335,8 @@ body.hud-inventory-open #hud-inventory-panel {
 }
 
 .inventory-bonus-stat-intel {
-  color: #7fd0ff;
+  /* Feu / Intelligence = rouge */
+  color: #ff5252;
 }
 
 .inventory-bonus-stat-agilite {
@@ -343,7 +344,8 @@ body.hud-inventory-open #hud-inventory-panel {
 }
 
 .inventory-bonus-stat-chance {
-  color: #bba9ff;
+  /* Eau / Chance = bleu */
+  color: #7fd0ff;
 }
 
 .inventory-bonus-stat-vitalite,

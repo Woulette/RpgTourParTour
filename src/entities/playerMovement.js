@@ -15,6 +15,7 @@ import { findExitTileForDirection } from "../maps/world.js";
 import { findPathForPlayer } from "./movement/pathfinding.js";
 import { movePlayerAlongPath } from "./movement/runtime.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
+import { on as onStoreEvent } from "../state/store.js";
 
 /**
  * Crée une fonction worldToTile "calibrée" qui compense
@@ -58,8 +59,91 @@ function createCalibratedWorldToTile(map, groundLayer) {
 }
 
 // Active le clic pour se déplacer et la prévisu de déplacement / sorts.
-export function enableClickToMove(scene, player, hudY, map, groundLayer) {
+ export function enableClickToMove(scene, player, hudY, map, groundLayer) {
   const worldToTile = createCalibratedWorldToTile(map, groundLayer);
+
+  const refreshSpellPreviewFromPointer = () => {
+    if (!scene || !scene.input) return;
+    const pointer = scene.input.activePointer;
+    if (!pointer) return;
+
+    // Même logique que le pointermove, mais déclenchée sur changement de sort.
+    if (pointer.y > hudY) {
+      const hudTile = scene.__combatHudHoverSpellTile;
+      const activeSpellHud = getActiveSpell(player);
+      const stateHud = scene.combatState;
+
+      if (
+        stateHud &&
+        stateHud.enCours &&
+        stateHud.tour === "joueur" &&
+        activeSpellHud &&
+        scene.__combatHudHoverLock &&
+        hudTile &&
+        typeof hudTile.x === "number" &&
+        typeof hudTile.y === "number"
+      ) {
+        updateCombatPreview(scene, map, groundLayer, null);
+        const mapForPreview = scene.combatMap || map;
+        const layerForPreview = scene.combatGroundLayer || groundLayer;
+        updateSpellRangePreview(
+          scene,
+          mapForPreview,
+          layerForPreview,
+          player,
+          activeSpellHud,
+          hudTile.x,
+          hudTile.y
+        );
+        return;
+      }
+
+      updateCombatPreview(scene, map, groundLayer, null);
+      clearSpellRangePreview(scene);
+      return;
+    }
+
+    const activeSpell = getActiveSpell(player);
+    const state = scene.combatState;
+    if (!state || !state.enCours) {
+      updateCombatPreview(scene, map, groundLayer, null);
+      clearSpellRangePreview(scene);
+      return;
+    }
+
+    if (activeSpell) {
+      updateCombatPreview(scene, map, groundLayer, null);
+      const t = worldToTile(pointer.worldX, pointer.worldY);
+      const mapForPreview = scene.combatMap || map;
+      const layerForPreview = scene.combatGroundLayer || groundLayer;
+      updateSpellRangePreview(
+        scene,
+        mapForPreview,
+        layerForPreview,
+        player,
+        activeSpell,
+        t ? t.x : null,
+        t ? t.y : null
+      );
+      return;
+    }
+
+    clearSpellRangePreview(scene);
+    updateCombatPreview(scene, map, groundLayer, null);
+  };
+
+  // Rafraîchit la prévisualisation immédiatement quand le sort actif change
+  if (scene.__unsubscribeSpellPreview) {
+    scene.__unsubscribeSpellPreview();
+    scene.__unsubscribeSpellPreview = null;
+  }
+  scene.__unsubscribeSpellPreview = onStoreEvent(
+    "spell:activeSpellChanged",
+    (payload) => {
+      if (!payload || payload.caster !== player) return;
+      refreshSpellPreviewFromPointer();
+    }
+  );
 
   // Position de départ : on "snap" le joueur sur la tuile sous ses pieds
   const startTile = worldToTile(player.x, player.y);

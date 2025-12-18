@@ -100,9 +100,9 @@ export function initDomMetiers(player) {
             <input id="metier-craft-search" type="text" placeholder="Rechercher un équipement..." style="flex:1; min-width:180px; padding:6px 8px; border-radius:8px; border:1px solid #4a5560; background:#0f141b; color:#e8eef7;">
           </div>
           <div class="metier-craft-body" style="display:grid; grid-template-columns: 45% 1fr; gap:10px; min-height:0;">
-            <div class="metier-craft-list" id="metier-craft-list" style="display:flex; flex-direction:column; gap:6px; overflow:auto; min-height:0; max-height:50vh;">
+            <div class="metier-craft-list" id="metier-craft-list" style="display:flex; flex-direction:column; gap:6px; overflow:auto; min-height:0;">
             </div>
-            <div class="metier-craft-info" id="metier-craft-info" style="border:1px solid #2d3742; border-radius:10px; padding:10px; background:#0f141b; min-height:120px; max-height:50vh; overflow:auto;">
+            <div class="metier-craft-info" id="metier-craft-info" style="border:1px solid #2d3742; border-radius:10px; padding:10px; background:rgba(255,255,255,0.06); min-height:120px; overflow:auto;">
               <p style="opacity:0.7; margin:0;">Sélectionne un équipement pour voir les détails.</p>
             </div>
           </div>
@@ -278,8 +278,8 @@ export function initDomMetiers(player) {
       icon.style.width = "42px";
       icon.style.height = "42px";
       icon.style.borderRadius = "8px";
-      icon.style.background = "#2c3a48";
-      icon.style.border = "1px solid #46566a";
+      icon.style.background = "rgba(248, 250, 252, 0.92)";
+      icon.style.border = "1px solid rgba(148, 163, 184, 0.55)";
     const titleText = document.createElement("div");
     titleText.innerHTML = `<strong>${outDef?.label || recipe.label}</strong><br/>Niv. ${recipe.level}`;
     title.appendChild(icon);
@@ -449,7 +449,9 @@ export function initDomMetiers(player) {
       card.style.cursor = "pointer";
       const currentSelected = craftSelectedByMetier[metierId] || null;
       card.style.background =
-        currentSelected === recipe.id ? "#1b2430" : "#0f141b";
+        currentSelected === recipe.id
+          ? "rgba(59, 130, 246, 0.18)"
+          : "rgba(255, 255, 255, 0.06)";
 
       const left = document.createElement("div");
       left.style.display = "flex";
@@ -461,8 +463,8 @@ export function initDomMetiers(player) {
       icon.style.width = "38px";
       icon.style.height = "38px";
       icon.style.borderRadius = "8px";
-      icon.style.background = "#2c3a48";
-      icon.style.border = "1px solid #46566a";
+      icon.style.background = "rgba(248, 250, 252, 0.92)";
+      icon.style.border = "1px solid rgba(148, 163, 184, 0.55)";
       const text = document.createElement("div");
       text.innerHTML = `<div>${outDef?.label || recipe.label}</div><div style="opacity:0.7; font-size:12px;">Niv. ${recipe.level}</div>`;
       left.appendChild(icon);
