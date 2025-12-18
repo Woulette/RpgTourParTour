@@ -2,6 +2,8 @@ export function showFloatingText(scene, x, y, text, options = {}) {
   if (!scene || typeof scene.add?.text !== "function") return null;
   if (typeof x !== "number" || typeof y !== "number") return null;
 
+  const DEFAULT_FLOATING_DEPTH = 50000;
+
   const {
     color = "#ffffff",
     stroke = "#000000",
@@ -9,7 +11,7 @@ export function showFloatingText(scene, x, y, text, options = {}) {
     fontSize = 18,
     duration = 1300,
     rise = 18,
-    depth = 10000,
+    depth = DEFAULT_FLOATING_DEPTH,
     resolution = 2,
   } = options || {};
 
@@ -54,6 +56,8 @@ function getFloatingKey(scene, entity) {
 
 export function showFloatingTextOverEntity(scene, entity, text, options = {}) {
   if (!scene || !entity) return null;
+
+  const DEFAULT_FLOATING_DEPTH = 50000;
 
   const yOffset =
     typeof options.yOffset === "number"
@@ -116,8 +120,9 @@ export function showFloatingTextOverEntity(scene, entity, text, options = {}) {
   const spawn = () => {
     const mergedOptions = { ...options };
     if (typeof mergedOptions.depth !== "number") {
-      mergedOptions.depth =
-        typeof entity.depth === "number" ? entity.depth + 1000 : 10000;
+      const entityBasedDepth =
+        typeof entity.depth === "number" ? entity.depth + 1000 : DEFAULT_FLOATING_DEPTH;
+      mergedOptions.depth = Math.max(DEFAULT_FLOATING_DEPTH, entityBasedDepth);
     }
     const t = showFloatingText(
       scene,

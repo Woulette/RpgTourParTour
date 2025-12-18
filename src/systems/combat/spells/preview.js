@@ -40,8 +40,9 @@ export function updateSpellRangePreview(
   }
 
   const g = scene.spellRangePreview;
-  // La prévisu doit rester derrière les sprites (monstres/joueur).
-  g.setDepth(1);
+  // La prévisu doit rester derrière les sprites (monstres/joueur),
+  // mais au-dessus de la grille blanche (debug grid).
+  g.setDepth(1.2);
   g.clear();
 
   if (!scene.spellEffectPreview) {
@@ -54,7 +55,7 @@ export function updateSpellRangePreview(
 
   const eg = scene.spellEffectPreview;
   // Zone d'effet au-dessus de la portée bleue, mais sous la case ciblée.
-  eg.setDepth(1.4);
+  eg.setDepth(1.6);
   eg.clear();
 
   if (!scene.spellTargetPreview) {
@@ -67,7 +68,7 @@ export function updateSpellRangePreview(
 
   const tg = scene.spellTargetPreview;
   // La case ciblée doit être au-dessus de la portée (bleu), mais derrière les sprites.
-  tg.setDepth(1.5);
+  tg.setDepth(1.7);
   tg.clear();
 
   const state = scene.combatState;
@@ -87,12 +88,13 @@ export function updateSpellRangePreview(
 
   for (let ty = 0; ty < map.height; ty++) {
     for (let tx = 0; tx < map.width; tx++) {
-      if (!isTileTargetableForSpell(scene, map, tx, ty)) continue;
+      if (!isTileAvailableForSpell(map, tx, ty)) continue;
       if (spell.castPattern === "line4") {
         if (!(tx === originX || ty === originY)) continue;
       }
       if (!isTileInRange(spell, originX, originY, tx, ty)) continue;
 
+      const tileTargetable = isTileTargetableForSpell(scene, map, tx, ty);
       const losOk =
         !spell.lineOfSight || hasLineOfSight(scene, originX, originY, tx, ty);
 
@@ -107,9 +109,10 @@ export function updateSpellRangePreview(
         new Phaser.Math.Vector2(cx - halfW, cy),
       ];
 
-      const c = losOk ? colorOk : colorBlocked;
-      const outlineAlpha = losOk ? 0.98 : 0.78;
-      const fillAlpha = losOk ? 0.30 : 0.18;
+      const canHitTile = tileTargetable && losOk;
+      const c = canHitTile ? colorOk : colorBlocked;
+      const outlineAlpha = canHitTile ? 0.98 : 0.78;
+      const fillAlpha = canHitTile ? 0.30 : 0.18;
       g.lineStyle(1, c, outlineAlpha);
       g.fillStyle(c, fillAlpha);
       g.fillPoints(pts, true);
@@ -151,13 +154,17 @@ export function updateSpellRangePreview(
   if (typeof tx === "number" && typeof ty === "number") {
     const inBounds = tx >= 0 && ty >= 0 && tx < map.width && ty < map.height;
 
-    if (inBounds && isTileTargetableForSpell(scene, map, tx, ty)) {
+    if (inBounds && isTileAvailableForSpell(map, tx, ty)) {
       const isLineOk =
         spell.castPattern !== "line4" || tx === originX || ty === originY;
+      const tileTargetable = isTileTargetableForSpell(scene, map, tx, ty);
       const losOk =
         !spell.lineOfSight || hasLineOfSight(scene, originX, originY, tx, ty);
       const isInRange =
-        isLineOk && isTileInRange(spell, originX, originY, tx, ty) && losOk;
+        isLineOk &&
+        isTileInRange(spell, originX, originY, tx, ty) &&
+        losOk &&
+        tileTargetable;
 
       const worldPos = map.tileToWorldXY(tx, ty, undefined, undefined, groundLayer);
       const cx = worldPos.x + map.tileWidth / 2;
