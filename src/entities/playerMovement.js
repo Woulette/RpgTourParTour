@@ -76,7 +76,6 @@ function createCalibratedWorldToTile(map, groundLayer) {
       if (
         stateHud &&
         stateHud.enCours &&
-        stateHud.tour === "joueur" &&
         activeSpellHud &&
         scene.__combatHudHoverLock &&
         hudTile &&
@@ -142,6 +141,21 @@ function createCalibratedWorldToTile(map, groundLayer) {
     (payload) => {
       if (!payload || payload.caster !== player) return;
       refreshSpellPreviewFromPointer();
+
+      // Si la souris est déjà sur un monstre, on rafraîchit aussi la bulle + dégâts
+      // sans exiger un mouvement de souris.
+      const hovered = scene.__combatTileHoverEntity;
+      if (
+        hovered &&
+        hovered.monsterId &&
+        scene.combatState &&
+        scene.combatState.enCours &&
+        typeof scene.showDamagePreview === "function" &&
+        typeof scene.showMonsterTooltip === "function"
+      ) {
+        scene.showDamagePreview(hovered);
+        scene.showMonsterTooltip(hovered);
+      }
     }
   );
 
@@ -175,7 +189,6 @@ function createCalibratedWorldToTile(map, groundLayer) {
       if (
         stateHud &&
         stateHud.enCours &&
-        stateHud.tour === "joueur" &&
         activeSpellHud &&
         scene.__combatHudHoverLock &&
         hudTile &&
@@ -305,6 +318,13 @@ function createCalibratedWorldToTile(map, groundLayer) {
 
     // Pas de nouveau déplacement pendant la récolte d'un arbre.
     if (player.isHarvestingTree) {
+      return;
+    }
+
+    // En combat : tant que ce n'est pas au tour du joueur, aucune action (ni déplacement, ni cast).
+    // Mais la sélection/prévisualisation du sort reste possible via le HUD / touches.
+    const stateForTurn = scene.combatState;
+    if (stateForTurn && stateForTurn.enCours && stateForTurn.tour !== "joueur") {
       return;
     }
 

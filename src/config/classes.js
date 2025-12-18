@@ -12,8 +12,9 @@ export const classes = {
     spells: ["punch_furtif", "traction_aerienne", "punch_enflamme"],
   },
   mage: {
-    label: "Mage",
-    color: 0xaa66ff,
+    // Remplace l'ancienne classe "Mage" par l'Animiste
+    label: "Animiste",
+    color: 0x66ccff,
     statBonuses: [],
     spells: [],
   },

@@ -72,7 +72,7 @@ export function updateSpellRangePreview(
   tg.clear();
 
   const state = scene.combatState;
-  if (!state || !state.enCours || state.tour !== "joueur") {
+  if (!state || !state.enCours) {
     return;
   }
 

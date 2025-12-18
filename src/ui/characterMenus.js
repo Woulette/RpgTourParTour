@@ -38,7 +38,8 @@ export function initCharacterMenus({ onStartGame }) {
   const classDescriptions = {
     archer: "Attaques à distance, mobilité.",
     tank: "Résistant, contrôle de zone.",
-    mage: "Dégâts magiques, effets.",
+    // Slot "mage" renommé en Animiste (même mécanique de sélection).
+    mage: "Animiste : magie spirituelle, soutien et altérations.",
     assassin: "Burst au corps à corps, esquive.",
   };
 

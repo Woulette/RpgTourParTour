@@ -2,40 +2,33 @@
 // Chaque set possède un id, un label et des paliers de bonus
 // en fonction du nombre de pièces équipées.
 
-export const equipmentSets = {
-  corbeau: {
-    id: "corbeau",
-    label: "Panoplie du Corbeau",
-    // clés = nombre de pièces équipées, valeurs = bonus de stats
-    thresholds: {
+const corbeauThresholds = (statKey) => ({
+  2: { [statKey]: 3 },
+  3: { [statKey]: 6, vitalite: 10 },
+  4: { [statKey]: 9, vitalite: 15 },
+  5: { [statKey]: 12, vitalite: 30, initiative: 10 },
+  6: { [statKey]: 20, vitalite: 30, initiative: 30 },
+});
 
-      2: {
-        // bonus un peu plus fort à 2 pièces
-        agilite: 3,
-      },
-      3: {
-        // petit bonus quand on a 4 pièces
-        agilite: 6,
-        vitalite: 10,
-      },
-      4: {
-        // bonus un peu plus fort à 4 pièces
-        agilite: 9,
-        vitalite: 15,
-      },
-      5: {
-        // bonus complet quand les 5 pièces sont équipées
-        agilite: 12,
-        vitalite: 30,
-        initiative: 10,
-      },
-      6: {
-        // bonus complet quand les 6 pièces sont équipées
-        agilite: 20,
-        vitalite: 30,
-        initiative: 30,
-      },
-    },
+export const equipmentSets = {
+  corbeau_air: {
+    id: "corbeau_air",
+    label: "Panoplie du Corbeau (Air)",
+    thresholds: corbeauThresholds("agilite"),
+  },
+  corbeau_eau: {
+    id: "corbeau_eau",
+    label: "Panoplie du Corbeau (Eau)",
+    thresholds: corbeauThresholds("chance"),
+  },
+  corbeau_feu: {
+    id: "corbeau_feu",
+    label: "Panoplie du Corbeau (Feu)",
+    thresholds: corbeauThresholds("intelligence"),
+  },
+  corbeau_terre: {
+    id: "corbeau_terre",
+    label: "Panoplie du Corbeau (Terre)",
+    thresholds: corbeauThresholds("force"),
   },
 };
-

@@ -81,16 +81,16 @@ export function attachCombatTileHover(scene, hudY) {
       return;
     }
 
-    if (monster && scene.showMonsterTooltip) {
-      scene.showMonsterTooltip(monster);
-    } else if (scene.hideMonsterTooltip) {
-      scene.hideMonsterTooltip();
-    }
-
     if (monster && scene.showDamagePreview) {
       scene.showDamagePreview(monster);
     } else if (scene.clearDamagePreview) {
       scene.clearDamagePreview();
+    }
+
+    if (monster && scene.showMonsterTooltip) {
+      scene.showMonsterTooltip(monster);
+    } else if (scene.hideMonsterTooltip) {
+      scene.hideMonsterTooltip();
     }
 
     if (scene.showCombatTargetPanel) {

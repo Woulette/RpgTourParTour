@@ -8,6 +8,7 @@ export function attachMonsterTooltip(scene) {
   if (!scene) return;
 
   scene.monsterTooltipText = null;
+  scene.monsterTooltipDamageText = null;
   scene.monsterTooltipBg = null;
 
   const getBounds = (entity) => {
@@ -35,25 +36,35 @@ export function attachMonsterTooltip(scene) {
     const bounds = getBounds(monster);
     const bubbleCenterX = bounds?.centerX ?? monster.x;
 
-    // En combat : affichage minimal (nom uniquement).
+    // En combat : affichage harmonieux (nom + niv + PV + prévisu dégâts en un seul bloc).
     if (scene.combatState && scene.combatState.enCours) {
       const stats = monster.stats || {};
       const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
       const hpMax = typeof stats.hpMax === "number" ? stats.hpMax : hp;
-      const text = `${baseName} ${hp}/${hpMax}`;
-      const bubbleCenterY = monster.y - 56;
+      const lvl = monster.level ?? monster.stats?.niveau ?? 1;
+      const headerText = `${baseName}  Niv. ${lvl}  ♥ ${hp}/${hpMax}`;
+      const dmgText =
+        scene.damagePreview &&
+        scene.damagePreview.monster === monster &&
+        typeof scene.damagePreview.text === "string"
+          ? scene.damagePreview.text
+          : null;
 
       if (scene.monsterTooltipText) {
         scene.monsterTooltipText.destroy();
         scene.monsterTooltipText = null;
+      }
+      if (scene.monsterTooltipDamageText) {
+        scene.monsterTooltipDamageText.destroy();
+        scene.monsterTooltipDamageText = null;
       }
       if (scene.monsterTooltipBg) {
         scene.monsterTooltipBg.destroy();
         scene.monsterTooltipBg = null;
       }
 
-      const tooltipText = scene.add.text(bubbleCenterX, bubbleCenterY, text, {
-        fontFamily: "Arial",
+      const header = scene.add.text(bubbleCenterX, monster.y - 56, headerText, {
+        fontFamily: "Segoe UI, Arial",
         fontSize: 13,
         fontStyle: "bold",
         color: "#ffffff",
@@ -61,40 +72,63 @@ export function attachMonsterTooltip(scene) {
         strokeThickness: 3,
         align: "center",
       });
-      tooltipText.setOrigin(0.5, 0.5);
-      if (tooltipText.setResolution) {
-        tooltipText.setResolution(2);
+      header.setOrigin(0.5, 0.5);
+      if (header.setResolution) header.setResolution(2);
+
+      let dmg = null;
+      if (dmgText) {
+        dmg = scene.add.text(bubbleCenterX, monster.y - 56, dmgText, {
+          fontFamily: "Segoe UI, Arial",
+          fontSize: 12,
+          fontStyle: "bold",
+          color: "#f59e0b",
+          stroke: "#000000",
+          strokeThickness: 3,
+          align: "center",
+        });
+        dmg.setOrigin(0.5, 0.5);
+        if (dmg.setResolution) dmg.setResolution(2);
       }
 
-      const paddingX = 8;
-      const paddingY = 4;
-      const bgWidth = tooltipText.width + paddingX * 2;
-      const bgHeight = tooltipText.height + paddingY * 2;
+      const paddingX = 10;
+      const paddingY = 6;
+      const gapY = dmg ? 2 : 0;
+      const contentW = Math.max(header.width, dmg ? dmg.width : 0);
+      const contentH = header.height + (dmg ? gapY + dmg.height : 0);
+      const bgWidth = contentW + paddingX * 2;
+      const bgHeight = contentH + paddingY * 2;
 
       const bg = scene.add.graphics();
-      bg.fillStyle(0x000000, 0.7);
-      bg.lineStyle(1, 0xffffff, 0.9);
-      const radius = 6;
+      bg.fillStyle(0x000000, 0.78);
+      bg.lineStyle(1, 0xffffff, 0.18);
+      const radius = 8;
 
-      const margin = 8;
-      const centerY = (bounds?.top ?? bubbleCenterY) - bgHeight / 2 - margin;
-      tooltipText.setPosition(bubbleCenterX, centerY);
-
+      const margin = 10;
+      const centerY = (bounds?.top ?? monster.y) - bgHeight / 2 - margin;
       const bgX = bubbleCenterX - bgWidth / 2;
       const bgY = centerY - bgHeight / 2;
-
       bg.fillRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
       bg.strokeRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
 
+      const headerY = bgY + paddingY + header.height / 2;
+      header.setPosition(bubbleCenterX, headerY);
+      if (dmg) {
+        const dmgY = headerY + header.height / 2 + gapY + dmg.height / 2;
+        dmg.setPosition(bubbleCenterX, dmgY);
+      }
+
       if (scene.hudCamera) {
         scene.hudCamera.ignore(bg);
-        scene.hudCamera.ignore(tooltipText);
+        scene.hudCamera.ignore(header);
+        if (dmg) scene.hudCamera.ignore(dmg);
       }
       bg.setDepth(200000);
-      tooltipText.setDepth(200001);
+      header.setDepth(200001);
+      if (dmg) dmg.setDepth(200001);
 
       scene.monsterTooltipBg = bg;
-      scene.monsterTooltipText = tooltipText;
+      scene.monsterTooltipText = header;
+      scene.monsterTooltipDamageText = dmg;
       return;
     }
 
@@ -194,6 +228,10 @@ export function attachMonsterTooltip(scene) {
     if (scene.monsterTooltipText) {
       scene.monsterTooltipText.destroy();
       scene.monsterTooltipText = null;
+    }
+    if (scene.monsterTooltipDamageText) {
+      scene.monsterTooltipDamageText.destroy();
+      scene.monsterTooltipDamageText = null;
     }
     if (scene.monsterTooltipBg) {
       scene.monsterTooltipBg.destroy();

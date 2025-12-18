@@ -58,6 +58,7 @@ export function initDomCombat(scene) {
       const pathByClass = {
         archer: "assets/rotations/south-east.png",
         tank: "assets/animations/animation tank/rotations/south-east.png",
+        mage: "assets/animations/animations-Animiste/rotations/south-east.png",
       };
       const raw = pathByClass[classId] || pathByClass.archer;
       imgEl.src = encodeURI(raw);
@@ -237,7 +238,6 @@ export function initDomCombat(scene) {
             if (
               state &&
               state.enCours &&
-              state.tour === "joueur" &&
               activeSpell &&
               scene.combatMap &&
               scene.combatGroundLayer
@@ -258,11 +258,11 @@ export function initDomCombat(scene) {
           scene.showCombatTargetPanel(actor.entity);
         }
         if (actor.kind === "monstre") {
-          if (typeof scene.showMonsterTooltip === "function") {
-            scene.showMonsterTooltip(actor.entity);
-          }
           if (typeof scene.showDamagePreview === "function") {
             scene.showDamagePreview(actor.entity);
+          }
+          if (typeof scene.showMonsterTooltip === "function") {
+            scene.showMonsterTooltip(actor.entity);
           }
         }
       });
@@ -399,13 +399,22 @@ export function initDomCombat(scene) {
       target.label ||
       target.monsterId ||
       (isPlayerTarget ? "Joueur" : "Cible");
+    const isMonsterTarget = !!(target && target.monsterId);
+    const targetLevel = isMonsterTarget
+      ? (target.level ?? target.stats?.niveau ?? 1)
+      : null;
     const stats = target.stats || {};
     const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
     const hpMax = typeof stats.hpMax === "number" ? stats.hpMax : hp;
     const pa = stats.pa ?? 0;
     const pm = stats.pm ?? 0;
 
-    if (targetPanelNameEl) targetPanelNameEl.textContent = name;
+    if (targetPanelNameEl) {
+      targetPanelNameEl.textContent =
+        isMonsterTarget && typeof targetLevel === "number"
+          ? `${name} - Niv. ${targetLevel}`
+          : name;
+    }
     if (targetPanelHpTextEl)
       targetPanelHpTextEl.textContent = `PV : ${hp}/${hpMax}`;
     if (targetPanelPaEl) targetPanelPaEl.textContent = String(pa);

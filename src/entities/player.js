@@ -16,7 +16,8 @@ export function createPlayer(scene, x, y, classId) {
   const baseStats = createStats();
   const stats = applyBonuses(baseStats, classDef.statBonuses || []);
 
-  const textureKey = classId === "tank" ? "tank" : "player";
+  const textureKey =
+    classId === "tank" ? "tank" : classId === "mage" ? "animiste" : "player";
   const player = createCharacter(scene, x, y, {
     textureKey,
     classId,

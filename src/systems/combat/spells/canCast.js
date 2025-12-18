@@ -73,3 +73,32 @@ export function isSpellInRangeFromPosition(spell, fromX, fromY, toX, toY) {
 export function canCastSpellOnTile(scene, caster, spell, tileX, tileY, map) {
   return canCastSpellAtTile(scene, caster, spell, tileX, tileY, map);
 }
+
+// ---------- Conditions de prévisualisation ----------
+// Identique à la logique de portée/LDV/ciblage, mais sans contraintes de tour, PA, cooldown...
+export function canPreviewSpellAtTile(scene, caster, spell, tileX, tileY, map) {
+  if (!scene || !caster || !spell || !map) return false;
+
+  const state = scene.combatState;
+  if (!state || !state.enCours) return false;
+
+  if (!isTileTargetableForSpell(scene, map, tileX, tileY)) return false;
+
+  const { x: originX, y: originY } = getCasterOriginTile(caster);
+
+  if (spell.lineOfSight) {
+    if (!hasLineOfSight(scene, originX, originY, tileX, tileY)) return false;
+  }
+
+  if (spell.castPattern === "line4") {
+    if (!(tileX === originX || tileY === originY)) {
+      return false;
+    }
+  }
+
+  if (!isTileInRange(spell, originX, originY, tileX, tileY)) {
+    return false;
+  }
+
+  return true;
+}

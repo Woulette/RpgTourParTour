@@ -19,10 +19,64 @@ export function createMonster(scene, x, y, monsterId) {
     throw new Error(`Monstre inconnu: ${monsterId}`);
   }
 
+  const baseLevel = typeof def.baseLevel === "number" ? def.baseLevel : 1;
+  const levelMin =
+    typeof def.levelMin === "number" ? def.levelMin : baseLevel;
+  const levelMax =
+    typeof def.levelMax === "number" ? def.levelMax : Math.max(levelMin, 4);
+  const level = Phaser.Math.Between(levelMin, levelMax);
+
+  const computeScaledOverrides = () => {
+    const overrides = def.statsOverrides || {};
+    const delta = Math.max(0, level - baseLevel);
+    if (!overrides || delta <= 0) return overrides;
+
+    // Scaling simple par niveau, avec cap pour éviter des stats qui explosent en haut niveau.
+    // - HP : % plus haut mais capé
+    // - autres stats : % plus bas, capé, +1 minimum pour éviter l'arrondi à 0 sur les petites valeurs
+    const HP_PCT_PER_LEVEL = 0.08;
+    const HP_CAP_PER_LEVEL = 40;
+    const STAT_PCT_PER_LEVEL = 0.05;
+    const STAT_CAP_PER_LEVEL = 10;
+    const STAT_MIN_PER_LEVEL = 1;
+
+    const result = { ...overrides };
+
+    const baseHp =
+      typeof overrides.hpMax === "number"
+        ? overrides.hpMax
+        : typeof overrides.hp === "number"
+          ? overrides.hp
+          : null;
+
+    if (typeof baseHp === "number") {
+      const perLevel = Math.min(
+        HP_CAP_PER_LEVEL,
+        Math.max(1, Math.round(baseHp * HP_PCT_PER_LEVEL))
+      );
+      const scaledHpMax = baseHp + perLevel * delta;
+      result.hpMax = scaledHpMax;
+      result.hp = scaledHpMax;
+    }
+
+    for (const [key, baseVal] of Object.entries(overrides)) {
+      if (key === "hp" || key === "hpMax") continue;
+      if (typeof baseVal !== "number") continue;
+
+      const perLevel = Math.min(
+        STAT_CAP_PER_LEVEL,
+        Math.max(STAT_MIN_PER_LEVEL, Math.round(baseVal * STAT_PCT_PER_LEVEL))
+      );
+      result[key] = baseVal + perLevel * delta;
+    }
+
+    return result;
+  };
+
   // Stats de base communes, avec overrides du monstre.
   // Pour un monstre, on considère les overrides comme des valeurs FIXES
   // (on ne veut pas ajouter 50 HP de base + 40 HP du monstre).
-  const stats = createStats(def.statsOverrides || {});
+  const stats = createStats(computeScaledOverrides());
 
   const monster = createCharacter(scene, x, y, {
     textureKey: def.textureKey,
@@ -65,7 +119,7 @@ export function createMonster(scene, x, y, monsterId) {
   // Clé de map pour scoper les respawns (empêche le respawn sur une autre map).
   monster.spawnMapKey = monster.spawnMapKey ?? scene.currentMapKey ?? null;
   // Niveau aléatoire par défaut (modifiable en amont si besoin)
-  monster.level = monster.level ?? Phaser.Math.Between(1, 4);
+  monster.level = monster.level ?? level;
 
   // Callback standard quand le monstre meurt
   monster.onKilled = (sceneArg, killer) => {
