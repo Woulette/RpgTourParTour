@@ -47,6 +47,7 @@ import { initStore } from "./state/store.js";
 import { initQuestRuntime } from "./quests/runtime/init.js";
 import { initDevCheats } from "./dev/cheats.js";
 import { attachCombatTileHover } from "./ui/combatTileHover.js";
+import { setupWorkstations } from "./metier/workstations.js";
     
 
 class MainScene extends Phaser.Scene {
@@ -147,6 +148,7 @@ class MainScene extends Phaser.Scene {
   rebuildCollisionGridFromMap(this, map, groundLayer);
   spawnObjectLayerTrees(this, map, "trees", "staticTrees");
   spawnObjectLayerTrees(this, map, "decor", "staticDecor");
+  setupWorkstations(this, map, groundLayer, mapDef);
 
   // --- JOUEUR AU CENTRE (coordonnÃ©es tuiles) ---
   const centerTileX = Math.floor(map.width / 2);

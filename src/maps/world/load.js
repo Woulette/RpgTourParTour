@@ -424,7 +424,26 @@ export function maybeHandlePortal(scene) {
       ? hit.targetStartTile
       : null;
 
-  loadMapLikeMain(scene, target, startTile ? { startTile } : undefined);
+  const cam = scene.cameras && scene.cameras.main;
+  const doChange = () => loadMapLikeMain(scene, target, startTile ? { startTile } : undefined);
+
+  // Même fondu que les sorties de map pour garder un effet "entrée".
+  const DELAY_MS = 50;
+  if (scene.time?.delayedCall) {
+    scene.time.delayedCall(DELAY_MS, () => {
+      if (cam?.fadeOut && cam?.fadeIn) {
+        cam.once("camerafadeoutcomplete", () => {
+          doChange();
+          cam.fadeIn(150, 0, 0, 0);
+        });
+        cam.fadeOut(150, 0, 0, 0);
+      } else {
+        doChange();
+      }
+    });
+  } else {
+    doChange();
+  }
 }
 
 // If the player reached an exit tile (world), start the transition to the neighbor map.

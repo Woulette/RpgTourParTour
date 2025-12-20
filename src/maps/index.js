@@ -73,6 +73,8 @@ const craftTableCordonnierTileset = {
   name: "TableDeCraftCordonnier",
   imageKey: "TableDeCraftCordonnier",
   imagePath: "assets/TableDeCraftCordonnier.png",
+  frameWidth: 60,
+  frameHeight: 60,
 };
 
 const entreeDonjonTileset = {
@@ -98,6 +100,15 @@ const taverneTileset = {
   imagePath: "assets/MesDecor/Taverne.png",
   frameWidth: 200,
   frameHeight: 200,
+  autoTileOffset: true,
+};
+
+const troncArbreDecoTileset = {
+  name: "TroncArbreDeco",
+  imageKey: "TroncArbreDeco",
+  imagePath: "assets/MesDecor/TroncArbreDeco.png",
+  frameWidth: 400,
+  frameHeight: 400,
   autoTileOffset: true,
 };
 
@@ -312,7 +323,12 @@ export const maps = {
     // Au-dessus de MapAndemiaNouvelleVersion2 (-1,0).
     worldPos: { x: -1, y: -1 },
     jsonPath: "assets/maps/MapAndemiaNouvelleVersion3.json",
-    tilesets: [...tilesetNew, entreeDonjonTileset, taverneTileset],
+    tilesets: [
+      ...tilesetNew,
+      entreeDonjonTileset,
+      taverneTileset,
+      troncArbreDecoTileset,
+    ],
     groundLayerName: "Calque de Tuiles 1",
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
@@ -340,13 +356,39 @@ export const maps = {
   MapTaverne: {
     key: "MapTaverne",
     jsonPath: "assets/maps/MapTaverne.json",
-    tilesets: [...tilesetNew, entreeDonjonTileset, solTaverneTileset],
+    tilesets: [
+      ...tilesetNew,
+      entreeDonjonTileset,
+      solTaverneTileset,
+      craftTableTileset,
+      craftTableBijoutierTileset,
+      craftTableCordonnierTileset,
+    ],
     groundLayerName: "Calque de Tuiles 1",
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: false,
     monsterSpawns: [],
     treePositions: [],
+    // Tables de craft dans la taverne (sprites + interaction).
+    // Ajuste ces tuiles si tu veux les déplacer dans Tiled.
+    workstations: [
+      { id: "tailleur", tileX: 12, tileY: 20, offsetX: -4 },
+      {
+        id: "bijoutier",
+        tileX: 12,
+        tileY: 18,
+        offsetY: -4,
+        textureKey: "TableDeCraftBijoutier",
+      },
+      {
+        id: "cordonnier",
+        tileX: 12,
+        tileY: 16,
+        offsetX: -4,
+        textureKey: "TableDeCraftCordonnier",
+      },
+    ],
     exitBounds: null,
   },
   MapAndemia5: {
@@ -608,4 +650,4 @@ export const maps = {
   },
 };
 
-export const defaultMapKey = "Map1Andemia";
+export const defaultMapKey = "MapTaverne";
