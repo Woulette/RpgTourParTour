@@ -101,6 +101,14 @@ const taverneTileset = {
   autoTileOffset: true,
 };
 
+const solTaverneTileset = {
+  name: "SolTaverne",
+  imageKey: "SolTaverne",
+  imagePath: "assets/NouveauAssetSolEncours/SolTaverne.png",
+  frameWidth: 64,
+  frameHeight: 32,
+};
+
 const donjonDecorOssementTileset = {
   name: "Ossement",
   imageKey: "Ossement",
@@ -308,13 +316,37 @@ export const maps = {
     groundLayerName: "Calque de Tuiles 1",
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
-    spawnDefaults: false,
+    spawnDefaults: true,
     monsterSpawns: [],
     treePositions: [
       { tileX: 8, tileY: 18 },
       { tileX: 23, tileY: 23 },
       { tileX: 19, tileY: 8 },
     ],
+    // Portail au sol : quand le joueur est sur cette tuile, on entre dans la taverne.
+    // Ajuste `tileX/tileY` selon la case du portail sur la map 3.
+    portals: [
+      {
+        id: "portalTaverne",
+        tileX: 11,
+        tileY: 18,
+        targetMapKey: "MapTaverne",
+        // Spawn dans la taverne (ajuste si besoin).
+        targetStartTile: { x: 18, y: 18 },
+      },
+    ],
+    exitBounds: null,
+  },
+  MapTaverne: {
+    key: "MapTaverne",
+    jsonPath: "assets/maps/MapTaverne.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, solTaverneTileset],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: false,
+    monsterSpawns: [],
+    treePositions: [],
     exitBounds: null,
   },
   MapAndemia5: {

@@ -40,6 +40,11 @@ export function spawnObjectLayerTrees(
     const propOverPlayer = isTrue(getProp("overPlayer"));
     const propUnderPlayer =
       isTrue(getProp("underPlayer")) || isTrue(getProp("playerFront"));
+    const isDecorLayer = String(layerName || "").toLowerCase().trim() === "decor";
+    const isLarge =
+      typeof obj.width === "number" &&
+      typeof obj.height === "number" &&
+      (obj.width >= 150 || obj.height >= 150);
 
     const ordered = [...(map.tilesets || [])]
       .filter((t) => typeof t.firstgid === "number")
@@ -128,7 +133,9 @@ export function spawnObjectLayerTrees(
         : scene.add.sprite(posX, posY, textureKey, frame);
     sprite.setOrigin(0.5, 1);
     sprite.isOverPlayer = propOverPlayer;
-    sprite.isUnderPlayer = propUnderPlayer;
+    // Par défaut, les "gros décors" (maisons/taverne) ne doivent pas cacher le joueur.
+    // Si tu veux l'inverse sur un objet précis, mets `overPlayer=true` dans Tiled.
+    sprite.isUnderPlayer = propUnderPlayer || (isDecorLayer && isLarge && !propOverPlayer);
     applyDepthRules(scene, sprite);
 
     if (scene.hudCamera) {

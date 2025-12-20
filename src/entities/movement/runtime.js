@@ -1,7 +1,7 @@
 import { PLAYER_SPEED } from "../../config/constants.js";
 import { applyMoveCost } from "../../core/combat.js";
 import { showFloatingTextOverEntity } from "../../core/combat/floatingText.js";
-import { maybeHandleMapExit } from "../../maps/world.js";
+import { maybeHandleMapExit, maybeHandlePortal } from "../../maps/world.js";
 import { maybeHandleDungeonExit } from "../../dungeons/runtime.js";
 import { isTileBlocked } from "../../collision/collisionGrid.js";
 import { recalcDepths } from "../../maps/world/decor.js";
@@ -185,6 +185,7 @@ export function movePlayerAlongPath(
         // Si une sortie de map est en attente et que le joueur est sur
         // la tuile cible, on laisse world.js gérer la transition.
         maybeHandleMapExit(scene);
+        maybeHandlePortal(scene);
         maybeHandleDungeonExit(scene);
 
         if (typeof onCompleteAll === "function") {

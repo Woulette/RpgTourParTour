@@ -11,7 +11,8 @@ import { rebuildCollisionGridFromMap } from "./collision.js";
 import { rebuildDebugGrid } from "./debugGrid.js";
 import { spawnObjectLayerTrees, recalcDepths } from "./decor.js";
 import { initWorldExitsForScene } from "./exits.js";
-import { getNeighbor } from "./util.js";
+import { createCalibratedWorldToTile, getNeighbor } from "./util.js";
+import { maps } from "../index.js";
 import { setupWorkstations } from "../../metier/workstations.js";
 import { onAfterMapLoaded } from "../../dungeons/hooks.js";
 import { isTileBlocked } from "../../collision/collisionGrid.js";
@@ -200,6 +201,8 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
 
   // Compute playable bounds (used for collision), and world exits (if any).
   initWorldExitsForScene(scene);
+  scene._lastPortalKey = null;
+  scene.worldPortals = buildWorldPortals(map, scene.groundLayer, mapDef);
   if (mapDef.isDungeon) {
     // In dungeons we disable world transitions, but keep playableBounds.
     scene.worldExits = { up: [], down: [], left: [], right: [] };
@@ -277,6 +280,151 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
 
   // Dungeon hooks: exit tiles, etc.
   onAfterMapLoaded(scene);
+}
+
+function getObjProp(obj, name) {
+  if (!obj || !obj.properties) return undefined;
+  if (Array.isArray(obj.properties)) {
+    const p = obj.properties.find((prop) => prop.name === name);
+    return p ? p.value : undefined;
+  }
+  return obj.properties[name];
+}
+
+function buildWorldPortals(map, groundLayer, mapDef) {
+  const worldToTile =
+    map && groundLayer ? createCalibratedWorldToTile(map, groundLayer) : null;
+
+  const portalsLayer =
+    map?.getObjectLayer?.("portals") || map?.getObjectLayer?.("Portals") || null;
+
+  // Priorité au calque Tiled "portals" (100% éditable sans toucher le code).
+  // Fallback: on scanne tous les object layers si on trouve des objets avec `targetMapKey`.
+  const objectLayers = Array.isArray(map?.objects) ? map.objects : null;
+  const layersToScan = [];
+  if (portalsLayer) layersToScan.push(portalsLayer);
+  if (objectLayers) {
+    objectLayers.forEach((l) => {
+      if (!l || !Array.isArray(l.objects)) return;
+      if (portalsLayer && l === portalsLayer) return;
+      layersToScan.push(l);
+    });
+  }
+
+  if (layersToScan.length > 0 && worldToTile) {
+    const portals = [];
+
+    layersToScan.forEach((layer) => {
+      (layer.objects || []).forEach((obj) => {
+        if (!obj) return;
+
+        const targetMapKey =
+          getObjProp(obj, "targetMapKey") || getObjProp(obj, "mapKey") || null;
+        // On ne considère l'objet comme "portail" que s'il a une destination.
+        if (!targetMapKey) return;
+
+        const txProp = getObjProp(obj, "tileX");
+        const tyProp = getObjProp(obj, "tileY");
+
+        let tileX;
+        let tileY;
+
+        if (typeof txProp === "number" && typeof tyProp === "number") {
+          tileX = txProp;
+          tileY = tyProp;
+        } else {
+          const w = typeof obj.width === "number" ? obj.width : map.tileWidth;
+          const h = typeof obj.height === "number" ? obj.height : map.tileHeight;
+          const anchorX = (obj.x ?? 0) + w / 2;
+          const anchorY = (obj.y ?? 0) + h; // bas de l'objet
+          const t = worldToTile(anchorX, anchorY);
+          if (!t) return;
+          tileX = t.x;
+          tileY = t.y;
+        }
+
+        const targetTileX =
+          typeof getObjProp(obj, "targetTileX") === "number"
+            ? getObjProp(obj, "targetTileX")
+            : null;
+        const targetTileY =
+          typeof getObjProp(obj, "targetTileY") === "number"
+            ? getObjProp(obj, "targetTileY")
+            : null;
+
+        portals.push({
+          id: getObjProp(obj, "id") || obj.name || obj.type || null,
+          tileX,
+          tileY,
+          targetMapKey,
+          targetStartTile:
+            typeof targetTileX === "number" && typeof targetTileY === "number"
+              ? { x: targetTileX, y: targetTileY }
+              : null,
+        });
+      });
+    });
+
+    if (portalsLayer && Array.isArray(portalsLayer.objects) && portalsLayer.objects.length === 0) {
+      // Aide debug: si le calque existe mais est vide, c'est souvent que la map n'a pas été exportée.
+      console.warn(
+        `[portals] Calque \"portals\" présent mais aucun objet trouvé dans ${mapDef?.key || "map"} (as-tu bien exporté la map ?)`
+      );
+    }
+
+    if (portals.length > 0) return portals;
+  }
+
+  // Fallback: portails codés dans src/maps/index.js (moins pratique, mais garde compat).
+  return Array.isArray(mapDef?.portals) ? mapDef.portals : [];
+}
+
+// Portails "au sol" : si le joueur est sur la tuile, on téléporte vers une map cible.
+// Définition via Tiled : calque objet "portals" avec props tileX/tileY + targetMapKey + targetTileX/targetTileY.
+export function maybeHandlePortal(scene) {
+  if (!scene || !scene.player || !scene.currentMapDef) return;
+  if (scene.combatState?.enCours || scene.prepState?.actif) return;
+
+  const portals = Array.isArray(scene.worldPortals)
+    ? scene.worldPortals
+    : buildWorldPortals(scene.map, scene.groundLayer, scene.currentMapDef);
+  if (portals.length === 0) return;
+
+  const px = scene.player.currentTileX;
+  const py = scene.player.currentTileY;
+  if (typeof px !== "number" || typeof py !== "number") return;
+
+  const hit = portals.find(
+    (p) => p && typeof p.tileX === "number" && typeof p.tileY === "number" && p.tileX === px && p.tileY === py
+  );
+
+  const key = hit ? `${hit.tileX},${hit.tileY}` : null;
+  if (!key) {
+    scene._lastPortalKey = null;
+    return;
+  }
+
+  if (scene._lastPortalKey === key) return;
+  scene._lastPortalKey = key;
+
+  const targetKey = hit.targetMapKey;
+  if (!targetKey) return;
+
+  const target =
+    maps[targetKey] ||
+    maps[String(targetKey).trim()] ||
+    maps[Object.keys(maps).find((k) => k.toLowerCase() === String(targetKey).toLowerCase())] ||
+    null;
+  if (!target) return;
+
+  const startTile =
+    hit.targetStartTile &&
+    typeof hit.targetStartTile.x === "number" &&
+    typeof hit.targetStartTile.y === "number"
+      ? hit.targetStartTile
+      : null;
+
+  loadMapLikeMain(scene, target, startTile ? { startTile } : undefined);
 }
 
 // If the player reached an exit tile (world), start the transition to the neighbor map.
