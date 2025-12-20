@@ -42,7 +42,8 @@ export function updateSpellRangePreview(
   const g = scene.spellRangePreview;
   // La prévisu doit rester derrière les sprites (monstres/joueur),
   // mais au-dessus de la grille blanche (debug grid).
-  g.setDepth(1.2);
+  const groundDepth = typeof scene.maxGroundDepth === "number" ? scene.maxGroundDepth : 1;
+  g.setDepth(groundDepth + 0.3);
   g.clear();
 
   if (!scene.spellEffectPreview) {
@@ -55,7 +56,7 @@ export function updateSpellRangePreview(
 
   const eg = scene.spellEffectPreview;
   // Zone d'effet au-dessus de la portée bleue, mais sous la case ciblée.
-  eg.setDepth(1.6);
+  eg.setDepth(groundDepth + 0.45);
   eg.clear();
 
   if (!scene.spellTargetPreview) {
@@ -68,7 +69,7 @@ export function updateSpellRangePreview(
 
   const tg = scene.spellTargetPreview;
   // La case ciblée doit être au-dessus de la portée (bleu), mais derrière les sprites.
-  tg.setDepth(1.7);
+  tg.setDepth(groundDepth + 0.55);
   tg.clear();
 
   const state = scene.combatState;

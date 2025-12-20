@@ -25,6 +25,34 @@ const tilesetLegacy = [
   },
 ];
 
+// Tileset utilisé par assets/maps/MAPDEDEPARTANDEMIA.json (nom Tiled : "MapJeu1 (1)").
+const mapDepartTileset = {
+  name: "MapJeu1 (1)",
+  imageKey: "MapJeu1_1",
+  imagePath: "assets/tileset/MapJeu1 (1).png",
+  frameWidth: 64,
+  frameHeight: 32,
+};
+
+// Tileset utilisé par assets/maps/MAPDEDEPARTANDEMIA2.json (nom Tiled : "MapJeu2 (1)").
+const mapDepartTileset2 = {
+  name: "MapJeu2 (1)",
+  imageKey: "MapJeu2_1",
+  imagePath: "assets/tileset/MapJeu2 (1).png",
+  frameWidth: 64,
+  frameHeight: 32,
+};
+
+// Tileset utilisé par assets/maps/MAPDEDEPARTANDEMIA2.json (nom Tiled : "TestMapPnGPourDOfus de moi meme").
+// Note: l'image attendue n'était pas dans le repo, on charge donc `assets/TestMapPnGPourDOfus de moi meme.png`.
+const testMapDofusTileset = {
+  name: "TestMapPnGPourDOfus de moi meme",
+  imageKey: "TestMapPnGPourDofus",
+  imagePath: "assets/TestMapPnGPourDOfus de moi meme.png",
+  frameWidth: 1088,
+  frameHeight: 608,
+};
+
 const craftTableTileset = {
   name: "TableDeCraftTailleur",
   imageKey: "TableDeCraftTailleur",
@@ -45,8 +73,6 @@ const craftTableCordonnierTileset = {
   name: "TableDeCraftCordonnier",
   imageKey: "TableDeCraftCordonnier",
   imagePath: "assets/TableDeCraftCordonnier.png",
-  frameWidth: 54,
-  frameHeight: 65,
 };
 
 const entreeDonjonTileset = {
@@ -55,6 +81,24 @@ const entreeDonjonTileset = {
   imagePath: "assets/EntreDonjons1Teste.png",
   frameWidth: 164,
   frameHeight: 124,
+};
+
+const maisonVillage1Tileset = {
+  name: "MaisonVillage1",
+  imageKey: "MaisonVillage1",
+  imagePath: "assets/MesDecor/MaisonVillage1.png",
+  frameWidth: 200,
+  frameHeight: 200,
+  autoTileOffset: true,
+};
+
+const taverneTileset = {
+  name: "Taverne",
+  imageKey: "Taverne",
+  imagePath: "assets/MesDecor/Taverne.png",
+  frameWidth: 200,
+  frameHeight: 200,
+  autoTileOffset: true,
 };
 
 const donjonDecorOssementTileset = {
@@ -75,12 +119,97 @@ const donjonDecorTroneBossTileset = {
   imagePath: "assets/TroneBossAluineeks.png",
 };
 
+// Tilesets pour assets/maps/MapPourtesteVite fait Andemia.json
+const mapPourTestViteTilesets = [
+  {
+    name: "testeBase2+2",
+    imageKey: "testeBase2+2",
+    imagePath: "assets/NouveauAssetSolEncours/testeBase2+2.png",
+    frameWidth: 64,
+    frameHeight: 32,
+  },
+  {
+    name: "testeBase",
+    imageKey: "testeBase",
+    imagePath: "assets/NouveauAssetSolEncours/testeBase.png",
+    frameWidth: 64,
+    frameHeight: 32,
+  },
+  {
+    name: "Sprite-0006",
+    imageKey: "Sprite-0006",
+    imagePath: "assets/NouveauAssetSolEncours/Sprite-0006.png",
+    frameWidth: 64,
+    frameHeight: 32,
+  },
+  {
+    name: "Sprite-0005",
+    imageKey: "Sprite-0005",
+    imagePath: "assets/NouveauAssetSolEncours/Sprite-0005.png",
+    frameWidth: 64,
+    frameHeight: 32,
+  },
+  {
+    name: "testTerre3",
+    imageKey: "testTerre3",
+    imagePath: "assets/NouveauAssetSolEncours/testTerre3.png",
+    frameWidth: 64,
+    frameHeight: 32,
+  },
+];
+
 export const maps = {
+  MapDeDepartAndemia: {
+    key: "MapDeDepartAndemia",
+    // Coordonnées monde dédiées (évite les collisions avec MapAndemia*).
+    worldPos: { x: 100, y: 100 },
+    jsonPath: "assets/maps/MAPDEDEPARTANDEMIA.json",
+    enabled: false,
+    tilesets: [...tilesetNew, entreeDonjonTileset, mapDepartTileset],
+    groundLayerName: "Calque de Tuiles 1",
+    startTile: { x: 18, y: 9 },
+    cameraOffsets: { x: 0, y: 43 },
+    // Map de départ : pas de spawns de test par défaut.
+    spawnDefaults: false,
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapDeDepartAndemia2: {
+    key: "MapDeDepartAndemia2",
+    // À gauche de la map de départ (100,100).
+    worldPos: { x: 99, y: 100 },
+    jsonPath: "assets/maps/MAPDEDEPARTANDEMIA2.json",
+    enabled: false,
+    tilesets: [
+      ...tilesetNew,
+      entreeDonjonTileset,
+      mapDepartTileset2,
+      testMapDofusTileset,
+    ],
+    groundLayerName: "Calque de Tuiles 1",
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: false,
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapPourTestViteAndemia: {
+    key: "MapPourTestViteAndemia",
+    jsonPath: "assets/maps/MapPourtesteVite fait Andemia.json",
+    enabled: false,
+    tilesets: [...tilesetNew, ...mapPourTestViteTilesets],
+    groundLayerName: "Calque de Tuiles 1",
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: false,
+    treePositions: [],
+    exitBounds: null,
+  },
   Map1Andemia: {
     key: "Map1Andemia",
     worldPos: { x: 0, y: 0 },
-    jsonPath: "assets/maps/MapAndemia1.json",
-    tilesets: [...tilesetNew, entreeDonjonTileset],
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion1.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, maisonVillage1Tileset],
+    // La grille debug ne doit pas passer au-dessus des calques décor (ex: "Calque de Tuiles 5").
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,
     monsterSpawns: [
@@ -120,6 +249,72 @@ export const maps = {
     ],
     // Optionnel : borne manuelle des bandes de sortie (coordonnées monde).
     // Laisse null pour l’auto, ou mets { minX, minY, maxX, maxY } si tu veux régler à la main.
+    exitBounds: null,
+  },
+  MapAndemiaNouvelleVersion2: {
+    key: "MapAndemiaNouvelleVersion2",
+    // À gauche de Map1Andemia (0,0).
+    worldPos: { x: -1, y: 0 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion2.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset],
+    groundLayerName: "Calque de Tuiles 1",
+    // Même logique de grille que la map principale (ne pas passer au-dessus des calques décor).
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [
+      {
+        groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: -6, y: 3 },
+      },
+      {
+        groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: 6, y: -2 },
+      },
+      {
+        groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: -3, y: -6 },
+      },
+      {
+        groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: 4, y: 6 },
+      },
+    ],
+    treePositions: [
+      { tileX: 11, tileY: 22 },
+      { tileX: 20, tileY: 20 },
+      { tileX: 19, tileY: 8 },
+    ],
+    exitBounds: null,
+  },
+  MapAndemiaNouvelleVersion3: {
+    key: "MapAndemiaNouvelleVersion3",
+    // Au-dessus de MapAndemiaNouvelleVersion2 (-1,0).
+    worldPos: { x: -1, y: -1 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion3.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, taverneTileset],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: false,
+    monsterSpawns: [],
+    treePositions: [
+      { tileX: 8, tileY: 18 },
+      { tileX: 23, tileY: 23 },
+      { tileX: 19, tileY: 8 },
+    ],
     exitBounds: null,
   },
   MapAndemia5: {

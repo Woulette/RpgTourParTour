@@ -5,7 +5,12 @@ import { createCombatState, buildTurnOrder } from "./state.js";
 import { onAfterCombatEnded } from "../../dungeons/runtime.js";
 import { addChatMessage } from "../../chat/chat.js";
 import { items } from "../../inventory/itemsConfig.js";
+import { addItem } from "../../inventory/inventoryCore.js";
 import { clearAllSummons } from "../../systems/combat/summons/summon.js";
+import { addXpToPlayer } from "../../entities/player.js";
+import { clearActiveSpell } from "../../systems/combat/spells/activeSpell.js";
+import { queueMonsterRespawn } from "../../monsters/respawnState.js";
+import { createMonster } from "../../entities/monster.js";
 
 function joinPartsWrapped(parts, maxLineLength = 70) {
   const safeMax = Math.max(20, maxLineLength | 0);
@@ -32,6 +37,186 @@ function joinPartsWrapped(parts, maxLineLength = 70) {
   return lines.join("\n");
 }
 
+function getWorldMapAndLayer(scene) {
+  const map = scene?.map || scene?.combatMap || null;
+  const layer = scene?.groundLayer || scene?.combatGroundLayer || null;
+  return { map, layer };
+}
+
+function snapshotMonsterForWorld(scene, monster) {
+  if (!scene || !monster) return null;
+
+  const fromPrep = monster._worldSnapshotBeforeCombat;
+  if (fromPrep && typeof fromPrep === "object") {
+    return { ...fromPrep };
+  }
+
+  const stats = monster.stats || {};
+  return {
+    monsterId: monster.monsterId || null,
+    tileX: monster.tileX,
+    tileY: monster.tileY,
+    x: monster.x,
+    y: monster.y,
+    level: typeof monster.level === "number" ? monster.level : null,
+    hp: typeof stats.hp === "number" ? stats.hp : null,
+    hpMax: typeof stats.hpMax === "number" ? stats.hpMax : null,
+    spawnMapKey: monster.spawnMapKey ?? scene.currentMapKey ?? null,
+    respawnEnabled:
+      monster.respawnEnabled === undefined ? true : !!monster.respawnEnabled,
+    groupId: monster.groupId ?? null,
+    groupSize: monster.groupSize ?? null,
+    groupLevels: Array.isArray(monster.groupLevels)
+      ? monster.groupLevels.slice()
+      : null,
+    groupMonsterIds: Array.isArray(monster.groupMonsterIds)
+      ? monster.groupMonsterIds.slice()
+      : null,
+    groupLevelTotal:
+      typeof monster.groupLevelTotal === "number" ? monster.groupLevelTotal : null,
+  };
+}
+
+function applyLootToPlayerInventory(player, loot) {
+  const finalLoot = [];
+  if (!player || !player.inventory || !Array.isArray(loot)) return finalLoot;
+
+  for (const entry of loot) {
+    if (!entry || !entry.itemId) continue;
+    const qty = entry.qty ?? 0;
+    if (qty <= 0) continue;
+
+    const remaining = addItem(player.inventory, entry.itemId, qty);
+    const gained = qty - remaining;
+    if (gained <= 0) continue;
+
+    let slot = finalLoot.find((l) => l.itemId === entry.itemId);
+    if (!slot) {
+      slot = { itemId: entry.itemId, qty: 0 };
+      finalLoot.push(slot);
+    }
+    slot.qty += gained;
+  }
+
+  return finalLoot;
+}
+
+function restoreWorldMonsterFromSnapshot(scene, snapshot, fallbackRef) {
+  if (!scene || !snapshot || !snapshot.monsterId) return;
+
+  const { map, layer } = getWorldMapAndLayer(scene);
+  const tileX = snapshot.tileX;
+  const tileY = snapshot.tileY;
+
+  const isValidTile =
+    typeof tileX === "number" &&
+    typeof tileY === "number" &&
+    map &&
+    layer &&
+    tileX >= 0 &&
+    tileY >= 0 &&
+    tileX < map.width &&
+    tileY < map.height;
+
+  const ensurePos = (m) => {
+    if (!m) return;
+    if (typeof tileX === "number") m.tileX = tileX;
+    if (typeof tileY === "number") m.tileY = tileY;
+
+    if (isValidTile && typeof map.tileToWorldXY === "function") {
+      const wp = map.tileToWorldXY(tileX, tileY, undefined, undefined, layer);
+      const offX = typeof m.renderOffsetX === "number" ? m.renderOffsetX : 0;
+      const offY = typeof m.renderOffsetY === "number" ? m.renderOffsetY : 0;
+      m.x = wp.x + map.tileWidth / 2 + offX;
+      m.y = wp.y + map.tileHeight + offY;
+    } else if (typeof snapshot.x === "number" && typeof snapshot.y === "number") {
+      m.x = snapshot.x;
+      m.y = snapshot.y;
+    }
+
+    m.setVisible?.(true);
+    m.setInteractive?.({ useHandCursor: true });
+  };
+
+  const inScene =
+    fallbackRef && Array.isArray(scene.monsters)
+      ? scene.monsters.includes(fallbackRef)
+      : false;
+  const canReuse =
+    inScene &&
+    !fallbackRef.destroyed &&
+    typeof fallbackRef.monsterId === "string" &&
+    fallbackRef.monsterId === snapshot.monsterId;
+
+  if (canReuse) {
+    fallbackRef.isCombatMember = false;
+    fallbackRef.respawnEnabled =
+      snapshot.respawnEnabled === undefined ? true : !!snapshot.respawnEnabled;
+    fallbackRef.spawnMapKey = snapshot.spawnMapKey ?? scene.currentMapKey ?? null;
+    if (typeof snapshot.level === "number") fallbackRef.level = snapshot.level;
+    if (snapshot.groupId != null) fallbackRef.groupId = snapshot.groupId;
+    if (typeof snapshot.groupSize === "number") fallbackRef.groupSize = snapshot.groupSize;
+    if (Array.isArray(snapshot.groupLevels)) fallbackRef.groupLevels = snapshot.groupLevels.slice();
+    if (Array.isArray(snapshot.groupMonsterIds))
+      fallbackRef.groupMonsterIds = snapshot.groupMonsterIds.slice();
+    if (typeof snapshot.groupLevelTotal === "number")
+      fallbackRef.groupLevelTotal = snapshot.groupLevelTotal;
+
+    fallbackRef.stats = fallbackRef.stats || {};
+    if (typeof snapshot.hpMax === "number") fallbackRef.stats.hpMax = snapshot.hpMax;
+    const hpToSet =
+      typeof snapshot.hp === "number"
+        ? snapshot.hp
+        : typeof snapshot.hpMax === "number"
+          ? snapshot.hpMax
+          : null;
+    if (typeof hpToSet === "number") fallbackRef.stats.hp = hpToSet;
+
+    ensurePos(fallbackRef);
+    delete fallbackRef._worldSnapshotBeforeCombat;
+    return;
+  }
+
+  // Sinon, recrée un monstre monde à partir du snapshot.
+  let spawnX = snapshot.x;
+  let spawnY = snapshot.y;
+  if (isValidTile && typeof map.tileToWorldXY === "function") {
+    const wp = map.tileToWorldXY(tileX, tileY, undefined, undefined, layer);
+    spawnX = wp.x + map.tileWidth / 2;
+    spawnY = wp.y + map.tileHeight;
+  }
+
+  if (typeof spawnX !== "number" || typeof spawnY !== "number") return;
+
+  const recreated = createMonster(scene, spawnX, spawnY, snapshot.monsterId, snapshot.level);
+  recreated.isCombatMember = false;
+  recreated.respawnEnabled =
+    snapshot.respawnEnabled === undefined ? true : !!snapshot.respawnEnabled;
+  recreated.spawnMapKey = snapshot.spawnMapKey ?? scene.currentMapKey ?? null;
+  if (typeof snapshot.level === "number") recreated.level = snapshot.level;
+  if (snapshot.groupId != null) recreated.groupId = snapshot.groupId;
+  if (typeof snapshot.groupSize === "number") recreated.groupSize = snapshot.groupSize;
+  if (Array.isArray(snapshot.groupLevels)) recreated.groupLevels = snapshot.groupLevels.slice();
+  if (Array.isArray(snapshot.groupMonsterIds))
+    recreated.groupMonsterIds = snapshot.groupMonsterIds.slice();
+  if (typeof snapshot.groupLevelTotal === "number")
+    recreated.groupLevelTotal = snapshot.groupLevelTotal;
+
+  recreated.stats = recreated.stats || {};
+  if (typeof snapshot.hpMax === "number") recreated.stats.hpMax = snapshot.hpMax;
+  const hpToSet =
+    typeof snapshot.hp === "number"
+      ? snapshot.hp
+      : typeof snapshot.hpMax === "number"
+        ? snapshot.hpMax
+        : null;
+  if (typeof hpToSet === "number") recreated.stats.hp = hpToSet;
+
+  ensurePos(recreated);
+  scene.monsters = scene.monsters || [];
+  scene.monsters.push(recreated);
+}
+
 // Commence un combat : on crée l'état et on active l'UI.
 export function startCombat(scene, player, monster) {
   // Si une régénération hors combat était en cours, on l'arrête
@@ -49,6 +234,7 @@ export function startCombat(scene, player, monster) {
   }
 
   scene.combatState = createCombatState(player, monster);
+  scene.combatState.worldMonsterSnapshot = snapshotMonsterForWorld(scene, monster);
   scene.combatSummons = [];
   document.body.classList.add("combat-active");
 
@@ -108,16 +294,88 @@ export function endCombat(scene) {
     }
   }
 
+  const player = state.joueur;
+  const levelBefore = player?.levelState?.niveau ?? 1;
+  const pointsBefore = player?.levelState?.pointsCaracLibres ?? 0;
+
+  // Nettoyage des monstres "combat only" (membres de pack créés uniquement pour le combat).
+  if (
+    scene.combatMonsters &&
+    Array.isArray(scene.combatMonsters) &&
+    Array.isArray(scene.monsters)
+  ) {
+    const combatOnly = scene.combatMonsters.filter((m) => m && m.isCombatOnly);
+    if (combatOnly.length > 0) {
+      combatOnly.forEach((m) => {
+        if (!m) return;
+        if (typeof m.destroy === "function") {
+          m.destroy();
+        }
+      });
+      scene.monsters = scene.monsters.filter((m) => !m || !m.isCombatOnly);
+    }
+  }
+
+  // Récompenses : uniquement en victoire, appliquées à la fin (évite les ups en plein combat).
+  let xpGagne = 0;
+  let goldGagne = 0;
+  let lootGagne = [];
+  let niveauxGagnes = 0;
+  let pointsCaracGagnes = 0;
+  let pvMaxGagnes = 0;
+
+  if (issue === "victoire") {
+    xpGagne = state.xpGagne || 0;
+    goldGagne = state.goldGagne || 0;
+    lootGagne = applyLootToPlayerInventory(player, state.loot || []);
+
+    if (player && typeof addXpToPlayer === "function" && xpGagne > 0) {
+      addXpToPlayer(player, xpGagne);
+      const levelAfter = player?.levelState?.niveau ?? levelBefore;
+      const pointsAfter = player?.levelState?.pointsCaracLibres ?? pointsBefore;
+      niveauxGagnes = Math.max(0, levelAfter - levelBefore);
+      pointsCaracGagnes = Math.max(0, pointsAfter - pointsBefore);
+      pvMaxGagnes = niveauxGagnes * 5;
+    }
+    if (player && typeof goldGagne === "number" && goldGagne > 0) {
+      const currentGold =
+        typeof player.gold === "number" && !Number.isNaN(player.gold)
+          ? player.gold
+          : 0;
+      player.gold = currentGold + goldGagne;
+    }
+
+    // Respawn du pack leader (monstre monde) après victoire.
+    if (
+      state.worldMonsterSnapshot &&
+      state.worldMonsterSnapshot.respawnEnabled !== false
+    ) {
+      queueMonsterRespawn(scene, state.worldMonsterSnapshot, 5000);
+    }
+  } else {
+    // Défaite / inconnu : pas de récompenses, et on restaure le monstre monde (PV/position).
+    restoreWorldMonsterFromSnapshot(scene, state.worldMonsterSnapshot, state.monstre);
+  }
+
+  // Reset des cooldowns à la sortie du combat.
+  if (player) {
+    player.spellCooldowns = {};
+    clearActiveSpell(player);
+  }
+
   const result = {
     issue,
     durationMs,
-    xpGagne: state.xpGagne || 0,
-    goldGagne: state.goldGagne || 0,
-    loot: state.loot || [],
-    playerLevel: state.joueur?.levelState?.niveau ?? 1,
-    playerXpTotal: state.joueur?.levelState?.xp ?? 0,
-    playerXpNext: state.joueur?.levelState?.xpProchain ?? 0,
-    monsterId: state.monstre?.monsterId || null,
+    xpGagne,
+    goldGagne,
+    loot: lootGagne,
+    niveauxGagnes,
+    pointsCaracGagnes,
+    pvMaxGagnes,
+    playerLevel: player?.levelState?.niveau ?? 1,
+    playerXpTotal: player?.levelState?.xp ?? 0,
+    playerXpNext: player?.levelState?.xpProchain ?? 0,
+    monsterId: state.worldMonsterSnapshot?.monsterId || state.monstre?.monsterId || null,
     monsterHpEnd: state.monstre?.stats?.hp ?? 0,
   };
 
@@ -209,15 +467,6 @@ export function endCombat(scene) {
   });
 
   // Démarre la régénération hors combat (+2 PV/s)
-  const player = state.joueur;
-  if (player && typeof result.goldGagne === "number" && result.goldGagne > 0) {
-    const currentGold =
-      typeof player.gold === "number" && !Number.isNaN(player.gold)
-        ? player.gold
-        : 0;
-    player.gold = currentGold + result.goldGagne;
-  }
-
   startOutOfCombatRegen(scene, player);
 
   // Remet l'affichage PA/PM du HUD aux valeurs de base du joueur (exploration)

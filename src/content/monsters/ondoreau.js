@@ -2,8 +2,8 @@ export default {
   id: "ondoreau",
   label: "Ondoreau",
   textureKey: "ondoreau",
-  spritePath: "assets/monsters/corbeau/corbeauWalkSouthWestBlue.png",
-  combatAvatarPath: "assets/monsters/corbeau/SpriteCorbeauEau.png",
+  spritePath: "assets/monsters/corbeau/animation/corbeauWalkSouthWestBlue.png",
+  combatAvatarPath: "assets/monsters/corbeau/sprite/SpriteCorbeauEau.png",
   spriteSheet: { frameWidth: 48, frameHeight: 48 },
   render: {
     originX: 0.45,
@@ -23,6 +23,9 @@ export default {
   loot: [
     { itemId: "plume_corbeau", min: 1, max: 1, dropRate: 0.5 },
     { itemId: "patte_corbeau", min: 1, max: 1, dropRate: 0.5 },
+    { itemId: "bec_corbeau", min: 1, max: 1, dropRate: 0.25 },
+    { itemId: "essence_corbeau", min: 1, max: 1, dropRate: 0.1 },
+    { itemId: "poussiere_temporelle", min: 1, max: 1, dropRate: 0.03 },
     { itemId: "coiffe_corbeau_eau", min: 1, max: 1, dropRate: 0.04 },
     { itemId: "cape_corbeau_eau", min: 1, max: 1, dropRate: 0.04 },
     { itemId: "amulette_corbeau_eau", min: 1, max: 1, dropRate: 0.04 },

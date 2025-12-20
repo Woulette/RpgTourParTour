@@ -3,11 +3,20 @@ import { monsters } from "../content/monsters/index.js";
 import { createStats } from "../core/stats.js";
 import { XP_CONFIG } from "../config/xp.js";
 import { addXpToPlayer } from "./player.js";
-import { addItem } from "../inventory/inventoryCore.js";
 import { incrementKillProgressForAll } from "../quests/index.js";
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { queueMonsterRespawn } from "../monsters/respawnState.js";
 import { tryResolveCaptureOnMonsterDeath } from "../systems/combat/summons/capture.js";
+
+// On ne scale que les stats principales (pas PA/PM/initiative/PO/etc.).
+const MONSTER_SCALABLE_STAT_KEYS = new Set([
+  "force",
+  "intelligence",
+  "agilite",
+  "chance",
+  "vitalite",
+  "sagesse",
+]);
 
 export function computeScaledMonsterOverrides(def, level) {
   if (!def) return {};
@@ -44,8 +53,8 @@ export function computeScaledMonsterOverrides(def, level) {
     result.hp = scaledHpMax;
   }
 
-  for (const [key, baseVal] of Object.entries(overrides)) {
-    if (key === "hp" || key === "hpMax") continue;
+  for (const key of MONSTER_SCALABLE_STAT_KEYS) {
+    const baseVal = overrides[key];
     if (typeof baseVal !== "number") continue;
 
     const perLevel = Math.min(
@@ -112,8 +121,8 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
       result.hp = scaledHpMax;
     }
 
-    for (const [key, baseVal] of Object.entries(overrides)) {
-      if (key === "hp" || key === "hpMax") continue;
+    for (const key of MONSTER_SCALABLE_STAT_KEYS) {
+      const baseVal = overrides[key];
       if (typeof baseVal !== "number") continue;
 
       const perLevel = Math.min(
@@ -148,8 +157,9 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     monster.setOrigin(ox, oy);
   }
 
-  // Place le monstre au-dessus de la grille debug
-  monster.setDepth(2);
+  // Depth basé sur Y (comme le joueur/les décors) pour rester au-dessus des calques sol + grille debug.
+  // (Sinon, si la grille est au-dessus de certains calques sol, elle peut passer devant le monstre.)
+  monster.setDepth(typeof monster.y === "number" ? monster.y : 2);
 
   // S'assure que la caméra HUD n'affiche pas le monstre
   if (scene.hudCamera) {
@@ -179,11 +189,13 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     // Capture : si ce monstre était marqué par le joueur, on enregistre la capture.
     tryResolveCaptureOnMonsterDeath(sceneArg, monster);
 
+    const inCombat = !!(sceneArg && sceneArg.combatState && sceneArg.combatState.enCours);
+
     const rewardXp = computeMonsterXpReward(monster, killer);
     const goldMin = monster.goldRewardMin || 0;
     const goldMax = monster.goldRewardMax || goldMin;
 
-    if (killer && typeof addXpToPlayer === "function") {
+    if (!inCombat && killer && typeof addXpToPlayer === "function") {
       addXpToPlayer(killer, rewardXp);
     }
 
@@ -194,7 +206,7 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     }
 
     // Si un combat est en cours, on cumule l'XP gagnée et on gère le loot
-    if (sceneArg && sceneArg.combatState && sceneArg.combatState.enCours) {
+    if (inCombat) {
       const cs = sceneArg.combatState;
       cs.xpGagne = (cs.xpGagne || 0) + rewardXp;
 
@@ -223,17 +235,13 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
           const qty = Math.max(0, Phaser.Math.Between(min, max));
           if (qty <= 0) continue;
 
-          const remaining = addItem(killer.inventory, entry.itemId, qty);
-          const gained = qty - remaining;
-          if (gained <= 0) continue;
-
           // Fusionne dans le tableau de loot du combat
           let slot = cs.loot.find((l) => l.itemId === entry.itemId);
           if (!slot) {
             slot = { itemId: entry.itemId, qty: 0 };
             cs.loot.push(slot);
           }
-          slot.qty += gained;
+          slot.qty += qty;
         }
       }
     }
@@ -259,7 +267,7 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     const allowRespawn =
       monster.respawnEnabled === undefined || monster.respawnEnabled === true;
 
-    if (allowRespawn && sceneArg) {
+    if (allowRespawn && sceneArg && !inCombat) {
       // Respawn scoppé par map : empêche les respawns sur une autre map.
       queueMonsterRespawn(sceneArg, monster, 5000);
     }

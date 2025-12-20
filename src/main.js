@@ -15,6 +15,7 @@ import {
   loadMapLikeMain,
   initWorldExitsForScene,
   rebuildCollisionGridFromMap,
+  rebuildDebugGrid,
   applyCustomLayerDepths,
   spawnObjectLayerTrees,
   recalcDepths,
@@ -54,8 +55,10 @@ class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    // PrÃ©charge toutes les maps dÃ©finies dans src/maps/index.js
+    // Précharge les maps activées (certaines defs peuvent rester dans le code
+    // même si leurs fichiers ont été supprimés).
     Object.values(maps).forEach((mapDef) => {
+      if (!mapDef || mapDef.enabled === false) return;
       preloadMap(this, mapDef);
     });
 
@@ -122,8 +125,15 @@ class MainScene extends Phaser.Scene {
     const { map, groundLayer, layers } = buildMap(this, mapDef);
 
     // Aligne le layer sur son origine sans décalage manuel
-    const mapLayers = layers && layers.length > 0 ? layers : [groundLayer];
-    mapLayers.forEach((layer) => layer.setOrigin(0, 0));
+    const mapLayers =
+      Array.isArray(layers) && layers.length > 0
+        ? layers.filter(Boolean)
+        : [groundLayer].filter(Boolean);
+    mapLayers.forEach((layer) => {
+      if (layer && typeof layer.setOrigin === "function") {
+        layer.setOrigin(0, 0);
+      }
+    });
 
     // Sauvegarde la carte sur la scène pour d'autres systèmes (respawn, etc.)
     this.map = map;
@@ -141,9 +151,27 @@ class MainScene extends Phaser.Scene {
   // --- JOUEUR AU CENTRE (coordonnÃ©es tuiles) ---
   const centerTileX = Math.floor(map.width / 2);
     const centerTileY = Math.floor(map.height / 2);
+
+    const desiredTile =
+      mapDef &&
+      mapDef.startTile &&
+      typeof mapDef.startTile.x === "number" &&
+      typeof mapDef.startTile.y === "number"
+        ? mapDef.startTile
+        : null;
+
+    const startTileX =
+      desiredTile && desiredTile.x >= 0 && desiredTile.x < map.width
+        ? desiredTile.x
+        : centerTileX;
+    const startTileY =
+      desiredTile && desiredTile.y >= 0 && desiredTile.y < map.height
+        ? desiredTile.y
+        : centerTileY;
+
     const centerWorld = map.tileToWorldXY(
-      centerTileX,
-      centerTileY,
+      startTileX,
+      startTileY,
       undefined,
       undefined,
       groundLayer
@@ -160,8 +188,8 @@ class MainScene extends Phaser.Scene {
     this.player.displayName = displayName;
     // Important : certains systèmes (PNJ donjon, quêtes, etc.) lisent la tuile courante.
     // Au premier spawn (sans transition de map), il faut l'initialiser.
-    this.player.currentTileX = centerTileX;
-    this.player.currentTileY = centerTileY;
+    this.player.currentTileX = startTileX;
+    this.player.currentTileY = startTileY;
     // Animations pour archer + tank (chargées en preload)
     setupPlayerAnimations(this);
     setupCharacterAnimations(this, "tank");
@@ -210,36 +238,7 @@ class MainScene extends Phaser.Scene {
     }
 
     // --- GRILLE ISO (DEBUG) ---
-    let grid = null;
-    if (SHOW_GRID) {
-      grid = this.add.graphics();
-      grid.lineStyle(1, 0xffffff, 1);
-      grid.setDepth(1);
-
-      const halfW = map.tileWidth / 2;
-      const halfH = map.tileHeight / 2;
-
-      map.forEachTile((tile) => {
-        const worldPos = map.tileToWorldXY(
-          tile.x,
-          tile.y,
-          undefined,
-          undefined,
-          groundLayer
-        );
-        const cx = worldPos.x + halfW;
-        const cy = worldPos.y + halfH;
-
-        const points = [
-          new Phaser.Math.Vector2(cx, cy - halfH), // haut
-          new Phaser.Math.Vector2(cx + halfW, cy), // droite
-          new Phaser.Math.Vector2(cx, cy + halfH), // bas
-          new Phaser.Math.Vector2(cx - halfW, cy), // gauche
-        ];
-
-        grid.strokePoints(points, true);
-      });
-    }
+    const grid = rebuildDebugGrid(this, map, groundLayer, mapLayers);
 
     // --- HUD ---
     const { hudY, uiElements } = createHud(this);

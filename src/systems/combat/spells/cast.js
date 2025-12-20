@@ -46,7 +46,6 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   if (paCost > 0) {
     showFloatingTextOverEntity(scene, caster, `${paCost}`, {
       color: "#3b82f6",
-      depth: 0,
     });
   }
 

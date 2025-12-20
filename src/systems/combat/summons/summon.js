@@ -212,7 +212,7 @@ export function spawnSummonFromCaptured(
     const ry = typeof render.originY === "number" ? render.originY : 1;
     summon.setOrigin(rx, ry);
   }
-  summon.setDepth(2);
+  summon.setDepth(summon.y);
   if (scene.hudCamera) scene.hudCamera.ignore(summon);
 
   summon.tileX = spawnTile.x;

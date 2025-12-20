@@ -58,8 +58,10 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
     if (scene.hudCamera) {
       scene.hudCamera.ignore(g);
     }
-    // Sous les monstres/objets (évite de recouvrir les sprites)
-    g.setDepth(0.8);
+    // Au-dessus des calques sol (y compris calque 2), mais sous les sprites/décors.
+    const base =
+      typeof scene.maxGroundDepth === "number" ? scene.maxGroundDepth : 1;
+    g.setDepth(base + 0.2);
     scene.combatPreview = g;
   }
 

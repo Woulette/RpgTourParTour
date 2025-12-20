@@ -14,7 +14,7 @@ export function rebuildCollisionGridFromMap(scene, map, groundLayer) {
 
   const layer =
     map.getObjectLayer("collisions") || map.getObjectLayer("Collisions");
-  if (!layer || !Array.isArray(layer.objects)) return;
+  const hasCollisionObjects = !!(layer && Array.isArray(layer.objects));
 
   const getProp = (obj, name) => {
     if (!obj || !obj.properties) return undefined;
@@ -102,7 +102,9 @@ export function rebuildCollisionGridFromMap(scene, map, groundLayer) {
     }
   };
 
-  layer.objects.forEach(blockRect);
+  if (hasCollisionObjects) {
+    layer.objects.forEach(blockRect);
+  }
 
   // Collision issues directement des shapes de tuiles (Èditeur de collision Tiled sur les tilesets).
   const layersToScan = Array.isArray(scene.mapLayers)
@@ -135,4 +137,6 @@ export function rebuildCollisionGridFromMap(scene, map, groundLayer) {
       }
     });
   });
+
+
 }

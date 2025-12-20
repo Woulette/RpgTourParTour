@@ -92,7 +92,6 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     if (pathTiles.length > 0) {
       showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
         color: "#22c55e",
-        depth: 0,
       });
     }
     delay(scene, 520, () => {

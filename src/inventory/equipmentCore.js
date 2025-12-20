@@ -88,6 +88,16 @@ export function recomputePlayerStatsWithEquipment(player) {
 
   const newStats = applyBonuses(base, bonuses);
 
+  // Initiative : +1 par point de Force/Intelligence/Agilité/Chance (stats finales).
+  // On conserve les bonus directs d'initiative (sets/objets) en les ajoutant au calcul.
+  const initBonus = newStats.initiative ?? 0;
+  const derivedInit =
+    (newStats.force ?? 0) +
+    (newStats.intelligence ?? 0) +
+    (newStats.agilite ?? 0) +
+    (newStats.chance ?? 0);
+  newStats.initiative = initBonus + derivedInit;
+
   // On essaye de ne pas "tuer" le joueur quand on réduit les HP max :
   const oldHp = player.stats?.hp ?? newStats.hp;
 

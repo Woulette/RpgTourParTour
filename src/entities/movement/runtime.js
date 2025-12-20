@@ -171,10 +171,9 @@ export function movePlayerAlongPath(
 
         // Applique le coût de déplacement au système de combat (PM, HUD)
         applyMoveCost(scene, player, moveCost);
-        if (moveCost > 0 && scene.combatState && scene.combatState.enCours) {
+          if (moveCost > 0 && scene.combatState && scene.combatState.enCours) {
           showFloatingTextOverEntity(scene, player, `${moveCost}`, {
             color: "#22c55e",
-            depth: 0,
           });
         }
 

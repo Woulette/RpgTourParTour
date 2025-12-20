@@ -1,0 +1,129 @@
+/* Popup dédiée : montée de niveau (PV + caractéristiques) */
+#levelup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Derrière la popup de récompense (combatResult = 9000),
+     mais au-dessus du jeu pour rester visible après fermeture du récap. */
+  z-index: 8900;
+}
+
+#levelup-overlay.levelup-hidden {
+  display: none;
+}
+
+.levelup-panel {
+  width: min(340px, 92vw);
+  border-radius: 14px;
+  background: radial-gradient(circle at top, rgba(255, 215, 102, 0.22), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, #111827, #0b1220);
+  border: 1px solid rgba(255, 215, 102, 0.35);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.6);
+  padding: 26px 18px 22px;
+  overflow: hidden;
+  color: #e5e7eb;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.levelup-title {
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #fcd34d;
+  margin: 0 0 10px;
+}
+
+.levelup-sub {
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 16px;
+}
+
+.levelup-items {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.levelup-item {
+  width: 144px;
+  flex: 0 0 144px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 14px 12px 12px;
+  text-align: center;
+}
+
+@media (max-width: 420px) {
+  .levelup-items {
+    flex-wrap: wrap;
+  }
+}
+
+.levelup-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  margin: 0 auto 8px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.levelup-icon.is-hp {
+  color: #ff5a5f;
+  background: rgba(255, 90, 95, 0.10);
+}
+
+.levelup-icon.is-carac {
+  color: #93c5fd;
+  background: rgba(147, 197, 253, 0.10);
+}
+
+.levelup-value {
+  font-weight: 900;
+  font-size: 16px;
+  color: #f9fafb;
+  line-height: 1;
+}
+
+.levelup-label {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.levelup-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.levelup-panel::after {
+  content: "";
+  display: block;
+  height: 6px;
+}
+
+.levelup-close {
+  min-width: 140px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.levelup-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}

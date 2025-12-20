@@ -95,7 +95,6 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     if (stepsUsed > 0) {
       showFloatingTextOverEntity(scene, monster, `${stepsUsed}`, {
         color: "#22c55e",
-        depth: 0,
       });
     }
 

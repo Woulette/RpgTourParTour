@@ -212,7 +212,6 @@ export function runSummonTurn(scene, onComplete) {
     if (stepsUsed > 0) {
       showFloatingTextOverEntity(scene, summon, `${stepsUsed}`, {
         color: "#22c55e",
-        depth: 0,
       });
     }
 

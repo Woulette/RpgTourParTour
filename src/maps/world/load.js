@@ -8,6 +8,7 @@ import { spawnNpcsForMap } from "../../npc/spawn.js";
 import { spawnTestTrees } from "../../metier/bucheron/trees.js";
 import { createMapExits } from "../exits.js";
 import { rebuildCollisionGridFromMap } from "./collision.js";
+import { rebuildDebugGrid } from "./debugGrid.js";
 import { spawnObjectLayerTrees, recalcDepths } from "./decor.js";
 import { initWorldExitsForScene } from "./exits.js";
 import { getNeighbor } from "./util.js";
@@ -51,8 +52,9 @@ function findNearestSpawnableTile(scene, map, groundLayer, startX, startY) {
 // Apply custom depths for certain named layers (tronc under player, canopy above).
 export function applyCustomLayerDepths(scene) {
   if (!scene || !Array.isArray(scene.mapLayers)) return;
-  scene.mapLayers.forEach((layer, index) => {
-    if (!layer || typeof layer.setDepth !== "function") return;
+
+  const layers = scene.mapLayers.filter((l) => l && typeof l.setDepth === "function");
+  const meta = layers.map((layer, index) => {
     const rawName =
       (
         layer.name ||
@@ -62,15 +64,50 @@ export function applyCustomLayerDepths(scene) {
       )
         .toLowerCase()
         .trim();
-    if (rawName.includes("tronc")) {
-      layer.setDepth(2);
-      return;
-    }
-    if (rawName.includes("canopy") || rawName.includes("feuillage")) {
-      layer.setDepth(100000);
-      return;
-    }
+    return { layer, index, rawName };
+  });
+
+  const isCanopyLayerName = (rawName) => {
+    if (!rawName) return false;
+    if (rawName.includes("canopy")) return true;
+    if (rawName.includes("feuillage")) return true;
+    // Dans certaines maps, le feuillage est directement sur "Calque de Tuiles 5".
+    if (rawName.includes("calque de tuiles 5")) return true;
+    if (rawName.includes("calque") && rawName.includes("tuiles") && rawName.includes("5"))
+      return true;
+    return false;
+  };
+
+  // 1) Depths de base (index) pour le "sol".
+  meta.forEach(({ layer, index, rawName }) => {
+    if (rawName.includes("tronc")) return;
+    if (isCanopyLayerName(rawName)) return;
     layer.setDepth(index);
+  });
+
+  // 2) Tronc : doit être au-dessus de tous les calques sol, mais sous le feuillage.
+  let maxGroundDepth = 0;
+  meta.forEach(({ layer, rawName }) => {
+    if (rawName.includes("tronc")) return;
+    if (isCanopyLayerName(rawName)) return;
+    const d = layer.depth;
+    if (typeof d === "number" && d > maxGroundDepth) maxGroundDepth = d;
+  });
+
+  // Expose pour les overlays (grille debug, previews combat, etc.).
+  scene.maxGroundDepth = maxGroundDepth;
+
+  meta.forEach(({ layer, rawName }) => {
+    if (rawName.includes("tronc")) {
+      layer.setDepth(maxGroundDepth + 0.5);
+    }
+  });
+
+  // 3) Feuillage/canopy : toujours au-dessus.
+  meta.forEach(({ layer, rawName }) => {
+    if (isCanopyLayerName(rawName)) {
+      layer.setDepth(100000);
+    }
   });
 }
 
@@ -159,6 +196,7 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
   spawnObjectLayerTrees(scene, map, "trees", "staticTrees");
   spawnObjectLayerTrees(scene, map, "decor", "staticDecor");
   setupWorkstations(scene, map, scene.groundLayer, mapDef);
+  rebuildDebugGrid(scene, map, scene.groundLayer, mapLayers);
 
   // Compute playable bounds (used for collision), and world exits (if any).
   initWorldExitsForScene(scene);

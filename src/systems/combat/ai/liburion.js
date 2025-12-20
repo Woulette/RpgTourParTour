@@ -148,12 +148,11 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
       moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
         state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - pathTiles.length);
-        if (pathTiles.length > 0) {
-          showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
-            color: "#22c55e",
-            depth: 0,
-          });
-        }
+          if (pathTiles.length > 0) {
+            showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
+              color: "#22c55e",
+            });
+          }
         delay(scene, 140, () => onComplete?.());
       });
     });
@@ -267,7 +266,6 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     if (pathTiles.length > 0) {
       showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
         color: "#22c55e",
-        depth: 0,
       });
     }
     delay(scene, 520, () => {

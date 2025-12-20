@@ -4,6 +4,7 @@ export {
   maybeHandleMapExit,
 } from "./load.js";
 export { rebuildCollisionGridFromMap } from "./collision.js";
+export { rebuildDebugGrid } from "./debugGrid.js";
 export {
   spawnObjectLayerTrees,
   refreshObjectLayerDepths,

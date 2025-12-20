@@ -7,7 +7,7 @@ export const resourceItems = {
     category: "ressource",
     stackable: true,
     maxStack: 9999,
-    icon: "assets/ressources/plumedecorbeau.png",
+    icon: "assets/monsters/corbeau/ressources/PlumeDeCorbeau.png",
   },
 
   patte_corbeau: {
@@ -16,7 +16,34 @@ export const resourceItems = {
     category: "ressource",
     stackable: true,
     maxStack: 9999,
-    icon: "assets/ressources/pattedecorbeau.png",
+    icon: "assets/monsters/corbeau/ressources/PatteDeCorbeau.png",
+  },
+
+  bec_corbeau: {
+    id: "bec_corbeau",
+    label: "Bec de corbeau",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/monsters/corbeau/ressources/BecDeCorbeau.png",
+  },
+
+  essence_corbeau: {
+    id: "essence_corbeau",
+    label: "Essence de corbeau",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/monsters/corbeau/ressources/EssenceDeCorbeau.png",
+  },
+
+  poussiere_temporelle: {
+    id: "poussiere_temporelle",
+    label: "Poussière temporelle",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/monsters/corbeau/ressources/Poussiere.png",
   },
 
   bois_chene: {

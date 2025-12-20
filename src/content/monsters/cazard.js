@@ -2,7 +2,7 @@ export default {
   id: "cazard",
   label: "Cazard",
   textureKey: "cazard",
-  spritePath: "assets/monsters/Cazard/south-west.png",
+  spritePath: "assets/monsters/Cazard/rotations/south-west.png",
   render: {
     originX: 0.5,
     originY: 1,
@@ -22,4 +22,3 @@ export default {
   goldRewardMin: 22,
   goldRewardMax: 55,
 };
-

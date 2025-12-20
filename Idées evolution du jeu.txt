@@ -1,0 +1,305 @@
+1️⃣ Principe général
+
+Les équipements ne sont pas remplacés, ils évoluent
+
+L’évolution est progressive, non RNG, non punitive
+
+Le nom de base de l’équipement reste le même
+
+Seul son état temporel change
+
+2️⃣ États d’évolution des équipements
+
+Il existe 3 états maximum :
+
+Évolué
+
+Stabilisé
+
+Synchronisé
+
+3️⃣ Bonus par état (équilibrés)
+
+Évolué → +5 % sur la stat principale
+
+Stabilisé → +8 % sur la stat principale
+
+Synchronisé → +12 % sur la stat principale
+
+éventuellement un micro bonus qualitatif
+
+⚠️ Pas de +20 %, pas de power creep.
+
+4️⃣ Ressources temporelles
+🌫️ Poussière Temporelle
+
+Plusieurs paliers de niveau (1–20, 21–50, 51–80, 81–100)
+
+Sert uniquement au palier correspondant
+
+Impossible de convertir BL → HL
+
+💠 Fragment Temporel
+
+Craft à partir de poussières du même palier
+
+Sert à créer des orbes
+
+5️⃣ Système d’Orbes (progression exponentielle)
+🔮 Orbe Temporelle (base)
+
+Craft :
+
+Fragments temporels
+
+Usage :
+
+Normal → Évolué
+
+🔮 Orbe Temporelle Stabilisée
+
+Craft :
+
+2 Orbes Temporelles
+
+ressources supplémentaires
+
+Usage :
+
+Évolué → Stabilisé
+
+🔮 Orbe Temporelle Synchronisée
+
+Craft :
+
+2 Orbes Temporelles Stabilisées
+
+composant rare (donjon / zone instable)
+
+Usage :
+
+Stabilisé → Synchronisé
+
+6️⃣ Règles importantes (anti-frustration)
+
+❌ Aucun échec RNG
+
+❌ Aucun downgrade
+
+❌ Aucune destruction d’équipement
+
+✅ Chaque évolution est définitive
+
+✅ Le coût augmente fortement à chaque palier
+
+7️⃣ Règle clé (très importante)
+
+⚠️ On recommence à zéro dans la chaîne d’orbes, PAS sur l’équipement.
+
+L’objet garde toujours son état acquis
+
+Seules les ressources demandées repartent à zéro
+
+8️⃣ Lisibilité joueur
+
+Le joueur voit :
+
+“Équipement Évolué”
+
+“Équipement Stabilisé”
+
+“Équipement Synchronisé”
+
+Pas de lettres (A, B, C) sur l’équipement
+
+Pas de rareté type “légendaire”
+
+9️⃣ Séparation des systèmes
+
+Rangs A / B / C / S → réservés aux sorts
+
+Équipement → évolution temporelle uniquement
+
+10️⃣ Objectif du système
+
+Valoriser le temps de jeu
+
+Empêcher le farm BL abusif
+
+Encourager les choix (tout ne peut pas être synchronisé)
+
+Rester compatible avec un RPG solo long terme
+
+Si tu veux, au prochain message on peut :
+
+fixer les quantités exactes
+
+écrire les textes UI
+
+ou intégrer ce système dans une quête / PNJ temporel
+
+Mais là :
+👉 note ça, c’est une base solide.
+
+
+
+
+🌫️ POUSSIÈRES TEMPORELLES – JEU NIVEAU 1 → 200
+
+👉 Principe conservé :
+
+Poussière Temporelle = nom de base
+
+Adjectif = palier de puissance
+
+Aucune ambiguïté
+
+Compatible lore Andémia
+
+🔹 Palier I — Niveaux 1 à 20
+
+(faible instabilité)
+
+Poussière Temporelle Fragile
+
+🔹 Palier II — Niveaux 21 à 50
+
+(instabilité modérée)
+
+Poussière Temporelle Instable
+
+🔹 Palier III — Niveaux 51 à 80
+
+(énergie concentrée)
+
+Poussière Temporelle Condensée
+
+🔹 Palier IV — Niveaux 81 à 100
+
+(quasi stable)
+
+Poussière Temporelle Stabilisée
+
+🔹 Palier V — Niveaux 101 à 130
+
+(temps maîtrisé)
+
+Poussière Temporelle Harmonisée
+
+👉 Très bon mot pour marquer le passage post-100.
+
+🔹 Palier VI — Niveaux 131 à 160
+
+(temps solidifié)
+
+Poussière Temporelle Ancrée
+
+👉 Lien direct avec les Ancres d’Andémia.
+
+🔹 Palier VII — Niveaux 161 à 180
+
+(temps rare, dangereux)
+
+Poussière Temporelle Transcendée
+
+🔹 Palier VIII — Niveaux 181 à 200
+
+(endgame, très rare)
+
+Essence Temporelle
+
+ou (plus lore)
+Poussière d’Andémia
+
+
+
+
+
+
+💠 FRAGMENTS TEMPORELS — NIVEAUX 1 → 200
+👉 Règle :
+
+Un Fragment est toujours lié au même palier que la Poussière utilisée
+
+❌ Impossible de mélanger les paliers
+
+
+🔹 Palier I — Niveaux 1 à 20
+
+Fragment Temporel Fragile
+
+🔹 Palier II — Niveaux 21 à 50
+
+Fragment Temporel Instable
+
+🔹 Palier III — Niveaux 51 à 80
+
+Fragment Temporel Condensé
+
+🔹 Palier IV — Niveaux 81 à 100
+
+Fragment Temporel Stabilisé
+
+🔹 Palier V — Niveaux 101 à 130
+
+Fragment Temporel Harmonisé
+
+🔹 Palier VI — Niveaux 131 à 160
+
+Fragment Temporel Ancré
+
+🔹 Palier VII — Niveaux 161 à 180
+
+Fragment Temporel Transcendé
+
+🔹 Palier VIII — Niveaux 181 à 200
+
+Fragment d’Andémia
+
+ou
+Fragment Temporel Essentiel (si tu veux rester générique)
+
+
+
+🔮 ORBES TEMPORELLES — NIVEAUX 1 → 200
+
+👉 Règle :
+
+Une Orbe ne peut améliorer que des équipements du même palier
+
+L’évolution d’orbes (→ stabilisée → synchronisée) reste interne au palier
+
+🔹 Palier I — Niveaux 1 à 20
+
+Orbe Temporelle Fragile
+
+🔹 Palier II — Niveaux 21 à 50
+
+Orbe Temporelle Instable
+
+🔹 Palier III — Niveaux 51 à 80
+
+Orbe Temporelle Condensée
+
+🔹 Palier IV — Niveaux 81 à 100
+
+Orbe Temporelle Stabilisée
+
+🔹 Palier V — Niveaux 101 à 130
+
+Orbe Temporelle Harmonisée
+
+🔹 Palier VI — Niveaux 131 à 160
+
+Orbe Temporelle Ancrée
+
+🔹 Palier VII — Niveaux 161 à 180
+
+Orbe Temporelle Transcendée
+
+🔹 Palier VIII — Niveaux 181 à 200
+
+Orbe d’Andémia
+
+ou
+Orbe Temporelle Essentielle

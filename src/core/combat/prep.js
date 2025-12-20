@@ -61,6 +61,35 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     return;
   }
 
+  // Snapshot "monde" du monstre cliqué avant tout déplacement de préparation,
+  // afin de pouvoir restaurer ses PV/position en cas de défaite.
+  if (!monster._worldSnapshotBeforeCombat) {
+    const stats = monster.stats || {};
+    monster._worldSnapshotBeforeCombat = {
+      monsterId: monster.monsterId || null,
+      tileX: monster.tileX,
+      tileY: monster.tileY,
+      x: monster.x,
+      y: monster.y,
+      level: typeof monster.level === "number" ? monster.level : null,
+      hp: typeof stats.hp === "number" ? stats.hp : null,
+      hpMax: typeof stats.hpMax === "number" ? stats.hpMax : null,
+      spawnMapKey: monster.spawnMapKey ?? scene.currentMapKey ?? null,
+      respawnEnabled:
+        monster.respawnEnabled === undefined ? true : !!monster.respawnEnabled,
+      groupId: monster.groupId ?? null,
+      groupSize: monster.groupSize ?? null,
+      groupLevels: Array.isArray(monster.groupLevels)
+        ? monster.groupLevels.slice()
+        : null,
+      groupMonsterIds: Array.isArray(monster.groupMonsterIds)
+        ? monster.groupMonsterIds.slice()
+        : null,
+      groupLevelTotal:
+        typeof monster.groupLevelTotal === "number" ? monster.groupLevelTotal : null,
+    };
+  }
+
   // Si une préparation est déjà active, on ne recrée pas tout.
   if (scene.prepState && scene.prepState.actif) {
     return;
@@ -262,6 +291,7 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     }
     extra.respawnEnabled = false;
     extra.isCombatMember = true;
+    extra.isCombatOnly = true;
 
     scene.monsters = scene.monsters || [];
     scene.monsters.push(extra);
@@ -344,6 +374,9 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     const g = scene.add.graphics();
     g.lineStyle(2, 0x2a9df4, 1);
     g.fillStyle(0x2a9df4, 0.7);
+    const base =
+      typeof scene.maxGroundDepth === "number" ? scene.maxGroundDepth : 1;
+    g.setDepth(base + 0.25);
 
     const points = [
       new Phaser.Math.Vector2(cx, cy - halfH),
@@ -377,6 +410,9 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     const g = scene.add.graphics();
     g.lineStyle(2, 0xff4444, 1);
     g.fillStyle(0xff4444, 0.7);
+    const base =
+      typeof scene.maxGroundDepth === "number" ? scene.maxGroundDepth : 1;
+    g.setDepth(base + 0.25);
 
     const points = [
       new Phaser.Math.Vector2(cx, cy - halfH),

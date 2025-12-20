@@ -8,7 +8,7 @@ export const tailleurRecipes = [
     category: "coiffe",
     inputs: [
       { itemId: "plume_corbeau", qty: 3 },
-      { itemId: "bois_chene", qty: 2 },
+      { itemId: "bec_corbeau", qty: 1 },
     ],
     output: { itemId: "coiffe_corbeau_air", qty: 1 },
     xpGain: 25,
@@ -20,7 +20,7 @@ export const tailleurRecipes = [
     category: "coiffe",
     inputs: [
       { itemId: "plume_corbeau", qty: 3 },
-      { itemId: "bois_chene", qty: 2 },
+      { itemId: "bec_corbeau", qty: 1 },
     ],
     output: { itemId: "coiffe_corbeau_eau", qty: 1 },
     xpGain: 25,
@@ -32,7 +32,7 @@ export const tailleurRecipes = [
     category: "coiffe",
     inputs: [
       { itemId: "plume_corbeau", qty: 3 },
-      { itemId: "bois_chene", qty: 2 },
+      { itemId: "bec_corbeau", qty: 1 },
     ],
     output: { itemId: "coiffe_corbeau_feu", qty: 1 },
     xpGain: 25,
@@ -44,7 +44,7 @@ export const tailleurRecipes = [
     category: "coiffe",
     inputs: [
       { itemId: "plume_corbeau", qty: 3 },
-      { itemId: "bois_chene", qty: 2 },
+      { itemId: "bec_corbeau", qty: 1 },
     ],
     output: { itemId: "coiffe_corbeau_terre", qty: 1 },
     xpGain: 25,
@@ -56,7 +56,8 @@ export const tailleurRecipes = [
     category: "cape",
     inputs: [
       { itemId: "plume_corbeau", qty: 4 },
-      { itemId: "bois_chene", qty: 3 },
+      { itemId: "patte_corbeau", qty: 1 },
+      { itemId: "essence_corbeau", qty: 1 },
     ],
     output: { itemId: "cape_corbeau_air", qty: 1 },
     xpGain: 30,
@@ -68,7 +69,8 @@ export const tailleurRecipes = [
     category: "cape",
     inputs: [
       { itemId: "plume_corbeau", qty: 4 },
-      { itemId: "bois_chene", qty: 3 },
+      { itemId: "patte_corbeau", qty: 1 },
+      { itemId: "essence_corbeau", qty: 1 },
     ],
     output: { itemId: "cape_corbeau_eau", qty: 1 },
     xpGain: 30,
@@ -80,7 +82,8 @@ export const tailleurRecipes = [
     category: "cape",
     inputs: [
       { itemId: "plume_corbeau", qty: 4 },
-      { itemId: "bois_chene", qty: 3 },
+      { itemId: "patte_corbeau", qty: 1 },
+      { itemId: "essence_corbeau", qty: 1 },
     ],
     output: { itemId: "cape_corbeau_feu", qty: 1 },
     xpGain: 30,
@@ -92,7 +95,8 @@ export const tailleurRecipes = [
     category: "cape",
     inputs: [
       { itemId: "plume_corbeau", qty: 4 },
-      { itemId: "bois_chene", qty: 3 },
+      { itemId: "patte_corbeau", qty: 1 },
+      { itemId: "essence_corbeau", qty: 1 },
     ],
     output: { itemId: "cape_corbeau_terre", qty: 1 },
     xpGain: 30,

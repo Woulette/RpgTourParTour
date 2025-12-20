@@ -3,10 +3,10 @@
 
 export const baseStats = {
   // Caractéristiques principales
-  force: 0,
-  intelligence: 0,
-  agilite: 0,
-  chance: 0,
+  force: 50,
+  intelligence: 50,
+  agilite: 50,
+  chance: 50,
   vitalite: 0,
   initiative: 0,
   sagesse: 0,

@@ -39,10 +39,33 @@ export function buildMap(scene, mapDef) {
       canvasTex.refresh();
     }
 
-    if (def) {
-      return map.addTilesetImage(def.name, textureKey);
+    const phaserTileset = def
+      ? map.addTilesetImage(def.name, textureKey)
+      : map.addTilesetImage(tsData.name, textureKey);
+
+    // Décors "gros sprites" (maisons, taverne, etc.) : on aligne le bas du sprite
+    // sur la tuile isométrique via un tileOffset (comme dans Tiled).
+    if (phaserTileset && def) {
+      const ox =
+        typeof def.tileOffsetX === "number" ? def.tileOffsetX : 0;
+      const oy =
+        typeof def.tileOffsetY === "number"
+          ? def.tileOffsetY
+          : def.autoTileOffset
+          ? map.tileHeight - (tsData.tileHeight || 0)
+          : 0;
+      if (ox || oy) {
+        if (phaserTileset.tileOffset) {
+          phaserTileset.tileOffset.x = ox;
+          phaserTileset.tileOffset.y = oy;
+        } else {
+          phaserTileset.tileOffsetX = ox;
+          phaserTileset.tileOffsetY = oy;
+        }
+      }
     }
-    return map.addTilesetImage(tsData.name, textureKey);
+
+    return phaserTileset;
   });
 
   const createdLayers = map.layers.map((layerData, index) => {
@@ -52,7 +75,28 @@ export function buildMap(scene, mapDef) {
     return layer;
   });
 
-  const groundLayer = createdLayers[0];
+  const getLayerName = (layer) =>
+    (layer && layer.layer && layer.layer.name) || layer?.name || "";
+
+  let groundLayer = createdLayers[0];
+  if (mapDef && typeof mapDef.groundLayerName === "string") {
+    const desired = mapDef.groundLayerName.trim();
+    if (desired) {
+      groundLayer =
+        createdLayers.find((l) => getLayerName(l) === desired) || groundLayer;
+    }
+  } else {
+    // Fallback : évite les calques "décor" typiques si le 1er calque n'est pas le sol.
+    groundLayer =
+      createdLayers.find((l) => {
+        const n = getLayerName(l).toLowerCase().trim();
+        if (!n) return false;
+        if (n.includes("nogrid")) return false;
+        if (n.includes("tronc")) return false;
+        if (n.includes("feuillage")) return false;
+        if (n.includes("canopy")) return false;
+        return true;
+      }) || groundLayer;
+  }
   return { map, groundLayer, layers: createdLayers };
 }
-

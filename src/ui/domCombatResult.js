@@ -6,6 +6,7 @@ import { items } from "../inventory/itemsConfig.js";
 export function initDomCombatResult(scene, player) {
   const overlay = document.getElementById("combat-result-overlay");
   const titleEl = document.getElementById("combat-result-title");
+  const panelEl = overlay ? overlay.querySelector(".combat-result-panel") : null;
   const playerLevelEl = document.getElementById("combat-result-player-level");
   const xpGainEl = document.getElementById("combat-result-xp-gain");
   const xpTotalEl = document.getElementById("combat-result-xp-total");
@@ -34,6 +35,15 @@ export function initDomCombatResult(scene, player) {
   }
 
   // Création dynamique du bloc "Butin" si besoin
+  // Bloc "Augmentations" (level up) : créé dynamiquement, affiché seulement si le joueur a gagné des niveaux.
+  let levelUpEl = document.getElementById("combat-result-levelup");
+  if (!levelUpEl && panelEl && titleEl) {
+    levelUpEl = document.createElement("div");
+    levelUpEl.id = "combat-result-levelup";
+    levelUpEl.className = "combat-result-levelup combat-result-levelup-hidden";
+    panelEl.insertBefore(levelUpEl, titleEl.nextSibling);
+  }
+
   if (!lootContainer) {
     const body = overlay.querySelector(".combat-result-body");
     if (body) {
@@ -55,6 +65,70 @@ export function initDomCombatResult(scene, player) {
 
   const hide = () => {
     overlay.classList.add("combat-result-hidden");
+  };
+
+  // Popup dédiée Level Up (au-dessus du récap combat)
+  let levelUpOverlay = document.getElementById("levelup-overlay");
+  let levelUpTitle = null;
+  let levelUpPvValue = null;
+  let levelUpCaracValue = null;
+  let levelUpCloseBtn = null;
+
+  const ensureLevelUpOverlay = () => {
+    if (levelUpOverlay) return;
+
+    levelUpOverlay = document.createElement("div");
+    levelUpOverlay.id = "levelup-overlay";
+    levelUpOverlay.className = "levelup-hidden";
+
+    levelUpOverlay.innerHTML = `
+      <div class="levelup-panel" role="dialog" aria-modal="true">
+        <h3 class="levelup-title" id="levelup-title">NIVEAU</h3>
+        <div class="levelup-sub">Augmentations</div>
+        <div class="levelup-items">
+          <div class="levelup-item">
+            <div class="levelup-icon is-hp">❤</div>
+            <div class="levelup-value" id="levelup-pv">+0</div>
+            <div class="levelup-label">PV max</div>
+          </div>
+          <div class="levelup-item">
+            <div class="levelup-icon is-carac">✦</div>
+            <div class="levelup-value" id="levelup-carac">+0</div>
+            <div class="levelup-label">Caractéristiques</div>
+          </div>
+        </div>
+        <div class="levelup-actions">
+          <button class="levelup-close" type="button" id="levelup-close">Fermer</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(levelUpOverlay);
+
+    levelUpTitle = levelUpOverlay.querySelector("#levelup-title");
+    levelUpPvValue = levelUpOverlay.querySelector("#levelup-pv");
+    levelUpCaracValue = levelUpOverlay.querySelector("#levelup-carac");
+    levelUpCloseBtn = levelUpOverlay.querySelector("#levelup-close");
+
+    const hideLevelUp = () => {
+      levelUpOverlay.classList.add("levelup-hidden");
+    };
+
+    levelUpOverlay.addEventListener("click", (e) => {
+      if (e.target === levelUpOverlay) hideLevelUp();
+    });
+    levelUpCloseBtn?.addEventListener("click", hideLevelUp);
+  };
+
+  const showLevelUpPopup = ({ level, pvMaxGagnes, pointsCaracGagnes }) => {
+    ensureLevelUpOverlay();
+    if (!levelUpOverlay) return;
+
+    if (levelUpTitle) levelUpTitle.textContent = `NIVEAU ${level}`;
+    if (levelUpPvValue) levelUpPvValue.textContent = `+${pvMaxGagnes}`;
+    if (levelUpCaracValue) levelUpCaracValue.textContent = `+${pointsCaracGagnes}`;
+
+    levelUpOverlay.classList.remove("levelup-hidden");
   };
 
   const renderLoot = (lootArray) => {
@@ -134,6 +208,26 @@ export function initDomCombatResult(scene, player) {
 
     // Loot
     renderLoot(result.loot);
+
+    // Augmentations (si passage de niveau pendant l'XP de fin de combat)
+    if (levelUpEl) {
+      const levels = result.niveauxGagnes ?? 0;
+
+      if (issue === "victoire" && levels > 0) {
+        levelUpEl.classList.remove("combat-result-levelup-hidden");
+        const newLevel = result.playerLevel ?? 1;
+        levelUpEl.innerHTML = `<span class="combat-result-levelup-badge">Niveau ${newLevel}</span>`;
+
+        showLevelUpPopup({
+          level: newLevel,
+          pvMaxGagnes: result.pvMaxGagnes ?? 0,
+          pointsCaracGagnes: result.pointsCaracGagnes ?? 0,
+        });
+      } else {
+        levelUpEl.classList.add("combat-result-levelup-hidden");
+        levelUpEl.innerHTML = "";
+      }
+    }
 
     // Chat : affiche le drop en fin de combat (TOTAL + Général)
     // Chat : le récap (XP/or/butin) est géré côté `src/core/combat/runtime.js`.

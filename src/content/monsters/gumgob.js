@@ -2,7 +2,7 @@ export default {
   id: "gumgob",
   label: "Gumgob",
   textureKey: "gumgob",
-  spritePath: "assets/monsters/Gumgob/south-west.png",
+  spritePath: "assets/monsters/Gumgob/rotations/south-west.png",
   render: {
     originX: 0.5,
     originY: 1,
@@ -22,4 +22,3 @@ export default {
   goldRewardMin: 35,
   goldRewardMax: 90,
 };
-

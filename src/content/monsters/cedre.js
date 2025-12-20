@@ -2,7 +2,7 @@ export default {
   id: "cedre",
   label: "Cèdre",
   textureKey: "cedre",
-  spritePath: "assets/monsters/Cedre/south-west.png",
+  spritePath: "assets/monsters/Cedre/rotations/south-west.png",
   render: {
     originX: 0.5,
     originY: 1,
@@ -22,4 +22,3 @@ export default {
   goldRewardMin: 28,
   goldRewardMax: 70,
 };
-

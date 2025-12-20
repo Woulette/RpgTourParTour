@@ -15,6 +15,13 @@ export function createPlayer(scene, x, y, classId) {
 
   const baseStats = createStats();
   const stats = applyBonuses(baseStats, classDef.statBonuses || []);
+  const initBonus = stats.initiative ?? 0;
+  const derivedInit =
+    (stats.force ?? 0) +
+    (stats.intelligence ?? 0) +
+    (stats.agilite ?? 0) +
+    (stats.chance ?? 0);
+  stats.initiative = initBonus + derivedInit;
 
   const textureKey =
     classId === "tank" ? "tank" : classId === "mage" ? "animiste" : "player";
@@ -47,11 +54,13 @@ export function createPlayer(scene, x, y, classId) {
   }
 
   // Stats de base "nues" du joueur (classe + points investis, sans équipement)
-  player.baseStats = { ...stats };
+  // Important : on stocke l'initiative "bonus" mais pas l'initiative dérivée,
+  // sinon elle serait additionnée à chaque recalcul.
+  player.baseStats = { ...stats, initiative: initBonus };
 
   // Stats de base "nues" du joueur (sans équipement), utilisées pour
   // recalculer les stats finales quand on équipe/déséquipe ou dépense des points.
-  player.baseStats = { ...stats };
+  player.baseStats = { ...stats, initiative: initBonus };
 
   // aligne l'origine du sprite sur les "pieds" du personnage.
   if (player.setOrigin) {
