@@ -116,11 +116,41 @@ export function startNpcInteraction(scene, player, npc) {
         text: "Merci pour le coup de main !",
         choice: "A plus tard.",
       };
-      dialogData = { ...base, questTurnIn: true };
+      const shouldChainOffer = npc.id === "meme_village" && quest.id === "andemia_intro_1";
+      dialogData = { ...base, questTurnIn: true, closeOnChoice: !shouldChainOffer };
       onDone = () => {
         const result = tryTurnInStage(scene, player, quest.id, quest, state, stage);
         if (!result.ok) return;
         advanceQuestStage(player, quest.id, { scene });
+
+        // Chaînage sans re-cliquer ni fermer : on valide la quête actuelle,
+        // puis on propose directement la prochaine quête disponible sur ce même PNJ.
+        if (shouldChainOffer) {
+          const offerContext = getQuestContextForNpc(player, npc.id);
+          if (offerContext && offerContext.offerable && offerContext.quest) {
+            const offerQuest = offerContext.quest;
+            const offerState = offerContext.state;
+            const offerStage = offerContext.stage;
+            const offerDialogDef = getNpcDialog(
+              npc.id,
+              offerQuest.id,
+              offerState?.state,
+              offerStage?.id
+            );
+
+            const baseOffer =
+              offerDialogDef || { text: "Je te confie une mission.", choice: "J'accepte" };
+
+            openDialog(npc, player, { ...baseOffer, questOffer: true }, () => {
+              acceptQuest(player, offerQuest.id);
+              if (npc.questMarker && npc.questMarker.destroy) {
+                npc.questMarker.destroy();
+                npc.questMarker = null;
+              }
+            });
+          }
+          return;
+        }
 
         // Enchaînement spécial : après avoir parlé au Maître (fin de la quête "donjon"),
         // on enchaîne directement sur le dialogue de la première épreuve, sans fermer.

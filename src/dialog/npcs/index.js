@@ -3,6 +3,7 @@ import { memeDialog } from "./meme.js";
 import { memeQuestAddons } from "./memeQuestAddons.js";
 import { dungeonKeeperDialog } from "./dungeonKeeper.js";
 import { mentorMap5Dialog } from "./mentorMap5.js";
+import { alchimisteProvisoireDialog } from "./alchimisteProvisoire.js";
 
 const NPC_DIALOGS = {
   papi_bucheron: papiDialog,
@@ -12,6 +13,7 @@ const NPC_DIALOGS = {
   },
   donjon_aluineeks_keeper: dungeonKeeperDialog,
   mentor_map5: mentorMap5Dialog,
+  alchimiste_provisoire: alchimisteProvisoireDialog,
 };
 
 export function getNpcDialog(npcId, questId, questState, stageId) {

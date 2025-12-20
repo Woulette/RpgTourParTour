@@ -2,67 +2,51 @@ import { QUEST_STATES } from "../../quests/catalog.js";
 
 export const papiDialog = {
   questDialogs: {
-    papi_corbeaux_1: {
-      hunt_corbeaux: {
+    andemia_intro_1: {
+      find_meme: {
         [QUEST_STATES.NOT_STARTED]: {
           sequence: [
             {
-              text: "Mais d'où sors-tu, toi ? Je ne t'ai pas vu arriver.",
-              choice: "Je... je ne sais même pas. Tout est flou.",
+              text: "…Ah. Encore un qui tombe du ciel.",
+              choice: "Où… où je suis ?",
+            },
+            {
+              text: "Andémia.\n\nOu ce qu’il en reste, depuis la fracture.",
+              choice: "Une fracture ?",
             },
             {
               text:
-                "Hum. Ça se confirme...\n" +
-                "Depuis la fracture, des gens apparaissent ici comme toi : d'un coup, sans explication.\n" +
-                "Certains disent que le temps lui-même s'est déréglé.",
-              choice: "J'ai juste un souvenir flou…",
+                "Rien n’est normal ici.\n" +
+                "Le sol, les bêtes, la magie… tout est tordu.\n\n" +
+                "Des gens apparaissent comme toi. Arrachés à leur réalité.",
+              choice: "Je ne me souviens de rien…",
             },
             {
               text:
-                "Bienvenue à Andémia. Une fois pris dans cette fracture, on ne repart pas aussi facilement...\n\n" +
-                "Mais si tu dois rester, autant apprendre à survivre. Ta formation commence ici, aventurier.\n" +
-                "Tu veux bien me donner un coup de main ?",
-              choice: "D'accord, je vais t'aider.",
+                "Si tu restes seul, tu finiras mangé. Ou perdu.\n\n" +
+                "Alors écoute bien.",
+              choice: "D’accord… j’ai besoin d’aide.",
+            },
+            {
+              text:
+                "Va voir Mémé. Ma femme.\n" +
+                "Elle comprend mieux la fracture que moi… et elle sait parler aux nouveaux.\n\n" +
+                "Reviens me voir après. Si tu tiens encore debout.",
+              choice: "Où est-elle ?",
             },
           ],
         },
         [QUEST_STATES.IN_PROGRESS]: {
-          text: "Alors, combien de corbeaux as-tu déjà chassés ?",
-          choice: "Je continue la chasse.",
-        },
-      },
-      return_to_papi: {
-        [QUEST_STATES.IN_PROGRESS]: {
-          text: "Les corbeaux sont partis ?",
-          choice: "Oui, la zone est dégagée.",
+          text:
+            "Ne traîne pas.\n" +
+            "Va voir Mémé. Elle t’aidera à comprendre ce qui se passe.",
+          choice: "J’y vais.",
         },
       },
       __default: {
         [QUEST_STATES.COMPLETED]: {
-          text: "Merci pour le coup de main !",
-          choice: "À plus tard.",
-        },
-      },
-    },
-
-    papi_meme_1: {
-      talk_to_meme: {
-        [QUEST_STATES.NOT_STARTED]: {
-          text:
-            "Bien joué, les corbeaux se calment enfin.\n" +
-            "Ma femme sera ravie d'apprendre que le chemin est plus sûr.\n" +
-            "Va lui parler, elle t'attend.",
-          choice: "Se mettre en route.",
-        },
-        [QUEST_STATES.IN_PROGRESS]: {
-          text:
-            "Maintenant que la zone est plus tranquille, va voir ma femme.\n" +
-            "Elle aura sûrement besoin d'un aventurier motivé comme toi.",
-          choice: "Se mettre en route.",
-        },
-        [QUEST_STATES.COMPLETED]: {
-          text: "Merci d'être allé la voir.",
-          choice: "À plus tard.",
+          text: "Alors ? Mémé t’a remis les idées en place ?",
+          choice: "Je continue.",
         },
       },
     },

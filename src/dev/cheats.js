@@ -38,6 +38,17 @@ function setQuestCompletedNoRewards(player, questId) {
   return state;
 }
 
+function completePrereqsNoRewards(player, questId, seen = new Set()) {
+  if (!questId) return;
+  if (seen.has(questId)) return;
+  seen.add(questId);
+  const questDef = quests[questId];
+  if (!questDef) throw new Error(`Cheats: quęte inconnue ${questId}`);
+  const reqs = Array.isArray(questDef.requires) ? questDef.requires.filter(Boolean) : [];
+  reqs.forEach((reqId) => completePrereqsNoRewards(player, reqId, seen));
+  reqs.forEach((reqId) => setQuestCompletedNoRewards(player, reqId));
+}
+
 function setQuestInProgressAtStage(player, questId, stageIdOrIndex = 0) {
   const questDef = quests[questId];
   if (!questDef) throw new Error(`Cheats: quête inconnue ${questId}`);
@@ -94,6 +105,9 @@ export function initDevCheats(scene) {
           "cheat.quests.accept('papi_corbeaux_1')",
           "cheat.quests.setStage('papi_corbeaux_1', 1) ou 'return_to_papi'",
           "cheat.quests.complete('papi_meme_1', { rewards: true|false })",
+          "cheat.quests.skip('andemia_intro_3')",
+          "cheat.quests.unlock('andemia_intro_3')",
+          "cheat.quests.skipTo('andemia_intro_3')",
           "cheat.quests.reset('papi_meme_1')",
           "cheat.inv.give('bois_chene', 50)",
           "cheat.craft.add('coiffe_corbeau_air', 1)",
@@ -141,6 +155,21 @@ export function initDevCheats(scene) {
           return questSnapshot(player, questId);
         }
         return setQuestCompletedNoRewards(player, questId);
+      },
+      skip(questId) {
+        const player = ensurePlayer();
+        return setQuestCompletedNoRewards(player, questId);
+      },
+      unlock(questId) {
+        const player = ensurePlayer();
+        completePrereqsNoRewards(player, questId);
+        return questSnapshot(player, questId);
+      },
+      skipTo(questId) {
+        const player = ensurePlayer();
+        completePrereqsNoRewards(player, questId);
+        acceptQuest(player, questId);
+        return questSnapshot(player, questId);
       },
       reset(questId) {
         const player = ensurePlayer();

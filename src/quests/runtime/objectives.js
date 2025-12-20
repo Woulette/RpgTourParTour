@@ -40,6 +40,17 @@ export function isTurnInReadyAtNpc(player, questDef, state, stage, npcId) {
     return current >= required;
   }
 
+  if (objective.type === "deliver_items") {
+    const items = Array.isArray(objective.items) ? objective.items : [];
+    if (items.length === 0) return false;
+    return items.every((it) => {
+      if (!it || !it.itemId) return false;
+      const required = it.qty || 1;
+      const current = countItemInInventory(player, it.itemId);
+      return current >= required;
+    });
+  }
+
   if (objective.type === "craft_items") {
     const items = Array.isArray(objective.items) ? objective.items : [];
     const crafted = state.progress?.crafted || {};
@@ -98,6 +109,45 @@ export function tryTurnInStage(scene, player, questId, questDef, state, stage) {
     return {
       ok: true,
       consumed: consume ? [{ itemId: objective.itemId, qty: required }] : [],
+    };
+  }
+
+  if (objective.type === "deliver_items") {
+    const items = Array.isArray(objective.items) ? objective.items : [];
+    if (items.length === 0) return { ok: false };
+
+    const missing = items
+      .filter((it) => it && it.itemId)
+      .map((it) => {
+        const required = it.qty || 1;
+        const current = countItemInInventory(player, it.itemId);
+        return { itemId: it.itemId, required, current };
+      })
+      .filter((it) => it.current < it.required);
+
+    if (missing.length > 0) {
+      return { ok: false, reason: "missing_items" };
+    }
+
+    const consume = objective.consume !== false;
+    if (consume) {
+      for (const it of items) {
+        if (!it || !it.itemId) continue;
+        const required = it.qty || 1;
+        const removed = removeItem(player.inventory, it.itemId, required);
+        if (removed < required) {
+          return { ok: false, reason: "missing_items" };
+        }
+      }
+    }
+
+    return {
+      ok: true,
+      consumed: consume
+        ? items
+            .filter((it) => it && it.itemId)
+            .map((it) => ({ itemId: it.itemId, qty: it.qty || 1 }))
+        : [],
     };
   }
 

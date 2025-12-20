@@ -112,6 +112,24 @@ const troncArbreDecoTileset = {
   autoTileOffset: true,
 };
 
+const tourMairieTileset = {
+  name: "TourMairie",
+  imageKey: "TourMairie",
+  imagePath: "assets/MesDecor/TourMairie.png",
+  frameWidth: 500,
+  frameHeight: 500,
+  autoTileOffset: true,
+};
+
+const maisonAlchimisteTileset = {
+  name: "MaisonAlchimiste",
+  imageKey: "MaisonAlchimiste",
+  imagePath: "assets/MesDecor/MaisonAlchimiste.png",
+  frameWidth: 400,
+  frameHeight: 400,
+  autoTileOffset: true,
+};
+
 const solTaverneTileset = {
   name: "SolTaverne",
   imageKey: "SolTaverne",
@@ -353,6 +371,34 @@ export const maps = {
     ],
     exitBounds: null,
   },
+  MapAndemiaNouvelleVersion4: {
+    key: "MapAndemiaNouvelleVersion4",
+    // À gauche de MapAndemiaNouvelleVersion3 (-1,-1).
+    worldPos: { x: -2, y: -1 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion4.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, tourMairieTileset],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemiaNouvelleVersion5: {
+    key: "MapAndemiaNouvelleVersion5",
+    // À gauche de MapAndemiaNouvelleVersion4 (-2,-1).
+    worldPos: { x: -3, y: -1 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion5.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, maisonAlchimisteTileset],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
   MapTaverne: {
     key: "MapTaverne",
     jsonPath: "assets/maps/MapTaverne.json",
@@ -389,6 +435,18 @@ export const maps = {
         textureKey: "TableDeCraftCordonnier",
       },
     ],
+    exitBounds: null,
+  },
+  MapMaisonAlchimiste: {
+    key: "MapMaisonAlchimiste",
+    jsonPath: "assets/maps/MapMaisonAlchimiste.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, maisonAlchimisteTileset],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: false,
+    monsterSpawns: [],
+    treePositions: [],
     exitBounds: null,
   },
   MapAndemia5: {
@@ -650,4 +708,4 @@ export const maps = {
   },
 };
 
-export const defaultMapKey = "MapTaverne";
+export const defaultMapKey = "Map1Andemia";
