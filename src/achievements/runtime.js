@@ -1,5 +1,5 @@
 import { emit as emitStoreEvent } from "../state/store.js";
-import { addItem } from "../inventory/inventoryCore.js";
+import { addItem, getItemDef } from "../inventory/inventoryCore.js";
 import { addXpToPlayer } from "../entities/player.js";
 import { achievementDefs } from "./defs/index.js";
 import { addChatMessage } from "../chat/chat.js";
@@ -102,11 +102,29 @@ function applyRewards(player, rewards) {
     });
   }
 
+  const normalizedItems = [];
+  if (items.length > 0) {
+    const byId = new Map();
+    items.forEach((it) => {
+      if (!it || !it.itemId) return;
+      const qty = it.qty || 1;
+      byId.set(it.itemId, (byId.get(it.itemId) || 0) + qty);
+    });
+    byId.forEach((qty, itemId) => normalizedItems.push({ itemId, qty }));
+  }
+
   const rewardParts = [];
   if (xp > 0) rewardParts.push(`+${xp} XP`);
   if (gold > 0) rewardParts.push(`+${gold} or`);
-  if (honorPoints > 0) rewardParts.push(`+${honorPoints} honneur`);
-  if (items.length > 0) rewardParts.push(`+${items.length} objet(s)`);
+  if (honorPoints > 0) rewardParts.push(`+${honorPoints} honneur fracturel`);
+  if (normalizedItems.length > 0) {
+    const parts = normalizedItems.map(({ itemId, qty }) => {
+      const def = getItemDef(itemId);
+      const label = def?.label || itemId;
+      return `${label} x${qty}`;
+    });
+    rewardParts.push(`+${parts.join(", ")}`);
+  }
   const rewardText = rewardParts.length > 0 ? ` (${rewardParts.join(", ")})` : "";
   addChatMessage(
     {
@@ -117,6 +135,17 @@ function applyRewards(player, rewards) {
     },
     { player }
   );
+
+  // Event UI : permet d'afficher des pops d'icônes (récompenses visuelles)
+  emitStoreEvent("rewards:granted", {
+    source: "achievement",
+    rewards: {
+      xpPlayer: xp,
+      gold,
+      honorPoints,
+      items: normalizedItems,
+    },
+  });
 
   emitStoreEvent("player:updated", { player });
 }

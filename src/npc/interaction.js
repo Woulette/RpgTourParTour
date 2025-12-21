@@ -46,6 +46,10 @@ function openDialog(npc, player, dialogData, onDone) {
         ...screen,
         questOffer: dialogData.questOffer,
         questTurnIn: dialogData.questTurnIn,
+        closeOnChoice:
+          screen.closeOnChoice === undefined
+            ? dialogData.closeOnChoice
+            : screen.closeOnChoice,
       };
     });
     openDialogSequence(npc, player, screens, onDone);
@@ -117,7 +121,10 @@ export function startNpcInteraction(scene, player, npc) {
         choice: "A plus tard.",
       };
       const shouldChainOffer = npc.id === "meme_village" && quest.id === "andemia_intro_1";
-      dialogData = { ...base, questTurnIn: true, closeOnChoice: !shouldChainOffer };
+      const shouldChainOfferAfterTurnIn =
+        shouldChainOffer ||
+        (npc.id === "alchimiste_provisoire" && quest.id === "andemia_intro_2");
+      dialogData = { ...base, questTurnIn: true, closeOnChoice: !shouldChainOfferAfterTurnIn };
       onDone = () => {
         const result = tryTurnInStage(scene, player, quest.id, quest, state, stage);
         if (!result.ok) return;
@@ -125,7 +132,7 @@ export function startNpcInteraction(scene, player, npc) {
 
         // Chaînage sans re-cliquer ni fermer : on valide la quête actuelle,
         // puis on propose directement la prochaine quête disponible sur ce même PNJ.
-        if (shouldChainOffer) {
+        if (shouldChainOfferAfterTurnIn) {
           const offerContext = getQuestContextForNpc(player, npc.id);
           if (offerContext && offerContext.offerable && offerContext.quest) {
             const offerQuest = offerContext.quest;

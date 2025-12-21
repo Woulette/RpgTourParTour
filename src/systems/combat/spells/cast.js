@@ -13,6 +13,22 @@ import { isTileAvailableForSpell, getCasterOriginTile } from "./util.js";
 import { canApplyCapture, startCaptureAttempt } from "../summons/capture.js";
 import { getAliveSummon, spawnSummonFromCaptured } from "../summons/summon.js";
 
+function playSpellAnimation(scene, spellId, x, y) {
+  if (!scene || !spellId) return;
+
+  if (spellId === "punch_furtif") {
+    const atlasKey = "spell_punch_furtif_atlas";
+    const animKey = "spell_punch_furtif_anim";
+    if (!scene.textures?.exists?.(atlasKey) || !scene.anims?.exists?.(animKey)) return;
+
+    const fx = scene.add.sprite(x, y, atlasKey);
+    fx.setOrigin(0.5, 0.75);
+    fx.setDepth(y + 5);
+    fx.play(animKey);
+    fx.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => fx.destroy());
+  }
+}
+
 export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundLayer) {
   if (!canCastSpellAtTile(scene, caster, spell, tileX, tileY, map)) {
     return false;
@@ -58,6 +74,9 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   const worldPos = map.tileToWorldXY(tileX, tileY, undefined, undefined, groundLayer);
   const cx = worldPos.x + map.tileWidth / 2;
   const cy = worldPos.y + map.tileHeight / 2;
+
+  // FX animation (si dispo)
+  playSpellAnimation(scene, spell?.id, cx, cy);
 
   const size = Math.min(map.tileWidth, map.tileHeight);
   const fx = scene.add.rectangle(cx, cy, size, size, 0xffdd55, 0.6);

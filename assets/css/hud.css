@@ -118,6 +118,30 @@
 }
 
 /* Évite un flash si certains boutons sont encore hors du dock au chargement */
+/* Indique quel panneau est ouvert : bordure blanche sur l'icône active */
+body.hud-metiers-open #hud-metiers-button,
+body.hud-quests-open #hud-quests-button,
+body.hud-map-open #hud-map-button,
+body.hud-inventory-open #hud-inventory-button,
+body.hud-achievements-open #hud-achievements-button,
+body.hud-spells-open #hud-spells-button,
+body.hud-stats-open #hud-stats-button {
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+body.hud-metiers-open #hud-metiers-button:hover,
+body.hud-quests-open #hud-quests-button:hover,
+body.hud-map-open #hud-map-button:hover,
+body.hud-inventory-open #hud-inventory-button:hover,
+body.hud-achievements-open #hud-achievements-button:hover,
+body.hud-spells-open #hud-spells-button:hover,
+body.hud-stats-open #hud-stats-button:hover {
+  background: rgba(110, 120, 138, 0.72);
+}
+
 #hud-bar > #hud-quests-button,
 #hud-bar > #hud-metiers-button {
   display: none;

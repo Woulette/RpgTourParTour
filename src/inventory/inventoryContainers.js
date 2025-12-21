@@ -3,7 +3,9 @@ import { createInventory } from "./inventoryCore.js";
 // Inventaire standard du joueur.
 // Base : 50 emplacements (grille 5 x 10).
 export function createPlayerInventory() {
-  return createInventory(50);
+  return createInventory(50, {
+    autoGrow: { enabled: true, minEmptySlots: 10, growBy: 5 },
+  });
 }
 
 // Banque simple : même logique, plus grand.

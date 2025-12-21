@@ -3,13 +3,38 @@ import { DIALOG_STATES } from "./dialogStates.js";
 
 export const alchimisteProvisoireDialog = {
   questDialogs: {
+    andemia_intro_2: {
+      talk_to_alchimiste: {
+        [QUEST_STATES.IN_PROGRESS]: {
+          sequence: [
+            {
+              text: "Ah, tu viens de la part de Mémé.",
+              choice: "Oui.",
+            },
+            {
+              text:
+                "Parfait.\n" +
+                "Je vois que tu sais déjà te débrouiller.\n\n" +
+                "Je vais te confier la suite.",
+              choice: "Je t’écoute.",
+            },
+          ],
+        },
+      },
+      __default: {
+        [QUEST_STATES.COMPLETED]: {
+          text: "Bien. On va pouvoir passer aux essences.",
+          choice: "D'accord.",
+        },
+      },
+    },
     andemia_intro_3: {
       bring_essence_corbeau: {
         [QUEST_STATES.NOT_STARTED]: {
           sequence: [
             {
-              text: "C’est Mémé qui t’envoie ?",
-              choice: "Oui.",
+              text: "Très bien. Passons aux essences.",
+              choice: "D’accord.",
             },
             {
               text:

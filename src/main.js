@@ -35,6 +35,7 @@ import { initDomLevelUpPopup } from "./ui/domLevelUpPopup.js";
 import { initDomPanelClose } from "./ui/domPanelClose.js";
 import { initQuestTracker } from "./ui/domQuestTracker.js";
 import { initDomChat } from "./ui/domChat.js";
+import { initDomRewardPops } from "./ui/domRewardPops.js";
 import {
   preloadMonsters,
   processPendingRespawnsForCurrentMap,
@@ -53,6 +54,7 @@ import { initAchievementRuntime } from "./achievements/runtime/init.js";
 import { initDevCheats } from "./dev/cheats.js";
 import { attachCombatTileHover } from "./ui/combatTileHover.js";
 import { setupWorkstations } from "./metier/workstations.js";
+import { setupSpellAnimations } from "./spells/animations.js";
     
 
 class MainScene extends Phaser.Scene {
@@ -124,6 +126,13 @@ class MainScene extends Phaser.Scene {
 
     preloadMonsters(this);
     preloadNpcs(this);
+
+    // --- Animations de sorts (atlases) ---
+    this.load.atlas(
+      "spell_punch_furtif_atlas",
+      "assets/AnimationSort/SpriteSheetPunchFurtif.png",
+      "assets/AnimationSort/AnimationPunchFurtif.json"
+    );
   }
 
     create() {
@@ -201,6 +210,7 @@ class MainScene extends Phaser.Scene {
     setupPlayerAnimations(this);
     setupCharacterAnimations(this, "tank");
     setupCharacterAnimations(this, "animiste");
+    setupSpellAnimations(this);
     this.player.setDepth(startY);
 
     // Recalcule les depth des decor/trees dependants du joueur
@@ -291,6 +301,7 @@ class MainScene extends Phaser.Scene {
 
     // Initialisation du HUD HTML (en dehors de Phaser)
     initDomHud(this.player);
+    initDomRewardPops();
     // Initialisation de l'UI de combat (bouton fin de tour)
     initDomCombat(this);
     initDomCombatInspector(this);

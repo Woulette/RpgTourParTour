@@ -50,7 +50,7 @@ function formatRewards(rewards) {
   const parts = [];
   if (r.xpPlayer) parts.push(`+${r.xpPlayer} XP`);
   if (r.gold) parts.push(`+${r.gold} or`);
-  if (r.honorPoints) parts.push(`+${r.honorPoints} honneur`);
+  if (r.honorPoints) parts.push(`+${r.honorPoints} honneur fracturel`);
 
   const items = Array.isArray(r.items) ? r.items : [];
   if (items.length > 0) {
@@ -144,7 +144,7 @@ export function initDomAchievements(player) {
   let selectedObjectiveId = null;
   let unlockedSnapshot = null;
 
-  function updateHonor() {
+function updateHonor() {
     if (!honorValueEl) return;
     const value = Number.isFinite(player?.honorPoints) ? player.honorPoints : 0;
     honorValueEl.textContent = String(value);
