@@ -8,7 +8,7 @@
   justify-content: center;
   /* Derrière la popup de récompense (combatResult = 9000),
      mais au-dessus du jeu pour rester visible après fermeture du récap. */
-  z-index: 8900;
+  z-index: 9100;
 }
 
 #levelup-overlay.levelup-hidden {

@@ -83,8 +83,8 @@
   padding: 0;
 
   border-radius: 0;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(35, 38, 44, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(70, 76, 86, 0.62);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.35);
 
   color: transparent;
@@ -93,7 +93,7 @@
 }
 
 #hud-dock-menu .hud-pill:hover {
-  background: rgba(50, 54, 62, 0.90);
+  background: rgba(88, 96, 110, 0.72);
   transform: none;
 }
 
@@ -106,19 +106,15 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   transform: translate(-50%, -50%);
 
-  background: rgba(236, 236, 232, 0.92);
-  -webkit-mask-image: var(--hud-icon);
-  mask-image: var(--hud-icon);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
+  background-image: var(--hud-icon-image);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  image-rendering: pixelated;
 }
 
 /* Évite un flash si certains boutons sont encore hors du dock au chargement */
@@ -130,24 +126,34 @@
 /* Icônes (SVG inline) */
 #hud-metiers-button {
   --hud-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M14.2 2.1l7.7 7.7-2.1 2.1-2.2-2.2-6.9 6.9 2.2 2.2-2.1 2.1-7.7-7.7 2.1-2.1 2.2 2.2 6.9-6.9-2.2-2.2 2.1-2.1z'/%3E%3C/svg%3E");
+  --hud-icon-image: url("../icon/Metier.png");
 }
 
 #hud-quests-button {
   --hud-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 2h10a3 3 0 013 3v16a1 1 0 01-1.5.86L16 20.3l-2.5 1.56a1 1 0 01-1.06 0L10 20.3 7.5 21.86A1 1 0 016 21V5a3 3 0 011-2.12A3 3 0 017 2zm2 6h6v2H9V8zm0 4h6v2H9v-2z'/%3E%3C/svg%3E");
+  --hud-icon-image: url("../icon/Quete.png");
 }
 
 #hud-map-button {
   --hud-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9 4l6 3 6-3v17l-6 3-6-3-6 3V7l6-3zm0 2.2L5 7.7V20l4-2.1V6.2zm2 0V18l4 2.1V7.7l-4-2.1z'/%3E%3C/svg%3E");
+  --hud-icon-image: url("../icon/Carte.png");
 }
 
 #hud-inventory-button {
   --hud-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M8 7V6a4 4 0 018 0v1h3v14H5V7h3zm2 0h4V6a2 2 0 00-4 0v1zm-2 4h2v2H8v-2zm6 0h2v2h-2v-2z'/%3E%3C/svg%3E");
+  --hud-icon-image: url("../icon/Inventaire.png");
 }
 
 #hud-spells-button {
   --hud-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 2l1.7 5.3L19 9l-5.3 1.7L12 16l-1.7-5.3L5 9l5.3-1.7L12 2zM4 20l6-6 2 2-6 6H4z'/%3E%3C/svg%3E");
+  --hud-icon-image: url("../icon/Sort.png");
 }
 
 #hud-stats-button {
   --hud-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M5 10h3v10H5V10zm6-6h3v16h-3V4zm6 8h3v8h-3v-8z'/%3E%3C/svg%3E");
+  --hud-icon-image: url("../icon/Statistique.png");
+}
+
+#hud-achievements-button {
+  --hud-icon-image: url("../icon/Accomplissement.png");
 }

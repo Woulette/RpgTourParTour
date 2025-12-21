@@ -9,6 +9,7 @@ import {
   recomputePlayerStatsWithEquipment,
 } from "../inventory/equipmentCore.js";
 import { purgeDeprecatedItemsFromPlayer } from "../inventory/deprecatedItems.js";
+import { emit as emitStoreEvent } from "../state/store.js";
 
 export function createPlayer(scene, x, y, classId) {
   const classDef = classes[classId] || classes.archer;
@@ -101,6 +102,9 @@ export function addXpToPlayer(player, montantXp) {
   const xpMultiplier = 1 + Math.max(0, sagesse) * wisdomPerPoint;
   const finalXp = Math.round(montantXp * xpMultiplier);
 
+  const levelBefore = player?.levelState?.niveau ?? 1;
+  const pointsBefore = player?.levelState?.pointsCaracLibres ?? 0;
+
   const { nouveauState, niveauxGagnes } = ajouterXp(
     player.levelState,
     finalXp
@@ -123,5 +127,22 @@ export function addXpToPlayer(player, montantXp) {
       const hpMax = player.stats.hpMax ?? player.stats.hp ?? 0;
       player.stats.hp = hpMax;
     }
+  }
+
+  if (niveauxGagnes > 0) {
+    const levelAfter = player?.levelState?.niveau ?? levelBefore;
+    const pointsAfter = player?.levelState?.pointsCaracLibres ?? pointsBefore;
+    const pointsCaracGagnes = Math.max(0, pointsAfter - pointsBefore);
+    const pvMaxGagnes = 5 * niveauxGagnes;
+
+    emitStoreEvent("player:levelup", {
+      player,
+      data: {
+        niveauxGagnes,
+        level: levelAfter,
+        pointsCaracGagnes,
+        pvMaxGagnes,
+      },
+    });
   }
 }

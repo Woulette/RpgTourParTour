@@ -218,11 +218,7 @@ export function initDomCombatResult(scene, player) {
         const newLevel = result.playerLevel ?? 1;
         levelUpEl.innerHTML = `<span class="combat-result-levelup-badge">Niveau ${newLevel}</span>`;
 
-        showLevelUpPopup({
-          level: newLevel,
-          pvMaxGagnes: result.pvMaxGagnes ?? 0,
-          pointsCaracGagnes: result.pointsCaracGagnes ?? 0,
-        });
+        // Le popup de niveau est géré globalement via l'event store "player:levelup".
       } else {
         levelUpEl.classList.add("combat-result-levelup-hidden");
         levelUpEl.innerHTML = "";

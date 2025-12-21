@@ -29,6 +29,10 @@ import { initDomCombatInspector } from "./ui/domCombatInspector.js";
 import { initDomInventory } from "./ui/domInventory.js";
 import { initDomMetiers } from "./ui/domMetiers.js";
 import { initDomQuests } from "./ui/domQuests.js";
+import { initDomAchievements } from "./ui/domAchievements.js";
+import { initAchievementClaimHint } from "./ui/domAchievementClaimHint.js";
+import { initDomLevelUpPopup } from "./ui/domLevelUpPopup.js";
+import { initDomPanelClose } from "./ui/domPanelClose.js";
 import { initQuestTracker } from "./ui/domQuestTracker.js";
 import { initDomChat } from "./ui/domChat.js";
 import {
@@ -45,6 +49,7 @@ import { spawnTestTrees } from "./metier/bucheron/trees.js";
 import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
 import { initStore } from "./state/store.js";
 import { initQuestRuntime } from "./quests/runtime/init.js";
+import { initAchievementRuntime } from "./achievements/runtime/init.js";
 import { initDevCheats } from "./dev/cheats.js";
 import { attachCombatTileHover } from "./ui/combatTileHover.js";
 import { setupWorkstations } from "./metier/workstations.js";
@@ -205,6 +210,7 @@ class MainScene extends Phaser.Scene {
     initStore(this.player);
     initDomChat(this.player);
     initQuestRuntime(this.player);
+    initAchievementRuntime(this.player);
     initDevCheats(this);
 
     // Initialise les tuiles de sortie pour cette premiÃ¨re map.
@@ -297,6 +303,10 @@ class MainScene extends Phaser.Scene {
     // Initialisation de la fenÃªtre de mÃ©tiers
     initDomMetiers(this.player);
     initDomQuests(this.player);
+    initDomAchievements(this.player);
+    initAchievementClaimHint(this.player);
+    initDomLevelUpPopup();
+    initDomPanelClose();
     initQuestTracker(this.player);
 
     // DEBUG : touche "N" -> charge Map2Andemia avec le mÃªme centrage

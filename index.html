@@ -33,6 +33,8 @@
   <link rel="stylesheet" href="assets/css/npcDialog.css" />
   <link rel="stylesheet" href="assets/css/quests.css" />
   <link rel="stylesheet" href="assets/css/questTracker.css" />
+  <link rel="stylesheet" href="assets/css/achievements.css" />
+  <link rel="stylesheet" href="assets/css/toasts.css" />
   <link rel="stylesheet" href="assets/css/chat.css" />
   <link rel="stylesheet" href="assets/css/menu.css" />
 </head>
@@ -159,6 +161,9 @@
           <button class="hud-pill" id="hud-inventory-button" aria-label="Ouvrir l'inventaire">
             INV
           </button>
+          <button class="hud-pill" id="hud-achievements-button" aria-label="Ouvrir les accomplissements">
+            ACCOMP
+          </button>
           <button class="hud-pill" id="hud-spells-button" aria-label="Ouvrir les sorts">
             SORTS
           </button>
@@ -277,6 +282,14 @@
     <aside id="hud-inventory-panel" aria-label="Inventaire du personnage">
       <header class="inventory-header">
         <h2 class="inventory-title">Inventaire</h2>
+        <button
+          type="button"
+          class="hud-panel-close-btn"
+          data-hud-close="hud-inventory-open"
+          aria-label="Fermer"
+        >
+          &times;
+        </button>
         <div class="inventory-filters">
           <button class="inventory-filter-btn inventory-filter-active" data-filter="all">Tout</button>
           <button class="inventory-filter-btn" data-filter="equipement">Equip.</button>
@@ -325,6 +338,14 @@
     <aside id="hud-stats-panel" aria-label="Fenêtre de statistiques du personnage">
       <header class="stats-header">
         <h2 class="stats-title">Statistiques</h2>
+        <button
+          type="button"
+          class="hud-panel-close-btn"
+          data-hud-close="hud-stats-open"
+          aria-label="Fermer"
+        >
+          &times;
+        </button>
         <div class="stats-player-name">Nom : <span id="stat-player-name">---</span></div>
         <div class="stats-level-line">
           Niveau : <span id="stat-level">1</span>
@@ -413,6 +434,14 @@
     <aside id="hud-metiers-panel" aria-label="Fenêtre des métiers du personnage">
       <header class="metiers-header">
         <h2 class="metiers-title">Métiers</h2>
+        <button
+          type="button"
+          class="hud-panel-close-btn"
+          data-hud-close="hud-metiers-open"
+          aria-label="Fermer"
+        >
+          &times;
+        </button>
       </header>
 
       <section class="metiers-section">
@@ -433,6 +462,14 @@
     <aside id="hud-spells-panel" aria-label="Fenêtre des sorts de la classe">
       <header class="spells-header">
         <h2 class="spells-title">Sorts</h2>
+        <button
+          type="button"
+          class="hud-panel-close-btn"
+          data-hud-close="hud-spells-open"
+          aria-label="Fermer"
+        >
+          &times;
+        </button>
         <div class="spells-class-name">
           Classe : <span id="spells-class-name">---</span>
         </div>
@@ -457,6 +494,14 @@
     <aside id="hud-map-panel" aria-label="Carte du monde">
       <header class="map-header">
         <h2 class="map-title">Carte</h2>
+        <button
+          type="button"
+          class="hud-panel-close-btn"
+          data-hud-close="hud-map-open"
+          aria-label="Fermer"
+        >
+          &times;
+        </button>
       </header>
       <section class="map-body">
         <div class="map-main">
@@ -521,6 +566,14 @@
     <aside id="hud-quests-panel" aria-label="Fenetre des quetes du personnage">
       <header class="quests-header">
         <h2 class="quests-title">Quetes</h2>
+        <button
+          type="button"
+          class="hud-panel-close-btn"
+          data-hud-close="hud-quests-open"
+          aria-label="Fermer"
+        >
+          &times;
+        </button>
       </header>
       <section class="quests-body">
         <div class="quests-columns">
@@ -542,6 +595,51 @@
           <p id="quest-detail-desc" class="quest-detail-desc"></p>
           <p id="quest-detail-progress" class="quest-detail-progress"></p>
           <p id="quest-detail-rewards" class="quest-detail-rewards"></p>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Fenetre des accomplissements -->
+    <aside id="hud-achievements-panel" aria-label="Fenetre des accomplissements du personnage">
+      <header class="achievements-header">
+        <button
+          type="button"
+          class="hud-panel-close-btn"
+          data-hud-close="hud-achievements-open"
+          aria-label="Fermer"
+        >
+          &times;
+        </button>
+        <div class="achievements-header-row">
+          <h2 class="achievements-title">Accomplissements</h2>
+          <div class="achievements-honor" aria-label="Points d'honneur">
+            Honneur : <span id="hud-honor-value">0</span>
+          </div>
+        </div>
+      </header>
+      <section class="achievements-body">
+        <div
+          id="achievements-categories"
+          class="achievements-categories"
+          aria-label="Catégories des accomplissements"
+        ></div>
+        <div id="achievements-list" class="achievements-list" aria-label="Liste des accomplissements"></div>
+        <div class="achievements-detail" aria-label="Détail accomplissement">
+          <h3 id="achievement-pack-title" class="achievement-pack-title">-</h3>
+          <p id="achievement-pack-desc" class="achievement-pack-desc"></p>
+          <ul id="achievement-pack-objectives" class="achievement-pack-objectives"></ul>
+
+          <div class="achievement-detail-separator"></div>
+          <h3 id="achievement-detail-title" class="achievement-detail-title">-</h3>
+          <p id="achievement-detail-desc" class="achievement-detail-desc"></p>
+          <ul id="achievement-detail-list" class="achievement-detail-list"></ul>
+          <div id="achievement-detail-rewards" class="achievement-detail-rewards"></div>
+          <div class="achievement-claim-row">
+            <button id="achievement-claim-button" class="achievement-claim-btn" type="button" disabled>
+              Réclamer
+            </button>
+            <span id="achievement-claim-status" class="achievement-claim-status"></span>
+          </div>
         </div>
       </section>
     </aside>

@@ -64,6 +64,7 @@ function mountHudDockMenu() {
     "hud-quests-button",
     "hud-map-button",
     "hud-inventory-button",
+    "hud-achievements-button",
     "hud-spells-button",
     "hud-stats-button",
   ];

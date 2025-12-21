@@ -1,0 +1,124 @@
+/* Toasts (petites notifications) */
+
+#hud-toast-container {
+  position: fixed;
+  right: 18px;
+  top: 18px;
+  z-index: 9500;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.hud-toast {
+  width: min(360px, calc(100vw - 36px));
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 55%),
+    rgba(8, 20, 40, 0.96);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+  color: rgba(226, 232, 240, 0.95);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.hud-claim-hint {
+  position: fixed;
+  right: 18px;
+  top: 78px;
+  z-index: 9501;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 55%),
+    rgba(8, 20, 40, 0.96);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+  color: rgba(226, 232, 240, 0.95);
+  cursor: pointer;
+}
+
+.hud-claim-hint:hover {
+  border-color: rgba(129, 140, 248, 0.8);
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.10), transparent 55%),
+    rgba(30, 64, 175, 0.35);
+}
+
+.hud-claim-hint-hidden {
+  display: none;
+}
+
+.hud-claim-hint-icon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 18px;
+  color: rgba(251, 191, 36, 0.95);
+}
+
+.hud-claim-hint-badge {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #0b1220;
+  background: rgba(251, 191, 36, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.35);
+}
+
+.hud-toast-title {
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: rgba(251, 191, 36, 0.95);
+  margin: 0 0 6px;
+}
+
+.hud-toast-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.hud-toast.hud-toast-enter {
+  animation: hudToastEnter 180ms ease-out both;
+}
+
+.hud-toast.hud-toast-leave {
+  animation: hudToastLeave 140ms ease-in both;
+}
+
+@keyframes hudToastEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hudToastLeave {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}

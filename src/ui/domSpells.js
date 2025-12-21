@@ -364,6 +364,26 @@ export function initDomSpells(player) {
     "8": 8,
   };
 
+  // Mapping par code (AZERTY/QWERTY) : Digit2 marche même si `event.key` vaut "é".
+  const codeToSlot = {
+    Digit1: 1,
+    Digit2: 2,
+    Digit3: 3,
+    Digit4: 4,
+    Digit5: 5,
+    Digit6: 6,
+    Digit7: 7,
+    Digit8: 8,
+    Numpad1: 1,
+    Numpad2: 2,
+    Numpad3: 3,
+    Numpad4: 4,
+    Numpad5: 5,
+    Numpad6: 6,
+    Numpad7: 7,
+    Numpad8: 8,
+  };
+
   window.addEventListener("keydown", (event) => {
     // Evite de capturer les touches quand on tape dans un champ de texte
     const target = event.target;
@@ -374,7 +394,7 @@ export function initDomSpells(player) {
       return;
     }
 
-    const slotIndex = keyToSlot[event.key];
+    const slotIndex = codeToSlot[event.code] || keyToSlot[event.key];
     if (!slotIndex) return;
 
     const slot = slotByIndex[slotIndex];
