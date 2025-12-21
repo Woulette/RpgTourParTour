@@ -1,4 +1,6 @@
 import { classes } from "../config/classes.js";
+import { on as onStore } from "../state/store.js";
+import { listCharacterMetas, upsertCharacterMeta } from "../save/index.js";
 
 export function initCharacterMenus({ onStartGame }) {
   const overlayEl = document.getElementById("menu-overlay");
@@ -73,9 +75,27 @@ export function initCharacterMenus({ onStartGame }) {
   let selectedCharacterId = null;
   let selectedClassId = null;
 
+  // Hydrate depuis la sauvegarde locale (persistant entre rechargements).
+  try {
+    const metas = listCharacterMetas();
+    metas.forEach((m) => {
+      if (!m || !m.id) return;
+      characters.push({
+        id: m.id,
+        name: m.name || "Joueur",
+        classId: m.classId || "archer",
+        level: m.level ?? 1,
+      });
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[menu] failed to load saved characters:", err);
+  }
+
   let carouselOrder = getCarouselClassIds();
   let carouselIds = getCarouselClassIds();
   const carouselSlotByClassId = new Map();
+  const carouselSlotByKey = new Map();
 
   // Mapping index -> position class (comme ton dessin : centre, haut, gauche, droite)
   const POS_CLASSES = ["pos-center", "pos-top", "pos-left", "pos-right"];
@@ -157,37 +177,60 @@ export function initCharacterMenus({ onStartGame }) {
 
     container.innerHTML = "";
     carouselSlotByClassId.clear();
+    carouselSlotByKey.clear();
 
     nextIds.forEach((classId) => {
-      const ui = classUi[classId] || {};
+      const carouselKey = classId;
+      const character =
+        characters.find((c) => c && c.id === carouselKey) || null;
+      const resolvedClassId = character?.classId || carouselKey;
+      const ui = classUi[resolvedClassId] || {};
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "menu-class-slot";
-      btn.dataset.classId = classId;
-      btn.setAttribute("aria-label", ui.title || classId);
+      btn.dataset.classId = resolvedClassId;
+      btn.dataset.carouselKey = carouselKey;
+
+      if (character?.id) {
+        btn.dataset.characterId = character.id;
+        btn.setAttribute(
+          "aria-label",
+          `${character.name || "Joueur"} - ${ui.title || resolvedClassId}`
+        );
+      } else {
+        btn.setAttribute("aria-label", ui.title || resolvedClassId);
+      }
 
       if (ui.selectable === false) btn.classList.add("is-disabled");
 
       const img = document.createElement("img");
-      img.alt = ui.title || classId;
+      img.alt = ui.title || resolvedClassId;
       img.draggable = false;
       img.src = ui.previewImage ? encodeURI(ui.previewImage) : "";
       btn.appendChild(img);
 
       const label = document.createElement("div");
       label.className = "menu-class-slot-label";
-      label.textContent = ui.title || classId;
+      label.textContent = ui.title || resolvedClassId;
       btn.appendChild(label);
+
+      const sub = document.createElement("div");
+      sub.className = "menu-class-slot-sub";
+      if (character) {
+        const lvl = character.level ?? 1;
+        sub.textContent = `${character.name || "Joueur"} - Niv. ${lvl}`;
+      }
+      btn.appendChild(sub);
 
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        rotateCarouselTo(classId);
+        rotateCarouselTo(carouselKey);
 
         // En création, cliquer une classe la sélectionne (si dispo).
-        if (isCreateMode() && classUi[classId]?.selectable !== false) {
-          selectedClassId = classId;
+        if (isCreateMode() && classUi[resolvedClassId]?.selectable !== false) {
+          selectedClassId = resolvedClassId;
           renderClasses();
           syncCreateButton();
           return;
@@ -196,19 +239,35 @@ export function initCharacterMenus({ onStartGame }) {
         // En sélection, cliquer une classe sélectionne un personnage de cette classe.
         if (!isCreateMode()) {
           const candidate =
-            characters.find((c) => c && c.classId === classId) || null;
+            (character && character.id && character) ||
+            characters.find((c) => c && c.classId === resolvedClassId) ||
+            null;
           if (candidate && candidate.id) {
             selectedCharacterId = candidate.id;
             btnPlay.disabled = false;
             renderCharacters();
-            setPreview(candidate.classId || "archer", {
+            renderCarouselMeta();
+            setPreview(candidate.classId || resolvedClassId || "archer", {
               characterName: candidate.name || "Joueur",
             });
           }
         }
       });
 
-      carouselSlotByClassId.set(classId, btn);
+      btn.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // En sélection : double-clic sur l'asset = jouer directement.
+        if (isCreateMode()) return;
+        if (!character || !character.id) return;
+        selectedCharacterId = character.id;
+        btnPlay.disabled = false;
+        startGameWithCharacter(character);
+      });
+
+      carouselSlotByClassId.set(resolvedClassId, btn);
+      carouselSlotByKey.set(carouselKey, btn);
       container.appendChild(btn);
     });
   }
@@ -217,41 +276,71 @@ export function initCharacterMenus({ onStartGame }) {
     const idsForPos = carouselOrder.slice(0, POS_CLASSES.length);
 
     // Hide all by default
-    carouselSlotByClassId.forEach((el) => {
+    carouselSlotByKey.forEach((el) => {
       el.hidden = true;
       POS_CLASSES.forEach((cls) => el.classList.remove(cls));
     });
 
     idsForPos.forEach((id, index) => {
-      const el = carouselSlotByClassId.get(id);
+      const el = carouselSlotByKey.get(id) || carouselSlotByClassId.get(id);
       if (!el) return;
       el.hidden = false;
       el.classList.add(POS_CLASSES[index]);
     });
   }
 
-  function rotateCarouselTo(classId) {
-    if (!classId) return;
-    const idx = carouselOrder.indexOf(classId);
+function rotateCarouselTo(key) {
+    if (!key) return;
+    const idx = carouselOrder.indexOf(key);
     if (idx < 0) return;
+
+    const candidate = characters.find((c) => c && c.id === key) || null;
+
     if (idx === 0) {
       // Déjà au premier plan : on rafraîchit la preview.
-      setPreview(classId);
+      if (candidate && candidate.id) {
+        selectedCharacterId = candidate.id;
+        btnPlay.disabled = false;
+        renderCharacters();
+        setPreview(candidate.classId || "archer", {
+          characterName: candidate.name || "Joueur",
+        });
+        renderCarouselMeta();
+        return;
+      }
+      setPreview(key);
+      renderCarouselMeta();
       return;
     }
 
     carouselOrder = [...carouselOrder.slice(idx), ...carouselOrder.slice(0, idx)];
     applyCarouselPositions();
-    setPreview(classId);
+
+    if (candidate && candidate.id) {
+      selectedCharacterId = candidate.id;
+      btnPlay.disabled = false;
+      renderCharacters();
+      setPreview(candidate.classId || "archer", {
+        characterName: candidate.name || "Joueur",
+      });
+      renderCarouselMeta();
+      return;
+    }
+
+    setPreview(key);
+    renderCarouselMeta();
   }
 
-  function buildCarouselIdsForSelect() {
-    const unique = Array.from(
-      new Set(characters.map((c) => c && c.classId).filter(Boolean))
-    );
-    // Garde un ordre cohérent (archer/tank/mage/assassin)
-    const ordered = CAROUSEL_ORDER.filter((id) => unique.includes(id));
-    return ordered.length > 0 ? ordered : getCarouselClassIds();
+function buildCarouselIdsForSelect() {
+    // En sélection, on veut pouvoir afficher plusieurs persos de la même classe.
+    // On construit un carousel de 4 vignettes max : [sélectionné] + 3 autres.
+    const ids = characters.map((c) => c && c.id).filter(Boolean);
+    const selectedFirst =
+      selectedCharacterId && ids.includes(selectedCharacterId);
+    const ordered = selectedFirst
+      ? [selectedCharacterId, ...ids.filter((id) => id !== selectedCharacterId)]
+      : ids;
+    return ordered.slice(0, POS_CLASSES.length);
   }
 
   function setPreview(classId, { characterName = null } = {}) {
@@ -279,6 +368,25 @@ export function initCharacterMenus({ onStartGame }) {
     }
   }
 
+  function getSelectedCharacter() {
+    return characters.find((c) => c && c.id === selectedCharacterId) || null;
+  }
+
+function renderCarouselMeta() {
+    carouselSlotByKey.forEach((btn, key) => {
+      const sub = btn.querySelector(".menu-class-slot-sub");
+      if (!sub) return;
+      const char = characters.find((c) => c && c.id === key) || null;
+      if (!char) {
+        sub.textContent = "";
+        return;
+      }
+      sub.textContent = `${char.name || "Joueur"} - Niv. ${char.level ?? 1}`;
+    });
+
+    if (isCreateMode()) return;
+  }
+
   const showSelect = () => {
     ensureLayout();
     screenCreateEl.hidden = true;
@@ -298,12 +406,16 @@ export function initCharacterMenus({ onStartGame }) {
     carouselIds = buildCarouselIdsForSelect();
     ensureCarousel(carouselIds);
     carouselOrder = carouselIds.slice();
-    // Mets la classe du perso au premier plan.
-    if (carouselOrder.includes(classId)) {
-      carouselOrder = [classId, ...carouselOrder.filter((id) => id !== classId)];
+    // Mets le perso au premier plan.
+    if (selectedCharacterId && carouselOrder.includes(selectedCharacterId)) {
+      carouselOrder = [
+        selectedCharacterId,
+        ...carouselOrder.filter((id) => id !== selectedCharacterId),
+      ];
     }
     applyCarouselPositions();
     setPreview(classId, { characterName: chosen?.name || null });
+    renderCarouselMeta();
   };
 
   const showCreate = () => {
@@ -327,6 +439,7 @@ export function initCharacterMenus({ onStartGame }) {
     carouselOrder = carouselIds.slice();
     applyCarouselPositions();
     setPreview("archer");
+    renderCarouselMeta();
   };
 
   const openMenu = () => {
@@ -386,15 +499,24 @@ export function initCharacterMenus({ onStartGame }) {
         selectedCharacterId = c.id;
         btnPlay.disabled = false;
         renderCharacters();
+        renderCarouselMeta();
         const classId = c.classId || "archer";
         carouselIds = buildCarouselIdsForSelect();
         ensureCarousel(carouselIds);
         carouselOrder = carouselIds.slice();
-        if (carouselOrder.includes(classId)) {
-          carouselOrder = [classId, ...carouselOrder.filter((id) => id !== classId)];
+        if (carouselOrder.includes(c.id)) {
+          carouselOrder = [c.id, ...carouselOrder.filter((id) => id !== c.id)];
         }
         applyCarouselPositions();
         setPreview(classId, { characterName: c.name || "Joueur" });
+      });
+
+      card.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        selectedCharacterId = c.id;
+        btnPlay.disabled = false;
+        startGameWithCharacter(c);
       });
 
       characterListEl.appendChild(card);
@@ -438,25 +560,89 @@ export function initCharacterMenus({ onStartGame }) {
   };
 
   const syncCreateButton = () => {
-    btnCreate.disabled = !selectedClassId || classUi[selectedClassId]?.selectable === false;
+    const rawName = String(inputName.value || "").trim();
+    const hasName = rawName.length > 0;
+    btnCreate.disabled =
+      !hasName ||
+      !selectedClassId ||
+      classUi[selectedClassId]?.selectable === false;
   };
 
   btnGoCreate.addEventListener("click", () => showCreate());
   btnBackSelect.addEventListener("click", () => showSelect());
+  inputName.addEventListener("input", () => syncCreateButton());
+
+  function startGameWithCharacter(chosen) {
+    if (!chosen) return;
+    upsertCharacterMeta(chosen);
+    closeMenu();
+    if (typeof onStartGame === "function") onStartGame(chosen);
+  }
 
   btnPlay.addEventListener("click", () => {
     const chosen = characters.find((c) => c.id === selectedCharacterId);
     if (!chosen) return;
-    closeMenu();
-    if (typeof onStartGame === "function") onStartGame(chosen);
+    startGameWithCharacter(chosen);
   });
+
+  // Sync du niveau (jeu -> menu)
+  onStore("player:levelup", (payload) => {
+    const levelAfter =
+      payload?.data?.level ?? payload?.player?.levelState?.niveau ?? null;
+    if (!levelAfter || !Number.isFinite(levelAfter)) return;
+
+    const current = window.__andemiaSelectedCharacter || null;
+    const id = current?.id ?? selectedCharacterId;
+    if (!id) return;
+
+    const char = characters.find((c) => c && c.id === id) || null;
+    if (!char) return;
+
+    char.level = levelAfter;
+    if (current && current.id === id) current.level = levelAfter;
+    upsertCharacterMeta(char);
+
+    if (document.body.classList.contains("menu-open")) {
+      renderCharacters();
+      renderCarouselMeta();
+    }
+  });
+
+  const makeUniqueName = (raw) => {
+    const base = String(raw || "").trim();
+    if (!base) return "";
+
+    const exists = (name) =>
+      characters.some(
+        (c) =>
+          c &&
+          typeof c.name === "string" &&
+          c.name.trim().toLowerCase() === name.trim().toLowerCase()
+      );
+
+    if (!exists(base)) return base;
+
+    let n = 2;
+    let next = `${base} ${n}`;
+    while (exists(next) && n < 999) {
+      n += 1;
+      next = `${base} ${n}`;
+    }
+    return next;
+  };
 
   formCreate.addEventListener("submit", (e) => {
     e.preventDefault();
     if (!selectedClassId) return;
 
     const rawName = String(inputName.value || "").trim();
-    const name = rawName.length > 0 ? rawName : "Joueur";
+    if (rawName.length === 0) {
+      inputName.focus();
+      syncCreateButton();
+      return;
+    }
+
+    const name = makeUniqueName(rawName);
 
     const character = {
       id:
@@ -469,6 +655,7 @@ export function initCharacterMenus({ onStartGame }) {
     };
 
     characters.push(character);
+    upsertCharacterMeta(character);
     selectedCharacterId = character.id;
     showSelect();
     btnPlay.disabled = false;

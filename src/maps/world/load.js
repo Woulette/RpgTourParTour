@@ -16,6 +16,7 @@ import { maps } from "../index.js";
 import { setupWorkstations } from "../../metier/workstations.js";
 import { onAfterMapLoaded } from "../../dungeons/hooks.js";
 import { isTileBlocked } from "../../collision/collisionGrid.js";
+import { emit as emitStoreEvent } from "../../state/store.js";
 
 function hasGroundTile(groundLayer, tileX, tileY) {
   if (!groundLayer || typeof groundLayer.getTileAt !== "function") return true;
@@ -280,6 +281,11 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
 
   // Dungeon hooks: exit tiles, etc.
   onAfterMapLoaded(scene);
+
+  emitStoreEvent("map:changed", {
+    mapKey: mapDef.key,
+    startTile: { x: safeTileX, y: safeTileY },
+  });
 }
 
 function getObjProp(obj, name) {

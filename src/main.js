@@ -48,13 +48,20 @@ import { initCharacterMenus } from "./ui/characterMenus.js";
 import { onAfterMapLoaded } from "./dungeons/hooks.js";
 import { spawnTestTrees } from "./metier/bucheron/trees.js";
 import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
-import { initStore } from "./state/store.js";
+import { getPlayer, initStore } from "./state/store.js";
 import { initQuestRuntime } from "./quests/runtime/init.js";
 import { initAchievementRuntime } from "./achievements/runtime/init.js";
 import { initDevCheats } from "./dev/cheats.js";
 import { attachCombatTileHover } from "./ui/combatTileHover.js";
 import { setupWorkstations } from "./metier/workstations.js";
 import { setupSpellAnimations } from "./spells/animations.js";
+import {
+  loadCharacterSnapshot,
+  applySnapshotToPlayer,
+  buildSnapshotFromPlayer,
+  saveCharacterSnapshot,
+} from "./save/index.js";
+import { initAutosave } from "./save/autosave.js";
     
 
 class MainScene extends Phaser.Scene {
@@ -136,7 +143,17 @@ class MainScene extends Phaser.Scene {
   }
 
     create() {
-    const mapDef = maps[defaultMapKey];
+    const selected = window.__andemiaSelectedCharacter || null;
+    const snapshot = selected?.id ? loadCharacterSnapshot(selected.id) : null;
+    const requestedMapKey = snapshot?.mapKey || defaultMapKey;
+    const mapDef = maps[requestedMapKey] || maps[defaultMapKey];
+
+    // Sync meta courante (utile si le menu avait une ancienne valeur de niveau)
+    if (selected && snapshot) {
+      if (snapshot.name) selected.name = snapshot.name;
+      if (snapshot.classId) selected.classId = snapshot.classId;
+      if (Number.isFinite(snapshot.level)) selected.level = snapshot.level;
+    }
     const { map, groundLayer, layers } = buildMap(this, mapDef);
 
     // Aligne le layer sur son origine sans décalage manuel
@@ -169,12 +186,16 @@ class MainScene extends Phaser.Scene {
     const centerTileY = Math.floor(map.height / 2);
 
     const desiredTile =
-      mapDef &&
-      mapDef.startTile &&
-      typeof mapDef.startTile.x === "number" &&
-      typeof mapDef.startTile.y === "number"
-        ? mapDef.startTile
-        : null;
+      snapshot &&
+      Number.isFinite(snapshot.tileX) &&
+      Number.isFinite(snapshot.tileY)
+        ? { x: snapshot.tileX, y: snapshot.tileY }
+        : mapDef &&
+          mapDef.startTile &&
+          typeof mapDef.startTile.x === "number" &&
+          typeof mapDef.startTile.y === "number"
+          ? mapDef.startTile
+          : null;
 
     const startTileX =
       desiredTile && desiredTile.x >= 0 && desiredTile.x < map.width
@@ -196,11 +217,11 @@ class MainScene extends Phaser.Scene {
     const startX = centerWorld.x + map.tileWidth / 2;
     const startY = centerWorld.y + map.tileHeight / 2;
 
-    const selected = window.__andemiaSelectedCharacter || null;
-    const classId = selected?.classId || defaultClassId;
-    const displayName = selected?.name || "Joueur";
+    const classId = selected?.classId || snapshot?.classId || defaultClassId;
+    const displayName = selected?.name || snapshot?.name || "Joueur";
 
     this.player = createPlayer(this, startX, startY, classId);
+    this.player.characterId = selected?.id || snapshot?.id || null;
     this.player.displayName = displayName;
     // Important : certains systèmes (PNJ donjon, quêtes, etc.) lisent la tuile courante.
     // Au premier spawn (sans transition de map), il faut l'initialiser.
@@ -216,8 +237,24 @@ class MainScene extends Phaser.Scene {
     // Recalcule les depth des decor/trees dependants du joueur
     recalcDepths(this);
 
+    // Applique la sauvegarde si dispo (niveau, inventaire, quêtes...)
+    if (snapshot) {
+      applySnapshotToPlayer(this.player, snapshot);
+      // Si la sauvegarde a une position valide, on l'applique après buildMap.
+      if (Number.isFinite(snapshot.tileX) && Number.isFinite(snapshot.tileY)) {
+        this.player.currentTileX = snapshot.tileX;
+        this.player.currentTileY = snapshot.tileY;
+      }
+    }
+
     // Initialise le store central avec le joueur.
     initStore(this.player);
+    initAutosave();
+    // Première sauvegarde immédiate (évite d'attendre 30s)
+    if (this.player && this.player.characterId) {
+      const first = buildSnapshotFromPlayer(this.player);
+      if (first) saveCharacterSnapshot(this.player.characterId, first);
+    }
     initDomChat(this.player);
     initQuestRuntime(this.player);
     initAchievementRuntime(this.player);
@@ -382,6 +419,19 @@ function startGame(character) {
 }
 
 function openMenu() {
+  // Sauvegarde avant de détruire la scène.
+  try {
+    const player = getPlayer();
+    const characterId =
+      player?.characterId || window.__andemiaSelectedCharacter?.id || null;
+    if (player && characterId) {
+      const snap = buildSnapshotFromPlayer(player);
+      if (snap) saveCharacterSnapshot(characterId, snap);
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[save] failed to save before menu:", err);
+  }
   destroyGame();
   document.body.classList.remove("game-running");
   document.body.classList.add("menu-open");
