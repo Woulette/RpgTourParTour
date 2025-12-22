@@ -1,8 +1,9 @@
 // Gestion du HUD HTML (en dehors de Phaser).
 // - Bouton STATS + panneau de stats
 // - Affichage PA / PM / PV du joueur dans le HUD bas
-// - (Ancien HUD "cible survolée" supprimé)
-// - Répartition des points de caractéristiques (force, intel, agi, chance, vita)
+// - Repartition des points de caracteristiques (force, intel, agi, chance, vita)
+
+import { classes } from "../config/classes.js";
 
 export function initDomHud(player) {
   const statsButtonEl = document.getElementById("hud-stats-button");
@@ -16,10 +17,10 @@ export function initDomHud(player) {
     return;
   }
 
-  // Aligne les boutons HUD dans le dock (layout unifié)
+  // Aligne les boutons HUD dans le dock (layout unifie)
   mountHudDockMenu();
 
-  // --- Panneau de stats joueur ---
+  // Panneau de stats joueur
   statsButtonEl.addEventListener("click", (event) => {
     event.stopPropagation();
     const willOpen = !document.body.classList.contains("hud-stats-open");
@@ -30,10 +31,12 @@ export function initDomHud(player) {
     }
   });
 
-  // Initialisation des contrôles de stats (boutons +/- et inputs)
+  initStatsTabs(statsPanelEl);
+
+  // Initialisation des controles de stats (boutons +/- et inputs)
   initStatControls(player);
 
-  // --- Initialisation PA / PM / PV dans le HUD bas ---
+  // Initialisation PA / PM / PV dans le HUD bas
   if (apValueEl && mpValueEl && hpValueEl && player.stats) {
     apValueEl.textContent = player.stats.pa ?? 0;
     mpValueEl.textContent = player.stats.pm ?? 0;
@@ -42,17 +45,19 @@ export function initDomHud(player) {
     hpValueEl.textContent = `${hp}/${hpMax}`;
   }
 
-  // Utilitaire pour mettre à jour PA/PM depuis le jeu
+  // Utilitaire pour mettre a jour PA/PM depuis le jeu
   player.updateHudApMp = (pa, pm) => {
     if (apValueEl) apValueEl.textContent = pa;
     if (mpValueEl) mpValueEl.textContent = pm;
   };
 
-  // Utilitaire pour mettre à jour les PV du joueur
+  // Utilitaire pour mettre a jour les PV du joueur
   player.updateHudHp = (hp, hpMax) => {
     if (hpValueEl) hpValueEl.textContent = `${hp}/${hpMax}`;
+    if (document.body.classList.contains("hud-stats-open")) {
+      mettreAJourStatsPanel(player);
+    }
   };
-
 }
 
 function mountHudDockMenu() {
@@ -77,6 +82,33 @@ function mountHudDockMenu() {
   });
 }
 
+function initStatsTabs(panelEl) {
+  if (!panelEl || panelEl.dataset.tabsInit === "true") return;
+  panelEl.dataset.tabsInit = "true";
+
+  const buttons = Array.from(panelEl.querySelectorAll(".stats-tab"));
+  const sections = Array.from(panelEl.querySelectorAll(".stats-section"));
+
+  const setActiveTab = (tabId) => {
+    buttons.forEach((btn) => {
+      const isActive = btn.dataset.tab === tabId;
+      btn.classList.toggle("is-active", isActive);
+    });
+    sections.forEach((section) => {
+      const isActive = section.dataset.tab === tabId;
+      section.classList.toggle("is-active", isActive);
+    });
+  };
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tabId = btn.dataset.tab;
+      if (!tabId) return;
+      setActiveTab(tabId);
+    });
+  });
+}
+
 function mettreAJourStatsPanel(player) {
   const stats = player.stats || {};
   const level = player.levelState || {};
@@ -88,26 +120,51 @@ function mettreAJourStatsPanel(player) {
     if (el) el.textContent = value;
   };
 
-  // Nom du joueur (placeholder pour l'instant)
-  setText("stat-player-name", "---");
+  const classDef = classes[player.classId] || classes.archer;
+  const classLabel = classDef?.label || player.classId || "-";
+  const nameLabel = player.displayName || player.name || "Joueur";
+
+  // Nom / classe
+  setText("stat-player-name", nameLabel);
+  setText("stat-player-class", classLabel);
+  setText("stat-player-class-text", classLabel);
 
   // Niveau / XP
+  const xp = level.xp ?? 0;
+  const xpNext = level.xpProchain ?? 0;
   setText("stat-level", level.niveau ?? 1);
-  setText("stat-xp", level.xp ?? 0);
-  setText("stat-xp-next", level.xpProchain ?? 0);
+  setText("stat-xp", xp);
+  setText("stat-xp-next", xpNext);
+  const xpFill = byId("stat-xp-fill");
+  if (xpFill) {
+    const ratio = xpNext > 0 ? Math.max(0, Math.min(1, xp / xpNext)) : 0;
+    xpFill.style.width = `${Math.round(ratio * 100)}%`;
+  }
 
-  // PV max / Initiative
-  setText("stat-hpMax", stats.hpMax ?? 0);
+  // PV / Initiative
+  const hp = stats.hp ?? stats.hpMax ?? 0;
+  const hpMax = stats.hpMax ?? hp;
+  setText("stat-hp", `${hp}/${hpMax}`);
+  setText("stat-hpMax", hpMax);
   setText("stat-initiative", stats.initiative ?? 0);
+  setText("stat-initiative-util", stats.initiative ?? 0);
 
   // PA / PM
   setText("stat-pa", stats.pa ?? 0);
   setText("stat-pm", stats.pm ?? 0);
 
-  // Points de caractéristiques à répartir
+  // Autres stats d'affichage
+  setText("stat-sagesse", stats.sagesse ?? 0);
+  setText("stat-vitalite", stats.vitalite ?? 0);
+  setText("stat-puissance", stats.puissance ?? 0);
+  setText("stat-dmg-fixe", stats.dommageFixe ?? 0);
+  setText("stat-crit", stats.critique ?? 0);
+  setText("stat-resist", stats.resistance ?? 0);
+
+  // Points de caracteristiques a repartir
   setText("stat-points-libres", level.pointsCaracLibres ?? 0);
 
-  // Inputs de caractéristiques
+  // Inputs de caracteristiques
   const inputs = {
     force: byId("stat-force-input"),
     intelligence: byId("stat-intelligence-input"),
@@ -125,13 +182,14 @@ function mettreAJourStatsPanel(player) {
 }
 
 function initStatControls(player) {
-  // Stats de base "nues" (sans équipement), qu'on modifie quand on dépense des points
+  // Stats de base "nues" (sans equipement), qu'on modifie quand on depense des points
   const getBaseStats = () => {
     if (!player.baseStats) {
       player.baseStats = { ...(player.stats || {}) };
     }
     return player.baseStats;
   };
+
   // S'assure qu'on a un levelState de base
   if (!player.levelState) {
     player.levelState = {
@@ -142,7 +200,7 @@ function initStatControls(player) {
     };
   }
 
-  // Toujours lire l'état actuel (il peut être remplacé par addXpToPlayer)
+  // Toujours lire l'etat actuel (il peut etre remplace par addXpToPlayer)
   const getLevelState = () => {
     if (!player.levelState) {
       player.levelState = {
@@ -167,8 +225,7 @@ function initStatControls(player) {
     sagesse: 2,
   };
 
-  const getInput = (key) =>
-    document.getElementById(`stat-${key}-input`);
+  const getInput = (key) => document.getElementById(`stat-${key}-input`);
 
   const updateAll = () => {
     mettreAJourStatsPanel(player);
@@ -207,7 +264,7 @@ function initStatControls(player) {
       const levelState = getLevelState();
       const base = getBaseStats();
       const current = base[key] ?? 0;
-      if (current <= 0) return; // on ne descend pas en dessous de 0 pour l'instant
+      if (current <= 0) return;
       const cost = statCosts[key] ?? 1;
       base[key] = current - 1;
       levelState.pointsCaracLibres =
@@ -238,20 +295,17 @@ function initStatControls(player) {
       const pointsLibres = levelState.pointsCaracLibres ?? 0;
 
       if (delta > 0) {
-        // On veut augmenter la stat
         const maxIncrease = Math.floor(pointsLibres / costPerPoint);
         if (delta > maxIncrease) {
           delta = maxIncrease;
         }
       }
 
-      // Si delta < 0, on rend des points (tant qu'on ne passe pas sous 0)
       if (current + delta < 0) {
         delta = -current;
       }
 
       if (delta === 0) {
-        // Rien à faire, on remet la valeur cohérente
         input.value = current;
         return;
       }
@@ -267,6 +321,5 @@ function initStatControls(player) {
     });
   });
 
-  // Premier affichage cohérent
   mettreAJourStatsPanel(player);
 }

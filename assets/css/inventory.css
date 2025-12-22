@@ -60,6 +60,8 @@ body.hud-inventory-open #hud-inventory-panel {
   position: absolute;
   right: 8px;
   bottom: 22px;
+  z-index: 5;
+  pointer-events: none;
 }
 
 /* Barre de filtres à droite du titre dans l'inventaire */
@@ -143,6 +145,7 @@ body.hud-inventory-open #hud-inventory-panel {
   align-items: flex-end;
   justify-content: flex-start;
   position: relative;
+  min-height: 0;
 }
 
 /* Grille d’équipement à l'intérieur du bloc de gauche */
@@ -184,6 +187,33 @@ body.hud-inventory-open #hud-inventory-panel {
   grid-auto-rows: minmax(60px, 1fr);
   gap: 0.1rem;
   margin-bottom: 0.4rem;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  padding-right: 0.35rem;
+  margin-right: -0.35rem;
+  box-sizing: border-box;
+}
+
+.inventory-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.inventory-grid::-webkit-scrollbar-track {
+  background: rgba(8, 16, 30, 0.4);
+  border-radius: 999px;
+}
+
+.inventory-grid::-webkit-scrollbar-thumb {
+  background: rgba(200, 210, 230, 0.35);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inventory-grid {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 210, 230, 0.35) rgba(8, 16, 30, 0.4);
 }
 
 .inventory-slot {

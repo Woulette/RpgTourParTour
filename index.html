@@ -326,92 +326,190 @@
       </div>
     </aside>
 
-    <!-- Fenêtre de statistiques (simple, responsive) -->
-    <aside id="hud-stats-panel" aria-label="Fenêtre de statistiques du personnage">
+        <!-- Fenetre de statistiques (onglets) -->
+    <aside id="hud-stats-panel" aria-label="Fenetre de statistiques du personnage">
       <header class="stats-header">
-        <h2 class="stats-title">Statistiques</h2>
-        <div class="stats-player-name">Nom : <span id="stat-player-name">---</span></div>
-        <div class="stats-level-line">
-          Niveau : <span id="stat-level">1</span>
-          &nbsp;-&nbsp;
-          XP : <span id="stat-xp">0</span>
-          / <span id="stat-xp-next">50</span>
+        <div class="stats-header-top">
+          <h2 class="stats-title">Statistiques</h2>
+          <div class="stats-class-pill" id="stat-player-class">-</div>
         </div>
-        <div class="stats-hp-init-line">
-          PV max : <span id="stat-hpMax">50</span>
-          &nbsp;-&nbsp;
-          Initiative : <span id="stat-initiative">0</span>
+        <div class="stats-header-lines">
+          <div class="stats-line">
+            <span class="stats-label">Nom</span>
+            <span id="stat-player-name">-</span>
+          </div>
+          <div class="stats-line">
+            <span class="stats-label">Classe</span>
+            <span id="stat-player-class-text">-</span>
+          </div>
+        </div>
+        <div class="stats-header-grid">
+          <div class="stats-header-item">
+            <div class="stats-header-label">Niveau</div>
+            <div class="stats-header-value" id="stat-level">1</div>
+          </div>
+          <div class="stats-header-item">
+            <div class="stats-header-label">PV</div>
+            <div class="stats-header-value" id="stat-hp">0/0</div>
+          </div>
+          <div class="stats-header-item">
+            <div class="stats-header-label">Initiative</div>
+            <div class="stats-header-value" id="stat-initiative">0</div>
+          </div>
+        </div>
+        <div class="stats-xp">
+          <div class="stats-xp-top">
+            <span class="stats-xp-label">XP</span>
+            <span class="stats-xp-value">
+              <span id="stat-xp">0</span> / <span id="stat-xp-next">0</span>
+            </span>
+          </div>
+          <div class="stats-xp-bar">
+            <div id="stat-xp-fill" class="stats-xp-fill"></div>
+          </div>
         </div>
       </header>
 
-      <section class="stats-section">
-        <h3 class="stats-section-title">Actions</h3>
-        <ul class="stats-list">
-          <li><span class="label">PA</span><span class="value" id="stat-pa">6</span></li>
-          <li><span class="label">PM</span><span class="value" id="stat-pm">3</span></li>
-        </ul>
-      </section>
+      <nav class="stats-tabs" role="tablist" aria-label="Onglets de statistiques">
+        <button class="stats-tab is-active" type="button" data-tab="carac">Caracs</button>
+        <button class="stats-tab" type="button" data-tab="offense">Offensif</button>
+        <button class="stats-tab" type="button" data-tab="defense">Defense</button>
+        <button class="stats-tab" type="button" data-tab="util">Util</button>
+      </nav>
 
-      <section class="stats-section">
-        <h3 class="stats-section-title">Caractéristiques</h3>
-        <ul class="stats-list">
-          <li class="stat-line" data-stat="force">
-            <span class="label">Force</span>
-            <div class="stat-controls">
-              <button type="button" class="stat-btn stat-btn-minus" data-stat="force">-</button>
-              <input type="number" id="stat-force-input" class="stat-input" min="0" step="1" />
-              <button type="button" class="stat-btn stat-btn-plus" data-stat="force">+</button>
-            </div>
-          </li>
-          <li class="stat-line" data-stat="intelligence">
-            <span class="label">Intelligence</span>
-            <div class="stat-controls">
-              <button type="button" class="stat-btn stat-btn-minus" data-stat="intelligence">-</button>
-              <input type="number" id="stat-intelligence-input" class="stat-input" min="0" step="1" />
-              <button type="button" class="stat-btn stat-btn-plus" data-stat="intelligence">+</button>
-            </div>
-          </li>
-          <li class="stat-line" data-stat="agilite">
-            <span class="label">Agilité</span>
-            <div class="stat-controls">
-              <button type="button" class="stat-btn stat-btn-minus" data-stat="agilite">-</button>
-              <input type="number" id="stat-agilite-input" class="stat-input" min="0" step="1" />
-              <button type="button" class="stat-btn stat-btn-plus" data-stat="agilite">+</button>
-            </div>
-          </li>
-          <li class="stat-line" data-stat="chance">
-            <span class="label">Chance</span>
-            <div class="stat-controls">
-              <button type="button" class="stat-btn stat-btn-minus" data-stat="chance">-</button>
-              <input type="number" id="stat-chance-input" class="stat-input" min="0" step="1" />
-              <button type="button" class="stat-btn stat-btn-plus" data-stat="chance">+</button>
-            </div>
-          </li>
-          <li class="stat-line" data-stat="vitalite">
-            <span class="label">Vitalité</span>
-            <div class="stat-controls">
-              <button type="button" class="stat-btn stat-btn-minus" data-stat="vitalite">-</button>
-              <input type="number" id="stat-vitalite-input" class="stat-input" min="0" step="1" />
-              <button type="button" class="stat-btn stat-btn-plus" data-stat="vitalite">+</button>
-            </div>
-          </li>
-          <li class="stat-line" data-stat="sagesse">
-            <span class="label">Sagesse</span>
-            <div class="stat-controls">
-              <button type="button" class="stat-btn stat-btn-minus" data-stat="sagesse">-</button>
-              <input type="number" id="stat-sagesse-input" class="stat-input" min="0" step="1" />
-              <button type="button" class="stat-btn stat-btn-plus" data-stat="sagesse">+</button>
-            </div>
-          </li>
-        </ul>
-      </section>
+      <div class="stats-body">
+        <section class="stats-section is-active" data-tab="carac">
+          <h3 class="stats-section-title">Caracteristiques</h3>
+          <ul class="stats-list">
+            <li class="stat-line" data-stat="force">
+              <span class="stat-badge stat-badge-feu" title="Feu"></span>
+              <span class="label">Force</span>
+              <div class="stat-controls">
+                <button type="button" class="stat-btn stat-btn-minus" data-stat="force">-</button>
+                <input type="number" id="stat-force-input" class="stat-input" min="0" step="1" />
+                <button type="button" class="stat-btn stat-btn-plus" data-stat="force">+</button>
+              </div>
+            </li>
+            <li class="stat-line" data-stat="intelligence">
+              <span class="stat-badge stat-badge-eau" title="Eau"></span>
+              <span class="label">Intelligence</span>
+              <div class="stat-controls">
+                <button type="button" class="stat-btn stat-btn-minus" data-stat="intelligence">-</button>
+                <input type="number" id="stat-intelligence-input" class="stat-input" min="0" step="1" />
+                <button type="button" class="stat-btn stat-btn-plus" data-stat="intelligence">+</button>
+              </div>
+            </li>
+            <li class="stat-line" data-stat="agilite">
+              <span class="stat-badge stat-badge-air" title="Air"></span>
+              <span class="label">Agilite</span>
+              <div class="stat-controls">
+                <button type="button" class="stat-btn stat-btn-minus" data-stat="agilite">-</button>
+                <input type="number" id="stat-agilite-input" class="stat-input" min="0" step="1" />
+                <button type="button" class="stat-btn stat-btn-plus" data-stat="agilite">+</button>
+              </div>
+            </li>
+            <li class="stat-line" data-stat="chance">
+              <span class="stat-badge stat-badge-terre" title="Terre"></span>
+              <span class="label">Chance</span>
+              <div class="stat-controls">
+                <button type="button" class="stat-btn stat-btn-minus" data-stat="chance">-</button>
+                <input type="number" id="stat-chance-input" class="stat-input" min="0" step="1" />
+                <button type="button" class="stat-btn stat-btn-plus" data-stat="chance">+</button>
+              </div>
+            </li>
+            <li class="stat-line" data-stat="vitalite">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Vitalite</span>
+              <div class="stat-controls">
+                <button type="button" class="stat-btn stat-btn-minus" data-stat="vitalite">-</button>
+                <input type="number" id="stat-vitalite-input" class="stat-input" min="0" step="1" />
+                <button type="button" class="stat-btn stat-btn-plus" data-stat="vitalite">+</button>
+              </div>
+            </li>
+            <li class="stat-line" data-stat="sagesse">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Sagesse</span>
+              <div class="stat-controls">
+                <button type="button" class="stat-btn stat-btn-minus" data-stat="sagesse">-</button>
+                <input type="number" id="stat-sagesse-input" class="stat-input" min="0" step="1" />
+                <button type="button" class="stat-btn stat-btn-plus" data-stat="sagesse">+</button>
+              </div>
+            </li>
+          </ul>
+          <div class="stats-points-line">
+            Points a repartir :
+            <span id="stat-points-libres">0</span>
+          </div>
+        </section>
 
-      <section class="stats-section stats-points-section">
-        <div class="stats-points-line">
-          Points à répartir :
-          <span id="stat-points-libres">0</span>
-        </div>
-      </section>
+        <section class="stats-section" data-tab="offense">
+          <h3 class="stats-section-title">Offensif</h3>
+          <ul class="stats-list stats-list-rows">
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-puissance" title="Puissance"></span>
+              <span class="label">Puissance</span>
+              <span class="value" id="stat-puissance">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Dommages fixes</span>
+              <span class="value" id="stat-dmg-fixe">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Coups critiques</span>
+              <span class="value" id="stat-crit">0</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="stats-section" data-tab="defense">
+          <h3 class="stats-section-title">Defense</h3>
+          <ul class="stats-list stats-list-rows">
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">PV max</span>
+              <span class="value" id="stat-hpMax">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Vitalite</span>
+              <span class="value" id="stat-vitalite">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Resistances</span>
+              <span class="value" id="stat-resist">0</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="stats-section" data-tab="util">
+          <h3 class="stats-section-title">Utilitaire</h3>
+          <ul class="stats-list stats-list-rows">
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">PA</span>
+              <span class="value" id="stat-pa">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">PM</span>
+              <span class="value" id="stat-pm">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Sagesse</span>
+              <span class="value" id="stat-sagesse">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Initiative</span>
+              <span class="value" id="stat-initiative-util">0</span>
+            </li>
+          </ul>
+        </section>
+      </div>
     </aside>
 
     <!-- Fenêtre des métiers -->
@@ -646,3 +744,4 @@
   <script type="module" src="src/main.js"></script>
 </body>
 </html>
+

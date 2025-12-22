@@ -128,10 +128,15 @@ export function addXpToPlayer(player, montantXp) {
   }
 
   if (typeof player.recomputeStatsWithEquipment === "function") {
+    const oldHp = player.stats?.hp ?? player.stats?.hpMax ?? 0;
     player.recomputeStatsWithEquipment();
     if (player.stats) {
       const hpMax = player.stats.hpMax ?? player.stats.hp ?? 0;
-      player.stats.hp = hpMax;
+      const newHp = niveauxGagnes > 0 ? hpMax : Math.min(oldHp, hpMax);
+      player.stats.hp = newHp;
+      if (typeof player.updateHudHp === "function") {
+        player.updateHudHp(newHp, hpMax);
+      }
     }
   }
 
