@@ -50,11 +50,8 @@
   border: 2px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
 
-  background-image: url("../maps/maptest.png");
+  background: rgba(8, 20, 40, 0.85);
   /* affiche l'image un peu réduite (dézoom) */
-  background-size: 30% 35%;
-  background-position: center;
-  background-repeat: no-repeat;
 
   overflow: hidden;
 }
