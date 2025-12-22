@@ -29,5 +29,20 @@ export function setupSpellAnimations(scene) {
       });
     }
   }
-}
 
+  // Recharge de Flux (Eryon) - atlas LibreSprite (test)
+  const atlasKeyFlux = "spell_recharge_flux_atlas";
+  const animKeyFlux = "spell_recharge_flux_anim";
+
+  if (!scene.anims.exists(animKeyFlux)) {
+    const frameNames = getSortedFrameNames(scene, atlasKeyFlux);
+    if (frameNames.length > 0) {
+      scene.anims.create({
+        key: animKeyFlux,
+        frames: frameNames.map((f) => ({ key: atlasKeyFlux, frame: f })),
+        frameRate: 14,
+        repeat: -1,
+      });
+    }
+  }
+}

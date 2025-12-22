@@ -18,11 +18,18 @@ export const classes = {
     statBonuses: [],
     spells: ["rayon_astral", "capture_essence", "invocation_capturee"],
   },
-  assassin: {
-    label: "Assassin",
+  eryon: {
+    label: "Eryon",
     color: 0xff6666,
     statBonuses: [],
-    spells: [],
+    spells: ["recharge_flux", "surcharge_instable", "stabilisation_flux"],
+  },
+  // Back-compat : d'anciennes sauvegardes pouvaient avoir "assassin".
+  assassin: {
+    label: "Eryon",
+    color: 0xff6666,
+    statBonuses: [],
+    spells: ["recharge_flux", "surcharge_instable", "stabilisation_flux"],
   },
 };
 

@@ -4,6 +4,7 @@ import { COMBAT_PATTERNS } from "../../combatPatterns.js";
 import { COMBAT_START_POSITIONS } from "../../config/combatStartPositions.js";
 import { createMonster } from "../../entities/monster.js";
 import { startCombat } from "./runtime.js";
+import { cleanupCombatChallenge, initPrepChallenge } from "../../challenges/runtime.js";
 
 // Calcule une liste de tuiles à partir d'une origine et d'une liste d'offsets.
 // Utilisé pour les cases joueurs et ennemies.
@@ -50,6 +51,9 @@ function computePlacementTiles(map, originX, originY, offsets) {
 
 // Lance la phase de préparation (placement) avant le combat.
 export function startPrep(scene, player, monster, map, groundLayer) {
+  // Nettoie un ancien indicateur de challenge (si on relance une préparation).
+  cleanupCombatChallenge(scene);
+
   if (
     !monster ||
     typeof monster.tileX !== "number" ||
@@ -451,7 +455,15 @@ export function startPrep(scene, player, monster, map, groundLayer) {
     highlights,
   };
 
+  // Challenge : tirage dès la préparation pour que le joueur puisse se placer en conséquence.
+  initPrepChallenge(scene, scene.prepState, player);
+
   document.body.classList.add("combat-prep");
+
+  // Rafraîchit l'UI (y compris le badge challenge) dès l'entrée en préparation.
+  if (scene && typeof scene.updateCombatUi === "function") {
+    scene.updateCombatUi();
+  }
 }
 
 // Termine la phase de préparation et démarre réellement le combat.

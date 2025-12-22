@@ -17,6 +17,7 @@ import {
   getChallengeBonusesIfSuccessful,
   initCombatChallenge,
 } from "../../challenges/runtime.js";
+import { resetEryonChargeState } from "../../systems/combat/eryon/charges.js";
 
 function joinPartsWrapped(parts, maxLineLength = 70) {
   const safeMax = Math.max(20, maxLineLength | 0);
@@ -301,6 +302,9 @@ export function startCombat(scene, player, monster) {
   // Nettoie les effets temporaires (ex: poison) d'un combat précédent
   if (player) {
     player.statusEffects = [];
+    if (player.classId === "eryon" || player.classId === "assassin") {
+      resetEryonChargeState(player);
+    }
     player.captureState = null;
     player.spellCooldowns = player.spellCooldowns || {};
     player.spellCooldowns.invocation_capturee = 0;
@@ -310,6 +314,11 @@ export function startCombat(scene, player, monster) {
   scene.combatState.worldMonsterSnapshot = snapshotMonsterForWorld(scene, monster);
   scene.combatSummons = [];
   document.body.classList.add("combat-active");
+
+  // Si un challenge a été tiré pendant la préparation, on le réutilise.
+  if (scene.prepState?.challenge && !scene.combatState.challenge) {
+    scene.combatState.challenge = scene.prepState.challenge;
+  }
 
   // Met à jour l'affichage des PA/PM du joueur dans le HUD, si dispo
   if (player && typeof player.updateHudApMp === "function") {
@@ -472,7 +481,11 @@ export function endCombat(scene) {
     challenge: state.challenge
       ? {
           id: state.challenge.id || null,
+          label: state.challenge.label || null,
+          description: state.challenge.description || null,
+          rewards: state.challenge.rewards || null,
           status: state.challenge.status || "active",
+          failReason: state.challenge.failReason || null,
         }
       : null,
   };

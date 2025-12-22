@@ -85,6 +85,10 @@ export function initCombatChallenge(scene) {
   const state = scene?.combatState;
   if (!scene || !state || !state.enCours) return null;
 
+  // Si un challenge a déjà été préparé pendant la phase de préparation,
+  // on le garde (pas de reroll).
+  if (state.challenge) return state.challenge;
+
   const def = pickRandom(combatChallenges);
   if (!def) {
     state.challenge = null;
@@ -131,6 +135,54 @@ export function initCombatChallenge(scene) {
   return state.challenge;
 }
 
+export function initPrepChallenge(scene, prepState, player) {
+  if (!scene || !prepState || !prepState.actif) return null;
+
+  const def = pickRandom(combatChallenges);
+  if (!def) {
+    prepState.challenge = null;
+    return null;
+  }
+
+  const hpMaxStart = player?.stats?.hpMax ?? player?.stats?.hp ?? 0;
+
+  prepState.challenge = {
+    id: def.id,
+    label: def.label,
+    description: def.description,
+    kind: def.kind,
+    params: def.params || {},
+    rewards: def.rewards || { xpBonusPct: 0, dropBonusPct: 0 },
+    startedAt: Date.now(),
+    status: "active", // active | success | failed
+    data: {
+      hpMaxStart,
+      targetTile: null,
+    },
+  };
+
+  if (def.kind === "finish_on_tile") {
+    // En préparation, on choisit une case parmi les cases de placement joueur
+    // pour que l'objectif soit clair et atteignable.
+    const allowed = Array.isArray(prepState.allowedTiles)
+      ? prepState.allowedTiles.filter(Boolean)
+      : [];
+    const px = player?.currentTileX;
+    const py = player?.currentTileY;
+    const candidates = allowed.filter(
+      (t) => t && (t.x !== px || t.y !== py)
+    );
+
+    const picked = pickRandom(candidates) || pickRandom(allowed) || null;
+    if (picked) {
+      prepState.challenge.data.targetTile = picked;
+      drawTargetTile(scene, picked);
+    }
+  }
+
+  return prepState.challenge;
+}
+
 export function cleanupCombatChallenge(scene) {
   if (!scene) return;
   if (scene.combatChallengeTargetGfx?.destroy) {
@@ -142,6 +194,11 @@ export function cleanupCombatChallenge(scene) {
 export function getCombatChallengeState(scene) {
   const state = scene?.combatState;
   return state?.challenge || null;
+}
+
+export function getPrepChallengeState(scene) {
+  const prep = scene?.prepState;
+  return prep?.challenge || null;
 }
 
 export function getChallengeBonusesIfSuccessful(scene, { issue } = {}) {

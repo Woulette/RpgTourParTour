@@ -62,17 +62,19 @@ export function initDomCombat(scene) {
 
   const ensureAvatarSrc = (actor, imgEl) => {
     // Chemins explicites (plus fiable que d'extraire depuis Phaser).
-    if (actor?.kind === "joueur") {
-      const classId = actor?.entity?.classId || "archer";
-      const pathByClass = {
-        archer: "assets/rotations/south-east.png",
-        tank: "assets/animations/animation tank/rotations/south-east.png",
-        mage: "assets/animations/animations-Animiste/rotations/south-east.png",
-      };
-      const raw = pathByClass[classId] || pathByClass.archer;
-      imgEl.src = encodeURI(raw);
-      return true;
-    }
+      if (actor?.kind === "joueur") {
+        const classId = actor?.entity?.classId || "archer";
+        const pathByClass = {
+          archer: "assets/rotations/south-east.png",
+          tank: "assets/animations/animation tank/rotations/south-east.png",
+          mage: "assets/animations/animations-Animiste/rotations/south-east.png",
+          eryon: "assets/animations/animations-Eryon/rotations/south-east.png",
+          assassin: "assets/animations/animations-Eryon/rotations/south-east.png",
+        };
+        const raw = pathByClass[classId] || pathByClass.archer;
+        imgEl.src = encodeURI(raw);
+        return true;
+      }
     if (actor?.kind === "monstre" || actor?.kind === "invocation") {
       const monsterId = actor?.entity?.monsterId;
       const def = monsterId ? monsterDefs[monsterId] : null;

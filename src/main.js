@@ -123,6 +123,16 @@ class MainScene extends Phaser.Scene {
       "animiste",
       "assets/animations/animations-Animiste/animations/running-6-frames"
     );
+
+    // Eryon (4e classe)
+    this.load.image(
+      "eryon",
+      "assets/animations/animations-Eryon/rotations/south-east.png"
+    );
+    loadRunFrames(
+      "eryon",
+      "assets/animations/animations-Eryon/animations/running-6-frames"
+    );
     this.load.image("tree_chene", "assets/metier/bucheron/Chene.png");
     this.load.image(
       "tree_chene_stump",
@@ -139,6 +149,13 @@ class MainScene extends Phaser.Scene {
       "spell_punch_furtif_atlas",
       "assets/AnimationSort/SpriteSheetPunchFurtif.png",
       "assets/AnimationSort/AnimationPunchFurtif.json"
+    );
+
+    // Test Eryon : projectile "Recharge de Flux"
+    this.load.atlas(
+      "spell_recharge_flux_atlas",
+      "assets/AnimationSort/TestPourVoirFeu.png",
+      "assets/AnimationSort/TestPourVoirFeu.json"
     );
   }
 
@@ -231,6 +248,7 @@ class MainScene extends Phaser.Scene {
     setupPlayerAnimations(this);
     setupCharacterAnimations(this, "tank");
     setupCharacterAnimations(this, "animiste");
+    setupCharacterAnimations(this, "eryon");
     setupSpellAnimations(this);
     this.player.setDepth(startY);
 

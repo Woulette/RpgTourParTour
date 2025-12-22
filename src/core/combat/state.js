@@ -291,7 +291,13 @@ function applyStartOfTurnStatusEffects(scene, entity) {
   for (const effect of effects) {
     if (!effect || (effect.turnsLeft ?? 0) <= 0) continue;
     if (effect.type !== "poison") {
-      keep.push(effect);
+      // Buffs (ex: puissance) : pas d'effet direct au start, on décrémente juste la durée.
+      if (typeof effect.turnsLeft === "number") {
+        effect.turnsLeft = effect.turnsLeft - 1;
+      }
+      if ((effect.turnsLeft ?? 0) > 0) {
+        keep.push(effect);
+      }
       continue;
     }
 

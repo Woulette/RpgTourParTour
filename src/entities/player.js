@@ -25,7 +25,13 @@ export function createPlayer(scene, x, y, classId) {
   stats.initiative = initBonus + derivedInit;
 
   const textureKey =
-    classId === "tank" ? "tank" : classId === "mage" ? "animiste" : "player";
+    classId === "tank"
+      ? "tank"
+      : classId === "mage"
+        ? "animiste"
+        : classId === "eryon" || classId === "assassin"
+          ? "eryon"
+          : "player";
   const player = createCharacter(scene, x, y, {
     textureKey,
     classId,

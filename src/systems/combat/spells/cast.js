@@ -13,8 +13,14 @@ import { isTileAvailableForSpell, getCasterOriginTile } from "./util.js";
 import { canApplyCapture, startCaptureAttempt } from "../summons/capture.js";
 import { getAliveSummon, spawnSummonFromCaptured } from "../summons/summon.js";
 import { registerNoCastMeleeViolation } from "../../../challenges/runtime.js";
+import {
+  applyEryonElementAfterCast,
+  convertEryonChargesToPuissance,
+  consumeEryonCharges,
+  getEryonChargeState,
+} from "../eryon/charges.js";
 
-function playSpellAnimation(scene, spellId, x, y) {
+function playSpellAnimation(scene, spellId, fromX, fromY, toX, toY) {
   if (!scene || !spellId) return;
 
   if (spellId === "punch_furtif") {
@@ -22,12 +28,114 @@ function playSpellAnimation(scene, spellId, x, y) {
     const animKey = "spell_punch_furtif_anim";
     if (!scene.textures?.exists?.(atlasKey) || !scene.anims?.exists?.(animKey)) return;
 
-    const fx = scene.add.sprite(x, y, atlasKey);
+    const fx = scene.add.sprite(toX, toY, atlasKey);
     fx.setOrigin(0.5, 0.75);
-    fx.setDepth(y + 5);
+    fx.setDepth(toY + 5);
     fx.play(animKey);
     fx.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => fx.destroy());
   }
+
+  if (spellId === "recharge_flux") {
+    const atlasKey = "spell_recharge_flux_atlas";
+    const animKey = "spell_recharge_flux_anim";
+    if (!scene.textures?.exists?.(atlasKey) || !scene.anims?.exists?.(animKey)) return;
+
+    const fx = scene.add.sprite(fromX, fromY, atlasKey);
+    fx.setOrigin(0.5, 0.5);
+    fx.setDepth(Math.max(fromY, toY) + 5);
+    fx.play(animKey);
+
+    // Sur soi : pas de projectile, juste un flash.
+    const dist = Phaser.Math.Distance.Between(fromX, fromY, toX, toY);
+    if (dist < 6) {
+      scene.time.delayedCall(260, () => {
+        if (fx?.destroy) fx.destroy();
+      });
+      return;
+    }
+
+    const duration = Math.max(180, Math.min(650, Math.round(dist * 1.2)));
+
+    scene.tweens.add({
+      targets: fx,
+      x: toX,
+      y: toY,
+      duration,
+      ease: "Linear",
+      onComplete: () => {
+        if (fx?.destroy) fx.destroy();
+      },
+    });
+
+    // Sécurité : si quelque chose empêche le tween/anim de se terminer.
+    scene.time.delayedCall(2000, () => {
+      if (fx && fx.active && fx.destroy) fx.destroy();
+    });
+  }
+}
+
+function isEryonCaster(caster) {
+  const id = caster?.classId;
+  return id === "eryon" || id === "assassin";
+}
+
+function applyEryonAfterCast(scene, caster, spell, { isSelfCast = false } = {}) {
+  if (!scene || !caster || !spell) return null;
+  if (!isEryonCaster(caster)) return null;
+  if (!spell.eryonCharges) return null;
+
+  // Si le sort est lancé sur soi : conversion des charges actuelles en Puissance.
+  // Aucun dégât, aucune génération de charge du sort lancé.
+  if (isSelfCast) {
+    const res = convertEryonChargesToPuissance(caster);
+    if (res?.bonusPuissance > 0 && scene.combatState?.joueur) {
+      addChatMessage(
+        {
+          kind: "combat",
+          channel: "global",
+          author: "Eryon",
+        text: `Conversion des charges : +${res.bonusPuissance} Puissance (3 tours).`,
+      },
+      { player: scene.combatState.joueur }
+    );
+      showFloatingTextOverEntity(scene, caster, `+${res.bonusPuissance} Puissance`, {
+        color: "#fbbf24",
+      });
+    }
+    if (scene && typeof scene.updateCombatUi === "function") {
+      scene.updateCombatUi();
+    }
+    return res || null;
+  }
+
+  const gain = spell.eryonCharges.chargeGain ?? 1;
+  const element = spell.eryonCharges.element ?? spell.element;
+  const res = applyEryonElementAfterCast(caster, element, gain);
+
+  if (scene && typeof scene.updateCombatUi === "function") {
+    scene.updateCombatUi();
+  }
+
+  return res || null;
+}
+
+function computeDamageForSpell(caster, spell) {
+  if (!spell || !caster) return { damage: 0, consumedCharges: 0 };
+
+  if (spell.id === "surcharge_instable" && isEryonCaster(caster)) {
+    const before = getEryonChargeState(caster);
+    const base = computeSpellDamage(caster, spell);
+
+    let consumed = 0;
+    if (before.element === "feu" && before.charges > 0) {
+      consumed = consumeEryonCharges(caster, "feu", 5);
+    }
+
+    const mult = 1 + 0.1 * (consumed || 0);
+    return { damage: Math.round(base * mult), consumedCharges: consumed };
+  }
+
+  return { damage: computeSpellDamage(caster, spell), consumedCharges: 0 };
 }
 
 export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundLayer) {
@@ -101,8 +209,13 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   const cx = worldPos.x + map.tileWidth / 2;
   const cy = worldPos.y + map.tileHeight / 2;
 
+  const { x: originTileX, y: originTileY } = getCasterOriginTile(caster);
+  const isSelfCast = tileX === originTileX && tileY === originTileY;
+
   // FX animation (si dispo)
-  playSpellAnimation(scene, spell?.id, cx, cy);
+  const fromX = caster?.x ?? cx;
+  const fromY = (caster?.y ?? cy) - 10;
+  playSpellAnimation(scene, spell?.id, fromX, fromY, cx, cy);
 
   const size = Math.min(map.tileWidth, map.tileHeight);
   const fx = scene.add.rectangle(cx, cy, size, size, 0xffdd55, 0.6);
@@ -144,6 +257,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
       }
       clearActiveSpell(caster);
       clearSpellRangePreview(scene);
+      applyEryonAfterCast(scene, caster, spell, { isSelfCast });
       return true;
     }
 
@@ -256,6 +370,92 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
       clearActiveSpell(caster);
       clearSpellRangePreview(scene);
+      applyEryonAfterCast(scene, caster, spell, { isSelfCast });
+      return true;
+    }
+
+    if (spell.effectPattern === "cross1") {
+      const { damage } = computeDamageForSpell(caster, spell);
+      const tiles = [
+        { x: tileX, y: tileY },
+        { x: tileX + 1, y: tileY },
+        { x: tileX - 1, y: tileY },
+        { x: tileX, y: tileY + 1 },
+        { x: tileX, y: tileY - 1 },
+      ];
+
+      for (const t of tiles) {
+        if (!isTileAvailableForSpell(map, t.x, t.y)) continue;
+
+        const zoneWorld = map.tileToWorldXY(t.x, t.y, undefined, undefined, groundLayer);
+        const zx = zoneWorld.x + map.tileWidth / 2;
+        const zy = zoneWorld.y + map.tileHeight / 2;
+        const size = Math.min(map.tileWidth, map.tileHeight);
+        const fxZone = scene.add.rectangle(zx, zy, size, size, 0xff5533, 0.22);
+        if (scene.hudCamera) {
+          scene.hudCamera.ignore(fxZone);
+        }
+        scene.time.delayedCall(220, () => fxZone.destroy());
+
+        const victim = findMonsterAtTile(scene, t.x, t.y);
+        if (!victim || !victim.stats) continue;
+
+        const currentHp =
+          typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
+        const newHp = Math.max(0, currentHp - damage);
+        victim.stats.hp = newHp;
+        if (scene && typeof scene.updateCombatUi === "function") {
+          scene.updateCombatUi();
+        }
+
+        if (state.enCours && state.joueur) {
+          const spellLabel = spell?.label || spell?.id || "Sort";
+          const targetName = victim.displayName || victim.label || victim.monsterId || "Monstre";
+          addChatMessage(
+            {
+              kind: "combat",
+              channel: "global",
+              author: "Combat",
+              text: `${spellLabel} : ${targetName} -${damage} PV`,
+              element: spell?.element ?? null,
+            },
+            { player: state.joueur }
+          );
+        }
+
+        showFloatingTextOverEntity(scene, victim, `-${damage}`, { color: "#ff4444" });
+
+        if (newHp <= 0) {
+          if (typeof victim.onKilled === "function") {
+            victim.onKilled(scene, caster);
+          }
+          victim.destroy();
+          if (scene.monsters) {
+            scene.monsters = scene.monsters.filter((m) => m !== victim);
+          }
+
+          let remaining = 0;
+          if (scene.combatMonsters && Array.isArray(scene.combatMonsters)) {
+            scene.combatMonsters = scene.combatMonsters.filter((m) => m && m !== victim);
+            remaining = scene.combatMonsters.filter((m) => {
+              const statsInner = m.stats || {};
+              const hpInner = typeof statsInner.hp === "number" ? statsInner.hp : statsInner.hpMax ?? 0;
+              return hpInner > 0;
+            }).length;
+          } else if (scene.monsters) {
+            remaining = scene.monsters.length;
+          }
+
+          if (scene.combatState && remaining <= 0) {
+            scene.combatState.issue = "victoire";
+            endCombat(scene);
+          }
+        }
+      }
+
+      clearActiveSpell(caster);
+      clearSpellRangePreview(scene);
+      applyEryonAfterCast(scene, caster, spell, { isSelfCast });
       return true;
     }
 
@@ -351,7 +551,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
     const target = findMonsterAtTile(scene, tileX, tileY);
     if (target && target.stats) {
-      const damage = computeSpellDamage(caster, spell);
+      const { damage } = computeDamageForSpell(caster, spell);
 
       const currentHp = typeof target.stats.hp === "number" ? target.stats.hp : target.stats.hpMax ?? 0;
       const newHp = Math.max(0, currentHp - damage);
@@ -613,6 +813,8 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
   clearActiveSpell(caster);
   clearSpellRangePreview(scene);
+
+  applyEryonAfterCast(scene, caster, spell, { isSelfCast });
 
   return true;
 }

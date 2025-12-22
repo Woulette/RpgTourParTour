@@ -156,6 +156,17 @@ export function initDomSpells(player) {
           if (spell.lifeSteal) {
             effects.push("Vole de vie");
           }
+          if (spell.id === "recharge_flux") {
+            effects.push("Sur cible : +1 charge Feu");
+            effects.push("Sur soi : convertit charges → Puissance");
+          }
+          if (spell.id === "stabilisation_flux") {
+            effects.push("Sur cible : +1 charge Eau");
+            effects.push("Sur soi : convertit charges → Puissance");
+          }
+          if (spell.id === "surcharge_instable") {
+            effects.push("Jusqu'à 5 charges Feu : +10%/charge");
+          }
           if (maxCasts) {
             effects.push(`Lancers/tour : ${maxCasts}`);
           }
@@ -194,6 +205,22 @@ export function initDomSpells(player) {
                   ? buildInvocationCapturedExtraHtml()
                   : "";
 
+              const buildSurchargeChargesHtml = () => {
+                if (spell.id !== "surcharge_instable") return "";
+                const baseMin = spell.damageMin ?? 0;
+                const baseMax = spell.damageMax ?? baseMin;
+                const lines = [];
+                for (let charges = 1; charges <= 5; charges += 1) {
+                  const mult = 1 + 0.1 * charges;
+                  const min = Math.ceil(baseMin * mult);
+                  const max = Math.ceil(baseMax * mult);
+                  lines.push(
+                    `<div class="spell-detail-line"><strong>Charge ${charges} :</strong> ${min} - ${max} <span class="spellbook-element spellbook-element-feu">Feu</span></div>`
+                  );
+                }
+                return lines.join("");
+              };
+
               spellsDetailEl.innerHTML = `
                 <h3>${spell.label}</h3>
                 <div class="spell-detail-line">Niveau requis : ${requiredLevel}</div>
@@ -202,6 +229,7 @@ export function initDomSpells(player) {
                   <strong>Degats :</strong> ${dmgMin} - ${dmgMax}
                   <span class="spellbook-element spellbook-element-${elementClassDetail}">${elementLabel}</span>
                 </div>
+                ${spell.id === "surcharge_instable" ? buildSurchargeChargesHtml() : ""}
                 <div class="spell-detail-line">
                   <strong>Portee :</strong> ${rangeMin}-${rangeMax}
                 </div>

@@ -64,6 +64,13 @@ export function initDomCombatResult(scene, player) {
           <span id="combat-result-challenge-number" class="combat-result-challenge-number">?</span>
           <span id="combat-result-challenge-mark" class="combat-result-challenge-mark">?</span>
         </div>
+        <div class="combat-result-challenge-tooltip" role="tooltip" aria-label="Détails du challenge">
+          <div id="combat-result-challenge-title" class="combat-result-challenge-title">Challenge</div>
+          <div id="combat-result-challenge-name" class="combat-result-challenge-name">-</div>
+          <div id="combat-result-challenge-desc" class="combat-result-challenge-desc"></div>
+          <div id="combat-result-challenge-rewards" class="combat-result-challenge-rewards"></div>
+          <div id="combat-result-challenge-status" class="combat-result-challenge-status"></div>
+        </div>
       `;
       firstSection.insertAdjacentElement("afterbegin", challengeEl);
     }
@@ -239,6 +246,10 @@ export function initDomCombatResult(scene, player) {
       const challenge = result.challenge || null;
       const badgeNumEl = document.getElementById("combat-result-challenge-number");
       const markEl = document.getElementById("combat-result-challenge-mark");
+      const nameEl = document.getElementById("combat-result-challenge-name");
+      const descEl = document.getElementById("combat-result-challenge-desc");
+      const rewardsEl = document.getElementById("combat-result-challenge-rewards");
+      const statusEl = document.getElementById("combat-result-challenge-status");
 
       if (!challenge || !challenge.id) {
         challengeEl.classList.add("is-hidden");
@@ -253,6 +264,23 @@ export function initDomCombatResult(scene, player) {
             status === "success" ? "✓" : status === "failed" ? "✕" : "•";
         }
         challengeEl.dataset.status = status;
+
+        if (nameEl) nameEl.textContent = challenge.label || `Challenge ${num}`;
+        if (descEl) descEl.textContent = challenge.description || "";
+        if (rewardsEl) {
+          const xpBonus = challenge.rewards?.xpBonusPct ?? 0;
+          const dropBonus = challenge.rewards?.dropBonusPct ?? 0;
+          const fmt = (p) => `+${Math.round((p || 0) * 100)}%`;
+          rewardsEl.textContent = `Bonus si réussi : XP ${fmt(xpBonus)} • Drop ${fmt(dropBonus)}`;
+        }
+        if (statusEl) {
+          statusEl.textContent =
+            status === "success"
+              ? "Réussi"
+              : status === "failed"
+                ? "Échoué"
+                : "En cours";
+        }
       }
     }
 

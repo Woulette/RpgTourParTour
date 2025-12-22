@@ -1,5 +1,6 @@
 import { isEnemyAdjacentToPlayer } from "../challenges/runtime.js";
 import { GAME_HEIGHT, GAME_WIDTH } from "../config/constants.js";
+import { getPrepChallengeState } from "../challenges/runtime.js";
 
 function pct(n) {
   if (typeof n !== "number" || !Number.isFinite(n)) return "0%";
@@ -90,8 +91,11 @@ function getOrCreatePanel() {
 
   // Restore last position (or default).
   const saved = readSavedPos();
-  const x = saved?.x ?? 12;
-  const y = saved?.y ?? 12;
+  const vw = window.innerWidth || 0;
+  const vh = window.innerHeight || 0;
+  const badgeSize = 54;
+  const x = clamp(saved?.x ?? 12, 0, Math.max(0, vw - badgeSize));
+  const y = clamp(saved?.y ?? 12, 0, Math.max(0, vh - badgeSize));
   panel.style.left = `${x}px`;
   panel.style.top = `${y}px`;
 
@@ -214,15 +218,20 @@ export function initDomCombatChallenge(scene) {
   enableDragging(panel);
 
   scene.updateCombatChallengeUi = () => {
-    const state = scene.combatState;
-    if (!state || !state.enCours || !state.challenge) {
+    const combat = scene.combatState;
+    const prep = scene.prepState;
+
+    const c =
+      (combat && combat.enCours && combat.challenge) ||
+      (prep && prep.actif && getPrepChallengeState(scene)) ||
+      null;
+
+    if (!c) {
       panel.style.display = "none";
       return;
     }
 
     panel.style.display = "block";
-
-    const c = state.challenge;
     const badgeLabel = CHALLENGE_BADGE_LABEL_BY_ID[c.id] || c.id || "?";
     setText("combat-challenge-badge-text", badgeLabel);
     panel.dataset.challengeId = c.id || "";
@@ -239,7 +248,7 @@ export function initDomCombatChallenge(scene) {
       )}`
     );
 
-    const player = state.joueur;
+    const player = (combat && combat.joueur) || (prep && prep.joueur) || null;
     const progressEl = document.getElementById("combat-challenge-progress");
     if (progressEl) progressEl.textContent = "";
 
@@ -270,7 +279,7 @@ export function initDomCombatChallenge(scene) {
       const blocked = isEnemyAdjacentToPlayer(scene, player);
       if (progressEl) {
         progressEl.textContent = blocked
-          ? "Un ennemi est au corps à corps : sorts bloqués."
+          ? "Un ennemi est au corps à corps : lancer un sort fera rater le challenge."
           : "Aucun ennemi au corps à corps.";
       }
     }

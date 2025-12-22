@@ -381,6 +381,35 @@ body.menu-open #combat-result-overlay {
   box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.22);
 }
 
+.menu-panel.menu-v2 .create-input.is-invalid {
+  border-color: rgba(239, 68, 68, 0.9);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22);
+  animation: menu-shake 260ms ease-in-out;
+}
+
+.menu-panel.menu-v2 .create-input.is-invalid:focus {
+  border-color: rgba(239, 68, 68, 0.95);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22);
+}
+
+@keyframes menu-shake {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
 .menu-panel.menu-v2 .class-picker-title {
   font-size: 12px;
   font-weight: 900;
@@ -451,6 +480,13 @@ body.menu-open #combat-result-overlay {
 }
 
 .menu-panel.menu-v2 .menu-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+.menu-panel.menu-v2 .menu-btn.is-disabled,
+.menu-panel.menu-v2 .menu-btn[aria-disabled="true"] {
   opacity: 0.45;
   cursor: not-allowed;
   filter: grayscale(0.3);

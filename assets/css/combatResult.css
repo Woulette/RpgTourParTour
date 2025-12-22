@@ -92,8 +92,8 @@
 /* Badge challenge (coin haut-gauche du bloc joueur) */
 .combat-result-challenge {
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: -55px;
+  left: 0px;
 }
 
 .combat-result-challenge.is-hidden {
@@ -112,6 +112,81 @@
   user-select: none;
 }
 
+.combat-result-challenge-tooltip {
+  position: absolute;
+  top: 0;
+  left: calc(42px + 10px);
+  width: min(340px, 55vw);
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(7, 16, 30, 0.92);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.96);
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 2;
+}
+
+.combat-result-challenge:hover .combat-result-challenge-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.combat-result-challenge-title {
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+  opacity: 0.92;
+  margin-bottom: 6px;
+}
+
+.combat-result-challenge-name {
+  font-weight: 950;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.combat-result-challenge-desc {
+  font-size: 12px;
+  opacity: 0.92;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+
+.combat-result-challenge-rewards {
+  font-size: 12px;
+  opacity: 0.92;
+  margin-bottom: 8px;
+}
+
+.combat-result-challenge-status {
+  display: inline-block;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.combat-result-challenge[data-status="success"] .combat-result-challenge-status {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.18);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.combat-result-challenge[data-status="failed"] .combat-result-challenge-status {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.18);
+  color: rgba(255, 255, 255, 0.96);
+}
+
 .combat-result-challenge-number {
   font-weight: 900;
   font-size: 16px;
@@ -120,15 +195,16 @@
 
 .combat-result-challenge-mark {
   position: absolute;
-  right: -8px;
-  top: -8px;
-  width: 22px;
-  height: 22px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   font-weight: 900;
-  font-size: 14px;
+  font-size: 18px;
   background: rgba(148, 163, 184, 0.2);
   border: 1px solid rgba(148, 163, 184, 0.55);
   color: #111;

@@ -210,6 +210,15 @@ export function updateSpellRangePreview(
           return tiles;
         }
 
+        if (pattern === "cross1") {
+          tiles.push({ x: tx, y: ty });
+          tiles.push({ x: tx + 1, y: ty });
+          tiles.push({ x: tx - 1, y: ty });
+          tiles.push({ x: tx, y: ty + 1 });
+          tiles.push({ x: tx, y: ty - 1 });
+          return tiles;
+        }
+
         if (pattern === "line_forward") {
           const dx = tx === originX ? 0 : Math.sign(tx - originX);
           const dy = ty === originY ? 0 : Math.sign(ty - originY);

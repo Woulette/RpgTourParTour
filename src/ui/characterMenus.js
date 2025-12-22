@@ -39,8 +39,8 @@ export function initCharacterMenus({ onStartGame }) {
     return null;
   }
 
-  const CLASS_ORDER = ["archer", "tank", "mage"];
-  const CAROUSEL_ORDER = ["archer", "tank", "mage", "assassin"];
+  const CLASS_ORDER = ["archer", "tank", "mage", "eryon"];
+  const CAROUSEL_ORDER = ["archer", "tank", "mage", "eryon"];
   const classUi = {
     archer: {
       title: "Archer",
@@ -63,17 +63,23 @@ export function initCharacterMenus({ onStartGame }) {
       previewImage: "assets/animations/animations-Animiste/rotations/south.png",
       selectable: true,
     },
-    assassin: {
-      title: "Assassin",
-      desc: "Bientôt disponible.",
-      bullets: ["En développement", "À venir"],
-      previewImage: "assets/rotations/south.png",
-      selectable: false,
+    eryon: {
+      title: "Eryon",
+      desc: "Nouvelle classe en test.",
+      bullets: ["Mobilité", "Dégâts", "Style Eryon"],
+      previewImage: "assets/animations/animations-Eryon/rotations/south.png",
+      selectable: true,
     },
   };
 
   const getAvailableClassIds = () => CLASS_ORDER.filter((id) => classes[id]);
   const getCarouselClassIds = () => CAROUSEL_ORDER.filter((id) => classes[id]);
+
+  const getDefaultCreateClassId = () => {
+    const ids = getAvailableClassIds();
+    const firstPlayable = ids.find((id) => classUi[id]?.selectable !== false) || null;
+    return firstPlayable || ids[0] || "archer";
+  };
 
   const characters = [];
   let selectedCharacterId = null;
@@ -466,7 +472,7 @@ function renderCarouselMeta() {
     btnGoCreate.hidden = true;
     btnPlay.hidden = true;
 
-    selectedClassId = null;
+    selectedClassId = getDefaultCreateClassId();
     inputName.value = "";
     renderClasses();
     syncCreateButton();
@@ -475,8 +481,15 @@ function renderCarouselMeta() {
     ensureCarousel(carouselIds);
     carouselOrder = carouselIds.slice();
     applyCarouselPositions();
-    setPreview("archer");
+    setPreview(selectedClassId || "archer");
     renderCarouselMeta();
+
+    // UX : focus direct sur le nom.
+    try {
+      inputName.focus();
+    } catch {
+      // ignore
+    }
   };
 
   const openMenu = () => {
@@ -639,15 +652,52 @@ function renderCarouselMeta() {
   const syncCreateButton = () => {
     const rawName = String(inputName.value || "").trim();
     const hasName = rawName.length > 0;
-    btnCreate.disabled =
-      !hasName ||
-      !selectedClassId ||
-      classUi[selectedClassId]?.selectable === false;
+    const canCreate =
+      hasName &&
+      !!selectedClassId &&
+      classUi[selectedClassId]?.selectable !== false;
+
+    // On évite un bouton "mort" : on garde le bouton cliquable pour pouvoir
+    // montrer un feedback (surbrillance du champ nom) si l'utilisateur tente
+    // de créer sans nom.
+    btnCreate.disabled = false;
+    btnCreate.classList.toggle("is-disabled", !canCreate);
+    btnCreate.setAttribute("aria-disabled", String(!canCreate));
   };
 
   btnGoCreate.addEventListener("click", () => showCreate());
   btnBackSelect.addEventListener("click", () => showSelect());
   inputName.addEventListener("input", () => syncCreateButton());
+
+  let invalidNameTimeout = null;
+  const flashInvalidName = () => {
+    if (invalidNameTimeout) {
+      clearTimeout(invalidNameTimeout);
+      invalidNameTimeout = null;
+    }
+    inputName.classList.remove("is-invalid");
+    // Force reflow so the animation restarts cleanly.
+    // eslint-disable-next-line no-unused-expressions
+    inputName.offsetWidth;
+    inputName.classList.add("is-invalid");
+    try {
+      inputName.focus();
+    } catch {
+      // ignore
+    }
+    invalidNameTimeout = setTimeout(() => {
+      inputName.classList.remove("is-invalid");
+      invalidNameTimeout = null;
+    }, 650);
+  };
+
+  btnCreate.addEventListener("click", (e) => {
+    const rawName = String(inputName.value || "").trim();
+    if (rawName.length > 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    flashInvalidName();
+  });
 
   function startGameWithCharacter(chosen) {
     if (!chosen) return;
@@ -710,11 +760,11 @@ function renderCarouselMeta() {
 
   formCreate.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (!selectedClassId) return;
+    if (!selectedClassId) selectedClassId = getDefaultCreateClassId();
 
     const rawName = String(inputName.value || "").trim();
     if (rawName.length === 0) {
-      inputName.focus();
+      flashInvalidName();
       syncCreateButton();
       return;
     }

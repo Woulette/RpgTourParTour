@@ -1,3 +1,5 @@
+import { getEryonChargeState } from "../systems/combat/eryon/charges.js";
+
 let inspectorInitialized = false;
 
 function getEntityLabel(scene, entity) {
@@ -12,50 +14,56 @@ function getEntityLabel(scene, entity) {
   );
 }
 
-function getEntityHp(entity) {
-  const stats = entity?.stats || {};
-  const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
-  const hpMax = typeof stats.hpMax === "number" ? stats.hpMax : hp;
-  return { hp, hpMax };
-}
-
-function getEntityApMp(scene, entity) {
-  const state = scene?.combatState;
-  const stats = entity?.stats || {};
-  const basePa = stats.pa ?? 0;
-  const basePm = stats.pm ?? 0;
-
-  if (!state || !state.enCours) return { pa: basePa, pm: basePm, isCurrent: false };
-
-  const isPlayer = entity === state.joueur;
-  const isCurrent =
-    (state.tour === "joueur" && isPlayer) ||
-    (state.tour === "monstre" && state.monstre === entity);
-
-  if (!isCurrent) return { pa: basePa, pm: basePm, isCurrent: false };
-  return {
-    pa: typeof state.paRestants === "number" ? state.paRestants : basePa,
-    pm: typeof state.pmRestants === "number" ? state.pmRestants : basePm,
-    isCurrent: true,
-  };
-}
-
 function formatEffect(effect) {
   if (!effect) return null;
   const label = effect.label || effect.id || "Effet";
   const turns = effect.turnsLeft ?? effect.turns ?? 0;
+
   if (effect.type === "poison") {
     const min = effect.damageMin ?? 0;
     const max = effect.damageMax ?? min;
     return {
       name: label,
-      meta: `Poison • ${turns} tour(s) • ${min}-${max} par tour`,
+      meta: `Poison ${turns} tour(s) ${min}-${max} par tour`,
     };
   }
+
+  if (effect.type === "puissance") {
+    const amount = typeof effect.amount === "number" ? effect.amount : 0;
+    const sign = amount >= 0 ? "+" : "";
+    return {
+      name: label,
+      meta: `${sign}${amount} Puissance ${turns} tour(s)`,
+    };
+  }
+
   return { name: label, meta: `${turns} tour(s)` };
 }
 
-function renderInspector(scene, root, titleEl, bodyEl, entity, expanded) {
+function formatEryonCharges(entity) {
+  if (!entity) return null;
+  const classId = entity.classId;
+  if (classId !== "eryon" && classId !== "assassin") return null;
+
+  const st = getEryonChargeState(entity);
+  const element = st?.element || null;
+  const charges = typeof st?.charges === "number" ? st.charges : 0;
+  if (!element) return null;
+
+  const labelByElement = {
+    feu: "Feu",
+    eau: "Eau",
+    terre: "Terre",
+    air: "Air",
+  };
+
+  return {
+    name: `Charges ${labelByElement[element] || element}`,
+    meta: `${Math.max(0, charges)} / 10`,
+  };
+}
+
+function renderInspector(scene, root, titleEl, bodyEl, entity) {
   if (!root || !titleEl || !bodyEl) return;
   if (!scene?.combatState?.enCours || !entity) {
     root.classList.remove("combat-inspector-visible");
@@ -69,6 +77,11 @@ function renderInspector(scene, root, titleEl, bodyEl, entity, expanded) {
   const formatted = effects
     .map(formatEffect)
     .filter((e) => e && e.name && e.meta);
+
+  const chargesLine = formatEryonCharges(entity);
+  if (chargesLine) {
+    formatted.unshift(chargesLine);
+  }
 
   const section = document.createElement("div");
   section.className = "combat-inspector-section";
@@ -133,7 +146,7 @@ export function initDomCombatInspector(scene) {
       return;
     }
     selected = entity;
-    renderInspector(scene, root, titleEl, bodyEl, selected, true);
+    renderInspector(scene, root, titleEl, bodyEl, selected);
   };
 
   scene.hideCombatInspector = close;
@@ -145,7 +158,7 @@ export function initDomCombatInspector(scene) {
       return;
     }
     if (!selected) return;
-    renderInspector(scene, root, titleEl, bodyEl, selected, true);
+    renderInspector(scene, root, titleEl, bodyEl, selected);
   };
 
   inspectorInitialized = true;
