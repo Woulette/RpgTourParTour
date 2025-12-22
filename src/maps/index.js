@@ -77,6 +77,14 @@ const craftTableCordonnierTileset = {
   frameHeight: 60,
 };
 
+const craftTableAlchimisteTileset = {
+  name: "TableDeAlchimiste",
+  imageKey: "TableDeAlchimiste",
+  imagePath: "assets/tableDeAlchimiste.png",
+  frameWidth: 60,
+  frameHeight: 60,
+};
+
 const entreeDonjonTileset = {
   name: "EntreDonjons1Teste",
   imageKey: "EntreDonjons1Teste",
@@ -244,7 +252,12 @@ export const maps = {
     key: "Map1Andemia",
     worldPos: { x: 0, y: 0 },
     jsonPath: "assets/maps/MapAndemiaNouvelleVersion1.json",
-    tilesets: [...tilesetNew, entreeDonjonTileset, maisonVillage1Tileset],
+    tilesets: [
+      ...tilesetNew,
+      entreeDonjonTileset,
+      maisonVillage1Tileset,
+      craftTableAlchimisteTileset,
+    ],
     // La grille debug ne doit pas passer au-dessus des calques décor (ex: "Calque de Tuiles 5").
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
@@ -283,6 +296,15 @@ export const maps = {
       { tileX: 8, tileY: 18 },
       { tileX: 23, tileY: 23 },
       { tileX: 19, tileY: 8 },
+    ],
+    workstations: [
+      {
+        id: "alchimiste",
+        tileX: 10,
+        tileY: 17,
+        offsetX: -4,
+        textureKey: "TableDeAlchimiste",
+      },
     ],
     // Optionnel : borne manuelle des bandes de sortie (coordonnées monde).
     // Laisse null pour l’auto, ou mets { minX, minY, maxX, maxY } si tu veux régler à la main.

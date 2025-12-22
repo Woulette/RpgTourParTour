@@ -54,4 +54,28 @@ export const resourceItems = {
     maxStack: 9999,
     icon: "assets/metier/bucheron/boisDeChene.png",
   },
+  plante_ortie: {
+    id: "plante_ortie",
+    label: "Ortie",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/monsters/corbeau/ressources/EssenceDeCorbeau.png",
+  },
+  plante_sauge: {
+    id: "plante_sauge",
+    label: "Sauge",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/monsters/corbeau/ressources/EssenceDeCorbeau.png",
+  },
+  plante_menthe: {
+    id: "plante_menthe",
+    label: "Menthe",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/monsters/corbeau/ressources/EssenceDeCorbeau.png",
+  },
 };

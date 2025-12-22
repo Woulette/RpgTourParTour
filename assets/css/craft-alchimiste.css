@@ -1,0 +1,129 @@
+/* Alchimiste - layout harmonise mais different */
+
+.craft-panel.alchimiste .craft-panel-inner {
+  background: radial-gradient(circle at 15% 5%, rgba(70, 120, 92, 0.22), transparent 55%),
+    linear-gradient(180deg, #141c19, #0d1311 70%);
+  border-color: rgba(140, 210, 165, 0.45);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+
+.craft-panel.alchimiste .craft-panel-header h3 {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.craft-body-alchimiste {
+  display: grid;
+  grid-template-columns: 32% 34% 34%;
+  gap: 10px;
+  min-height: 0;
+}
+
+.craft-left-alchimiste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.alchimiste-xp-card {
+  border-radius: 12px;
+  border: 1px solid rgba(120, 190, 150, 0.45);
+  padding: 8px 10px;
+  background: rgba(18, 26, 22, 0.9);
+}
+
+.alchimiste-xp-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cbe7d2;
+  margin-bottom: 6px;
+}
+
+.alchimiste-xp-level {
+  font-weight: 700;
+}
+
+.craft-panel.alchimiste .craft-xp-bar {
+  background: rgba(12, 18, 15, 0.9);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(120, 190, 150, 0.3);
+}
+
+.craft-panel.alchimiste .craft-xp-bar-fill {
+  background: linear-gradient(90deg, #4fb97a, #2f6c49);
+}
+
+.craft-panel.alchimiste .craft-xp-bar-label {
+  font-size: 11px;
+}
+
+.craft-center-alchimiste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.alchimiste-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alchimiste-slots-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.craft-panel.alchimiste .craft-slot {
+  height: 70px;
+  border-radius: 12px;
+  background: rgba(60, 72, 65, 0.7);
+  border: 1px dashed rgba(120, 190, 150, 0.4);
+}
+
+.craft-panel.alchimiste .craft-slot.filled {
+  border-style: solid;
+  border-color: rgba(120, 210, 150, 0.75);
+}
+
+.craft-panel.alchimiste .craft-btn {
+  background: linear-gradient(90deg, #3e9f68, #276243);
+}
+
+.craft-panel.alchimiste .craft-result {
+  border-color: rgba(120, 210, 150, 0.5);
+  background: linear-gradient(135deg, rgba(62, 159, 104, 0.2), rgba(62, 159, 104, 0.35));
+}
+
+.craft-panel.alchimiste .craft-recipe {
+  background: rgba(32, 44, 36, 0.9);
+  border-color: rgba(70, 120, 92, 0.6);
+}
+
+.craft-panel.alchimiste .craft-recipe.active {
+  border-color: #7ad7a6;
+  box-shadow: 0 0 0 2px rgba(122, 215, 166, 0.28), 0 10px 24px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(180deg, rgba(58, 140, 90, 0.4), rgba(34, 70, 48, 0.35));
+}
+
+.craft-panel.alchimiste .craft-inventory-slot {
+  background: rgba(90, 120, 105, 0.45);
+  border-color: rgba(170, 210, 190, 0.6);
+}
+
+.craft-panel.alchimiste .craft-tag {
+  background: rgba(30, 50, 38, 0.75);
+  color: #b7f0cf;
+}
+
+.craft-panel.alchimiste .craft-tag.locked {
+  background: rgba(65, 25, 25, 0.7);
+  color: #f4c2c2;
+}

@@ -1,5 +1,7 @@
 import { bucheronDefinition } from "../metier/bucheron/config.js";
 import { ensureBucheronState } from "../metier/bucheron/state.js";
+import { alchimisteDefinition } from "../metier/alchimiste/config.js";
+import { ensureAlchimisteState } from "../metier/alchimiste/state.js";
 import { tailleurDefinition } from "../metier/tailleur/config.js";
 import { ensureTailleurState } from "../metier/tailleur/state.js";
 import { bijoutierDefinition } from "../metier/bijoutier/config.js";
@@ -9,16 +11,24 @@ import { bijoutierRecipes } from "../metier/bijoutier/recipes.js";
 import { cordonnierDefinition } from "../metier/cordonnier/config.js";
 import { ensureCordonnierState } from "../metier/cordonnier/state.js";
 import { cordonnierRecipes } from "../metier/cordonnier/recipes.js";
+import { alchimieRecipes } from "../metier/alchimiste/recipes.js";
 import { getItemDef } from "../inventory/inventoryCore.js";
 import { on as onStoreEvent } from "../state/store.js";
 
 // Métier unique pour l'instant, mais structuré pour en ajouter d'autres.
-const METIERS = [bucheronDefinition, tailleurDefinition, bijoutierDefinition, cordonnierDefinition];
+const METIERS = [
+  bucheronDefinition,
+  alchimisteDefinition,
+  tailleurDefinition,
+  bijoutierDefinition,
+  cordonnierDefinition,
+];
 const METIERS_BY_ID = Object.fromEntries(METIERS.map((m) => [m.id, m]));
 const CRAFT_RECIPES = {
   tailleur: tailleurRecipes,
   bijoutier: bijoutierRecipes,
   cordonnier: cordonnierRecipes,
+  alchimiste: alchimieRecipes,
 };
 
 let metiersUiInitialized = false;
@@ -80,6 +90,10 @@ export function initDomMetiers(player) {
             <div class="metier-detail-xp-bar-fill"></div>
           </div>
         </header>
+        <div class="metier-tabs" id="metier-tabs" style="display:none; gap:8px; margin-top:8px;">
+          <button type="button" class="metier-tab" data-tab="resources">Ressources</button>
+          <button type="button" class="metier-tab" data-tab="craft">Recettes</button>
+        </div>
         <section class="metier-resources" id="metier-resources-section">
           <h4 class="metier-resources-title">Ressources récoltables</h4>
           <table class="metier-resources-table">
@@ -115,6 +129,7 @@ export function initDomMetiers(player) {
   const resourcesBodyEl = detailEl.querySelector("#metier-resources-body");
   const resourcesSectionEl = detailEl.querySelector("#metier-resources-section");
   const craftSectionEl = detailEl.querySelector("#metier-craft-section");
+  const tabsEl = detailEl.querySelector("#metier-tabs");
   const craftFiltersEl = detailEl.querySelector("#metier-craft-filters");
   const craftSearchEl = detailEl.querySelector("#metier-craft-search");
   const craftListEl = detailEl.querySelector("#metier-craft-list");
@@ -127,12 +142,16 @@ export function initDomMetiers(player) {
 
   let currentMetierId = "bucheron";
   const craftSelectedByMetier = {};
+  const tabsByMetier = {};
   let craftSearchValue = "";
   let craftCategory = "all";
 
   const getPlayerMetierState = (id) => {
     if (id === "bucheron") {
       return ensureBucheronState(player);
+    }
+    if (id === "alchimiste") {
+      return ensureAlchimisteState(player);
     }
     if (id === "tailleur") {
       return ensureTailleurState(player);
@@ -214,17 +233,28 @@ export function initDomMetiers(player) {
     }
 
     const isCraft = def.type === "craft";
-    if (!isCraft) {
+    const isHybrid = def.type === "hybrid";
+    const showTabs = !!tabsEl && isHybrid;
+    const currentTab = tabsByMetier[metierId] || (isCraft ? "craft" : "resources");
+    if (showTabs) {
+      tabsEl.style.display = "flex";
+    } else if (tabsEl) {
+      tabsEl.style.display = "none";
+    }
+
+    if (!isCraft && !isHybrid) {
       craftSelectedByMetier[metierId] = null;
     }
     if (resourcesSectionEl) {
-      resourcesSectionEl.style.display = isCraft ? "none" : "block";
+      resourcesSectionEl.style.display =
+        isCraft || (isHybrid && currentTab === "craft") ? "none" : "block";
     }
     if (craftSectionEl) {
-      craftSectionEl.style.display = isCraft ? "flex" : "none";
+      craftSectionEl.style.display =
+        isCraft || (isHybrid && currentTab === "craft") ? "flex" : "none";
     }
 
-    if (!isCraft && resourcesBodyEl) {
+    if ((!isCraft && currentTab !== "craft") && resourcesBodyEl) {
       resourcesBodyEl.innerHTML = "";
       (def.resources || []).forEach((res) => {
         const tr = document.createElement("tr");
@@ -254,7 +284,7 @@ export function initDomMetiers(player) {
       });
     }
 
-    if (isCraft && craftSectionEl) {
+    if ((isCraft || (isHybrid && currentTab === "craft")) && craftSectionEl) {
       renderCraftPanel(def, state, metierId);
     }
   };
@@ -513,6 +543,19 @@ export function initDomMetiers(player) {
     });
 
     renderMetierDetail(currentMetierId);
+    if (tabsEl) {
+      const tabs = tabsEl.querySelectorAll(".metier-tab");
+      tabs.forEach((btn) => {
+        const tab = btn.dataset.tab;
+        if (!tab) return;
+        const activeTab = tabsByMetier[currentMetierId] || "resources";
+        btn.classList.toggle("active", activeTab === tab);
+        btn.onclick = () => {
+          tabsByMetier[currentMetierId] = tab;
+          updatePanel();
+        };
+      });
+    }
   };
 
   // Met à jour l'UI quand le store signale un changement métier.
@@ -532,3 +575,4 @@ export function initDomMetiers(player) {
 
   metiersUiInitialized = true;
 }
+

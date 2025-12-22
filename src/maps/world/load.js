@@ -6,6 +6,7 @@ import {
 } from "../../monsters/index.js";
 import { spawnNpcsForMap } from "../../npc/spawn.js";
 import { spawnTestTrees } from "../../metier/bucheron/trees.js";
+import { spawnTestHerbs } from "../../metier/alchimiste/plants.js";
 import { createMapExits } from "../exits.js";
 import { rebuildCollisionGridFromMap } from "./collision.js";
 import { rebuildDebugGrid } from "./debugGrid.js";
@@ -159,6 +160,14 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
     });
     scene.bucheronNodes = [];
   }
+  if (Array.isArray(scene.alchimisteNodes)) {
+    scene.alchimisteNodes.forEach((node) => {
+      if (node?.hoverHighlight?.destroy) node.hoverHighlight.destroy();
+      node.hoverHighlight = null;
+      if (node?.sprite?.destroy) node.sprite.destroy();
+    });
+    scene.alchimisteNodes = [];
+  }
   if (Array.isArray(scene.staticTrees)) {
     scene.staticTrees.forEach((s) => {
       if (s?.destroy) s.destroy();
@@ -274,6 +283,7 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
   if (mapDef.spawnDefaults) {
     spawnInitialMonsters(scene, map, scene.groundLayer, safeTileX, safeTileY, mapDef);
     spawnTestTrees(scene, map, scene.player, mapDef);
+    spawnTestHerbs(scene, map, scene.player, mapDef);
   }
 
   // Respawns dus uniquement pour cette map (scopés par clé de map).

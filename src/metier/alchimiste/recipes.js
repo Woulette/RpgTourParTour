@@ -1,19 +1,54 @@
-// Recettes d'alchimie.
-// Pour l'instant, on ne définit qu'une structure de base
-// pour servir d'exemple et de point de départ.
-
-export const alchimieRecipes = {
-  // Exemple :
-  // potion_vie_petite: {
-  //   id: "potion_vie_petite",
-  //   label: "Petite potion de vie",
-  //   resultItemId: "potion_vie_petite",
-  //   resultQty: 1,
-  //   costs: {
-  //     herbe_verte: 3,
-  //     fiole_vide: 1,
-  //   },
-  //   requiredLevel: 1,
-  // },
-};
-
+// Recettes d'alchimie (potion/consommable).
+export const alchimieRecipes = [
+  {
+    id: "potion_vie_mineure",
+    label: "Potion de vie mineure",
+    level: 1,
+    category: "potion",
+    inputs: [
+      { itemId: "plante_ortie", qty: 3 },
+      { itemId: "essence_corbeau", qty: 1 },
+    ],
+    output: { itemId: "potion_vie_mineure", qty: 1 },
+    xpGain: 12,
+  },
+  {
+    id: "potion_vie",
+    label: "Potion de vie",
+    level: 10,
+    category: "potion",
+    inputs: [
+      { itemId: "plante_sauge", qty: 3 },
+      { itemId: "plante_ortie", qty: 2 },
+      { itemId: "essence_corbeau", qty: 2 },
+    ],
+    output: { itemId: "potion_vie", qty: 1 },
+    xpGain: 22,
+  },
+  {
+    id: "potion_regen",
+    label: "Potion de regeneration",
+    level: 20,
+    category: "potion",
+    inputs: [
+      { itemId: "plante_menthe", qty: 3 },
+      { itemId: "plante_sauge", qty: 2 },
+      { itemId: "essence_corbeau", qty: 2 },
+    ],
+    output: { itemId: "potion_regen", qty: 1 },
+    xpGain: 36,
+  },
+  {
+    id: "potion_energie",
+    label: "Potion d'energie",
+    level: 30,
+    category: "potion",
+    inputs: [
+      { itemId: "plante_menthe", qty: 4 },
+      { itemId: "essence_corbeau", qty: 3 },
+      { itemId: "poussiere_temporelle", qty: 1 },
+    ],
+    output: { itemId: "potion_energie", qty: 1 },
+    xpGain: 50,
+  },
+];
