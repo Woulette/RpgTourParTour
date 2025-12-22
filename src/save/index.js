@@ -33,6 +33,14 @@ export function listCharacterMetas() {
   return metas;
 }
 
+export function deleteCharacter(characterId) {
+  if (!characterId) return false;
+  const saveFile = loadSaveFile();
+  if (!saveFile?.characters || !saveFile.characters[characterId]) return false;
+  delete saveFile.characters[characterId];
+  return writeSaveFile(saveFile);
+}
+
 export function upsertCharacterMeta(character) {
   if (!character || !character.id) return false;
   const saveFile = loadSaveFile();
@@ -151,4 +159,3 @@ export function applySnapshotToPlayer(player, snapshot) {
     player.recomputeStatsWithEquipment();
   }
 }
-

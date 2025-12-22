@@ -77,6 +77,17 @@ export function startPrep(scene, player, monster, map, groundLayer) {
       spawnMapKey: monster.spawnMapKey ?? scene.currentMapKey ?? null,
       respawnEnabled:
         monster.respawnEnabled === undefined ? true : !!monster.respawnEnabled,
+      respawnTemplate:
+        monster.respawnTemplate && typeof monster.respawnTemplate === "object"
+          ? {
+              groupPool: Array.isArray(monster.respawnTemplate.groupPool)
+                ? monster.respawnTemplate.groupPool.slice()
+                : null,
+              groupSizeMin: monster.respawnTemplate.groupSizeMin ?? null,
+              groupSizeMax: monster.respawnTemplate.groupSizeMax ?? null,
+              forceMixedGroup: monster.respawnTemplate.forceMixedGroup === true,
+            }
+          : null,
       groupId: monster.groupId ?? null,
       groupSize: monster.groupSize ?? null,
       groupLevels: Array.isArray(monster.groupLevels)

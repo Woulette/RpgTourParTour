@@ -423,14 +423,14 @@ export function initDomInventory(player) {
     // Filtre compact (visuel uniquement) : les objets filtrés se rangent en haut à gauche,
     // mais l'inventaire réel (indices) ne bouge pas. Quand on repasse sur "Tout",
     // ils reviennent à leur place.
-    if (currentFilter !== "all") {
+    if (true) {
       const filtered = [];
       for (let i = 0; i < inv.size; i += 1) {
         const slotData = inv.slots[i];
         if (!slotData) continue;
         const def = getItemDef(slotData.itemId);
         const cat = def?.category ?? "inconnu";
-        if (cat === currentFilter) {
+        if (currentFilter === "all" || cat === currentFilter) {
           filtered.push({ realIndex: i, slotData });
         }
       }

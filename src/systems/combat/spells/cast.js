@@ -12,6 +12,7 @@ import { clearSpellRangePreview } from "./preview.js";
 import { isTileAvailableForSpell, getCasterOriginTile } from "./util.js";
 import { canApplyCapture, startCaptureAttempt } from "../summons/capture.js";
 import { getAliveSummon, spawnSummonFromCaptured } from "../summons/summon.js";
+import { registerNoCastMeleeViolation } from "../../../challenges/runtime.js";
 
 function playSpellAnimation(scene, spellId, x, y) {
   if (!scene || !spellId) return;
@@ -38,6 +39,31 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   if (!state) return false;
 
   const isPlayerCaster = state.joueur === caster;
+
+  // Challenge : si le joueur caste alors qu'un ennemi est au corps-à-corps,
+  // on laisse le sort partir mais le challenge est raté (pas de bonus).
+  if (isPlayerCaster) {
+    const v = registerNoCastMeleeViolation(scene, caster);
+    if (v.violated) {
+      if (v.firstTime && state.enCours && state.joueur) {
+        addChatMessage(
+          {
+            kind: "combat",
+            channel: "global",
+            author: "Challenge",
+            text: "Challenge raté : sort lancé au corps à corps.",
+          },
+          { player: state.joueur }
+        );
+      }
+      showFloatingTextOverEntity(scene, caster, "Challenge raté", {
+        color: "#f97316",
+      });
+      if (typeof scene.updateCombatChallengeUi === "function") {
+        scene.updateCombatChallengeUi();
+      }
+    }
+  }
 
   // Pré-checks pour sorts spéciaux (évite de consommer des PA si c'est impossible)
   if (isPlayerCaster && spell?.capture) {

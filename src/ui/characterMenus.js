@@ -1,6 +1,10 @@
 import { classes } from "../config/classes.js";
 import { on as onStore } from "../state/store.js";
-import { listCharacterMetas, upsertCharacterMeta } from "../save/index.js";
+import {
+  deleteCharacter,
+  listCharacterMetas,
+  upsertCharacterMeta,
+} from "../save/index.js";
 
 export function initCharacterMenus({ onStartGame }) {
   const overlayEl = document.getElementById("menu-overlay");
@@ -418,6 +422,39 @@ function renderCarouselMeta() {
     renderCarouselMeta();
   };
 
+  function refreshSelectAfterCharactersChanged() {
+    if (characters.length === 0) {
+      showCreate();
+      return;
+    }
+
+    ensureLayout();
+    screenCreateEl.hidden = true;
+    screenSelectEl.hidden = false;
+
+    btnBackSelect.hidden = true;
+    btnCreate.hidden = true;
+    btnGoCreate.hidden = false;
+    btnPlay.hidden = false;
+
+    renderCharacters();
+
+    const chosen = getSelectedCharacter();
+    const classId = chosen?.classId || "archer";
+    carouselIds = buildCarouselIdsForSelect();
+    ensureCarousel(carouselIds);
+    carouselOrder = carouselIds.slice();
+    if (selectedCharacterId && carouselOrder.includes(selectedCharacterId)) {
+      carouselOrder = [
+        selectedCharacterId,
+        ...carouselOrder.filter((id) => id !== selectedCharacterId),
+      ];
+    }
+    applyCarouselPositions();
+    setPreview(classId, { characterName: chosen?.name || null });
+    renderCarouselMeta();
+  }
+
   const showCreate = () => {
     ensureLayout();
     screenSelectEl.hidden = true;
@@ -483,6 +520,9 @@ function renderCarouselMeta() {
       card.className = "character-card";
       if (c.id === selectedCharacterId) card.classList.add("is-selected");
 
+      const info = document.createElement("div");
+      info.className = "character-info";
+
       const name = document.createElement("div");
       name.className = "character-name";
       name.textContent = c.name || "Joueur";
@@ -492,8 +532,45 @@ function renderCarouselMeta() {
       const classLabel = classes[c.classId]?.label || c.classId;
       meta.textContent = `${classLabel} · Niv. ${c.level ?? 1}`;
 
-      card.appendChild(name);
-      card.appendChild(meta);
+      info.appendChild(name);
+      info.appendChild(meta);
+      card.appendChild(info);
+
+      const actions = document.createElement("div");
+      actions.className = "character-actions";
+
+      const btnDelete = document.createElement("button");
+      btnDelete.type = "button";
+      btnDelete.className = "character-delete";
+      btnDelete.textContent = "Supprimer";
+      btnDelete.setAttribute(
+        "aria-label",
+        `Supprimer le personnage ${c.name || "Joueur"}`
+      );
+      btnDelete.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const label = c.name || "Joueur";
+        const ok = window.confirm(
+          `Supprimer \"${label}\" ?\n\nCette action efface sa sauvegarde locale (irréversible).`
+        );
+        if (!ok) return;
+
+        deleteCharacter(c.id);
+        const idx = characters.findIndex((x) => x && x.id === c.id);
+        if (idx >= 0) characters.splice(idx, 1);
+
+        if (selectedCharacterId === c.id) selectedCharacterId = null;
+        if (window.__andemiaSelectedCharacter?.id === c.id) {
+          window.__andemiaSelectedCharacter = null;
+        }
+
+        refreshSelectAfterCharactersChanged();
+      });
+
+      actions.appendChild(btnDelete);
+      card.appendChild(actions);
 
       card.addEventListener("click", () => {
         selectedCharacterId = c.id;

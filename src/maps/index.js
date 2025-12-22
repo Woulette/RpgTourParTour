@@ -437,6 +437,18 @@ export const maps = {
     ],
     exitBounds: null,
   },
+  MapMairie: {
+    key: "MapMairie",
+    jsonPath: "assets/maps/MapMairie.json",
+    tilesets: [...tilesetNew, entreeDonjonTileset, solTaverneTileset],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: false,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
   MapMaisonAlchimiste: {
     key: "MapMaisonAlchimiste",
     jsonPath: "assets/maps/MapMaisonAlchimiste.json",

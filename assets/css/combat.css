@@ -326,3 +326,152 @@ body.combat-active #combat-turn-order {
   opacity: 0.92;
   white-space: nowrap;
 }
+
+/* --- Challenge combat --- */
+#combat-challenge-panel {
+  position: absolute;
+  pointer-events: auto;
+  display: none;
+  z-index: 8002;
+}
+
+body.combat-active #combat-challenge-panel {
+  display: block;
+}
+
+.combat-challenge-badge {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(7, 16, 30, 0.72);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  user-select: none;
+  cursor: grab;
+}
+
+.combat-challenge-badge:active {
+  cursor: grabbing;
+}
+
+.combat-challenge-tooltip {
+  z-index: 1;
+}
+
+#combat-challenge-panel.is-dragging .combat-challenge-tooltip {
+  opacity: 0 !important;
+  transform: translateY(4px) !important;
+}
+
+/* Badge 1 (challenge #1) plus clair */
+#combat-challenge-panel[data-badge="1"] .combat-challenge-badge {
+  background: rgba(7, 16, 30, 0.52);
+  border-color: rgba(251, 191, 36, 0.32);
+}
+
+/* Indication d'ancrage sur un bord du cadre de jeu */
+#combat-challenge-panel[data-snap] .combat-challenge-badge {
+  box-shadow:
+    0 18px 55px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(251, 191, 36, 0.35);
+}
+
+.combat-challenge-badge-text {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 1000;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.combat-challenge-tooltip {
+  position: absolute;
+  top: 0;
+  left: calc(54px + 10px);
+  width: min(360px, 34vw);
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(7, 16, 30, 0.76);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.96);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+#combat-challenge-panel:hover .combat-challenge-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.combat-challenge-title {
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 6px;
+}
+
+.combat-challenge-name {
+  font-weight: 950;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.combat-challenge-desc {
+  font-size: 12px;
+  opacity: 0.9;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+
+.combat-challenge-progress {
+  font-size: 12px;
+  opacity: 0.92;
+  margin-bottom: 8px;
+}
+
+.combat-challenge-rewards {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 8px;
+}
+
+.combat-challenge-status {
+  display: inline-block;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#combat-challenge-panel[data-status="success"] .combat-challenge-status {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.18);
+}
+
+#combat-challenge-panel[data-status="failed"] .combat-challenge-status {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.18);
+}
+
+/* Feedback visuel sur le badge selon le statut */
+#combat-challenge-panel[data-status="success"] .combat-challenge-badge {
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(34, 197, 94, 0.25);
+}
+
+#combat-challenge-panel[data-status="failed"] .combat-challenge-badge {
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(239, 68, 68, 0.25);
+}

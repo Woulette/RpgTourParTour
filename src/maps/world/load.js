@@ -73,10 +73,13 @@ export function applyCustomLayerDepths(scene) {
     if (!rawName) return false;
     if (rawName.includes("canopy")) return true;
     if (rawName.includes("feuillage")) return true;
-    // Dans certaines maps, le feuillage est directement sur "Calque de Tuiles 5".
-    if (rawName.includes("calque de tuiles 5")) return true;
-    if (rawName.includes("calque") && rawName.includes("tuiles") && rawName.includes("5"))
-      return true;
+    // Dans certaines maps, le feuillage est directement sur un "Calque de Tuiles N"
+    // (souvent 5 ou 6). On considère N >= 5 comme canopy.
+    const m = rawName.match(/calque\s+de\s+tuiles\s*(\d+)/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (!Number.isNaN(n) && n >= 5) return true;
+    }
     return false;
   };
 

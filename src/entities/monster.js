@@ -221,28 +221,11 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
 
       // --- Génération de loot simple lié au monstre ---
       if (killer && killer.inventory && Array.isArray(monster.lootTable)) {
-        cs.loot = cs.loot || [];
-
-        for (const entry of monster.lootTable) {
-          if (!entry || !entry.itemId) continue;
-
-          const dropRate =
-            typeof entry.dropRate === "number" ? entry.dropRate : 1.0;
-          if (Math.random() > dropRate) continue;
-
-          const min = entry.min ?? 1;
-          const max = entry.max ?? min;
-          const qty = Math.max(0, Phaser.Math.Between(min, max));
-          if (qty <= 0) continue;
-
-          // Fusionne dans le tableau de loot du combat
-          let slot = cs.loot.find((l) => l.itemId === entry.itemId);
-          if (!slot) {
-            slot = { itemId: entry.itemId, qty: 0 };
-            cs.loot.push(slot);
-          }
-          slot.qty += qty;
-        }
+        cs.lootSources = cs.lootSources || [];
+        cs.lootSources.push({
+          monsterId: monster.monsterId || null,
+          lootTable: monster.lootTable,
+        });
       }
     }
 

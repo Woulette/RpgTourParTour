@@ -10,6 +10,7 @@ import { monsters as monsterDefs } from "../content/monsters/index.js";
 import { getActiveSpell } from "../systems/combat/spells/activeSpell.js";
 import { tryCastActiveSpellAtTile } from "../systems/combat/spells/cast.js";
 import { updateSpellRangePreview, clearSpellRangePreview } from "../systems/combat/spells/preview.js";
+import { initDomCombatChallenge } from "./domCombatChallenge.js";
 
 export function initDomCombat(scene) {
   const endTurnBtn = document.getElementById("combat-end-turn-button");
@@ -27,6 +28,8 @@ export function initDomCombat(scene) {
   if (!endTurnBtn || !turnLabel) {
     return;
   }
+
+  initDomCombatChallenge(scene);
 
   const getActorName = (actor) => {
     if (!actor) return "-";
@@ -494,6 +497,9 @@ export function initDomCombat(scene) {
     }
     if (typeof scene.updateCombatInspector === "function") {
       scene.updateCombatInspector();
+    }
+    if (typeof scene.updateCombatChallengeUi === "function") {
+      scene.updateCombatChallengeUi();
     }
   };
 

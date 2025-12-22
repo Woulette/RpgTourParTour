@@ -3,6 +3,12 @@
 
 import { items } from "../inventory/itemsConfig.js";
 
+const CHALLENGE_BADGE_LABEL_BY_ID = {
+  hp_70: "1",
+  finish_on_tile: "2",
+  no_cast_melee: "3",
+};
+
 export function initDomCombatResult(scene, player) {
   const overlay = document.getElementById("combat-result-overlay");
   const titleEl = document.getElementById("combat-result-title");
@@ -42,6 +48,25 @@ export function initDomCombatResult(scene, player) {
     levelUpEl.id = "combat-result-levelup";
     levelUpEl.className = "combat-result-levelup combat-result-levelup-hidden";
     panelEl.insertBefore(levelUpEl, titleEl.nextSibling);
+  }
+
+  // Badge challenge (en haut à gauche du bloc "Joueur")
+  let challengeEl = document.getElementById("combat-result-challenge");
+  if (!challengeEl) {
+    const body = overlay.querySelector(".combat-result-body");
+    const firstSection = body ? body.querySelector(".combat-result-section") : null;
+    if (firstSection) {
+      challengeEl = document.createElement("div");
+      challengeEl.id = "combat-result-challenge";
+      challengeEl.className = "combat-result-challenge is-hidden";
+      challengeEl.innerHTML = `
+        <div class="combat-result-challenge-badge" aria-label="Challenge du combat">
+          <span id="combat-result-challenge-number" class="combat-result-challenge-number">?</span>
+          <span id="combat-result-challenge-mark" class="combat-result-challenge-mark">?</span>
+        </div>
+      `;
+      firstSection.insertAdjacentElement("afterbegin", challengeEl);
+    }
   }
 
   if (!lootContainer) {
@@ -208,6 +233,28 @@ export function initDomCombatResult(scene, player) {
 
     // Loot
     renderLoot(result.loot);
+
+    // Challenge badge : 1/2/3 + ✓ vert / ✕ rouge selon succès/échec.
+    if (challengeEl) {
+      const challenge = result.challenge || null;
+      const badgeNumEl = document.getElementById("combat-result-challenge-number");
+      const markEl = document.getElementById("combat-result-challenge-mark");
+
+      if (!challenge || !challenge.id) {
+        challengeEl.classList.add("is-hidden");
+      } else {
+        challengeEl.classList.remove("is-hidden");
+        const num = CHALLENGE_BADGE_LABEL_BY_ID[challenge.id] || "?";
+        if (badgeNumEl) badgeNumEl.textContent = num;
+
+        const status = challenge.status || "active";
+        if (markEl) {
+          markEl.textContent =
+            status === "success" ? "✓" : status === "failed" ? "✕" : "•";
+        }
+        challengeEl.dataset.status = status;
+      }
+    }
 
     // Augmentations (si passage de niveau pendant l'XP de fin de combat)
     if (levelUpEl) {

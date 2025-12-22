@@ -11,6 +11,12 @@ import { addXpToPlayer } from "../../entities/player.js";
 import { clearActiveSpell } from "../../systems/combat/spells/activeSpell.js";
 import { queueMonsterRespawn } from "../../monsters/respawnState.js";
 import { createMonster } from "../../entities/monster.js";
+import {
+  cleanupCombatChallenge,
+  finalizeCombatChallenge,
+  getChallengeBonusesIfSuccessful,
+  initCombatChallenge,
+} from "../../challenges/runtime.js";
 
 function joinPartsWrapped(parts, maxLineLength = 70) {
   const safeMax = Math.max(20, maxLineLength | 0);
@@ -64,6 +70,17 @@ function snapshotMonsterForWorld(scene, monster) {
     spawnMapKey: monster.spawnMapKey ?? scene.currentMapKey ?? null,
     respawnEnabled:
       monster.respawnEnabled === undefined ? true : !!monster.respawnEnabled,
+    respawnTemplate:
+      monster.respawnTemplate && typeof monster.respawnTemplate === "object"
+        ? {
+            groupPool: Array.isArray(monster.respawnTemplate.groupPool)
+              ? monster.respawnTemplate.groupPool.slice()
+              : null,
+            groupSizeMin: monster.respawnTemplate.groupSizeMin ?? null,
+            groupSizeMax: monster.respawnTemplate.groupSizeMax ?? null,
+            forceMixedGroup: monster.respawnTemplate.forceMixedGroup === true,
+          }
+        : null,
     groupId: monster.groupId ?? null,
     groupSize: monster.groupSize ?? null,
     groupLevels: Array.isArray(monster.groupLevels)
@@ -99,6 +116,42 @@ function applyLootToPlayerInventory(player, loot) {
   }
 
   return finalLoot;
+}
+
+function clampNonNegativeFinite(n) {
+  return typeof n === "number" && Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
+function rollLootFromSources(lootSources, dropMultiplier = 1) {
+  const sources = Array.isArray(lootSources) ? lootSources : [];
+  const mult = clampNonNegativeFinite(dropMultiplier) || 1;
+
+  const aggregated = [];
+
+  sources.forEach((src) => {
+    const table = Array.isArray(src?.lootTable) ? src.lootTable : [];
+    table.forEach((entry) => {
+      if (!entry || !entry.itemId) return;
+
+      const baseRate = typeof entry.dropRate === "number" ? entry.dropRate : 1.0;
+      const finalRate = Math.min(1, Math.max(0, baseRate * mult));
+      if (Math.random() > finalRate) return;
+
+      const min = entry.min ?? 1;
+      const max = entry.max ?? min;
+      const qty = Math.max(0, Phaser.Math.Between(min, max));
+      if (qty <= 0) return;
+
+      let slot = aggregated.find((l) => l.itemId === entry.itemId);
+      if (!slot) {
+        slot = { itemId: entry.itemId, qty: 0 };
+        aggregated.push(slot);
+      }
+      slot.qty += qty;
+    });
+  });
+
+  return aggregated;
 }
 
 function restoreWorldMonsterFromSnapshot(scene, snapshot, fallbackRef) {
@@ -153,6 +206,16 @@ function restoreWorldMonsterFromSnapshot(scene, snapshot, fallbackRef) {
     fallbackRef.respawnEnabled =
       snapshot.respawnEnabled === undefined ? true : !!snapshot.respawnEnabled;
     fallbackRef.spawnMapKey = snapshot.spawnMapKey ?? scene.currentMapKey ?? null;
+    if (snapshot.respawnTemplate && typeof snapshot.respawnTemplate === "object") {
+      fallbackRef.respawnTemplate = {
+        groupPool: Array.isArray(snapshot.respawnTemplate.groupPool)
+          ? snapshot.respawnTemplate.groupPool.slice()
+          : null,
+        groupSizeMin: snapshot.respawnTemplate.groupSizeMin ?? null,
+        groupSizeMax: snapshot.respawnTemplate.groupSizeMax ?? null,
+        forceMixedGroup: snapshot.respawnTemplate.forceMixedGroup === true,
+      };
+    }
     if (typeof snapshot.level === "number") fallbackRef.level = snapshot.level;
     if (snapshot.groupId != null) fallbackRef.groupId = snapshot.groupId;
     if (typeof snapshot.groupSize === "number") fallbackRef.groupSize = snapshot.groupSize;
@@ -193,6 +256,16 @@ function restoreWorldMonsterFromSnapshot(scene, snapshot, fallbackRef) {
   recreated.respawnEnabled =
     snapshot.respawnEnabled === undefined ? true : !!snapshot.respawnEnabled;
   recreated.spawnMapKey = snapshot.spawnMapKey ?? scene.currentMapKey ?? null;
+  if (snapshot.respawnTemplate && typeof snapshot.respawnTemplate === "object") {
+    recreated.respawnTemplate = {
+      groupPool: Array.isArray(snapshot.respawnTemplate.groupPool)
+        ? snapshot.respawnTemplate.groupPool.slice()
+        : null,
+      groupSizeMin: snapshot.respawnTemplate.groupSizeMin ?? null,
+      groupSizeMax: snapshot.respawnTemplate.groupSizeMax ?? null,
+      forceMixedGroup: snapshot.respawnTemplate.forceMixedGroup === true,
+    };
+  }
   if (typeof snapshot.level === "number") recreated.level = snapshot.level;
   if (snapshot.groupId != null) recreated.groupId = snapshot.groupId;
   if (typeof snapshot.groupSize === "number") recreated.groupSize = snapshot.groupSize;
@@ -249,6 +322,9 @@ export function startCombat(scene, player, monster) {
   // Construit l'ordre de tour multi‑acteurs (joueur + monstres).
   buildTurnOrder(scene);
 
+  // Challenge : tirage aléatoire au début du combat.
+  initCombatChallenge(scene);
+
   if (scene && typeof scene.updateCombatUi === "function") {
     scene.updateCombatUi();
   }
@@ -262,6 +338,7 @@ export function endCombat(scene) {
   state.enCours = false;
 
   clearAllSummons(scene);
+  cleanupCombatChallenge(scene);
 
   // Nettoie les effets temporaires restants sur le joueur
   if (state.joueur) {
@@ -293,6 +370,9 @@ export function endCombat(scene) {
       issue = "inconnu";
     }
   }
+
+  // Challenge : finalise pour avoir un statut stable (success/failed) dans le résultat UI.
+  finalizeCombatChallenge(scene, { issue });
 
   const player = state.joueur;
   const levelBefore = player?.levelState?.niveau ?? 1;
@@ -327,7 +407,19 @@ export function endCombat(scene) {
   if (issue === "victoire") {
     xpGagne = state.xpGagne || 0;
     goldGagne = state.goldGagne || 0;
-    lootGagne = applyLootToPlayerInventory(player, state.loot || []);
+
+    const { ok: challengeOk, xpBonusPct, dropBonusPct } =
+      getChallengeBonusesIfSuccessful(scene, { issue });
+
+    // XP bonus (avant sagesse/level up).
+    if (challengeOk && xpGagne > 0) {
+      xpGagne = Math.round(xpGagne * (1 + xpBonusPct));
+    }
+
+    // Loot : roll en fin de combat, avec bonus de drop si challenge réussi.
+    const dropMult = 1 + (challengeOk ? dropBonusPct : 0);
+    const lootRolls = rollLootFromSources(state.lootSources || [], dropMult);
+    lootGagne = applyLootToPlayerInventory(player, lootRolls);
 
     if (player && typeof addXpToPlayer === "function" && xpGagne > 0) {
       addXpToPlayer(player, xpGagne);
@@ -377,6 +469,12 @@ export function endCombat(scene) {
     playerXpNext: player?.levelState?.xpProchain ?? 0,
     monsterId: state.worldMonsterSnapshot?.monsterId || state.monstre?.monsterId || null,
     monsterHpEnd: state.monstre?.stats?.hp ?? 0,
+    challenge: state.challenge
+      ? {
+          id: state.challenge.id || null,
+          status: state.challenge.status || "active",
+        }
+      : null,
   };
 
   // Chat (général) : récap XP/or en fin de combat.
