@@ -80,7 +80,7 @@ const craftTableCordonnierTileset = {
 const craftTableAlchimisteTileset = {
   name: "TableDeAlchimiste",
   imageKey: "TableDeAlchimiste",
-  imagePath: "assets/tableDeAlchimiste.png",
+  imagePath: "assets/TableDeAlchimiste.png",
   frameWidth: 60,
   frameHeight: 60,
 };
