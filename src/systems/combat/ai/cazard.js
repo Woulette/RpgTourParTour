@@ -4,6 +4,7 @@ import {
   canCastSpell,
   canCastSpellOnTile,
 } from "../../../core/spellSystem.js";
+import { showFloatingTextOverEntity } from "../../../core/combat/floatingText.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 import {
   delay,
