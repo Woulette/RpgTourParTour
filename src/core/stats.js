@@ -19,8 +19,8 @@ export const baseStats = {
   hp: 50,
 
   // Ressources d'action
-  pa: 6, // Points d'action de base
-  pm: 3, // Points de mouvement de base
+  pa: 12, // Points d'action de base
+  pm: 6, // Points de mouvement de base
 };
 
 // Crée un objet stats en partant du modèle, avec éventuellement des overrides

@@ -15,9 +15,9 @@ export default {
   },
   projectile_epineux: {
     id: "projectile_epineux",
-    label: "Projectile épineux",
+    label: "Projectile epineux",
     paCost: 4,
-    rangeMin: 2,
+    rangeMin: 1,
     rangeMax: 4,
     lineOfSight: true,
     zone: "cell",
@@ -25,7 +25,6 @@ export default {
     damageMin: 10,
     damageMax: 14,
     cooldownTurns: 2,
-    description: "Lance un projectile à moyenne portée (2-4 PO).",
+    description: "Lance un projectile a moyenne portee (1-4 PO).",
   },
 };
-

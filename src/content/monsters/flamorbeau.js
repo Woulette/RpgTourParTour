@@ -1,5 +1,6 @@
 export default {
   id: "flamorbeau",
+  familyId: "corbeau",
   label: "Flamorbeau",
   textureKey: "flamorbeau",
   spritePath: "assets/monsters/corbeau/animation/corbeauWalkSouthWestRed.png",
@@ -24,7 +25,14 @@ export default {
     { itemId: "plume_corbeau", min: 1, max: 1, dropRate: 0.5 },
     { itemId: "patte_corbeau", min: 1, max: 1, dropRate: 0.5 },
     { itemId: "bec_corbeau", min: 1, max: 1, dropRate: 0.4 },
-    { itemId: "essence_corbeau", min: 1, max: 1, dropRate: 0.1 },
+    {
+      itemId: "essence_corbeau",
+      min: 1,
+      max: 1,
+      dropRate: 0.1,
+      requiresJob: "alchimiste",
+      minJobLevel: 1,
+    },
     { itemId: "poussiere_temporelle", min: 1, max: 1, dropRate: 0.03 },
     { itemId: "coiffe_corbeau_feu", min: 1, max: 1, dropRate: 0.04 },
     { itemId: "cape_corbeau_feu", min: 1, max: 1, dropRate: 0.04 },

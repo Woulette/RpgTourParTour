@@ -393,6 +393,35 @@ export const maps = {
     ],
     exitBounds: null,
   },
+  MapAndemiaNouvelleVersion6: {
+    key: "MapAndemiaNouvelleVersion6",
+    // Au-dessus de MapAndemiaNouvelleVersion3 (-1,-1).
+    worldPos: { x: -1, y: -2 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion6.json",
+    tilesets: [...tilesetNew],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [
+      {
+        groupPool: ["cazard", "gumgob"],
+        groupSizeMin: 1,
+        groupSizeMax: 3,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: -4, y: -6 },
+      },
+      {
+        groupPool: ["cazard", "gumgob"],
+        groupSizeMin: 1,
+        groupSizeMax: 3,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: 5, y: 5 },
+      },
+    ],
+    treePositions: [],
+    exitBounds: null,
+  },
   MapAndemiaNouvelleVersion4: {
     key: "MapAndemiaNouvelleVersion4",
     // À gauche de MapAndemiaNouvelleVersion3 (-1,-1).
@@ -417,7 +446,22 @@ export const maps = {
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,
-    monsterSpawns: [],
+    monsterSpawns: [
+      {
+        groupPool: ["cazard", "gumgob"],
+        groupSizeMin: 1,
+        groupSizeMax: 3,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: -3, y: 4 },
+      },
+      {
+        groupPool: ["cazard", "gumgob"],
+        groupSizeMin: 1,
+        groupSizeMax: 3,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: 4, y: -5 },
+      },
+    ],
     treePositions: [],
     exitBounds: null,
   },

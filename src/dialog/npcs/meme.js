@@ -8,15 +8,14 @@ export const memeDialog = {
         [QUEST_STATES.IN_PROGRESS]: {
           sequence: [
             {
-              text: "…Tu es pâle. Encore un nouveau, hein ?",
-              choice: "Papi m’a envoyé…",
+              text: "Tu es pale. Encore un nouveau, hein ?",
+              choice: "Papi m'a envoye",
             },
             {
               text:
-                "Respire.\n" +
-                "Ici, le monde n’obéit plus aux mêmes règles.\n" +
-                "On appelle ça la fracture.",
-              choice: "La fracture…",
+                "Respire. Ici, le monde n'obéit plus aux memes regles.\n" +
+                "On appelle ca la fracture.",
+              choice: "La fracture ?",
               closeOnChoice: false,
             },
           ],
@@ -26,7 +25,7 @@ export const memeDialog = {
         [QUEST_STATES.COMPLETED]: {
           text:
             "Bien. Tu tiens debout.\n" +
-            "Reviens me voir si tu sens que la fracture te “tire” à l’intérieur.",
+            "Reviens me voir si tu sens que la fracture te tire a l'interieur.",
           choice: "Je continue.",
         },
       },
@@ -38,42 +37,42 @@ export const memeDialog = {
           sequence: [
             {
               text:
-                "Avant de te raconter des histoires, je veux voir si tu sais te défendre.\n" +
-                "Dehors, des corbeaux rôdent. Ils sont plus agressifs depuis la fracture.",
-              choice: "Je peux gérer.",
+                "Avant de te raconter des histoires, je veux voir si tu sais te defendre.\n" +
+                "Dehors, des corbeaux rodent. Ils sont plus agressifs depuis la fracture.",
+              choice: "Je peux gerer.",
             },
             {
-              text: "Ramène-moi 2 becs et 3 plumes de corbeau.",
-              choice: "J’y vais.",
+              text: "Ramene-moi 2 becs et 3 plumes de corbeau.",
+              choice: "J'y vais.",
             },
           ],
         },
         [QUEST_STATES.IN_PROGRESS]: {
           text: "Il me faut 2 becs et 3 plumes de corbeau.\nReviens quand tu les as.",
-          choice: "Je m’en occupe.",
+          choice: "Je m'en occupe.",
         },
         [DIALOG_STATES.READY_TO_TURN_IN]: {
           sequence: [
             {
               text:
                 "Bien. Ton regard est plus clair.\n" +
-                "Ici, tout le monde apprend vite… ou disparaît.\n" +
-                "Très bien. Avec ça, on va pouvoir commencer à faire quelque chose.",
-              choice: "D’accord…",
+                "Ici, tout le monde apprend vite ou disparait.\n" +
+                "Avec ca, on va pouvoir commencer a faire quelque chose.",
+              choice: "D'accord.",
             },
             {
               text:
-                "Mais avant… va voir l’alchimiste du village.\n" +
-                "Il se trouve à l’ouest.",
-              choice: "C’est fait.",
+                "Mais avant, va voir l'alchimiste du village.\n" +
+                "Il se trouve a l'ouest.",
+              choice: "C'est fait.",
             },
           ],
         },
       },
       __default: {
         [QUEST_STATES.COMPLETED]: {
-          text: "Tu progresses. On parlera du reste quand tu seras prêt.",
-          choice: "À plus tard.",
+          text: "Tu progresses. On parlera du reste quand tu seras pret.",
+          choice: "A plus tard.",
         },
       },
     },
@@ -84,18 +83,27 @@ export const memeDialog = {
           sequence: [
             {
               text:
-                "Tu reviens de chez l’alchimiste ?\n" +
-                "Bien. On va pouvoir passer à l’étape suivante.",
+                "Tu reviens de chez l'alchimiste ?\n" +
+                "Bien. On va pouvoir passer a l'etape suivante.",
               choice: "Oui.",
             },
             {
               text:
-                "Avec ce que tu as récupéré sur les corbeaux, je peux enfin te montrer l’essentiel.",
-              choice: "Je t’écoute.",
+                "Avec ce que tu as recupere sur les corbeaux, je peux te montrer l'essentiel.",
+              choice: "Je t'ecoute.",
             },
           ],
         },
       },
+      __default: {
+        [QUEST_STATES.COMPLETED]: {
+          text: "Tu progresses. Reviens me voir quand tu seras pret.",
+          choice: "A plus tard.",
+        },
+      },
+    },
+
+    andemia_intro_4: {
       craft_panoplie_corbeau: {
         [QUEST_STATES.IN_PROGRESS]: {
           sequence: [
@@ -103,36 +111,37 @@ export const memeDialog = {
               text:
                 "Fabrique une panoplie du Corbeau :\n" +
                 "coiffe, cape, amulette, ceinture, bottes et anneau.\n" +
-                "Peu importe l’élément, du moment que c’est une panoplie du Corbeau.",
-              choice: "Je m’en occupe.",
+                "Peu importe l'element, du moment que c'est une panoplie du Corbeau.",
+              choice: "Je m'en occupe.",
             },
           ],
         },
         [DIALOG_STATES.READY_TO_TURN_IN]: {
           sequence: [
             {
-              text: "Parfait. Tu as compris l’idée : transformer le butin en équipement.",
-              choice: "Voilà.",
+              text:
+                "Parfait. Tu as compris l'idee : transformer le butin en equipement.",
+              choice: "Voila.",
             },
             {
               text:
-                "On peut maintenant avancer… et tu vas vite voir que la fracture ne pardonne pas.\n" +
-                "Reviens me voir quand tu seras prêt(e) pour la suite.",
-              choice: "D’accord.",
+                "On peut maintenant avancer, et tu vas vite voir que la fracture ne pardonne pas.\n" +
+                "Reviens me voir quand tu seras pret(e) pour la suite.",
+              choice: "D'accord.",
             },
           ],
         },
       },
       __default: {
         [QUEST_STATES.COMPLETED]: {
-          text: "Tu progresses. On parlera du reste quand tu seras prêt.",
-          choice: "À plus tard.",
+          text: "Tu progresses. On parlera du reste quand tu seras pret.",
+          choice: "A plus tard.",
         },
       },
     },
   },
   generic: {
     text: "Bonjour, mon petit.",
-    choice: "À plus tard.",
+    choice: "A plus tard.",
   },
 };

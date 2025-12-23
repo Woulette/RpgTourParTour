@@ -30,4 +30,12 @@ export const alchimisteDefinition = {
       xpGain: 30,
     },
   ],
+  drops: [
+    {
+      id: "essence_corbeau",
+      name: "Essence de corbeau",
+      level: 1,
+      sources: "Corbeaux",
+    },
+  ],
 };

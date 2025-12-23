@@ -13,5 +13,12 @@ export const achievementPacks = [
     ],
     rewardAchievementId: "chapitre1_global",
   },
+  {
+    id: "pack_maire_chasses",
+    category: "quetes",
+    title: "Ordres du maire",
+    description: "Une serie d'objectifs donnes par le maire.",
+    objectiveAchievementIds: ["maire_etape_1_corbeaux", "maire_global"],
+    rewardAchievementId: "maire_global",
+  },
 ];
-

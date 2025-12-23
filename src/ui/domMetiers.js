@@ -93,6 +93,7 @@ export function initDomMetiers(player) {
         <div class="metier-tabs" id="metier-tabs" style="display:none; gap:8px; margin-top:8px;">
           <button type="button" class="metier-tab" data-tab="resources">Ressources</button>
           <button type="button" class="metier-tab" data-tab="craft">Recettes</button>
+          <button type="button" class="metier-tab" data-tab="drops">Drops</button>
         </div>
         <section class="metier-resources" id="metier-resources-section">
           <h4 class="metier-resources-title">Ressources récoltables</h4>
@@ -106,6 +107,19 @@ export function initDomMetiers(player) {
               </tr>
             </thead>
             <tbody id="metier-resources-body"></tbody>
+          </table>
+        </section>
+        <section class="metier-drops" id="metier-drops-section" style="display:none;">
+          <h4 class="metier-resources-title">Drops rÇ¸servÇ¸s</h4>
+          <table class="metier-resources-table">
+            <thead>
+              <tr>
+                <th>Ressource</th>
+                <th>Niveau</th>
+                <th>Monstres</th>
+              </tr>
+            </thead>
+            <tbody id="metier-drops-body"></tbody>
           </table>
         </section>
         <section class="metier-craft" id="metier-craft-section" style="display:none; gap:10px; flex-direction:column;">
@@ -128,6 +142,8 @@ export function initDomMetiers(player) {
 
   const resourcesBodyEl = detailEl.querySelector("#metier-resources-body");
   const resourcesSectionEl = detailEl.querySelector("#metier-resources-section");
+  const dropsSectionEl = detailEl.querySelector("#metier-drops-section");
+  const dropsBodyEl = detailEl.querySelector("#metier-drops-body");
   const craftSectionEl = detailEl.querySelector("#metier-craft-section");
   const tabsEl = detailEl.querySelector("#metier-tabs");
   const craftFiltersEl = detailEl.querySelector("#metier-craft-filters");
@@ -234,8 +250,16 @@ export function initDomMetiers(player) {
 
     const isCraft = def.type === "craft";
     const isHybrid = def.type === "hybrid";
+    const hasDrops = Array.isArray(def.drops) && def.drops.length > 0;
     const showTabs = !!tabsEl && isHybrid;
-    const currentTab = tabsByMetier[metierId] || (isCraft ? "craft" : "resources");
+    let currentTab = tabsByMetier[metierId] || (isCraft ? "craft" : "resources");
+    if (currentTab === "drops" && !hasDrops) {
+      currentTab = "resources";
+    }
+    if (isCraft && !isHybrid) {
+      currentTab = "craft";
+    }
+    tabsByMetier[metierId] = currentTab;
     if (showTabs) {
       tabsEl.style.display = "flex";
     } else if (tabsEl) {
@@ -246,15 +270,16 @@ export function initDomMetiers(player) {
       craftSelectedByMetier[metierId] = null;
     }
     if (resourcesSectionEl) {
-      resourcesSectionEl.style.display =
-        isCraft || (isHybrid && currentTab === "craft") ? "none" : "block";
+      resourcesSectionEl.style.display = currentTab === "resources" ? "block" : "none";
     }
     if (craftSectionEl) {
-      craftSectionEl.style.display =
-        isCraft || (isHybrid && currentTab === "craft") ? "flex" : "none";
+      craftSectionEl.style.display = currentTab === "craft" ? "flex" : "none";
+    }
+    if (dropsSectionEl) {
+      dropsSectionEl.style.display = currentTab === "drops" ? "block" : "none";
     }
 
-    if ((!isCraft && currentTab !== "craft") && resourcesBodyEl) {
+    if (currentTab === "resources" && resourcesBodyEl) {
       resourcesBodyEl.innerHTML = "";
       (def.resources || []).forEach((res) => {
         const tr = document.createElement("tr");
@@ -284,7 +309,32 @@ export function initDomMetiers(player) {
       });
     }
 
-    if ((isCraft || (isHybrid && currentTab === "craft")) && craftSectionEl) {
+    if (currentTab === "drops" && dropsBodyEl) {
+      dropsBodyEl.innerHTML = "";
+      (def.drops || []).forEach((drop) => {
+        const tr = document.createElement("tr");
+
+        const nameTd = document.createElement("td");
+        nameTd.className = "metier-resource-name";
+        nameTd.textContent = drop.name;
+
+        const levelTd = document.createElement("td");
+        levelTd.className = "metier-resource-level";
+        levelTd.textContent = `Niv. ${drop.level}`;
+
+        const sourceTd = document.createElement("td");
+        sourceTd.className = "metier-resource-quantity";
+        sourceTd.textContent = drop.sources || "-";
+
+        tr.appendChild(nameTd);
+        tr.appendChild(levelTd);
+        tr.appendChild(sourceTd);
+
+        dropsBodyEl.appendChild(tr);
+      });
+    }
+
+    if (currentTab === "craft" && craftSectionEl) {
       renderCraftPanel(def, state, metierId);
     }
   };
@@ -544,10 +594,17 @@ export function initDomMetiers(player) {
 
     renderMetierDetail(currentMetierId);
     if (tabsEl) {
+      const def = METIERS_BY_ID[currentMetierId];
+      const hasDrops = Array.isArray(def?.drops) && def.drops.length > 0;
       const tabs = tabsEl.querySelectorAll(".metier-tab");
       tabs.forEach((btn) => {
         const tab = btn.dataset.tab;
         if (!tab) return;
+        if (tab === "drops") {
+          btn.style.display = hasDrops ? "inline-flex" : "none";
+        } else {
+          btn.style.display = "inline-flex";
+        }
         const activeTab = tabsByMetier[currentMetierId] || "resources";
         btn.classList.toggle("active", activeTab === tab);
         btn.onclick = () => {

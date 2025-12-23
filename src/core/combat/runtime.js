@@ -123,7 +123,13 @@ function clampNonNegativeFinite(n) {
   return typeof n === "number" && Number.isFinite(n) ? Math.max(0, n) : 0;
 }
 
-function rollLootFromSources(lootSources, dropMultiplier = 1) {
+function getJobLevel(player, jobId) {
+  if (!player || !jobId) return 0;
+  const level = player.metiers?.[jobId]?.level;
+  return typeof level === "number" && level > 0 ? level : 0;
+}
+
+function rollLootFromSources(lootSources, dropMultiplier = 1, player = null) {
   const sources = Array.isArray(lootSources) ? lootSources : [];
   const mult = clampNonNegativeFinite(dropMultiplier) || 1;
 
@@ -133,6 +139,13 @@ function rollLootFromSources(lootSources, dropMultiplier = 1) {
     const table = Array.isArray(src?.lootTable) ? src.lootTable : [];
     table.forEach((entry) => {
       if (!entry || !entry.itemId) return;
+
+      const requiredJob = entry.requiresJob;
+      if (requiredJob) {
+        const minLevel =
+          typeof entry.minJobLevel === "number" ? entry.minJobLevel : 1;
+        if (getJobLevel(player, requiredJob) < minLevel) return;
+      }
 
       const baseRate = typeof entry.dropRate === "number" ? entry.dropRate : 1.0;
       const finalRate = Math.min(1, Math.max(0, baseRate * mult));
@@ -427,7 +440,7 @@ export function endCombat(scene) {
 
     // Loot : roll en fin de combat, avec bonus de drop si challenge réussi.
     const dropMult = 1 + (challengeOk ? dropBonusPct : 0);
-    const lootRolls = rollLootFromSources(state.lootSources || [], dropMult);
+    const lootRolls = rollLootFromSources(state.lootSources || [], dropMult, player);
     lootGagne = applyLootToPlayerInventory(player, lootRolls);
 
     if (player && typeof addXpToPlayer === "function" && xpGagne > 0) {

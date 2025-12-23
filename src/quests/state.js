@@ -1,4 +1,5 @@
 import { QUEST_STATES, quests } from "./catalog.js";
+import { monsters } from "../content/monsters/index.js";
 import { emit as emitStoreEvent } from "../state/store.js";
 import { addChatMessage } from "../chat/chat.js";
 import { items as itemDefs } from "../inventory/itemsConfig.js";
@@ -12,6 +13,23 @@ function ensureQuestContainer(player) {
 
 function resetStageProgress(state) {
   state.progress = { currentCount: 0, crafted: {} };
+}
+
+function getMonsterFamilyId(monsterId) {
+  if (!monsterId) return null;
+  const def = monsters?.[monsterId];
+  return def?.familyId || null;
+}
+
+function isMonsterObjectiveMatch(objective, monsterId) {
+  if (!objective || !monsterId) return false;
+  const targetId = objective.monsterId;
+  const targetFamily = objective.monsterFamily;
+  const familyId = getMonsterFamilyId(monsterId);
+  if (targetId && targetId === monsterId) return true;
+  if (targetId && familyId && targetId === familyId) return true;
+  if (targetFamily && familyId && targetFamily === familyId) return true;
+  return false;
 }
 
 function getQuestStageByIndex(questDef, stageIndex = 0) {
@@ -121,7 +139,7 @@ export function incrementKillProgress(scene, player, questId, monsterId) {
   if (!stage || !stage.objective || stage.objective.type !== "kill_monster") {
     return;
   }
-  if (stage.objective.monsterId !== monsterId) return;
+  if (!isMonsterObjectiveMatch(stage.objective, monsterId)) return;
 
   const required = stage.objective.requiredCount || 1;
   const current = state.progress.currentCount || 0;
@@ -148,7 +166,7 @@ export function incrementKillProgressForAll(scene, player, monsterId) {
     if (!stage || !stage.objective || stage.objective.type !== "kill_monster") {
       return;
     }
-    if (stage.objective.monsterId !== monsterId) return;
+    if (!isMonsterObjectiveMatch(stage.objective, monsterId)) return;
 
     const required = stage.objective.requiredCount || 1;
     const current = state.progress?.currentCount || 0;

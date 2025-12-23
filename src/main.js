@@ -312,9 +312,10 @@ class MainScene extends Phaser.Scene {
       // --- PLANTES DE TEST (METIER ALCHIMISTE) ---
       spawnTestHerbs(this, map, this.player, mapDef);
 
-      // --- PNJ ---
-      spawnNpcsForMap(this, map, groundLayer, mapDef.key);
     }
+
+    // --- PNJ (toujours, même si spawnDefaults=false) ---
+    spawnNpcsForMap(this, map, groundLayer, mapDef.key);
 
     // --- GRILLE ISO (DEBUG) ---
     const grid = rebuildDebugGrid(this, map, groundLayer, mapLayers);
