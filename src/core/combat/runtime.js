@@ -487,7 +487,7 @@ export function endCombat(scene) {
     pointsCaracGagnes,
     pvMaxGagnes,
     playerLevel: player?.levelState?.niveau ?? 1,
-    playerXpTotal: player?.levelState?.xp ?? 0,
+    playerXpTotal: player?.levelState?.xpTotal ?? player?.levelState?.xp ?? 0,
     playerXpNext: player?.levelState?.xpProchain ?? 0,
     monsterId: state.worldMonsterSnapshot?.monsterId || state.monstre?.monsterId || null,
     monsterHpEnd: state.monstre?.stats?.hp ?? 0,

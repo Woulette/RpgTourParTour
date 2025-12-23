@@ -4,6 +4,7 @@
 // - Repartition des points de caracteristiques (force, intel, agi, chance, vita)
 
 import { classes } from "../config/classes.js";
+import { getXpTotalForLevel } from "../core/level.js";
 
 export function initDomHud(player) {
   const statsButtonEl = document.getElementById("hud-stats-button");
@@ -131,14 +132,22 @@ function mettreAJourStatsPanel(player) {
 
   // Niveau / XP
   const xp = level.xp ?? 0;
-  const xpNext = level.xpProchain ?? 0;
+  const xpTotal = typeof level.xpTotal === "number" ? level.xpTotal : xp;
+  const xpNextTotal = level.xpProchain ?? 0;
+  const levelStartTotal = getXpTotalForLevel(level.niveau ?? 1);
+  const xpNeeded = Math.max(0, xpNextTotal - levelStartTotal);
   setText("stat-level", level.niveau ?? 1);
-  setText("stat-xp", xp);
-  setText("stat-xp-next", xpNext);
+  setText("stat-xp", xpTotal);
+  setText("stat-xp-next", xpNextTotal);
   const xpFill = byId("stat-xp-fill");
   if (xpFill) {
-    const ratio = xpNext > 0 ? Math.max(0, Math.min(1, xp / xpNext)) : 0;
+    const ratio = xpNeeded > 0 ? Math.max(0, Math.min(1, xp / xpNeeded)) : 0;
     xpFill.style.width = `${Math.round(ratio * 100)}%`;
+  }
+  const statsPanelEl = byId("hud-stats-panel");
+  const xpTooltip = byId("stat-xp-tooltip");
+  if (xpTooltip) {
+    xpTooltip.textContent = `${xp} / ${xpNeeded}`;
   }
 
   // PV / Initiative
@@ -195,7 +204,8 @@ function initStatControls(player) {
     player.levelState = {
       niveau: 1,
       xp: 0,
-      xpProchain: 50,
+      xpTotal: 0,
+      xpProchain: getXpTotalForLevel(2),
       pointsCaracLibres: 0,
     };
   }
@@ -206,7 +216,8 @@ function initStatControls(player) {
       player.levelState = {
         niveau: 1,
         xp: 0,
-        xpProchain: 50,
+        xpTotal: 0,
+        xpProchain: getXpTotalForLevel(2),
         pointsCaracLibres: 0,
       };
     }

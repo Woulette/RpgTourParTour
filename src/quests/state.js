@@ -1,6 +1,7 @@
 import { QUEST_STATES, quests } from "./catalog.js";
 import { monsters } from "../content/monsters/index.js";
 import { emit as emitStoreEvent } from "../state/store.js";
+import { addXpToPlayer } from "../entities/player.js";
 import { addChatMessage } from "../chat/chat.js";
 import { items as itemDefs } from "../inventory/itemsConfig.js";
 
@@ -12,7 +13,7 @@ function ensureQuestContainer(player) {
 }
 
 function resetStageProgress(state) {
-  state.progress = { currentCount: 0, crafted: {} };
+  state.progress = { currentCount: 0, crafted: {}, kills: {} };
 }
 
 function getMonsterFamilyId(monsterId) {
@@ -136,20 +137,48 @@ export function incrementKillProgress(scene, player, questId, monsterId) {
   if (state.state !== QUEST_STATES.IN_PROGRESS) return;
 
   const stage = getCurrentQuestStage(questDef, state);
-  if (!stage || !stage.objective || stage.objective.type !== "kill_monster") {
+  if (!stage || !stage.objective) return;
+  const objective = stage.objective;
+
+  if (objective.type === "kill_monster") {
+    if (!isMonsterObjectiveMatch(objective, monsterId)) return;
+
+    const required = objective.requiredCount || 1;
+    const current = state.progress.currentCount || 0;
+    const next = Math.min(required, current + 1);
+
+    state.progress.currentCount = next;
+    emitStoreEvent("quest:updated", { questId, state });
+
+    if (next >= required) {
+      advanceQuestStage(player, questId, { scene });
+    }
     return;
   }
-  if (!isMonsterObjectiveMatch(stage.objective, monsterId)) return;
 
-  const required = stage.objective.requiredCount || 1;
-  const current = state.progress.currentCount || 0;
-  const next = Math.min(required, current + 1);
+  if (objective.type === "kill_monsters") {
+    const list = Array.isArray(objective.monsters) ? objective.monsters : [];
+    if (list.length === 0) return;
+    const target = list.find((entry) => isMonsterObjectiveMatch(entry, monsterId));
+    if (!target) return;
 
-  state.progress.currentCount = next;
-  emitStoreEvent("quest:updated", { questId, state });
+    state.progress = state.progress || {};
+    state.progress.kills = state.progress.kills || {};
+    const current = state.progress.kills[target.monsterId] || 0;
+    const required = target.requiredCount || 1;
+    const next = Math.min(required, current + 1);
+    state.progress.kills[target.monsterId] = next;
+    emitStoreEvent("quest:updated", { questId, state });
 
-  if (next >= required) {
-    advanceQuestStage(player, questId, { scene });
+    const done = list.every((entry) => {
+      if (!entry || !entry.monsterId) return false;
+      const req = entry.requiredCount || 1;
+      const cur = state.progress.kills[entry.monsterId] || 0;
+      return cur >= req;
+    });
+    if (done) {
+      advanceQuestStage(player, questId, { scene });
+    }
   }
 }
 
@@ -163,21 +192,49 @@ export function incrementKillProgressForAll(scene, player, monsterId) {
     if (state.state !== QUEST_STATES.IN_PROGRESS) return;
 
     const stage = getCurrentQuestStage(questDef, state);
-    if (!stage || !stage.objective || stage.objective.type !== "kill_monster") {
+    if (!stage || !stage.objective) return;
+    const objective = stage.objective;
+
+    if (objective.type === "kill_monster") {
+      if (!isMonsterObjectiveMatch(objective, monsterId)) return;
+
+      const required = objective.requiredCount || 1;
+      const current = state.progress?.currentCount || 0;
+      const next = Math.min(required, current + 1);
+
+      state.progress = state.progress || {};
+      state.progress.currentCount = next;
+      emitStoreEvent("quest:updated", { questId: questDef.id, state });
+
+      if (next >= required) {
+        advanceQuestStage(player, questDef.id, { scene });
+      }
       return;
     }
-    if (!isMonsterObjectiveMatch(stage.objective, monsterId)) return;
 
-    const required = stage.objective.requiredCount || 1;
-    const current = state.progress?.currentCount || 0;
-    const next = Math.min(required, current + 1);
+    if (objective.type === "kill_monsters") {
+      const list = Array.isArray(objective.monsters) ? objective.monsters : [];
+      if (list.length === 0) return;
+      const target = list.find((entry) => isMonsterObjectiveMatch(entry, monsterId));
+      if (!target) return;
 
-    state.progress = state.progress || {};
-    state.progress.currentCount = next;
-    emitStoreEvent("quest:updated", { questId: questDef.id, state });
+      state.progress = state.progress || {};
+      state.progress.kills = state.progress.kills || {};
+      const current = state.progress.kills[target.monsterId] || 0;
+      const required = target.requiredCount || 1;
+      const next = Math.min(required, current + 1);
+      state.progress.kills[target.monsterId] = next;
+      emitStoreEvent("quest:updated", { questId: questDef.id, state });
 
-    if (next >= required) {
-      advanceQuestStage(player, questDef.id, { scene });
+      const done = list.every((entry) => {
+        if (!entry || !entry.monsterId) return false;
+        const req = entry.requiredCount || 1;
+        const cur = state.progress.kills[entry.monsterId] || 0;
+        return cur >= req;
+      });
+      if (done) {
+        advanceQuestStage(player, questDef.id, { scene });
+      }
     }
   });
 }
@@ -272,11 +329,8 @@ export function completeQuest(scene, player, questId) {
   const xp = rewards.xpPlayer || 0;
   const gold = rewards.gold || 0;
 
-  if (!player.levelState) {
-    player.levelState = { xp: 0 };
-  }
   if (xp > 0) {
-    player.levelState.xp = (player.levelState.xp || 0) + xp;
+    addXpToPlayer(player, xp);
   }
 
   if (!player.gold) {

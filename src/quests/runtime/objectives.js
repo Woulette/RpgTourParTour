@@ -34,6 +34,18 @@ export function isTurnInReadyAtNpc(player, questDef, state, stage, npcId) {
     return current >= required;
   }
 
+  if (objective.type === "kill_monsters") {
+    const list = Array.isArray(objective.monsters) ? objective.monsters : [];
+    if (list.length === 0) return false;
+    const kills = state.progress?.kills || {};
+    return list.every((entry) => {
+      if (!entry || !entry.monsterId) return false;
+      const required = entry.requiredCount || 1;
+      const current = kills[entry.monsterId] || 0;
+      return current >= required;
+    });
+  }
+
   if (objective.type === "deliver_item") {
     const required = objective.qty || 1;
     const current = countItemInInventory(player, objective.itemId);
@@ -155,6 +167,20 @@ export function tryTurnInStage(scene, player, questId, questDef, state, stage) {
     const required = objective.requiredCount || 1;
     const current = state.progress?.currentCount || 0;
     if (current < required) return { ok: false, reason: "not_complete" };
+    return { ok: true, consumed: [] };
+  }
+
+  if (objective.type === "kill_monsters") {
+    const list = Array.isArray(objective.monsters) ? objective.monsters : [];
+    if (list.length === 0) return { ok: false, reason: "not_complete" };
+    const kills = state.progress?.kills || {};
+    const complete = list.every((entry) => {
+      if (!entry || !entry.monsterId) return false;
+      const required = entry.requiredCount || 1;
+      const current = kills[entry.monsterId] || 0;
+      return current >= required;
+    });
+    if (!complete) return { ok: false, reason: "not_complete" };
     return { ok: true, consumed: [] };
   }
 

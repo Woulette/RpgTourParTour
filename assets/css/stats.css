@@ -131,7 +131,8 @@ body.hud-stats-open #hud-stats-panel {
   background: rgba(10, 18, 32, 0.85);
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 }
 
 .stats-xp-fill {
@@ -139,6 +140,29 @@ body.hud-stats-open #hud-stats-panel {
   width: 0%;
   background: linear-gradient(90deg, #5a8bff, #8ac6ff);
   transition: width 0.25s ease;
+}
+
+.stats-xp-tooltip {
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.45rem;
+  border-radius: 8px;
+  background: rgba(10, 18, 32, 0.95);
+  border: 1px solid rgba(120, 160, 255, 0.45);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  color: #e7ecff;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  white-space: nowrap;
+}
+
+.stats-xp-bar:hover .stats-xp-tooltip {
+  opacity: 1;
 }
 
 .stats-tabs {

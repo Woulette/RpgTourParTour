@@ -5,6 +5,17 @@ import { isTileBlocked } from "../collision/collisionGrid.js";
 import { getRespawnsForMap, setRespawnsForMap } from "./respawnState.js";
 import { createStats } from "../core/stats.js";
 
+function rollMonsterLevel(monsterId) {
+  const def = monsters[monsterId] || null;
+  const baseLevel = typeof def?.baseLevel === "number" ? def.baseLevel : 1;
+  const levelMin = typeof def?.levelMin === "number" ? def.levelMin : baseLevel;
+  const levelMax =
+    typeof def?.levelMax === "number" ? def.levelMax : Math.max(levelMin, 4);
+  const lo = Math.min(levelMin, levelMax);
+  const hi = Math.max(levelMin, levelMax);
+  return Phaser.Math.Between(lo, hi);
+}
+
 function syncMonsterStatsToDisplayedLevel(monster) {
   if (!monster) return;
   const def = monsters[monster.monsterId] || null;
@@ -164,9 +175,7 @@ export function processPendingRespawnsForCurrentMap(scene) {
         }
 
         monster.groupMonsterIds = groupMonsterIds;
-        monster.groupLevels = Array.from({ length: monster.groupSize }, () =>
-          Phaser.Math.Between(1, 4)
-        );
+        monster.groupLevels = groupMonsterIds.map((id) => rollMonsterLevel(id));
         monster.level = monster.groupLevels[0];
         syncMonsterStatsToDisplayedLevel(monster);
         monster.groupLevelTotal = monster.groupLevels.reduce((s, v) => s + v, 0);
@@ -354,9 +363,7 @@ export function spawnInitialMonsters(
       monster.groupMonsterIds = Array.from({ length: monster.groupSize }, () => type);
     }
 
-    monster.groupLevels = Array.from({ length: monster.groupSize }, () =>
-      Phaser.Math.Between(1, 4)
-    );
+    monster.groupLevels = monster.groupMonsterIds.map((id) => rollMonsterLevel(id));
 
     if (pool.length > 0) {
       monster.respawnTemplate = {

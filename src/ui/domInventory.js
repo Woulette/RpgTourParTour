@@ -22,6 +22,7 @@ export function initDomInventory(player) {
   const typeEl = document.getElementById("inventory-item-type");
   const bonusEl = document.getElementById("inventory-item-bonus");
   const descEl = document.getElementById("inventory-item-desc");
+  const requiredEl = document.getElementById("inventory-item-required");
   let iconEl = document.getElementById("inventory-item-icon");
 
   // Sous‑composants pour l'encadré de bonus : onglets Objet / Panoplie + texte
@@ -110,6 +111,7 @@ export function initDomInventory(player) {
     }
     if (nameEl) nameEl.textContent = "-";
     if (typeEl) typeEl.textContent = "";
+    if (requiredEl) requiredEl.textContent = "";
     lastObjectBonusText = "";
     lastSetBonusText = "";
     applyBonusText();
@@ -366,6 +368,19 @@ export function initDomInventory(player) {
       const cleanedSetText = rawSetText.replace(/^Panoplie\s*:\s*/i, "");
       lastSetBonusText = decorateBonusHtml(cleanedSetText);
       applyBonusText();
+    }
+
+    // Zone niveau requis : uniquement pour l'equipement
+    if (requiredEl) {
+      let levelValue = null;
+      if (def && def.category === "equipement") {
+        levelValue =
+          typeof def.requiredLevel === "number" ? def.requiredLevel : 1;
+      } else if (def && typeof def.level === "number") {
+        levelValue = def.level;
+      }
+      requiredEl.textContent =
+        typeof levelValue === "number" ? `Niv. ${levelValue}` : "";
     }
 
     // Zone description : uniquement la description libre

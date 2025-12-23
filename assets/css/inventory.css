@@ -301,6 +301,7 @@ body.hud-inventory-open #hud-inventory-panel {
 
   min-height: 240px;
   max-height: 260px;
+  position: relative;
 }
 
 /* Nom de l'objet : en haut, ne change plus la hauteur de la fiche */
@@ -454,6 +455,15 @@ body.hud-inventory-open #hud-inventory-panel {
 .inventory-bonus-text {
   flex: 1 1 auto;
   margin-top: -1.5rem;  /* remonte le bloc, mais laisse un peu d'espace sous "Bonus objet :" */
+}
+
+#inventory-item-required {
+  position: absolute;
+  top: 10px;
+  left: 17px;
+  font-size: clamp(14px, 1.4vw, 24px);
+  font-weight: 700;
+  opacity: 0.85;
 }
 
 /* --- Surcharge : cadre fixe pour la zone de description --- */

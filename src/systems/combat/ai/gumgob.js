@@ -178,7 +178,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
       moveAlong(scene, state, monster, map, groundLayer, pathToCast, () => {
         tryCast(ranged);
 
-        const pathBack =
+        const pathBackFull =
           findPathToReachAdjacentToTarget(
             scene,
             map,
@@ -186,10 +186,11 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
             monster.tileY ?? my,
             px,
             py,
-            state.pmRestants,
+            60,
             monster
           ) || [];
-        const pathBackTiles = pathBack.length > 0 ? pathBack.slice(0, state.pmRestants ?? 0) : [];
+        const pathBackTiles =
+          pathBackFull.length > 0 ? pathBackFull.slice(0, state.pmRestants ?? 0) : [];
         moveAlong(scene, state, monster, map, groundLayer, pathBackTiles, tryMeleeAfterMove);
       });
       return;
@@ -215,7 +216,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
       moveAlong(scene, state, monster, map, groundLayer, pathToCast, () => {
         tryCast(ranged);
 
-        const pathToMelee =
+        const pathToMeleeFull =
           findPathToReachAdjacentToTarget(
             scene,
             map,
@@ -223,10 +224,11 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
             monster.tileY ?? my,
             px,
             py,
-            state.pmRestants,
+            60,
             monster
           ) || [];
-        const pathTiles = pathToMelee.length > 0 ? pathToMelee.slice(0, state.pmRestants ?? 0) : [];
+        const pathTiles =
+          pathToMeleeFull.length > 0 ? pathToMeleeFull.slice(0, state.pmRestants ?? 0) : [];
         moveAlong(scene, state, monster, map, groundLayer, pathTiles, tryMeleeAfterMove);
       });
       return;

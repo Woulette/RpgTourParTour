@@ -125,6 +125,10 @@ export function equipFromInventory(player, inventory, inventorySlotIndex) {
 
   const def = getItemDef(slot.itemId);
   if (!def || def.category !== "equipement") return false;
+  const playerLevel = player?.levelState?.niveau ?? 1;
+  const requiredLevel =
+    typeof def.requiredLevel === "number" ? def.requiredLevel : 1;
+  if (playerLevel < requiredLevel) return false;
 
   const equipSlot = def.slot;
   if (!equipSlot) return false;

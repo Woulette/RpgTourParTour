@@ -42,18 +42,18 @@ export const maireDialog = {
       },
     },
     maire_cazard_1: {
-      kill_cazards: {
+      kill_cazard_gumgobs: {
         [QUEST_STATES.NOT_STARTED]: {
           sequence: [
             {
               text:
-                "Les cazards sont devenus dangereux. Elimine-en 4.",
+                "Les cazards sont devenus dangereux. Elimine-en 3, et 2 gumgobs.",
               choice: "J'y vais.",
             },
           ],
         },
         [QUEST_STATES.IN_PROGRESS]: {
-          text: "Il me faut 4 cazards elimines.",
+          text: "Il me faut 3 cazards et 2 gumgobs elimines.",
           choice: "J'y retourne.",
         },
       },

@@ -1,6 +1,7 @@
 import { loadSaveFile, writeSaveFile } from "./storage.js";
 import { createPlayerInventory } from "../inventory/inventoryContainers.js";
 import { createEmptyEquipment } from "../inventory/equipmentCore.js";
+import { normalizeLevelState } from "../core/level.js";
 
 function cloneJson(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -114,7 +115,9 @@ export function applySnapshotToPlayer(player, snapshot) {
   player.displayName = snapshot.name || player.displayName || "Joueur";
   if (snapshot.classId) player.classId = snapshot.classId;
 
-  if (snapshot.levelState) player.levelState = cloneJson(snapshot.levelState);
+  if (snapshot.levelState) {
+    player.levelState = normalizeLevelState(cloneJson(snapshot.levelState));
+  }
   if (snapshot.baseStats) player.baseStats = cloneJson(snapshot.baseStats);
 
   player.gold = Number.isFinite(snapshot.gold) ? snapshot.gold : player.gold ?? 0;

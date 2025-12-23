@@ -13,6 +13,20 @@ function pickObjectiveText(stage, state, questDef, player) {
     const current = state.progress?.currentCount || 0;
     return `${objective.label}: ${current}/${required}`;
   }
+  if (objective && objective.type === "kill_monsters") {
+    const list = Array.isArray(objective.monsters) ? objective.monsters : [];
+    if (list.length === 0) return stage?.description || questDef?.description || "";
+    const kills = state.progress?.kills || {};
+    const parts = list
+      .filter((entry) => entry && entry.monsterId)
+      .map((entry) => {
+        const required = entry.requiredCount || 1;
+        const current = Math.min(required, kills[entry.monsterId] || 0);
+        const label = entry.label || entry.monsterId;
+        return `${label}: ${current}/${required}`;
+      });
+    return parts.join(" | ");
+  }
   if (objective && objective.type === "talk_to_npc") {
     const required = objective.requiredCount || 1;
     const current = Math.min(required, state.progress?.currentCount || 0);

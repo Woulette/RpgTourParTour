@@ -18,7 +18,11 @@ export const achievementPacks = [
     category: "quetes",
     title: "Ordres du maire",
     description: "Une serie d'objectifs donnes par le maire.",
-    objectiveAchievementIds: ["maire_etape_1_corbeaux", "maire_global"],
+    objectiveAchievementIds: [
+      "maire_etape_1_corbeaux",
+      "maire_etape_2_cazard",
+      "maire_global",
+    ],
     rewardAchievementId: "maire_global",
   },
 ];

@@ -407,14 +407,14 @@ export const maps = {
       {
         groupPool: ["cazard", "gumgob"],
         groupSizeMin: 1,
-        groupSizeMax: 3,
+        groupSizeMax: 4,
         forceMixedGroup: true,
         offsetFromCenter: { x: -4, y: -6 },
       },
       {
         groupPool: ["cazard", "gumgob"],
         groupSizeMin: 1,
-        groupSizeMax: 3,
+        groupSizeMax: 4,
         forceMixedGroup: true,
         offsetFromCenter: { x: 5, y: 5 },
       },
@@ -436,6 +436,35 @@ export const maps = {
     treePositions: [],
     exitBounds: null,
   },
+  MapAndemiaNouvelleVersion7: {
+    key: "MapAndemiaNouvelleVersion7",
+    // Au-dessus de MapAndemiaNouvelleVersion4 (-2,-1).
+    worldPos: { x: -2, y: -2 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion7.json",
+    tilesets: [...tilesetNew],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [
+      {
+        groupPool: ["cazard", "gumgob"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: -4, y: -6 },
+      },
+      {
+        groupPool: ["cazard", "gumgob"],
+        groupSizeMin: 1,
+        groupSizeMax: 4,
+        forceMixedGroup: true,
+        offsetFromCenter: { x: 5, y: 5 },
+      },
+    ],
+    treePositions: [],
+    exitBounds: null,
+  },
   MapAndemiaNouvelleVersion5: {
     key: "MapAndemiaNouvelleVersion5",
     // À gauche de MapAndemiaNouvelleVersion4 (-2,-1).
@@ -450,16 +479,16 @@ export const maps = {
       {
         groupPool: ["cazard", "gumgob"],
         groupSizeMin: 1,
-        groupSizeMax: 3,
+        groupSizeMax: 4,
         forceMixedGroup: true,
-        offsetFromCenter: { x: -3, y: 4 },
+        offsetFromCenter: { x: -2, y: 4 },
       },
       {
         groupPool: ["cazard", "gumgob"],
         groupSizeMin: 1,
-        groupSizeMax: 3,
+        groupSizeMax: 4,
         forceMixedGroup: true,
-        offsetFromCenter: { x: 4, y: -5 },
+        offsetFromCenter: { x: 2, y: -5 },
       },
     ],
     treePositions: [],
