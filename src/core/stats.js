@@ -3,10 +3,10 @@
 
 export const baseStats = {
   // Caractéristiques principales
-  force: 50,
-  intelligence: 50,
-  agilite: 50,
-  chance: 50,
+  force: 0,
+  intelligence: 0,
+  agilite: 0,
+  chance: 0,
   // Puissance : bonus générique de dégâts (équivaut à +1 sur force/intel/agi/chance
   // uniquement pour le calcul des dégâts, sans donner les effets secondaires).
   puissance: 0,
@@ -19,8 +19,8 @@ export const baseStats = {
   hp: 50,
 
   // Ressources d'action
-  pa: 12, // Points d'action de base
-  pm: 6, // Points de mouvement de base
+  pa: 6, // Points d'action de base
+  pm: 3, // Points de mouvement de base
 };
 
 // Crée un objet stats en partant du modèle, avec éventuellement des overrides
