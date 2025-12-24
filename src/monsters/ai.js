@@ -3,6 +3,7 @@ import { runTurn as runCorbeauTurn } from "../systems/combat/ai/corbeau.js";
 import { runTurn as runAluineeksTurn } from "../systems/combat/ai/aluineeks.js";
 import { runTurn as runGoushTurn } from "../systems/combat/ai/goush.js";
 import { runTurn as runLiburionTurn } from "../systems/combat/ai/liburion.js";
+import { runTurn as runLibareneTurn } from "../systems/combat/ai/libarene.js";
 import { runTurn as runCazardTurn } from "../systems/combat/ai/cazard.js";
 import { runTurn as runCedreTurn } from "../systems/combat/ai/cedre.js";
 import { runTurn as runGumgobTurn } from "../systems/combat/ai/gumgob.js";
@@ -18,6 +19,7 @@ const AI_HANDLERS = {
   senbone: runAluineeksTurn,
   goush: runGoushTurn,
   liburion: runLiburionTurn,
+  libarene: runLibareneTurn,
   cazard: runCazardTurn,
   cedre: runCedreTurn,
   gumgob: runGumgobTurn,
@@ -66,8 +68,6 @@ export function runMonsterTurn(scene) {
 
   // On passe officiellement au tour du monstre courant
   state.tour = "monstre";
-  state.paRestants = monster.stats?.pa ?? state.paBaseMonstre;
-  state.pmRestants = monster.stats?.pm ?? state.pmBaseMonstre;
 
   if (typeof scene.updateCombatUi === "function") {
     scene.updateCombatUi();

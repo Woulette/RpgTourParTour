@@ -8,6 +8,9 @@ export default {
     originY: 1,
     offsetY: 0,
   },
+  baseLevel: 10,
+  levelMin: 7,
+  levelMax: 11,
   statsOverrides: {
     hpMax: 80,
     hp: 80,
@@ -16,9 +19,9 @@ export default {
     force: 20,
     initiative: 6,
   },
-  spells: ["ronce", "seve_toxique"],
+  spells: ["aura_cedre", "souffle_cedre"],
   loot: [],
-  xpReward: 190,
+  xpReward: 290,
   goldRewardMin: 28,
   goldRewardMax: 70,
 };

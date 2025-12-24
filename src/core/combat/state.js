@@ -280,6 +280,42 @@ function tickSpellCooldowns(entity) {
   });
 }
 
+function applyShieldToDamage(entity, damage) {
+  if (!entity || !Array.isArray(entity.statusEffects)) {
+    return { damage, absorbed: 0 };
+  }
+  let remaining = Math.max(0, damage);
+  let absorbed = 0;
+  let touched = false;
+
+  entity.statusEffects.forEach((effect) => {
+    if (!effect || effect.type !== "shield") return;
+    if ((effect.turnsLeft ?? 0) <= 0) return;
+    if (remaining <= 0) return;
+    const amount = typeof effect.amount === "number" ? effect.amount : 0;
+    if (amount <= 0) return;
+    const used = Math.min(amount, remaining);
+    effect.amount = amount - used;
+    remaining -= used;
+    absorbed += used;
+    touched = true;
+    if (effect.amount <= 0) {
+      effect.turnsLeft = 0;
+    }
+  });
+
+  if (touched) {
+    entity.statusEffects = entity.statusEffects.filter(
+      (effect) =>
+        effect &&
+        (effect.type !== "shield" ||
+          ((effect.turnsLeft ?? 0) > 0 && (effect.amount ?? 0) > 0))
+    );
+  }
+
+  return { damage: remaining, absorbed };
+}
+
 function applyStartOfTurnStatusEffects(scene, entity) {
   const state = scene?.combatState;
   if (!state || !state.enCours || !entity || !entity.stats) return;
@@ -287,6 +323,15 @@ function applyStartOfTurnStatusEffects(scene, entity) {
   const effects = Array.isArray(entity.statusEffects) ? entity.statusEffects : [];
   if (effects.length === 0) return;
 
+  const pmBonus = effects.reduce((sum, effect) => {
+    if (!effect || (effect.turnsLeft ?? 0) <= 0) return sum;
+    if (effect.type !== "pm") return sum;
+    const amount = typeof effect.amount === "number" ? effect.amount : 0;
+    return sum + amount;
+  }, 0);
+  const basePm =
+    typeof entity.stats?.pm === "number" ? entity.stats.pm : state.pmRestants ?? 0;
+  state.pmRestants = Math.max(0, basePm + pmBonus);
   const keep = [];
   for (const effect of effects) {
     if (!effect || (effect.turnsLeft ?? 0) <= 0) continue;
@@ -304,8 +349,11 @@ function applyStartOfTurnStatusEffects(scene, entity) {
     const min = typeof effect.damageMin === "number" ? effect.damageMin : 0;
     const max = typeof effect.damageMax === "number" ? effect.damageMax : min;
     const safeMax = max >= min ? max : min;
-    const dmg =
+    const rawDmg =
       min + Math.floor(Math.random() * (Math.max(0, safeMax - min) + 1));
+
+    const shielded = applyShieldToDamage(entity, rawDmg);
+    const dmg = Math.max(0, shielded.damage);
 
     const currentHp =
       typeof entity.stats.hp === "number"
@@ -399,3 +447,5 @@ function applyStartOfTurnStatusEffects(scene, entity) {
 
   entity.statusEffects = keep;
 }
+
+

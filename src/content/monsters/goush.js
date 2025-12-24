@@ -8,9 +8,12 @@ export default {
     originY: 1,
     offsetY: 0,
   },
+  baseLevel: 8,
+  levelMin: 6,
+  levelMax: 9,
   statsOverrides: {
-    hpMax: 40,
-    hp: 40,
+    hpMax: 70,
+    hp: 70,
     pa: 7,
     pm: 3,
     force: 24,
@@ -18,8 +21,7 @@ export default {
   },
   spells: ["morsure", "bave_puante"],
   loot: [],
-  xpReward: 110,
+  xpReward: 220,
   goldRewardMin: 18,
   goldRewardMax: 40,
 };
-

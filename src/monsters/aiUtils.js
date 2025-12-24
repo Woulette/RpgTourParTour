@@ -243,6 +243,36 @@ export function findPathToReachAdjacentToTarget(
     return dist === 1;
   };
 
+  const others = getAliveCombatMonsters(scene).filter((m) => m && m !== self);
+  const candidatePaths = [];
+  let bestLen = null;
+
+  const scoreTile = (x, y) => {
+    let occupiedNeighbors = 0;
+    for (const { dx, dy } of dirs) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+      if (isTileBlocked(scene, nx, ny)) {
+        occupiedNeighbors += 1;
+        continue;
+      }
+      if (isTileOccupiedByMonster(scene, nx, ny, self)) {
+        occupiedNeighbors += 1;
+      }
+    }
+
+    let minDist = 99;
+    for (const m of others) {
+      if (typeof m.tileX !== "number" || typeof m.tileY !== "number") continue;
+      const d = Math.abs(m.tileX - x) + Math.abs(m.tileY - y);
+      if (d < minDist) minDist = d;
+    }
+
+    // Plus le score est haut, mieux c'est.
+    return minDist * 10 - occupiedNeighbors * 5;
+  };
+
   while (queue.length > 0) {
     const current = queue.shift();
     const { x, y, path } = current;
@@ -251,10 +281,17 @@ export function findPathToReachAdjacentToTarget(
       continue;
     }
 
-    // On consid��re qu'on a trouvǸ une bonne case de contact
-    // uniquement si on a effectuǸ au moins un pas
+    if (bestLen !== null && path.length > bestLen) {
+      break;
+    }
+
+    // On considere qu'on a trouve une bonne case de contact
+    // uniquement si on a effectue au moins un pas
     if (path.length > 0 && isGoal(x, y)) {
-      return path;
+      const score = scoreTile(x, y);
+      candidatePaths.push({ path, score });
+      if (bestLen === null) bestLen = path.length;
+      continue;
     }
 
     for (const { dx, dy } of dirs) {
@@ -267,7 +304,7 @@ export function findPathToReachAdjacentToTarget(
       const key = `${nx},${ny}`;
       if (visited.has(key)) continue;
 
-      // Case occupǸe par un autre monstre : on ne peut pas marcher dessus
+      // Case occupee par un autre monstre : on ne peut pas marcher dessus
       if (isTileBlocked(scene, nx, ny)) continue;
       if (isTileOccupiedByMonster(scene, nx, ny, self)) continue;
 
@@ -281,6 +318,9 @@ export function findPathToReachAdjacentToTarget(
     }
   }
 
-  // Aucun chemin trouvǸ pour atteindre une case adjacente
-  return null;
+  if (!candidatePaths.length) return null;
+
+  candidatePaths.sort((a, b) => b.score - a.score);
+  return candidatePaths[0].path;
 }
+

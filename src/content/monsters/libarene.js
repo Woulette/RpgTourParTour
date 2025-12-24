@@ -1,0 +1,27 @@
+export default {
+  id: "libarene",
+  label: "Libarene",
+  textureKey: "libarene",
+  spritePath: "assets/monsters/Libarene/rotations/south-west.png",
+  render: {
+    originX: 0.6,
+    originY: 0.85,
+    offsetY: 0,
+  },
+  baseLevel: 12,
+  levelMin: 10,
+  levelMax: 14,
+  statsOverrides: {
+    hpMax: 80,
+    hp: 80,
+    pa: 7,
+    pm: 4,
+    intelligence: 22,
+    initiative: 8,
+  },
+  spells: ["taille_libarene", "griffure_libarene"],
+  loot: [],
+  xpReward: 360,
+  goldRewardMin: 16,
+  goldRewardMax: 36,
+};

@@ -14,5 +14,35 @@ export default {
     maxCastsPerTurn: 2,
     description: "Un eclat en ligne, a moyenne portee.",
   },
+  rugissement: {
+    id: "rugissement",
+    label: "Rugissement",
+    paCost: 4,
+    rangeMin: 0,
+    rangeMax: 0,
+    lineOfSight: false,
+    zone: "cell",
+    cooldownTurns: 3,
+    maxCastsPerTurn: 1,
+    areaBuff: {
+      radius: 2,
+      effects: [
+        {
+          id: "rugissement_puissance",
+          type: "puissance",
+          amount: 20,
+          turns: 2,
+          label: "+20 Puissance",
+        },
+        {
+          id: "rugissement_bouclier",
+          type: "shield",
+          percent: 0.2,
+          turns: 2,
+          label: "Bouclier",
+        },
+      ],
+    },
+    description: "Boost alliés (+20 puissance) et bouclier sur soi.",
+  },
 };
-

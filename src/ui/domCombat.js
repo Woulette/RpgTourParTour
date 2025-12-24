@@ -21,6 +21,7 @@ export function initDomCombat(scene) {
   const targetPanelNameEl = document.getElementById("combat-target-name");
   const targetPanelHpTextEl = document.getElementById("combat-target-hp-text");
   const targetPanelHpFillEl = document.getElementById("combat-target-hp-fill");
+  const targetPanelShieldFillEl = document.getElementById("combat-target-shield-fill");
   const targetPanelPaEl = document.getElementById("combat-target-pa");
   const targetPanelPmEl = document.getElementById("combat-target-pm");
   const targetPanelEl = document.getElementById("combat-target-panel");
@@ -449,7 +450,16 @@ export function initDomCombat(scene) {
     const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
     const hpMax = typeof stats.hpMax === "number" ? stats.hpMax : hp;
     const pa = stats.pa ?? 0;
-    const pm = stats.pm ?? 0;
+    const basePm = stats.pm ?? 0;
+    const pmBonus = Array.isArray(target.statusEffects)
+      ? target.statusEffects.reduce((sum, effect) => {
+          if (!effect || (effect.turnsLeft ?? 0) <= 0) return sum;
+          if (effect.type !== "pm") return sum;
+          const amount = typeof effect.amount === "number" ? effect.amount : 0;
+          return sum + amount;
+        }, 0)
+      : 0;
+    const pm = basePm + pmBonus;
 
     if (targetPanelNameEl) {
       targetPanelNameEl.textContent =
@@ -457,14 +467,33 @@ export function initDomCombat(scene) {
           ? `${name} - Niv. ${targetLevel}`
           : name;
     }
-    if (targetPanelHpTextEl)
-      targetPanelHpTextEl.textContent = `PV : ${hp}/${hpMax}`;
+    const shieldAmount = Array.isArray(target.statusEffects)
+      ? target.statusEffects.reduce((sum, effect) => {
+          if (!effect || (effect.turnsLeft ?? 0) <= 0) return sum;
+          if (effect.type !== "shield") return sum;
+          const amount = typeof effect.amount === "number" ? effect.amount : 0;
+          return sum + amount;
+        }, 0)
+      : 0;
+
+    if (targetPanelHpTextEl) {
+      targetPanelHpTextEl.textContent =
+        shieldAmount > 0
+          ? `PV : ${hp}/${hpMax} | Bouclier : ${shieldAmount}`
+          : `PV : ${hp}/${hpMax}`;
+    }
     if (targetPanelPaEl) targetPanelPaEl.textContent = String(pa);
     if (targetPanelPmEl) targetPanelPmEl.textContent = String(pm);
 
     const pct = hpMax > 0 ? Math.max(0, Math.min(1, hp / hpMax)) : 0;
     if (targetPanelHpFillEl) {
       targetPanelHpFillEl.style.width = `${Math.round(pct * 100)}%`;
+    }
+    if (targetPanelShieldFillEl) {
+      const totalMax = hpMax + shieldAmount;
+      const shieldPct =
+        totalMax > 0 ? Math.max(0, Math.min(1, shieldAmount / totalMax)) : 0;
+      targetPanelShieldFillEl.style.width = `${Math.round(shieldPct * 100)}%`;
     }
 
     if (targetPanelEl) {

@@ -5,6 +5,7 @@ import ondoreau from "./ondoreau.js";
 import aluineeks from "./aluineeks.js";
 import goush from "./goush.js";
 import liburion from "./liburion.js";
+import libarene from "./libarene.js";
 import cazard from "./cazard.js";
 import cedre from "./cedre.js";
 import gumgob from "./gumgob.js";
@@ -17,6 +18,7 @@ export const monsterSpells = {
   aluineeks,
   goush,
   liburion,
+  libarene,
   cazard,
   cedre,
   gumgob,

@@ -4,11 +4,13 @@ import {
   canCastSpellOnTile,
   isSpellInRangeFromPosition,
 } from "../../../core/spellSystem.js";
+import { hasLineOfSight } from "../../../systems/combat/spells/util.js";
 import { showFloatingTextOverEntity } from "../../../core/combat/floatingText.js";
 import {
   moveMonsterAlongPath,
   isTileOccupiedByMonster,
   chooseStepTowardsTarget,
+  getAliveCombatMonsters,
   delay,
 } from "../../../monsters/aiUtils.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
@@ -72,8 +74,6 @@ function findPathToTile(scene, map, fromX, fromY, toX, toY, maxNodes = 120, self
 
 // IA du Liburion : lanceur en ligne (2-4 PO), puis fuite après attaque.
 export function runTurn(scene, state, monster, player, map, groundLayer, onComplete) {
-  let pmRestants = state.pmRestants ?? 0;
-
   if (typeof monster.tileX !== "number" || typeof monster.tileY !== "number") {
     const t = map.worldToTileXY(monster.x, monster.y, true, undefined, undefined, groundLayer);
     if (t) {
@@ -100,18 +100,85 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
   const libuSpells = monsterSpells.liburion || {};
   const eclat = libuSpells.eclat;
+  const rugissement = libuSpells.rugissement;
+
+  const getMonsterTile = () => ({
+    x: typeof monster.tileX === "number" ? monster.tileX : mx,
+    y: typeof monster.tileY === "number" ? monster.tileY : my,
+  });
+
+  const hasLosToPlayer = (tx, ty) =>
+    typeof tx === "number" &&
+    typeof ty === "number" &&
+    hasLineOfSight(scene, tx, ty, px, py);
+
+  const countAlliesInRadius = (cx, cy, radius) => {
+    const list = getAliveCombatMonsters(scene);
+    let count = 0;
+    for (const m of list) {
+      if (!m || m === monster) continue;
+      if (typeof m.tileX !== "number" || typeof m.tileY !== "number") continue;
+      const d = Math.abs(m.tileX - cx) + Math.abs(m.tileY - cy);
+      if (d <= radius) count += 1;
+    }
+    return count;
+  };
+
+  const buildReachableTiles = (startX, startY, maxSteps) => {
+    const results = [];
+    const queue = [{ x: startX, y: startY, path: [] }];
+    const visited = new Set([`${startX},${startY}`]);
+
+    const dirs = [
+      { dx: 1, dy: 0 },
+      { dx: -1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: 0, dy: -1 },
+    ];
+
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      results.push(cur);
+      if (cur.path.length >= maxSteps) continue;
+
+      for (const dir of dirs) {
+        const nx = cur.x + dir.dx;
+        const ny = cur.y + dir.dy;
+        if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
+        const key = `${nx},${ny}`;
+        if (visited.has(key)) continue;
+        if (isTileBlocked(scene, nx, ny)) continue;
+        if (isTileOccupiedByMonster(scene, nx, ny, monster)) continue;
+        visited.add(key);
+        queue.push({ x: nx, y: ny, path: [...cur.path, { x: nx, y: ny }] });
+      }
+    }
+
+    return results;
+  };
 
   const isInRange = (tx, ty) => {
     if (!eclat) return false;
     return isSpellInRangeFromPosition(eclat, tx, ty, px, py);
   };
 
-  const tryCast = () => {
+  const tryCastEclat = () => {
     if (!eclat) return false;
     const st = scene.combatState;
     if (!st || !st.enCours) return false;
+    const pos = getMonsterTile();
+    if (!hasLosToPlayer(pos.x, pos.y)) return false;
     if (!canCastSpellOnTile(scene, monster, eclat, px, py, map)) return false;
     return castSpellAtTile(scene, monster, eclat, px, py, map, groundLayer);
+  };
+
+  const tryCastRugissement = () => {
+    if (!rugissement) return false;
+    const st = scene.combatState;
+    if (!st || !st.enCours) return false;
+    const pos = getMonsterTile();
+    if (!canCastSpellOnTile(scene, monster, rugissement, pos.x, pos.y, map)) return false;
+    return castSpellAtTile(scene, monster, rugissement, pos.x, pos.y, map, groundLayer);
   };
 
   let didAttackThisTurn = false;
@@ -158,7 +225,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     });
   };
 
-  const castSequence = (count) => {
+  const castSequenceEclat = (count) => {
     if (!scene.combatState?.enCours) {
       onComplete?.();
       return;
@@ -171,26 +238,22 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
       fleeAfterAttack();
       return;
     }
-    const ok = tryCast();
+    const ok = tryCastEclat();
     if (!ok) {
       fleeAfterAttack();
       return;
     }
     didAttackThisTurn = true;
-    if (scene.time?.delayedCall) scene.time.delayedCall(450, () => castSequence(count - 1));
-    else castSequence(count - 1);
+    if (scene.time?.delayedCall) scene.time.delayedCall(450, () => castSequenceEclat(count - 1));
+    else castSequenceEclat(count - 1);
   };
-
-  if (eclat && canCastSpellOnTile(scene, monster, eclat, px, py, map)) {
-    delay(scene, 220, () => castSequence(2));
-    return;
-  }
 
   const inLine = (tx, ty) => tx === px || ty === py;
   const distToPlayer = (tx, ty) => Math.abs(px - tx) + Math.abs(py - ty);
   const inCastWindow = (tx, ty) => {
     if (!eclat) return false;
     if (!inLine(tx, ty)) return false;
+    if (!hasLosToPlayer(tx, ty)) return false;
     const d = distToPlayer(tx, ty);
     const min = eclat.rangeMin ?? 0;
     const max = eclat.rangeMax ?? 0;
@@ -255,25 +318,85 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     });
   }
 
-  const pathTiles = bestPath && pmRestants > 0 ? bestPath.slice(0, pmRestants) : [];
-  if (pathTiles.length === 0) {
-    onComplete?.();
-    return;
-  }
-
-  moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
-    state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - pathTiles.length);
-    if (pathTiles.length > 0) {
-      showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
-        color: "#22c55e",
-      });
+  const runOffense = () => {
+    if (eclat && canCastSpellOnTile(scene, monster, eclat, px, py, map)) {
+      delay(scene, 220, () => castSequenceEclat(2));
+      return;
     }
-    delay(scene, 520, () => {
-      if (canCastSpellOnTile(scene, monster, eclat, px, py, map)) {
-        castSequence(2);
+
+    const availablePm = state.pmRestants ?? 0;
+    const pathTiles = bestPath && availablePm > 0 ? bestPath.slice(0, availablePm) : [];
+    if (pathTiles.length === 0) {
+      onComplete?.();
+      return;
+    }
+
+    moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
+      state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - pathTiles.length);
+      if (pathTiles.length > 0) {
+        showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
+          color: "#22c55e",
+        });
+      }
+      delay(scene, 520, () => {
+        if (canCastSpellOnTile(scene, monster, eclat, px, py, map)) {
+          castSequenceEclat(2);
+          return;
+        }
+        fleeAfterAttack();
+      });
+    });
+  };
+
+  if (rugissement) {
+    const pos = getMonsterTile();
+    const reachable = buildReachableTiles(pos.x, pos.y, state.pmRestants ?? 0);
+    if (reachable.length > 0) {
+      const playerDist = (entry) =>
+        Math.abs(px - entry.x) + Math.abs(py - entry.y);
+      const best = reachable.reduce(
+        (acc, entry) => {
+          const count = countAlliesInRadius(entry.x, entry.y, 2);
+          const steps = entry.path.length;
+          const dist = playerDist(entry);
+          if (
+            count > acc.count ||
+            (count === acc.count && steps < acc.steps) ||
+            (count === acc.count && steps === acc.steps && dist < acc.dist)
+          ) {
+            return { entry, count, steps, dist };
+          }
+          return acc;
+        },
+        { entry: reachable[0], count: -1, steps: 999, dist: 999 }
+      ).entry;
+
+      const pathTiles = best.path || [];
+      const castAfterMove = () => {
+        if (tryCastRugissement()) {
+          delay(scene, 260, runOffense);
+        } else {
+          runOffense();
+        }
+      };
+
+      if (pathTiles.length === 0) {
+        castAfterMove();
         return;
       }
-      fleeAfterAttack();
-    });
-  });
+
+      moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
+        state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - pathTiles.length);
+        if (pathTiles.length > 0) {
+          showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
+            color: "#22c55e",
+          });
+        }
+        delay(scene, 200, castAfterMove);
+      });
+      return;
+    }
+  }
+
+  runOffense();
 }

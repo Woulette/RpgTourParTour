@@ -79,6 +79,214 @@ function isEryonCaster(caster) {
   return id === "eryon" || id === "assassin";
 }
 
+function applyStatusEffectToEntity(entity, effect, caster) {
+  if (!entity || !effect) return;
+  const turns =
+    typeof effect.turns === "number"
+      ? effect.turns
+      : typeof effect.turnsLeft === "number"
+        ? effect.turnsLeft
+        : 0;
+  const next = {
+    id: effect.id || effect.type || "buff",
+    type: effect.type || "buff",
+    label: effect.label || effect.type || "Buff",
+    turnsLeft: Math.max(0, turns),
+    amount: typeof effect.amount === "number" ? effect.amount : 0,
+    sourceName: caster?.displayName || caster?.label || caster?.monsterId || "Monstre",
+  };
+
+  entity.statusEffects = Array.isArray(entity.statusEffects) ? entity.statusEffects : [];
+  const idx = entity.statusEffects.findIndex((e) => e && e.id === next.id);
+  if (idx >= 0) entity.statusEffects[idx] = next;
+  else entity.statusEffects.push(next);
+}
+
+function applyShieldToDamage(entity, damage) {
+  if (!entity || !Array.isArray(entity.statusEffects)) {
+    return { damage, absorbed: 0 };
+  }
+  let remaining = Math.max(0, damage);
+  let absorbed = 0;
+  let touched = false;
+
+  entity.statusEffects.forEach((effect) => {
+    if (!effect || effect.type !== "shield") return;
+    if ((effect.turnsLeft ?? 0) <= 0) return;
+    if (remaining <= 0) return;
+    const amount = typeof effect.amount === "number" ? effect.amount : 0;
+    if (amount <= 0) return;
+    const used = Math.min(amount, remaining);
+    effect.amount = amount - used;
+    remaining -= used;
+    absorbed += used;
+    touched = true;
+    if (effect.amount <= 0) {
+      effect.turnsLeft = 0;
+    }
+  });
+
+  if (touched) {
+    entity.statusEffects = entity.statusEffects.filter(
+      (effect) =>
+        effect &&
+        (effect.type !== "shield" ||
+          ((effect.turnsLeft ?? 0) > 0 && (effect.amount ?? 0) > 0))
+    );
+  }
+
+  return { damage: remaining, absorbed };
+}
+
+function getEntityTile(entity, map, groundLayer) {
+  const tx =
+    typeof entity?.tileX === "number"
+      ? entity.tileX
+      : typeof entity?.currentTileX === "number"
+        ? entity.currentTileX
+        : null;
+  const ty =
+    typeof entity?.tileY === "number"
+      ? entity.tileY
+      : typeof entity?.currentTileY === "number"
+        ? entity.currentTileY
+        : null;
+  if (typeof tx === "number" && typeof ty === "number") {
+    return { x: tx, y: ty };
+  }
+  if (!map || !groundLayer || typeof map.worldToTileXY !== "function") return null;
+  const t = map.worldToTileXY(entity.x, entity.y, true, undefined, undefined, groundLayer);
+  return t ? { x: t.x, y: t.y } : null;
+}
+
+function applyAreaBuffToMonsters(scene, map, groundLayer, caster, buffDef) {
+  const radius =
+    typeof buffDef?.radius === "number" && buffDef.radius >= 0
+      ? buffDef.radius
+      : 0;
+  const effects = Array.isArray(buffDef?.effects) ? buffDef.effects : [];
+  if (effects.length === 0) return;
+
+  const state = scene?.combatState;
+  const activeEntity =
+    state?.tour === "joueur" ? state.joueur : state?.monstre || null;
+
+  const origin = getEntityTile(caster, map, groundLayer);
+  if (!origin) return;
+
+  const list =
+    scene?.combatMonsters && Array.isArray(scene.combatMonsters)
+      ? scene.combatMonsters
+      : [caster];
+
+  const targets = list.filter((m) => {
+    if (!m || !m.stats) return false;
+    const hp =
+      typeof m.stats.hp === "number" ? m.stats.hp : m.stats.hpMax ?? 0;
+    if (hp <= 0) return false;
+    const pos = getEntityTile(m, map, groundLayer);
+    if (!pos) return false;
+    const dist = Math.abs(pos.x - origin.x) + Math.abs(pos.y - origin.y);
+    return dist <= radius;
+  });
+
+  effects.forEach((effect) => {
+    targets.forEach((target) => {
+      let resolved = effect;
+      if (effect?.type === "shield") {
+        const casterHpMax =
+          typeof caster?.stats?.hpMax === "number"
+            ? caster.stats.hpMax
+            : typeof caster?.stats?.hp === "number"
+              ? caster.stats.hp
+              : 0;
+        const percent =
+          typeof effect.percent === "number" ? effect.percent : null;
+        const amount =
+          typeof effect.amount === "number"
+            ? effect.amount
+            : percent !== null
+              ? Math.round(casterHpMax * percent)
+              : 0;
+        resolved = {
+          ...effect,
+          amount,
+          label: effect.label || `Bouclier ${amount}`,
+        };
+      }
+
+      applyStatusEffectToEntity(target, resolved, caster);
+      if (effect?.type === "pm" && target && activeEntity === target && state) {
+        const bonus = typeof effect.amount === "number" ? effect.amount : 0;
+        if (bonus !== 0) {
+          state.pmRestants = Math.max(0, (state.pmRestants ?? 0) + bonus);
+        }
+      }
+    });
+  });
+}
+
+function isPlayerAtTile(scene, map, groundLayer, tileX, tileY) {
+  const player = scene?.combatState?.joueur;
+  if (!player) return false;
+  const pos = getEntityTile(player, map, groundLayer);
+  if (!pos) return false;
+  return pos.x === tileX && pos.y === tileY;
+}
+
+function tryPushEntity(scene, map, groundLayer, caster, target, distance) {
+  if (!scene || !map || !caster || !target) return false;
+  const dist = typeof distance === "number" ? Math.max(0, distance) : 0;
+  if (dist <= 0) return false;
+
+  const origin = getEntityTile(caster, map, groundLayer);
+  const targetPos = getEntityTile(target, map, groundLayer);
+  if (!origin || !targetPos) return false;
+
+  const dx = targetPos.x - origin.x;
+  const dy = targetPos.y - origin.y;
+  const stepX = dx === 0 ? 0 : Math.sign(dx);
+  const stepY = dy === 0 ? 0 : Math.sign(dy);
+  if (stepX === 0 && stepY === 0) return false;
+
+  let last = null;
+  for (let i = 1; i <= dist; i += 1) {
+    const nx = targetPos.x + stepX * i;
+    const ny = targetPos.y + stepY * i;
+    if (!isTileAvailableForSpell(map, nx, ny)) break;
+    if (isTileBlocked(scene, nx, ny)) break;
+    if (isTileOccupiedByMonster(scene, nx, ny, target)) break;
+    if (
+      isPlayerAtTile(scene, map, groundLayer, nx, ny) &&
+      target !== scene?.combatState?.joueur
+    ) {
+      break;
+    }
+    last = { x: nx, y: ny };
+  }
+
+  if (!last) return false;
+
+  const wp = map.tileToWorldXY(last.x, last.y, undefined, undefined, groundLayer);
+  const isPlayerTarget = target === scene?.combatState?.joueur;
+  const offX = !isPlayerTarget && typeof target.renderOffsetX === "number" ? target.renderOffsetX : 0;
+  const offY = !isPlayerTarget && typeof target.renderOffsetY === "number" ? target.renderOffsetY : 0;
+  target.x = wp.x + map.tileWidth / 2 + offX;
+  target.y = wp.y + (isPlayerTarget ? map.tileHeight / 2 : map.tileHeight) + offY;
+  if (typeof target.setDepth === "function") {
+    target.setDepth(target.y);
+  }
+  if (typeof target.tileX === "number") target.tileX = last.x;
+  if (typeof target.tileY === "number") target.tileY = last.y;
+  if (typeof target.currentTileX === "number") target.currentTileX = last.x;
+  if (typeof target.currentTileY === "number") target.currentTileY = last.y;
+  if (target === scene?.combatState?.joueur) {
+    target.currentTileX = last.x;
+    target.currentTileY = last.y;
+  }
+  return true;
+}
+
 function applyEryonAfterCast(scene, caster, spell, { isSelfCast = false } = {}) {
   if (!scene || !caster || !spell) return null;
   if (!isEryonCaster(caster)) return null;
@@ -315,9 +523,11 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         const victim = findMonsterAtTile(scene, tx, ty);
         if (!victim || !victim.stats) continue;
 
+        const shielded = applyShieldToDamage(victim, damage);
+        const finalDamage = Math.max(0, shielded.damage);
         const currentHp =
           typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
-        const newHp = Math.max(0, currentHp - damage);
+        const newHp = Math.max(0, currentHp - finalDamage);
         victim.stats.hp = newHp;
         if (scene && typeof scene.updateCombatUi === "function") {
           scene.updateCombatUi();
@@ -331,14 +541,16 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
               kind: "combat",
               channel: "global",
               author: "Combat",
-              text: `${spellLabel} : ${targetName} -${damage} PV`,
-              element: spell?.element ?? null,
-            },
-            { player: state.joueur }
-          );
-        }
+            text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
+            element: spell?.element ?? null,
+          },
+          { player: state.joueur }
+        );
+      }
 
-        showFloatingTextOverEntity(scene, victim, `-${damage}`, { color: "#ff4444" });
+        if (finalDamage > 0) {
+          showFloatingTextOverEntity(scene, victim, `-${finalDamage}`, { color: "#ff4444" });
+        }
 
         if (newHp <= 0) {
           if (typeof victim.onKilled === "function") {
@@ -400,9 +612,11 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         const victim = findMonsterAtTile(scene, t.x, t.y);
         if (!victim || !victim.stats) continue;
 
+        const shielded = applyShieldToDamage(victim, damage);
+        const finalDamage = Math.max(0, shielded.damage);
         const currentHp =
           typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
-        const newHp = Math.max(0, currentHp - damage);
+        const newHp = Math.max(0, currentHp - finalDamage);
         victim.stats.hp = newHp;
         if (scene && typeof scene.updateCombatUi === "function") {
           scene.updateCombatUi();
@@ -416,14 +630,16 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
               kind: "combat",
               channel: "global",
               author: "Combat",
-              text: `${spellLabel} : ${targetName} -${damage} PV`,
-              element: spell?.element ?? null,
-            },
-            { player: state.joueur }
-          );
-        }
+            text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
+            element: spell?.element ?? null,
+          },
+          { player: state.joueur }
+        );
+      }
 
-        showFloatingTextOverEntity(scene, victim, `-${damage}`, { color: "#ff4444" });
+        if (finalDamage > 0) {
+          showFloatingTextOverEntity(scene, victim, `-${finalDamage}`, { color: "#ff4444" });
+        }
 
         if (newHp <= 0) {
           if (typeof victim.onKilled === "function") {
@@ -491,9 +707,11 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         const victim = findMonsterAtTile(scene, t.x, t.y);
         if (!victim || !victim.stats) continue;
 
+        const shielded = applyShieldToDamage(victim, damage);
+        const finalDamage = Math.max(0, shielded.damage);
         const currentHp =
           typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
-        const newHp = Math.max(0, currentHp - damage);
+        const newHp = Math.max(0, currentHp - finalDamage);
         victim.stats.hp = newHp;
         if (scene && typeof scene.updateCombatUi === "function") {
           scene.updateCombatUi();
@@ -507,14 +725,16 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
               kind: "combat",
               channel: "global",
               author: "Combat",
-              text: `${spellLabel} : ${targetName} -${damage} PV`,
-              element: spell?.element ?? null,
-            },
-            { player: state.joueur }
-          );
-        }
+            text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
+            element: spell?.element ?? null,
+          },
+          { player: state.joueur }
+        );
+      }
 
-        showFloatingTextOverEntity(scene, victim, `-${damage}`, { color: "#ff4444" });
+        if (finalDamage > 0) {
+          showFloatingTextOverEntity(scene, victim, `-${finalDamage}`, { color: "#ff4444" });
+        }
 
         if (newHp <= 0) {
           if (typeof victim.onKilled === "function") {
@@ -553,8 +773,10 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
     if (target && target.stats) {
       const { damage } = computeDamageForSpell(caster, spell);
 
+      const shielded = applyShieldToDamage(target, damage);
+      const finalDamage = Math.max(0, shielded.damage);
       const currentHp = typeof target.stats.hp === "number" ? target.stats.hp : target.stats.hpMax ?? 0;
-      const newHp = Math.max(0, currentHp - damage);
+      const newHp = Math.max(0, currentHp - finalDamage);
       target.stats.hp = newHp;
       if (scene && typeof scene.updateCombatUi === "function") {
         scene.updateCombatUi();
@@ -568,7 +790,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
             kind: "combat",
             channel: "global",
             author: "Combat",
-            text: `${spellLabel} : ${targetName} -${damage} PV`,
+            text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
             element: spell?.element ?? null,
           },
           { player: state.joueur }
@@ -651,6 +873,10 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
       showFloatingTextOverEntity(scene, target, `-${damage}`, { color: "#ff4444" });
 
+      if ((spell.pushbackDistance ?? 0) > 0 && newHp > 0) {
+        tryPushEntity(scene, map, groundLayer, caster, target, spell.pushbackDistance);
+      }
+
       if (newHp <= 0) {
         if (typeof target.onKilled === "function") {
           target.onKilled(scene, caster);
@@ -680,6 +906,13 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
       }
     }
   } else if (state.monstre === caster) {
+    if (spell?.areaBuff) {
+      applyAreaBuffToMonsters(scene, map, groundLayer, caster, spell.areaBuff);
+      clearActiveSpell(caster);
+      clearSpellRangePreview(scene);
+      return true;
+    }
+
     const player = state.joueur;
 
     const findAliveSummonAtTile = (x, y) => {
@@ -720,9 +953,11 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         const damageOnHit = spell.damageOnHit !== false;
         const damage = damageOnHit ? computeSpellDamage(caster, spell) : 0;
 
+        const shielded = applyShieldToDamage(victim, damage);
+        const finalDamage = Math.max(0, shielded.damage);
         const currentHp = typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
-        const newHp = Math.max(0, currentHp - Math.max(0, damage));
-        if (damageOnHit && damage > 0) {
+        const newHp = Math.max(0, currentHp - Math.max(0, finalDamage));
+        if (damageOnHit && finalDamage > 0) {
           victim.stats.hp = newHp;
         }
         if (scene && typeof scene.updateCombatUi === "function") {
@@ -732,13 +967,13 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         if (state.enCours && state.joueur) {
           const spellLabel = spell?.label || spell?.id || "Sort";
           const casterName = caster?.displayName || caster?.label || caster?.monsterId || "Monstre";
-          if (damageOnHit && damage > 0) {
+          if (damageOnHit && finalDamage > 0) {
             addChatMessage(
               {
                 kind: "combat",
                 channel: "global",
                 author: "Combat",
-                text: `${spellLabel} : ${isPlayerTile ? "vous subissez" : "l'invocation subit"} -${damage} PV (par ${casterName})`,
+                text: `${spellLabel} : ${isPlayerTile ? "vous subissez" : "l'invocation subit"} -${finalDamage} PV (par ${casterName})`,
                 element: spell?.element ?? null,
               },
               { player: state.joueur }
@@ -779,13 +1014,17 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
           }
         }
 
-        if (isPlayerTile && damageOnHit && damage > 0 && typeof player.updateHudHp === "function") {
+        if (isPlayerTile && damageOnHit && finalDamage > 0 && typeof player.updateHudHp === "function") {
           const hpMax = player.stats.hpMax ?? newHp;
           player.updateHudHp(newHp, hpMax);
         }
 
-        if (damageOnHit && damage > 0) {
-          showFloatingTextOverEntity(scene, victim, `-${damage}`, { color: "#ff4444" });
+        if (damageOnHit && finalDamage > 0) {
+          showFloatingTextOverEntity(scene, victim, `-${finalDamage}`, { color: "#ff4444" });
+        }
+
+        if ((spell.pushbackDistance ?? 0) > 0 && newHp > 0) {
+          tryPushEntity(scene, map, groundLayer, caster, victim, spell.pushbackDistance);
         }
 
         if (damageOnHit && newHp <= 0) {

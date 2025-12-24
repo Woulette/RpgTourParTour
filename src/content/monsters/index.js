@@ -8,6 +8,7 @@ import skelbone from "./skelbone.js";
 import senbone from "./senbone.js";
 import goush from "./goush.js";
 import liburion from "./liburion.js";
+import libarene from "./libarene.js";
 import cazard from "./cazard.js";
 import cedre from "./cedre.js";
 import gumgob from "./gumgob.js";
@@ -23,6 +24,7 @@ export const monsters = {
   senbone,
   goush,
   liburion,
+  libarene,
   cazard,
   cedre,
   gumgob,
