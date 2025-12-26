@@ -3,6 +3,7 @@ import { openBijoutierCraftPanel } from "../ui/craft/bijoutierPanel.js";
 import { openCordonnierCraftPanel } from "../ui/craft/cordonnierPanel.js";
 import { openAlchimisteCraftPanel } from "../ui/craft/alchimistePanel.js";
 import { openBucheronCraftPanel } from "../ui/craft/bucheronPanel.js";
+import { openBricoleurCraftPanel } from "../ui/craft/bricoleurPanel.js";
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { blockTile, isTileBlocked } from "../collision/collisionGrid.js";
 import { findPathForPlayer } from "../entities/movement/pathfinding.js";
@@ -161,6 +162,9 @@ export function setupWorkstations(scene, map, groundLayer, mapDef) {
         }
         if (ws.id === "bucheron") {
           openBucheronCraftPanel(scene, scene?.player);
+        }
+        if (ws.id === "bricoleur") {
+          openBricoleurCraftPanel(scene, scene?.player);
         }
       };
 

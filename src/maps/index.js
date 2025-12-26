@@ -164,6 +164,15 @@ const donjonDecorTroneBossTileset = {
   imagePath: "assets/TroneBossAluineeks.png",
 };
 
+const donjonAluineeksTileset = {
+  name: "DonjonAluineeks",
+  imageKey: "DonjonAluineeks",
+  imagePath: "assets/DonjonAluineeks.png",
+  frameWidth: 1000,
+  frameHeight: 1000,
+  autoTileOffset: true,
+};
+
 // Tilesets pour assets/maps/MapPourtesteVite fait Andemia.json
 const mapPourTestViteTilesets = [
   {
@@ -362,6 +371,12 @@ export const maps = {
         tileX: 14,
         tileY: 18,
         textureKey: "ScierieDuBucheron",
+      },
+      {
+        id: "bricoleur",
+        tileX: 17,
+        tileY: 18,
+        textureKey: "EtablieDuBricoleur",
       },
     ],
     exitBounds: null,
@@ -625,6 +640,19 @@ export const maps = {
     worldPos: { x: 0, y: -1 }, // droite de MapAndemiaNouvelleVersion3 (-1,-1)
     jsonPath: "assets/maps/MapAndemiaNouvelleVersion8.json",
     tilesets: [...tilesetNew],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemiaNouvelleVersion9: {
+    key: "MapAndemiaNouvelleVersion9",
+    worldPos: { x: 1, y: -1 }, // droite de MapAndemiaNouvelleVersion8 (0,-1)
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion9.json",
+    tilesets: [...tilesetNew, donjonAluineeksTileset],
     groundLayerName: "Calque de Tuiles 1",
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },

@@ -25,7 +25,9 @@ export default {
     initiative: 6,
   },
   spells: ["aura_cedre", "souffle_cedre"],
-  loot: [],
+  loot: [
+    { itemId: "peau_cedre", min: 1, max: 1, dropRate: 0.3 },
+  ],
   xpReward: 290,
   goldRewardMin: 28,
   goldRewardMax: 70,

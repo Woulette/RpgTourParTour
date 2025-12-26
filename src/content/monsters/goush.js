@@ -25,7 +25,9 @@ export default {
     initiative: 7,
   },
   spells: ["morsure", "bave_puante"],
-  loot: [],
+  loot: [
+    { itemId: "peau_goush", min: 1, max: 1, dropRate: 0.3 },
+  ],
   xpReward: 220,
   goldRewardMin: 18,
   goldRewardMax: 40,

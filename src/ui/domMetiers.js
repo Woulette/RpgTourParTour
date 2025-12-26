@@ -12,6 +12,9 @@ import { cordonnierDefinition } from "../metier/cordonnier/config.js";
 import { ensureCordonnierState } from "../metier/cordonnier/state.js";
 import { cordonnierRecipes } from "../metier/cordonnier/recipes.js";
 import { alchimieRecipes } from "../metier/alchimiste/recipes.js";
+import { bricoleurDefinition } from "../metier/bricoleur/config.js";
+import { ensureBricoleurState } from "../metier/bricoleur/state.js";
+import { bricoleurRecipes } from "../metier/bricoleur/recipes.js";
 import { getItemDef } from "../inventory/inventoryCore.js";
 import { on as onStoreEvent } from "../state/store.js";
 
@@ -22,6 +25,7 @@ const METIERS = [
   tailleurDefinition,
   bijoutierDefinition,
   cordonnierDefinition,
+  bricoleurDefinition,
 ];
 const METIERS_BY_ID = Object.fromEntries(METIERS.map((m) => [m.id, m]));
 const CRAFT_RECIPES = {
@@ -29,6 +33,7 @@ const CRAFT_RECIPES = {
   bijoutier: bijoutierRecipes,
   cordonnier: cordonnierRecipes,
   alchimiste: alchimieRecipes,
+  bricoleur: bricoleurRecipes,
 };
 
 let metiersUiInitialized = false;
@@ -177,6 +182,9 @@ export function initDomMetiers(player) {
     }
     if (id === "cordonnier") {
       return ensureCordonnierState(player);
+    }
+    if (id === "bricoleur") {
+      return ensureBricoleurState(player);
     }
     // Fallback pour futurs métiers
     if (!player.metiers) player.metiers = {};

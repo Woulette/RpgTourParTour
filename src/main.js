@@ -145,6 +145,10 @@ class MainScene extends Phaser.Scene {
       "ScierieDuBucheron",
       "assets/metier/Bucheron/ScierieDuBucheron.png"
     );
+    this.load.image(
+      "EtablieDuBricoleur",
+      "assets/metier/Bricoleur/EtablieDuBricoleur.png"
+    );
     this.load.image("Boutique", "assets/Boutique.png");
     this.load.image("puits", "assets/Puits.png");
     // Ressources alchimiste (ortie)

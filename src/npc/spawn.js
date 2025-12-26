@@ -90,6 +90,9 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
 
     const sprite = scene.add.sprite(x, y, def.textureKey);
     sprite.setOrigin(0.5, 1);
+    if (typeof def.scale === "number" && Number.isFinite(def.scale)) {
+      sprite.setScale(def.scale);
+    }
     sprite.setDepth(y);
 
     const npcInstance = {
@@ -110,6 +113,9 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
 
       const overlay = scene.add.sprite(sprite.x, sprite.y, def.textureKey);
       overlay.setOrigin(sprite.originX, sprite.originY);
+      if (typeof sprite.scaleX === "number" && typeof sprite.scaleY === "number") {
+        overlay.setScale(sprite.scaleX, sprite.scaleY);
+      }
       overlay.setBlendMode(Phaser.BlendModes.ADD);
       overlay.setAlpha(0.5);
       overlay.setDepth((sprite.depth || 0) + 1);

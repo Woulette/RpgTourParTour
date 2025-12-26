@@ -150,6 +150,10 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
   if (def.animation && def.animation.basePath) {
     monster.animPrefix = def.animation.prefix || def.id || def.textureKey;
   }
+  monster.animScale =
+    typeof def.animation?.scale === "number" && Number.isFinite(def.animation.scale)
+      ? def.animation.scale
+      : null;
 
   // Réglages de rendu spécifiques au monstre (origin/offset).
   const render = def.render || {};
@@ -160,6 +164,14 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     const ox = typeof render.originX === "number" ? render.originX : 0.5;
     const oy = typeof render.originY === "number" ? render.originY : 1;
     monster.setOrigin(ox, oy);
+  }
+  const baseScale =
+    typeof render.scale === "number" && Number.isFinite(render.scale)
+      ? render.scale
+      : 1;
+  monster.baseScale = baseScale;
+  if (monster.setScale && baseScale !== 1) {
+    monster.setScale(baseScale);
   }
 
   // Depth basé sur Y (comme le joueur/les décors) pour rester au-dessus des calques sol + grille debug.

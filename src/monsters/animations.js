@@ -20,6 +20,9 @@ export function playMonsterMoveAnimation(scene, monster, dx, dy) {
   const dir = resolveMonsterAnimDirection(dx, dy);
   const key = `${monster.animPrefix}_run_${dir}`;
   if (scene.anims.exists(key)) {
+    if (monster.animScale && typeof monster.setScale === "function") {
+      monster.setScale(monster.animScale);
+    }
     monster.anims.play(key, true);
   }
 }
@@ -31,5 +34,12 @@ export function stopMonsterMoveAnimation(monster) {
   }
   if (monster.baseTextureKey && typeof monster.setTexture === "function") {
     monster.setTexture(monster.baseTextureKey);
+  }
+  if (
+    typeof monster.baseScale === "number" &&
+    Number.isFinite(monster.baseScale) &&
+    typeof monster.setScale === "function"
+  ) {
+    monster.setScale(monster.baseScale);
   }
 }

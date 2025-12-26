@@ -74,4 +74,16 @@ export const questGiverNpcs = [
     shopId: "boutique",
     questIds: [],
   },
+  {
+    id: "donjonaluineekspnj",
+    name: "Gardien du donjon",
+    mapId: "MapAndemiaNouvelleVersion9",
+    tileX: 21,
+    tileY: 15,
+    scale: 1.3,
+    textureKey: "npc_donjon_aluineeks",
+    spritePath: "assets/npc/DonjonALuineeksPNJsouth-west.png",
+    type: "npc",
+    questIds: [],
+  },
 ];

@@ -7,6 +7,7 @@ export default {
     prefix: "libarene",
     basePath: "assets/monsters/Libarene/animations/running-4-frames",
     frameCount: 4,
+    scale: 1.4,
   },
   render: {
     originX: 0.6,

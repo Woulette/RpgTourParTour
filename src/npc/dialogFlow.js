@@ -8,9 +8,10 @@ import {
 import { getNpcDialog } from "../dialog/npcs/index.js";
 import { DIALOG_STATES } from "../dialog/npcs/dialogStates.js";
 import { countItemInInventory, tryTurnInStage } from "../quests/runtime/objectives.js";
+import { removeItem } from "../inventory/inventoryCore.js";
 import { enterDungeon } from "../dungeons/runtime.js";
 
-const DUNGEON_KEY_ITEM_ID = "cle_donjon_aluineeks";
+const DUNGEON_KEY_ITEM_ID = "clef_aluineeks";
 
 function openDialogSequence(npc, player, screens, onDone) {
   const list = Array.isArray(screens) ? screens : [];
@@ -67,21 +68,31 @@ export function startNpcDialogFlow(scene, player, npc) {
   if (!scene || !player || !npc || !npc.sprite) return;
 
   const questContext = getQuestContextForNpc(player, npc.id);
-  const isDungeonKeeper = npc.id === "donjon_aluineeks_keeper";
+  const isDungeonKeeper =
+    npc.id === "donjon_aluineeks_keeper" || npc.id === "donjonaluineekspnj";
 
   // Donjon Aluineeks : si aucune quete n'est en cours sur ce PNJ,
   // on affiche l'option "cle" si le joueur en possede une.
   if (isDungeonKeeper && !questContext) {
     const hasKey = countItemInInventory(player, DUNGEON_KEY_ITEM_ID) > 0;
+    if (!hasKey) {
+      openNpcDialog(npc, player, {
+        text: "Tu n'as pas la clef du donjon.\nDegage.",
+        choice: "Ok.",
+        closeOnChoice: true,
+      });
+      return;
+    }
+
     openNpcDialog(npc, player, {
-      text: hasKey
-        ? "Tu as une cle.\nUtiliser la cle pour entrer ?"
-        : "Le donjon est dangereux.\nEntre seulement si tu es pret.",
-      choice: hasKey ? "Utiliser la cle pour entrer" : "Entrer dans le donjon",
+      text: "Tu as la clef.\nJe te laisse entrer.",
+      choice: "Entrer dans le donjon",
       closeOnChoice: true,
       onChoice: () => {
-        // Pour le moment, on laisse l'entree possible meme sans cle.
-        enterDungeon(scene, "aluineeks");
+        const removed = removeItem(player.inventory, DUNGEON_KEY_ITEM_ID, 1);
+        if (removed > 0) {
+          enterDungeon(scene, "aluineeks");
+        }
       },
     });
     return;
