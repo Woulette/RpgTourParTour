@@ -25,7 +25,10 @@ export default {
     initiative: 7,
   },
   spells: ["griffure", "projectile_epineux"],
-  loot: [],
+  loot: [
+    { itemId: "peau_cazard", min: 1, max: 1, dropRate: 0.3 },
+    { itemId: "queue_cazard", min: 1, max: 1, dropRate: 0.35 },
+  ],
   xpReward: 90,
   goldRewardMin: 12,
   goldRewardMax: 31,

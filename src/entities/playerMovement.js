@@ -299,6 +299,10 @@ function createCalibratedWorldToTile(map, groundLayer) {
 
   // --- Clic pour déplacer ou lancer un sort ---
   scene.input.on("pointerdown", (pointer) => {
+    if (window.__uiPointerBlock) {
+      return;
+    }
+
     const activeSpell = getActiveSpell(player);
     const bandWidthRight = 30;
     const bandWidthLeft = 30;

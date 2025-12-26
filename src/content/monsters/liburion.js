@@ -25,7 +25,9 @@ export default {
     initiative: 8,
   },
   spells: ["eclat", "rugissement"],
-  loot: [],
+  loot: [
+    { itemId: "fourrure_liburion", min: 1, max: 1, dropRate: 0.25 },
+  ],
   xpReward: 440,
   goldRewardMin: 17,
   goldRewardMax: 38,

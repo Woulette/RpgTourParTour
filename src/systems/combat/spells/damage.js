@@ -55,6 +55,14 @@ function getElementStat(caster, spell) {
 
 // Calcule les dégâts finaux d'un sort pour un lanceur donné,
 // en appliquant un bonus de 2% par point de stat élémentaire.
+function getSpellParchmentMultiplier(caster, spell) {
+  if (!caster || !spell) return 1;
+  const tiers = caster.spellParchments || {};
+  const tier = tiers[spell.id] || 0;
+  if (!tier) return 1;
+  return 1 + 0.1 * tier;
+}
+
 function getSurchargeInstableMultiplierForPreview(caster, spell) {
   if (!caster || !spell || spell.id !== "surcharge_instable") return 1;
   const classId = caster.classId;
@@ -76,7 +84,8 @@ export function computeSpellDamage(caster, spell) {
   const bonusPercent = elemStat * 0.02; // 2% par point
   const multiplier = 1 + bonusPercent;
 
-  const finalDamage = Math.round(baseDamage * multiplier);
+  const parchmentMult = getSpellParchmentMultiplier(caster, spell);
+  const finalDamage = Math.round(baseDamage * multiplier * parchmentMult);
   return Math.max(0, finalDamage);
 }
 
@@ -94,8 +103,9 @@ export function getSpellDamageRange(caster, spell) {
   const bonusPercent = elemStat * 0.02; // 2% par point
   const multiplier = 1 + bonusPercent;
 
-  const finalMin = Math.round(dmgMin * multiplier);
-  const finalMax = Math.round(dmgMax * multiplier);
+  const parchmentMult = getSpellParchmentMultiplier(caster, spell);
+  const finalMin = Math.round(dmgMin * multiplier * parchmentMult);
+  const finalMax = Math.round(dmgMax * multiplier * parchmentMult);
 
   const extraMult = getSurchargeInstableMultiplierForPreview(caster, spell);
   const scaledMin = Math.round(finalMin * extraMult);

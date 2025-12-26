@@ -12,6 +12,34 @@
   text-transform: uppercase;
 }
 
+.craft-panel.alchimiste .craft-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.alchimiste-mode-tabs {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.alchimiste-mode-tab {
+  border: 1px solid rgba(130, 200, 160, 0.55);
+  background: rgba(18, 28, 22, 0.75);
+  color: #d4efe0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.alchimiste-mode-tab.active {
+  background: rgba(80, 155, 110, 0.5);
+  border-color: #7ad7a6;
+  color: #f1fff7;
+}
+
 .craft-body-alchimiste {
   display: grid;
   grid-template-columns: 32% 34% 34%;

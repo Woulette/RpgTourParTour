@@ -67,4 +67,18 @@ export const alchimieRecipes = [
 ];
 
 // Recettes de fusion (interface "Fusion")
-export const alchimieFusionRecipes = [];
+export const alchimieFusionRecipes = [
+  {
+    id: "parchemin_inferieur_tier_1",
+    label: "Parchemin inferieur tier 1",
+    level: 1,
+    category: "resource",
+    recipeIcon: "assets/ressources/Consommable/ParcheminInferieurTier1.png",
+    inputs: [
+      { itemId: "papier", qty: 5 },
+      { itemId: "talisman_inferieur_tier_1", qty: 1 },
+    ],
+    output: { itemId: "parchemin_inferieur_tier_1", qty: 1 },
+    xpGain: 12,
+  },
+];

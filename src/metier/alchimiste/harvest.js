@@ -28,7 +28,7 @@ export function harvestHerb(scene, player, node) {
   }
 
   const resourceDef = alchimisteResources[node.resourceId];
-  const amount = Phaser.Math.Between(1, 3);
+  const amount = Phaser.Math.Between(1, 5);
 
   let gainedItems = 0;
   let gainedXp = 0;

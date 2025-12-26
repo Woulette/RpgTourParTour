@@ -2,12 +2,12 @@
 export const bucheronRecipes = [
   {
     id: "copeau_frene",
-    label: "Copeau de frene",
+    label: "Copeau de chene",
     level: 1,
     category: "resource",
-    recipeIcon: "assets/metier/Bucheron/Craft/CopeauDeFrene.png",
+    recipeIcon: "assets/ressources/Bois/Copeau De Chene.png",
     inputs: [
-      { itemId: "bois_frene", qty: 5 },
+      { itemId: "bois_chene", qty: 5 },
     ],
     output: { itemId: "copeau_frene", qty: 1 },
     xpGain: 10,

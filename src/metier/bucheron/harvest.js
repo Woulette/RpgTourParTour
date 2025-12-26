@@ -28,8 +28,8 @@ export function harvestTree(scene, player, node) {
   }
 
   const resourceDef = bucheronResources[node.resourceId];
-  // Quantite de bois aleatoire entre 1 et 3 a chaque recolte
-  const amount = Phaser.Math.Between(1, 3);
+  // Quantite de bois aleatoire entre 1 et 5 a chaque recolte
+  const amount = Phaser.Math.Between(1, 5);
 
   let gainedItems = 0;
   let gainedXp = 0;

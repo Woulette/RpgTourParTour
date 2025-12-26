@@ -25,7 +25,9 @@ export default {
     initiative: 5,
   },
   spells: ["coup_de_massue", "jet_de_caillou"],
-  loot: [],
+  loot: [
+    { itemId: "peau_gobelin", min: 1, max: 1, dropRate: 0.3 },
+  ],
   xpReward: 120,
   goldRewardMin: 15,
   goldRewardMax: 34,

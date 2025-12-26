@@ -6,6 +6,30 @@
 import { classes } from "../config/classes.js";
 import { getXpTotalForLevel } from "../core/level.js";
 
+let uiInputGuardMounted = false;
+
+function mountUiInputGuard() {
+  if (uiInputGuardMounted) return;
+  uiInputGuardMounted = true;
+
+  const blockIfUi = (event) => {
+    const target = event.target;
+    if (!target || !target.closest) return;
+
+    const inUi = target.closest(
+      "#hud-root, .craft-panel, .shop-panel, .npc-dialog-panel, #combat-result-overlay, #levelup-overlay, .menu-panel"
+    );
+    if (!inUi) return;
+
+    window.__uiPointerBlock = true;
+    setTimeout(() => {
+      window.__uiPointerBlock = false;
+    }, 0);
+  };
+
+  document.addEventListener("pointerdown", blockIfUi, true);
+}
+
 export function initDomHud(player) {
   const statsButtonEl = document.getElementById("hud-stats-button");
   const statsPanelEl = document.getElementById("hud-stats-panel");
@@ -17,6 +41,8 @@ export function initDomHud(player) {
   if (!statsButtonEl || !statsPanelEl || !player) {
     return;
   }
+
+  mountUiInputGuard();
 
   // Aligne les boutons HUD dans le dock (layout unifie)
   mountHudDockMenu();

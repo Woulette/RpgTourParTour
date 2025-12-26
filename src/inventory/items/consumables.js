@@ -12,6 +12,17 @@ export const consumableItems = {
       hpPlus: 20,
     },
   },
+  parchemin_inferieur_tier_1: {
+    id: "parchemin_inferieur_tier_1",
+    label: "Parchemin inferieur tier 1",
+    category: "consommable",
+    description:
+      "Un parchemin fragile qui concentre une energie limitee, utile pour les premiers paliers.",
+    bonusInfo: "Ameliore un sort de niveau 1 a 10 au niveau 2.",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/ressources/Consommable/ParcheminInferieurTier1.png",
+  },
 
     potion_vie: {
       id: "potion_vie",

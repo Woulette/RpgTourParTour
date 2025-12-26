@@ -403,7 +403,7 @@ export const maps = {
       { tileX: 19, tileY: 8 },
     ],
     wellPositions: [
-      { tileX: 14, tileY: 10, offsetX: 0, offsetY: 6 },
+      { tileX: 14, tileY: 10, offsetX: 0, offsetY: 4 },
     ],
     // Portail au sol : quand le joueur est sur cette tuile, on entre dans la taverne.
     // Ajuste `tileX/tileY` selon la case du portail sur la map 3.

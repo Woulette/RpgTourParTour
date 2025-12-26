@@ -1,5 +1,5 @@
 import { ensureAlchimisteState, addAlchimisteXp } from "../../metier/alchimiste/state.js";
-import { alchimieRecipes } from "../../metier/alchimiste/recipes.js";
+import { alchimieRecipes, alchimieFusionRecipes } from "../../metier/alchimiste/recipes.js";
 import { removeItem, addItem, getItemDef } from "../../inventory/inventoryCore.js";
 import { emit as emitStoreEvent } from "../../state/store.js";
 
@@ -8,6 +8,7 @@ let isOpen = false;
 let lastCrafted = null;
 let activeRecipePreview = null;
 let xpRenderRequested = false;
+let activeMode = "craft";
 
 function formatEffectLines(effect) {
   if (!effect) return [];
@@ -70,6 +71,10 @@ function ensurePanelElements() {
     <div class="craft-panel-inner">
       <header class="craft-panel-header">
         <h3>Atelier Alchimiste</h3>
+        <div class="alchimiste-mode-tabs">
+          <button type="button" class="alchimiste-mode-tab active" data-mode="craft">Craft</button>
+          <button type="button" class="alchimiste-mode-tab" data-mode="fusion">Fusion</button>
+        </div>
         <button type="button" class="craft-panel-close" aria-label="Fermer">X</button>
       </header>
       <div class="craft-body craft-body-alchimiste">
@@ -372,9 +377,9 @@ function renderResult(player) {
   }
 }
 
-function renderRecipes(player, selectedIdRef) {
+function renderRecipes(recipes, player, selectedIdRef) {
   const list = panelEl.querySelector("#alchimiste-recipes");
-  if (!list) return;
+  if (!list) return null;
   list.innerHTML = "";
 
   const inventory = player?.inventory;
@@ -389,9 +394,11 @@ function renderRecipes(player, selectedIdRef) {
     return count >= qty;
   };
 
-  let currentSelected = selectedIdRef?.value || (alchimieRecipes[0] && alchimieRecipes[0].id);
+  const safeRecipes = Array.isArray(recipes) ? recipes : [];
+  let currentSelected =
+    selectedIdRef?.value || (safeRecipes[0] && safeRecipes[0].id);
 
-  alchimieRecipes.forEach((recipe) => {
+  safeRecipes.forEach((recipe) => {
     if (state?.level < recipe.level) {
       return;
     }
@@ -467,7 +474,7 @@ function renderRecipes(player, selectedIdRef) {
       currentSelected = recipe.id;
       selectedIdRef.value = recipe.id;
       activeRecipePreview = recipe;
-      renderRecipes(player, selectedIdRef);
+      renderRecipes(recipes, player, selectedIdRef);
       renderSlots(recipe, player);
       updateCraftButton(recipe, player);
       renderResult(player);
@@ -502,19 +509,38 @@ function updateCraftButton(recipe, player) {
 export function openAlchimisteCraftPanel(scene, player) {
   ensurePanelElements();
   if (!panelEl) return;
-  const selectedRef = { value: alchimieRecipes[0]?.id };
-  const selected = renderRecipes(player, selectedRef);
-  const getActiveRecipe = () =>
-    alchimieRecipes.find((r) => r.id === selectedRef.value) ||
-    alchimieRecipes.find((r) => r.id === selected) ||
-    alchimieRecipes[0];
-  const recipe = getActiveRecipe();
-  activeRecipePreview = recipe || null;
+  const selectedRefs = {
+    craft: { value: alchimieRecipes[0]?.id },
+    fusion: { value: alchimieFusionRecipes[0]?.id },
+  };
+
+  const getListForMode = (mode) =>
+    mode === "fusion" ? alchimieFusionRecipes : alchimieRecipes;
+  const getSelectedRef = (mode) => selectedRefs[mode] || selectedRefs.craft;
+
+  const syncModeUI = (mode) => {
+    activeMode = mode;
+    const tabs = panelEl.querySelectorAll(".alchimiste-mode-tab");
+    tabs.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.mode === mode);
+    });
+
+    const list = getListForMode(mode);
+    const selectedRef = getSelectedRef(mode);
+    const selected = renderRecipes(list, player, selectedRef);
+    const recipe =
+      list.find((r) => r.id === selectedRef.value) ||
+      list.find((r) => r.id === selected) ||
+      list[0];
+    activeRecipePreview = recipe || null;
+    renderSlots(recipe, player);
+    renderInventory(player);
+    updateCraftButton(recipe, player);
+    renderResult(player);
+  };
+
+  syncModeUI("craft");
   renderXpHeader(player);
-  renderSlots(recipe, player);
-  renderInventory(player);
-  updateCraftButton(recipe, player);
-  renderResult(player);
 
   const filters = panelEl.querySelectorAll(
     ".craft-inventory-filters button[data-filter]"
@@ -528,10 +554,22 @@ export function openAlchimisteCraftPanel(scene, player) {
     };
   });
 
+  const modeTabs = panelEl.querySelectorAll(".alchimiste-mode-tab");
+  modeTabs.forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const mode = btn.dataset.mode || "craft";
+      syncModeUI(mode);
+    };
+  });
+
   const btn = panelEl.querySelector("#alchimiste-craft-btn");
   if (btn) {
     btn.onclick = () => {
-      const activeRecipe = getActiveRecipe();
+      const list = getListForMode(activeMode);
+      const selectedRef = getSelectedRef(activeMode);
+      const activeRecipe =
+        list.find((r) => r.id === selectedRef.value) || list[0];
       if (!activeRecipe) return;
       if (btn.disabled) return;
       const inv = player?.inventory;
@@ -562,7 +600,7 @@ export function openAlchimisteCraftPanel(scene, player) {
         qty: activeRecipe.output.qty,
       });
       renderInventory(player);
-      renderRecipes(player, selectedRef);
+      renderRecipes(list, player, selectedRef);
       renderSlots(activeRecipe, player);
       activeRecipePreview = activeRecipe;
       renderResult(player);

@@ -1,6 +1,7 @@
 import { classes } from "../config/classes.js";
 import { spells } from "../config/spells.js";
 import { setActiveSpell } from "../core/spellSystem.js";
+import { removeItem } from "../inventory/inventoryCore.js";
 import { monsters as monsterDefs } from "../content/monsters/index.js";
 
 // Initialise la barre de sorts en bas + la fenetre "grimoire" des sorts.
@@ -18,6 +19,17 @@ export function initDomSpells(player) {
   const classId = player.classId || "archer";
   const classDef = classes[classId] || classes.archer;
   const spellIds = classDef.spells || [];
+
+  const parchmentPreviewDefs = {
+    1: {
+      label: "Parchemin inferieur tier 1",
+      icon: "assets/ressources/Consommable/ParcheminInferieurTier1.png",
+      itemId: "parchemin_inferieur_tier_1",
+    },
+  };
+  if (!player.spellParchments || typeof player.spellParchments !== "object") {
+    player.spellParchments = {};
+  }
 
   const knownSpells = spellIds
     .map((id) => spells[id])
@@ -221,30 +233,250 @@ export function initDomSpells(player) {
                 return lines.join("");
               };
 
+              const rangeModLabel =
+                spell.rangeModifiable === false ? "fixe" : "modifiable";
+              const statRows = [
+                { key: "level", label: "Niveau requis", value: `${requiredLevel}` },
+                { key: "pa", label: "PA", value: `${paCost}` },
+                { key: "damage", label: "Degats", value: `${dmgMin} - ${dmgMax}` },
+                {
+                  key: "range",
+                  label: "Portee",
+                  value: `${rangeMin}-${rangeMax} (${rangeModLabel})`,
+                },
+              ];
+
+              if (typeof maxCasts === "number") {
+                statRows.push({
+                  label: "Lancers/tour",
+                  value: `${maxCasts}`,
+                  className: "spell-detail-row-emph",
+                });
+              }
+
+              if (typeof spell.cooldownTurns === "number") {
+                statRows.push({
+                  label: "Cooldown",
+                  value: `${spell.cooldownTurns} tours`,
+                  className: "spell-detail-row-emph",
+                });
+              }
+
+              const statsHtml = statRows
+                .map((row) => {
+                  if (row.key === "damage") {
+                    return `
+                      <div class="spell-detail-row ${row.className || ""}">
+                        <span>${row.label}</span>
+                        <strong>
+                          <span class="spell-detail-damage-base">${row.value}</span>
+                          <span class="spell-detail-damage-preview"></span>
+                        </strong>
+                      </div>
+                    `;
+                  }
+                  return `
+                    <div class="spell-detail-row ${row.className || ""}">
+                      <span>${row.label}</span>
+                      <strong>${row.value}</strong>
+                    </div>
+                  `;
+                })
+                .join("");
+
               spellsDetailEl.innerHTML = `
-                <h3>${spell.label}</h3>
-                <div class="spell-detail-line">Niveau requis : ${requiredLevel}</div>
-                <div class="spell-detail-line">
-                  <strong>PA :</strong> ${paCost} &nbsp;|&nbsp;
-                  <strong>Degats :</strong> ${dmgMin} - ${dmgMax}
-                  <span class="spellbook-element spellbook-element-${elementClassDetail}">${elementLabel}</span>
+                <div class="spell-detail-header">
+                  <div class="spell-detail-title">
+                    <h3>${spell.label}</h3>
+                    <span class="spellbook-element spellbook-element-${elementClassDetail}">${elementLabel}</span>
+                  </div>
+                  <div class="spell-detail-scrolls">
+                    <span class="spell-detail-scroll" data-tier="1" title="Parchemin faible"></span>
+                    <span class="spell-detail-scroll" data-tier="2" title="Parchemin moyen"></span>
+                    <span class="spell-detail-scroll" data-tier="3" title="Parchemin fort"></span>
+                    <span class="spell-detail-scroll" data-tier="4" title="Parchemin tres fort"></span>
+                  </div>
                 </div>
-                ${spell.id === "surcharge_instable" ? buildSurchargeChargesHtml() : ""}
-                <div class="spell-detail-line">
-                  <strong>Portee :</strong> ${rangeMin}-${rangeMax}
+                <div class="spell-detail-grid">
+                  ${statsHtml}
                 </div>
-                ${extra}
+                <div class="spell-detail-preview">
+                  Cliquez sur un parchemin pour voir les degats futurs.
+                </div>
+                <div class="spell-detail-parchment is-hidden">
+                  <div class="spell-detail-parchment-icon" aria-hidden="true"></div>
+                  <div class="spell-detail-parchment-info">
+                    <div class="spell-detail-parchment-name">Parchemin</div>
+                    <div class="spell-detail-parchment-status">Non equipe</div>
+                  </div>
+                  <button type="button" class="spell-detail-parchment-btn">Equiper</button>
+                </div>
+                ${spell.id === "surcharge_instable" ? `<div class="spell-detail-block">${buildSurchargeChargesHtml()}</div>` : ""}
+                ${extra ? `<div class="spell-detail-block">${extra}</div>` : ""}
                 ${
                   effectsText
-                    ? `<div class="spell-detail-line"><strong>Effets :</strong> ${effectsText}</div>`
+                    ? `<div class="spell-detail-block"><strong>Effets :</strong> ${effectsText}</div>`
                     : ""
                 }
                 ${
                   spell.description
-                    ? `<div class="spell-detail-line">${spell.description}</div>`
+                    ? `<div class="spell-detail-desc">${spell.description}</div>`
                     : ""
                 }
               `;
+
+              const damagePreviewEl = spellsDetailEl.querySelector(
+                ".spell-detail-damage-preview"
+              );
+              const scrollSlots = spellsDetailEl.querySelectorAll(
+                ".spell-detail-scroll"
+              );
+              const tierLabels = {
+                1: "Parchemin faible",
+                2: "Parchemin moyen",
+                3: "Parchemin fort",
+                4: "Parchemin tres fort",
+              };
+
+              const updatePreview = (tier) => {
+                if (!damagePreviewEl) return;
+                const mult = 1 + 0.1 * tier;
+                if (dmgMax <= 0) {
+                  damagePreviewEl.textContent = " (pas de degats)";
+                  return;
+                }
+                const nextMin = Math.ceil(dmgMin * mult);
+                const nextMax = Math.ceil(dmgMax * mult);
+                damagePreviewEl.textContent = ` → ${nextMin} - ${nextMax}`;
+              };
+
+              const applyEquippedDamageDisplay = () => {
+                const baseEl = spellsDetailEl.querySelector(
+                  ".spell-detail-damage-base"
+                );
+                if (!baseEl || !damagePreviewEl) return;
+                const equippedTier = getEquippedTier();
+                if (!equippedTier) {
+                  baseEl.textContent = `${dmgMin} - ${dmgMax}`;
+                  damagePreviewEl.textContent = "";
+                  return;
+                }
+                const mult = 1 + 0.1 * equippedTier;
+                if (dmgMax <= 0) {
+                  baseEl.textContent = "0 - 0";
+                  damagePreviewEl.textContent = "";
+                  return;
+                }
+                const nextMin = Math.ceil(dmgMin * mult);
+                const nextMax = Math.ceil(dmgMax * mult);
+                baseEl.textContent = `${nextMin} - ${nextMax}`;
+                damagePreviewEl.textContent = "";
+              };
+
+              const updateSlotVisuals = () => {
+                scrollSlots.forEach((slot) => {
+                  const tier = parseInt(slot.dataset.tier, 10) || 1;
+                  const def = parchmentPreviewDefs[tier];
+                  const equippedTier = getEquippedTier();
+                  const isEquipped = equippedTier === tier;
+                  slot.classList.toggle("has-parchment", isEquipped);
+                  slot.style.backgroundImage =
+                    isEquipped && def?.icon ? `url(${def.icon})` : "";
+                  slot.style.backgroundSize = "cover";
+                  slot.style.backgroundPosition = "center";
+                });
+              };
+
+              const parchmentWrap = spellsDetailEl.querySelector(
+                ".spell-detail-parchment"
+              );
+              const parchmentIcon = spellsDetailEl.querySelector(
+                ".spell-detail-parchment-icon"
+              );
+              const parchmentName = spellsDetailEl.querySelector(
+                ".spell-detail-parchment-name"
+              );
+              const parchmentStatus = spellsDetailEl.querySelector(
+                ".spell-detail-parchment-status"
+              );
+              const parchmentBtn = spellsDetailEl.querySelector(
+                ".spell-detail-parchment-btn"
+              );
+
+              const spellKey = spell.id;
+              const getEquippedTier = () =>
+                player.spellParchments?.[spellKey] || null;
+              const setEquippedTier = (tier) => {
+                if (!player.spellParchments) player.spellParchments = {};
+                if (!tier) {
+                  delete player.spellParchments[spellKey];
+                } else {
+                  player.spellParchments[spellKey] = tier;
+                }
+              };
+
+              const countItem = (itemId) => {
+                const inv = player?.inventory;
+                if (!inv || !Array.isArray(inv.slots)) return 0;
+                return inv.slots.reduce(
+                  (acc, slot) =>
+                    acc + (slot && slot.itemId === itemId ? slot.qty : 0),
+                  0
+                );
+              };
+
+              const renderParchmentPreview = (tier) => {
+                if (!parchmentWrap) return;
+                const def = parchmentPreviewDefs[tier];
+                if (!def) {
+                  parchmentWrap.classList.add("is-hidden");
+                  return;
+                }
+                if (getEquippedTier() === tier) {
+                  parchmentWrap.classList.add("is-hidden");
+                  return;
+                }
+                parchmentWrap.classList.remove("is-hidden");
+                if (parchmentIcon) {
+                  parchmentIcon.style.backgroundImage = def.icon
+                    ? `url(${def.icon})`
+                    : "";
+                }
+                if (parchmentName) {
+                  parchmentName.textContent = def.label;
+                }
+                if (parchmentStatus) {
+                  parchmentStatus.textContent = "Non equipe";
+                }
+                if (parchmentBtn) {
+                  const canEquip = countItem(def.itemId) > 0;
+                  parchmentBtn.textContent = "Equiper";
+                  parchmentBtn.disabled = !canEquip;
+                  parchmentBtn.onclick = () => {
+                    if (!canEquip) return;
+                    removeItem(player.inventory, def.itemId, 1);
+                    setEquippedTier(tier);
+                    applyEquippedDamageDisplay();
+                    renderParchmentPreview(tier);
+                    updateSlotVisuals();
+                  };
+                }
+              };
+
+              scrollSlots.forEach((slot) => {
+                slot.addEventListener("click", () => {
+                  scrollSlots.forEach((s) => s.classList.remove("active"));
+                  slot.classList.add("active");
+                  const tier = parseInt(slot.dataset.tier, 10) || 1;
+                  if (!getEquippedTier()) {
+                    updatePreview(tier);
+                  }
+                  renderParchmentPreview(tier);
+                });
+              });
+
+              applyEquippedDamageDisplay();
+              updateSlotVisuals();
             }
           });
 

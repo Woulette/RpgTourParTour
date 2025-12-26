@@ -106,6 +106,7 @@ export function buildSnapshotFromPlayer(player) {
     quests: cloneJson(player.quests || null),
     achievements: cloneJson(player.achievements || null),
     metiers: cloneJson(player.metiers || null),
+    spellParchments: cloneJson(player.spellParchments || null),
     savedAt: Date.now(),
   };
 }
@@ -157,6 +158,9 @@ export function applySnapshotToPlayer(player, snapshot) {
 
   if (snapshot.metiers && typeof snapshot.metiers === "object") {
     player.metiers = cloneJson(snapshot.metiers);
+  }
+  if (snapshot.spellParchments && typeof snapshot.spellParchments === "object") {
+    player.spellParchments = cloneJson(snapshot.spellParchments);
   }
 
   ensureAllMetiers(player);
