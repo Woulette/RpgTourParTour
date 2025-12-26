@@ -234,6 +234,59 @@ function isPlayerAtTile(scene, map, groundLayer, tileX, tileY) {
   return pos.x === tileX && pos.y === tileY;
 }
 
+function applyPushbackDamage(scene, caster, target, blockedCells) {
+  if (!scene || !target || !caster) return false;
+  const cells = Math.max(0, blockedCells | 0);
+  if (cells <= 0) return false;
+
+  const stats = target.stats || {};
+  const currentHp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
+  if (currentHp <= 0) return false;
+
+  const casterBonus =
+    typeof caster.stats?.pushDamage === "number" ? caster.stats.pushDamage : 0;
+  const damage = Math.max(0, cells * 9 + casterBonus);
+  if (damage <= 0) return false;
+
+  const newHp = Math.max(0, currentHp - damage);
+  stats.hp = newHp;
+
+  showFloatingTextOverEntity(scene, target, `-${damage}`, { color: "#ff4444" });
+
+  const isPlayerTarget = target === scene?.combatState?.joueur;
+  if (isPlayerTarget && typeof target.updateHudHp === "function") {
+    const hpMax = stats.hpMax ?? newHp;
+    target.updateHudHp(newHp, hpMax);
+  }
+  if (scene && typeof scene.updateCombatUi === "function") {
+    scene.updateCombatUi();
+  }
+
+  if (newHp > 0) return true;
+
+  if (isPlayerTarget) {
+    if (scene.combatState) {
+      scene.combatState.issue = "defaite";
+    }
+    endCombat(scene);
+    return true;
+  }
+
+  if (typeof target.onKilled === "function") {
+    target.onKilled(scene, caster);
+  }
+  if (typeof target.destroy === "function") {
+    target.destroy();
+  }
+  if (scene.monsters) {
+    scene.monsters = scene.monsters.filter((m) => m !== target);
+  }
+  if (scene.combatMonsters && Array.isArray(scene.combatMonsters)) {
+    scene.combatMonsters = scene.combatMonsters.filter((m) => m && m !== target);
+  }
+  return true;
+}
+
 function tryPushEntity(scene, map, groundLayer, caster, target, distance) {
   if (!scene || !map || !caster || !target) return false;
   const dist = typeof distance === "number" ? Math.max(0, distance) : 0;
@@ -249,6 +302,7 @@ function tryPushEntity(scene, map, groundLayer, caster, target, distance) {
   const stepY = dy === 0 ? 0 : Math.sign(dy);
   if (stepX === 0 && stepY === 0) return false;
 
+  let moved = 0;
   let last = null;
   for (let i = 1; i <= dist; i += 1) {
     const nx = targetPos.x + stepX * i;
@@ -263,9 +317,15 @@ function tryPushEntity(scene, map, groundLayer, caster, target, distance) {
       break;
     }
     last = { x: nx, y: ny };
+    moved = i;
   }
 
-  if (!last) return false;
+  const blockedCells = dist - moved;
+  if (blockedCells > 0) {
+    applyPushbackDamage(scene, caster, target, blockedCells);
+  }
+
+  if (!last) return blockedCells > 0;
 
   const wp = map.tileToWorldXY(last.x, last.y, undefined, undefined, groundLayer);
   const isPlayerTarget = target === scene?.combatState?.joueur;

@@ -29,7 +29,7 @@ export default {
       itemId: "essence_corbeau",
       min: 1,
       max: 1,
-      dropRate: 0.1,
+      dropRate: 0.15,
       requiresJob: "alchimiste",
       minJobLevel: 1,
     },

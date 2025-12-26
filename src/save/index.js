@@ -2,6 +2,7 @@ import { loadSaveFile, writeSaveFile } from "./storage.js";
 import { createPlayerInventory } from "../inventory/inventoryContainers.js";
 import { createEmptyEquipment } from "../inventory/equipmentCore.js";
 import { normalizeLevelState } from "../core/level.js";
+import { ensureAllMetiers } from "../metier/ensureAllMetiers.js";
 
 function cloneJson(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -157,6 +158,8 @@ export function applySnapshotToPlayer(player, snapshot) {
   if (snapshot.metiers && typeof snapshot.metiers === "object") {
     player.metiers = cloneJson(snapshot.metiers);
   }
+
+  ensureAllMetiers(player);
 
   if (typeof player.recomputeStatsWithEquipment === "function") {
     player.recomputeStatsWithEquipment();

@@ -7,6 +7,9 @@ import {
   findPathToReachAdjacentToTarget,
 } from "../../../monsters/aiUtils.js";
 
+const POST_MOVE_DELAY_MS = 250;
+const POST_ATTACK_DELAY_MS = 150;
+
 // IA de Libarene :
 // - melee pur : priorise la frappe lourde, puis la griffure
 export function runTurn(scene, state, monster, player, map, groundLayer, onComplete) {
@@ -47,7 +50,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
   const doMelee = () => {
     const didHeavy = heavy ? tryCastOnPlayer(heavy) : false;
-    delay(scene, didHeavy ? 240 : 120, () => {
+    delay(scene, POST_ATTACK_DELAY_MS, () => {
       if (light) {
         tryCastOnPlayer(light);
       }
@@ -93,7 +96,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
           color: "#22c55e",
         });
       }
-      delay(scene, 260, doMelee);
+      delay(scene, POST_MOVE_DELAY_MS, doMelee);
     });
   };
 

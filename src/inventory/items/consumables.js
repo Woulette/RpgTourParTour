@@ -1,13 +1,13 @@
 // Objets consommables (potions, etc.)
 
 export const consumableItems = {
-  potion_vie_mineure: {
-    id: "potion_vie_mineure",
-    label: "Potion de vie mineure",
+  potion_ortie: {
+    id: "potion_ortie",
+    label: "Potion d'ortie",
     category: "consommable",
     stackable: true,
     maxStack: 9999,
-    icon: "assets/monsters/corbeau/ressources/EssenceDeCorbeau.png",
+    icon: "assets/metier/Alchimiste/Craft/PotionAuOrtie.png",
     effect: {
       hpPlus: 20,
     },

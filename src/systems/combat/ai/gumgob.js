@@ -86,6 +86,9 @@ function findPathToCastRanged(scene, map, monster, targetX, targetY, spell, maxS
   return null;
 }
 
+const POST_MOVE_DELAY_MS = 250;
+const POST_ATTACK_DELAY_MS = 150;
+
 function moveAlong(scene, state, monster, map, groundLayer, path, cb) {
   if (!path || path.length === 0) {
     cb?.();
@@ -98,7 +101,7 @@ function moveAlong(scene, state, monster, map, groundLayer, path, cb) {
         color: "#22c55e",
       });
     }
-    cb?.();
+    delay(scene, POST_MOVE_DELAY_MS, cb);
   });
 }
 
@@ -151,7 +154,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     if (newDist === 1) {
       tryCast(melee);
     }
-    delay(scene, 200, finish);
+    delay(scene, POST_ATTACK_DELAY_MS, finish);
   };
 
   const dist = Math.abs(px - mx) + Math.abs(py - my);
@@ -176,22 +179,31 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
     if (pathToCast && pathToCast.length > 0) {
       moveAlong(scene, state, monster, map, groundLayer, pathToCast, () => {
-        tryCast(ranged);
+        const didCast = tryCast(ranged);
 
-        const pathBackFull =
-          findPathToReachAdjacentToTarget(
-            scene,
-            map,
-            monster.tileX ?? mx,
-            monster.tileY ?? my,
-            px,
-            py,
-            60,
-            monster
-          ) || [];
-        const pathBackTiles =
-          pathBackFull.length > 0 ? pathBackFull.slice(0, state.pmRestants ?? 0) : [];
-        moveAlong(scene, state, monster, map, groundLayer, pathBackTiles, tryMeleeAfterMove);
+        const continueAfterCast = () => {
+          const pathBackFull =
+            findPathToReachAdjacentToTarget(
+              scene,
+              map,
+              monster.tileX ?? mx,
+              monster.tileY ?? my,
+              px,
+              py,
+              60,
+              monster
+            ) || [];
+          const pathBackTiles =
+            pathBackFull.length > 0 ? pathBackFull.slice(0, state.pmRestants ?? 0) : [];
+          moveAlong(scene, state, monster, map, groundLayer, pathBackTiles, tryMeleeAfterMove);
+        };
+
+        if (didCast) {
+          delay(scene, POST_ATTACK_DELAY_MS, continueAfterCast);
+          return;
+        }
+
+        continueAfterCast();
       });
       return;
     }
@@ -214,22 +226,31 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
     if (pathToCast !== null) {
       moveAlong(scene, state, monster, map, groundLayer, pathToCast, () => {
-        tryCast(ranged);
+        const didCast = tryCast(ranged);
 
-        const pathToMeleeFull =
-          findPathToReachAdjacentToTarget(
-            scene,
-            map,
-            monster.tileX ?? mx,
-            monster.tileY ?? my,
-            px,
-            py,
-            60,
-            monster
-          ) || [];
-        const pathTiles =
-          pathToMeleeFull.length > 0 ? pathToMeleeFull.slice(0, state.pmRestants ?? 0) : [];
-        moveAlong(scene, state, monster, map, groundLayer, pathTiles, tryMeleeAfterMove);
+        const continueAfterCast = () => {
+          const pathToMeleeFull =
+            findPathToReachAdjacentToTarget(
+              scene,
+              map,
+              monster.tileX ?? mx,
+              monster.tileY ?? my,
+              px,
+              py,
+              60,
+              monster
+            ) || [];
+          const pathTiles =
+            pathToMeleeFull.length > 0 ? pathToMeleeFull.slice(0, state.pmRestants ?? 0) : [];
+          moveAlong(scene, state, monster, map, groundLayer, pathTiles, tryMeleeAfterMove);
+        };
+
+        if (didCast) {
+          delay(scene, POST_ATTACK_DELAY_MS, continueAfterCast);
+          return;
+        }
+
+        continueAfterCast();
       });
       return;
     }

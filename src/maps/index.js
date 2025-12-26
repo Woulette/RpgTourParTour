@@ -80,7 +80,7 @@ const craftTableCordonnierTileset = {
 const craftTableAlchimisteTileset = {
   name: "TableDeAlchimiste",
   imageKey: "TableDeAlchimiste",
-  imagePath: "assets/TableDeAlchimiste.png",
+  imagePath: "assets/metier/Alchimiste/TableDeAlchimiste.png",
   frameWidth: 60,
   frameHeight: 60,
 };
@@ -356,6 +356,14 @@ export const maps = {
       { tileX: 20, tileY: 20 },
       { tileX: 19, tileY: 8 },
     ],
+    workstations: [
+      {
+        id: "bucheron",
+        tileX: 14,
+        tileY: 18,
+        textureKey: "ScierieDuBucheron",
+      },
+    ],
     exitBounds: null,
   },
   MapAndemiaNouvelleVersion3: {
@@ -393,6 +401,9 @@ export const maps = {
       { tileX: 13, tileY: 19 },
       { tileX: 27, tileY: 18 },
       { tileX: 19, tileY: 8 },
+    ],
+    wellPositions: [
+      { tileX: 14, tileY: 10, offsetX: 0, offsetY: 6 },
     ],
     // Portail au sol : quand le joueur est sur cette tuile, on entre dans la taverne.
     // Ajuste `tileX/tileY` selon la case du portail sur la map 3.
@@ -435,6 +446,11 @@ export const maps = {
       },
     ],
     treePositions: [],
+    herbPositions: [
+      { tileX: 8, tileY: 12 },
+      { tileX: 15, tileY: 9 },
+      { tileX: 21, tileY: 16 },
+    ],
     exitBounds: null,
   },
   MapAndemiaNouvelleVersion4: {
@@ -469,7 +485,7 @@ export const maps = {
   MapAndemiaNouvelleVersion7: {
     key: "MapAndemiaNouvelleVersion7",
     // Au-dessus de MapAndemiaNouvelleVersion4 (-2,-1).
-    worldPos: { x: -2, y: -2 },
+    worldPos: { x:-2, y: -2 },
     jsonPath: "assets/maps/MapAndemiaNouvelleVersion7.json",
     tilesets: [...tilesetNew],
     groundLayerName: "Calque de Tuiles 1",
@@ -493,6 +509,19 @@ export const maps = {
       },
     ],
     treePositions: [],
+    herbPositions: [
+      { tileX: 9, tileY: 14 },
+      { tileX: 16, tileY: 10 },
+      { tileX: 22, tileY: 18 },
+    ],
+    workstations: [
+      {
+        id: "boutique",
+        tileX: 10,
+        tileY: 18,
+        textureKey: "Boutique",
+      },
+    ],
     exitBounds: null,
   },
   MapAndemiaNouvelleVersion5: {
@@ -522,6 +551,11 @@ export const maps = {
       },
     ],
     treePositions: [],
+    herbPositions: [
+      { tileX: 7, tileY: 13 },
+      { tileX: 14, tileY: 8 },
+      { tileX: 19, tileY: 17 },
+    ],
     exitBounds: null,
   },
   MapTaverne: {

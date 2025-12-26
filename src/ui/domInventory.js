@@ -1,4 +1,4 @@
-import { getItemDef } from "../inventory/inventoryCore.js";
+import { getItemDef, removeItem } from "../inventory/inventoryCore.js";
 import {
   equipFromInventory,
   unequipToInventory,
@@ -9,6 +9,57 @@ import { on as onStoreEvent } from "../state/store.js";
 let inventoryUiInitialized = false;
 let unsubscribeInventory = null;
 let unsubscribeEquipment = null;
+
+function applyConsumableEffect(player, def) {
+  if (!player || !def) return false;
+  const effect = def.effect || {};
+  const stats = player.stats || {};
+  let didApply = false;
+
+  if (typeof effect.hpPlus === "number" && effect.hpPlus !== 0) {
+    const hp = stats.hp ?? stats.hpMax ?? 0;
+    const hpMax = stats.hpMax ?? hp;
+    const nextHp = Math.min(hpMax, hp + effect.hpPlus);
+    stats.hp = nextHp;
+    if (typeof player.updateHudHp === "function") {
+      player.updateHudHp(nextHp, hpMax);
+    }
+    didApply = true;
+  }
+
+  const scene = player.scene || null;
+  const combat = scene?.combatState?.enCours ? scene.combatState : null;
+  if (combat) {
+    if (typeof effect.paPlusCombat === "number" && effect.paPlusCombat !== 0) {
+      combat.paRestants = Math.max(0, (combat.paRestants ?? 0) + effect.paPlusCombat);
+      didApply = true;
+    }
+    if (typeof effect.pmPlusCombat === "number" && effect.pmPlusCombat !== 0) {
+      combat.pmRestants = Math.max(0, (combat.pmRestants ?? 0) + effect.pmPlusCombat);
+      didApply = true;
+    }
+    if (typeof player.updateHudApMp === "function") {
+      player.updateHudApMp(combat.paRestants ?? 0, combat.pmRestants ?? 0);
+    }
+    if (scene && typeof scene.updateCombatUi === "function") {
+      scene.updateCombatUi();
+    }
+  } else {
+    if (typeof effect.paPlus === "number" && effect.paPlus !== 0) {
+      stats.pa = (stats.pa ?? 0) + effect.paPlus;
+      didApply = true;
+    }
+    if (typeof effect.pmPlus === "number" && effect.pmPlus !== 0) {
+      stats.pm = (stats.pm ?? 0) + effect.pmPlus;
+      didApply = true;
+    }
+    if (didApply && typeof player.updateHudApMp === "function") {
+      player.updateHudApMp(stats.pa ?? 0, stats.pm ?? 0);
+    }
+  }
+
+  return didApply;
+}
 
 // Initialisation de la fenêtre d'inventaire HTML.
 export function initDomInventory(player) {
@@ -27,6 +78,7 @@ export function initDomInventory(player) {
 
   // Sous‑composants pour l'encadré de bonus : onglets Objet / Panoplie + texte
   let bonusTextEl = null;
+  let bonusTabsEl = null;
   let bonusMode = "object"; // "object" | "set"
   let lastObjectBonusText = "";
   let lastSetBonusText = "";
@@ -49,6 +101,7 @@ export function initDomInventory(player) {
     `;
 
     bonusTextEl = bonusEl.querySelector(".inventory-bonus-text");
+    bonusTabsEl = bonusEl.querySelector(".inventory-bonus-tabs");
 
     const tabs = bonusEl.querySelectorAll(".inventory-bonus-tab");
     tabs.forEach((btn) => {
@@ -120,6 +173,25 @@ export function initDomInventory(player) {
     }
   }
 
+  function setBonusUiForItem(def) {
+    const isEquip = def?.category === "equipement";
+    if (bonusTabsEl) {
+      bonusTabsEl.style.display = isEquip ? "" : "none";
+    }
+    if (bonusTextEl) {
+      bonusTextEl.style.marginTop = isEquip ? "" : "0";
+    }
+    if (!isEquip) {
+      bonusMode = "object";
+      if (bonusEl) {
+        const tabs = bonusEl.querySelectorAll(".inventory-bonus-tab");
+        tabs.forEach((btn, index) => {
+          btn.classList.toggle("inventory-bonus-tab-active", index === 0);
+        });
+      }
+    }
+  }
+
   // Utilitaire : nom humain pour une statistique
   function labelForStatKey(key) {
     switch (key) {
@@ -135,6 +207,8 @@ export function initDomInventory(player) {
         return "Vitalité";
       case "initiative":
         return "Initiative";
+      case "puissance":
+        return "Puissance";
       case "hpPlus":
       case "hp":
       case "hpMax":
@@ -172,6 +246,7 @@ export function initDomInventory(player) {
 
     const def = getItemDef(itemId);
     const baseName = def ? def.label : itemId;
+    setBonusUiForItem(def);
 
     // Icône
     if (iconEl) {
@@ -220,8 +295,8 @@ export function initDomInventory(player) {
       descLines.push(def.description);
     }
 
-    // Effets "consommables" -> zone bonus
-    const effect = def?.effect || {};
+  // Effets "consommables" -> zone bonus
+  const effect = def?.effect || {};
     const effectParts = [];
     if (typeof effect.hpPlus === "number" && effect.hpPlus !== 0) {
       effectParts.push(`+${effect.hpPlus} PV`);
@@ -234,6 +309,10 @@ export function initDomInventory(player) {
     }
     if (effectParts.length > 0) {
       bonusLines.push(`Effets : ${effectParts.join(", ")}`);
+    }
+
+    if (def && typeof def.bonusInfo === "string" && def.bonusInfo.trim()) {
+      bonusLines.push(def.bonusInfo.trim());
     }
 
     // Bonus de l'équipement (statsBonus) -> zone bonus
@@ -344,6 +423,7 @@ export function initDomInventory(player) {
           { label: "Chance", cls: "inventory-bonus-stat-chance" },
           { label: "Vitalit\u00e9", cls: "inventory-bonus-stat-vitalite" },
           { label: "Initiative", cls: "inventory-bonus-stat-init" },
+          { label: "Puissance", cls: "inventory-bonus-stat-force" },
           { label: "PV", cls: "inventory-bonus-stat-hp" },
           { label: "PA", cls: "inventory-bonus-stat-pa" },
           { label: "PM", cls: "inventory-bonus-stat-pm" },
@@ -505,7 +585,16 @@ export function initDomInventory(player) {
           const liveSlotData = Number.isNaN(idx) ? null : inv.slots[idx];
           if (!liveSlotData) return;
           const def = getItemDef(liveSlotData.itemId);
-          if (!def || def.category !== "equipement") return;
+          if (!def) return;
+          if (def.category === "consommable") {
+            const applied = applyConsumableEffect(player, def);
+            if (applied) {
+              removeItem(player.inventory, liveSlotData.itemId, 1);
+              renderInventory();
+            }
+            return;
+          }
+          if (def.category !== "equipement") return;
 
           const ok = equipFromInventory(player, player.inventory, idx);
           if (ok) {
@@ -581,7 +670,16 @@ export function initDomInventory(player) {
       slot.addEventListener("dblclick", () => {
         if (!slotData) return;
         const def = getItemDef(slotData.itemId);
-        if (!def || def.category !== "equipement") return;
+        if (!def) return;
+        if (def.category === "consommable") {
+          const applied = applyConsumableEffect(player, def);
+          if (applied) {
+            removeItem(player.inventory, slotData.itemId, 1);
+            renderInventory();
+          }
+          return;
+        }
+        if (def.category !== "equipement") return;
 
         const ok = equipFromInventory(player, player.inventory, i);
         if (ok) {

@@ -308,18 +308,6 @@
                  "y":576
                 }, 
                 {
-                 "gid":315,
-                 "height":32,
-                 "id":515,
-                 "name":"",
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":64,
-                 "x":315.333333333333,
-                 "y":490
-                }, 
-                {
                  "gid":1447,
                  "height":400,
                  "id":519,
@@ -2225,7 +2213,7 @@
          "y":0
         }],
  "nextlayerid":12,
- "nextobjectid":520,
+ "nextobjectid":522,
  "orientation":"isometric",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

@@ -1,15 +1,28 @@
 // Recettes d'alchimie (potion/consommable).
 export const alchimieRecipes = [
   {
-    id: "potion_vie_mineure",
-    label: "Potion de vie mineure",
+    id: "potion_ortie",
+    label: "Potion d'ortie",
     level: 1,
     category: "potion",
+    recipeIcon: "assets/metier/Alchimiste/Craft/PotionAuOrtie.png",
     inputs: [
-      { itemId: "plante_ortie", qty: 3 },
-      { itemId: "essence_corbeau", qty: 1 },
+      { itemId: "plante_ortie", qty: 4 },
     ],
-    output: { itemId: "potion_vie_mineure", qty: 1 },
+    output: { itemId: "potion_ortie", qty: 1 },
+    xpGain: 12,
+  },
+  {
+    id: "papier",
+    label: "Papier",
+    level: 1,
+    category: "resource",
+    recipeIcon: "assets/metier/Alchimiste/Craft/Papier.png",
+    inputs: [
+      { itemId: "copeau_frene", qty: 6 },
+      { itemId: "eau", qty: 10 },
+    ],
+    output: { itemId: "papier", qty: 1 },
     xpGain: 12,
   },
   {
@@ -52,3 +65,6 @@ export const alchimieRecipes = [
     xpGain: 50,
   },
 ];
+
+// Recettes de fusion (interface "Fusion")
+export const alchimieFusionRecipes = [];

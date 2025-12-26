@@ -14,6 +14,9 @@ import {
   isTileOccupiedByMonster,
 } from "../../../monsters/aiUtils.js";
 
+const POST_MOVE_DELAY_MS = 250;
+const POST_ATTACK_DELAY_MS = 150;
+
 function canCastFromTile(scene, monster, spell, tileX, tileY, targetX, targetY, map) {
   const prevX = monster.tileX;
   const prevY = monster.tileY;
@@ -115,7 +118,7 @@ function moveAlong(scene, state, monster, map, groundLayer, path, cb) {
         color: "#22c55e",
       });
     }
-    cb?.();
+    delay(scene, POST_MOVE_DELAY_MS, cb);
   });
 }
 
@@ -167,7 +170,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     if (newDist === 1) {
       tryCast(melee);
     }
-    delay(scene, 200, finish);
+    delay(scene, POST_ATTACK_DELAY_MS, finish);
   };
 
   const dist = Math.abs(px - mx) + Math.abs(py - my);
@@ -194,27 +197,36 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
           return;
         }
 
-        const pathToMelee =
-          findPathToReachAdjacentToTarget(
-            scene,
-            map,
-            mx,
-            my,
-            px,
-            py,
-            state.pmRestants,
-            monster
-          ) || [];
+        const continueAfterCast = () => {
+          const pathToMelee =
+            findPathToReachAdjacentToTarget(
+              scene,
+              map,
+              mx,
+              my,
+              px,
+              py,
+              state.pmRestants,
+              monster
+            ) || [];
 
-        if (pathToMelee.length > 0 && pathToMelee.length <= (state.pmRestants ?? 0)) {
-          moveAlong(scene, state, monster, map, groundLayer, pathToMelee, tryMeleeAfterMove);
+          if (pathToMelee.length > 0 && pathToMelee.length <= (state.pmRestants ?? 0)) {
+            moveAlong(scene, state, monster, map, groundLayer, pathToMelee, tryMeleeAfterMove);
+            return;
+          }
+
+          const fleePath = buildFleePath(scene, map, monster, mx, my, px, py, state.pmRestants ?? 0);
+          moveAlong(scene, state, monster, map, groundLayer, fleePath, () =>
+            delay(scene, POST_MOVE_DELAY_MS, finish)
+          );
+        };
+
+        if (didRanged) {
+          delay(scene, POST_ATTACK_DELAY_MS, continueAfterCast);
           return;
         }
 
-        const fleePath = buildFleePath(scene, map, monster, mx, my, px, py, state.pmRestants ?? 0);
-        moveAlong(scene, state, monster, map, groundLayer, fleePath, () =>
-          delay(scene, 200, finish)
-        );
+        continueAfterCast();
       });
       return;
     }
@@ -223,7 +235,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
   if (dist === 1) {
     tryCast(melee);
-    delay(scene, 200, finish);
+    delay(scene, POST_ATTACK_DELAY_MS, finish);
     return;
   }
 

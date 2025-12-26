@@ -9,6 +9,47 @@ let lastCrafted = null;
 let activeRecipePreview = null;
 let xpRenderRequested = false;
 
+function formatEffectLines(effect) {
+  if (!effect) return [];
+  const parts = [];
+  if (typeof effect.hpPlus === "number" && effect.hpPlus !== 0) {
+    parts.push({
+      value: `+${effect.hpPlus}`,
+      label: "PV",
+      cls: "inventory-bonus-stat-hp",
+    });
+  }
+  if (typeof effect.paPlus === "number" && effect.paPlus !== 0) {
+    parts.push({
+      value: `+${effect.paPlus}`,
+      label: "PA",
+      cls: "inventory-bonus-stat-pa",
+    });
+  }
+  if (typeof effect.pmPlus === "number" && effect.pmPlus !== 0) {
+    parts.push({
+      value: `+${effect.pmPlus}`,
+      label: "PM",
+      cls: "inventory-bonus-stat-pm",
+    });
+  }
+  if (typeof effect.paPlusCombat === "number" && effect.paPlusCombat !== 0) {
+    parts.push({
+      value: `+${effect.paPlusCombat}`,
+      label: "PA (combat)",
+      cls: "inventory-bonus-stat-pa",
+    });
+  }
+  if (typeof effect.pmPlusCombat === "number" && effect.pmPlusCombat !== 0) {
+    parts.push({
+      value: `+${effect.pmPlusCombat}`,
+      label: "PM (combat)",
+      cls: "inventory-bonus-stat-pm",
+    });
+  }
+  return parts;
+}
+
 function ensurePanelElements() {
   if (panelEl) return panelEl;
   const ensureLink = (id, href) => {
@@ -232,6 +273,39 @@ function renderResult(player) {
     }
 
     if (showRecipe) {
+      const effectParts = formatEffectLines(def?.effect);
+      if (effectParts.length > 0) {
+        const effectsBlock = document.createElement("div");
+        effectsBlock.style.display = "flex";
+        effectsBlock.style.flexDirection = "column";
+        effectsBlock.style.gap = "2px";
+        effectsBlock.style.marginTop = "2px";
+
+        effectParts.forEach((entry) => {
+          const line = document.createElement("div");
+          line.className = `inventory-bonus-stat ${entry.cls}`;
+          line.style.fontSize = "16px";
+          line.style.lineHeight = "1.2";
+          line.style.display = "flex";
+          line.style.alignItems = "center";
+          line.style.gap = "6px";
+          line.style.padding = "0";
+          line.style.margin = "0";
+
+          const valSpan = document.createElement("span");
+          valSpan.textContent = entry.value;
+          const labelSpan = document.createElement("span");
+          labelSpan.textContent = entry.label;
+          line.appendChild(valSpan);
+          line.appendChild(labelSpan);
+          effectsBlock.appendChild(line);
+        });
+
+        wrap.appendChild(effectsBlock);
+      }
+    }
+
+    if (showRecipe) {
       const ingTitle = document.createElement("div");
       ingTitle.style.marginTop = "6px";
       ingTitle.innerHTML = "<strong>Ingredients :</strong>";
@@ -335,9 +409,10 @@ function renderRecipes(player, selectedIdRef) {
     const icon = document.createElement("img");
     icon.className = "recipe-icon";
     const outDef = getItemDef(recipe.output.itemId);
-    if (outDef?.icon) {
-      icon.src = outDef.icon;
-      icon.alt = outDef?.label || recipe.output.itemId;
+    const recipeIcon = recipe.recipeIcon || outDef?.icon || "";
+    if (recipeIcon) {
+      icon.src = recipeIcon;
+      icon.alt = outDef?.label || recipe.label || recipe.output.itemId;
     }
 
     const title = document.createElement("div");

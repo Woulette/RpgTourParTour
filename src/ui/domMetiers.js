@@ -353,8 +353,9 @@ export function initDomMetiers(player) {
     title.style.alignItems = "center";
     title.style.gap = "10px";
       const icon = document.createElement("img");
-      icon.src = outDef?.icon || "";
-      icon.alt = outDef?.label || recipe.output.itemId;
+      const recipeIcon = recipe.recipeIcon || outDef?.icon || "";
+      icon.src = recipeIcon;
+      icon.alt = outDef?.label || recipe.label || recipe.output.itemId;
       icon.style.width = "42px";
       icon.style.height = "42px";
       icon.style.borderRadius = "8px";
@@ -538,8 +539,9 @@ export function initDomMetiers(player) {
       left.style.alignItems = "center";
       left.style.gap = "8px";
       const icon = document.createElement("img");
-      icon.src = outDef?.icon || "";
-      icon.alt = outDef?.label || recipe.output.itemId;
+      const recipeIcon = recipe.recipeIcon || outDef?.icon || "";
+      icon.src = recipeIcon;
+      icon.alt = outDef?.label || recipe.label || recipe.output.itemId;
       icon.style.width = "38px";
       icon.style.height = "38px";
       icon.style.borderRadius = "8px";

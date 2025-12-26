@@ -2,6 +2,7 @@ import { openTailleurCraftPanel } from "../ui/craft/tailleurPanel.js";
 import { openBijoutierCraftPanel } from "../ui/craft/bijoutierPanel.js";
 import { openCordonnierCraftPanel } from "../ui/craft/cordonnierPanel.js";
 import { openAlchimisteCraftPanel } from "../ui/craft/alchimistePanel.js";
+import { openBucheronCraftPanel } from "../ui/craft/bucheronPanel.js";
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { blockTile, isTileBlocked } from "../collision/collisionGrid.js";
 import { findPathForPlayer } from "../entities/movement/pathfinding.js";
@@ -104,23 +105,28 @@ export function setupWorkstations(scene, map, groundLayer, mapDef) {
       return free[0];
     };
 
-    sprite.on("pointerover", () => {
-      if (sprite.hoverHighlight || !scene.add) return;
-      const overlay = scene.add.sprite(sprite.x, sprite.y, textureKey, frame);
-      overlay.setOrigin(sprite.originX, sprite.originY);
-      overlay.setBlendMode(Phaser.BlendModes.ADD);
-      overlay.setAlpha(0.35);
-      overlay.setDepth(sprite.depth + 1);
-      if (scene.hudCamera) scene.hudCamera.ignore(overlay);
-      sprite.hoverHighlight = overlay;
-    });
+    const disableHover =
+      ws.disableHover === true || ws.id === "boutique";
 
-    sprite.on("pointerout", () => {
-      if (sprite.hoverHighlight) {
-        sprite.hoverHighlight.destroy();
-        sprite.hoverHighlight = null;
-      }
-    });
+    if (!disableHover) {
+      sprite.on("pointerover", () => {
+        if (sprite.hoverHighlight || !scene.add) return;
+        const overlay = scene.add.sprite(sprite.x, sprite.y, textureKey, frame);
+        overlay.setOrigin(sprite.originX, sprite.originY);
+        overlay.setBlendMode(Phaser.BlendModes.ADD);
+        overlay.setAlpha(0.35);
+        overlay.setDepth(sprite.depth + 1);
+        if (scene.hudCamera) scene.hudCamera.ignore(overlay);
+        sprite.hoverHighlight = overlay;
+      });
+
+      sprite.on("pointerout", () => {
+        if (sprite.hoverHighlight) {
+          sprite.hoverHighlight.destroy();
+          sprite.hoverHighlight = null;
+        }
+      });
+    }
 
     sprite.on("pointerdown", (pointer, lx, ly, event) => {
       if (event?.stopPropagation) event.stopPropagation();
@@ -152,6 +158,9 @@ export function setupWorkstations(scene, map, groundLayer, mapDef) {
         }
         if (ws.id === "alchimiste") {
           openAlchimisteCraftPanel(scene, scene?.player);
+        }
+        if (ws.id === "bucheron") {
+          openBucheronCraftPanel(scene, scene?.player);
         }
       };
 

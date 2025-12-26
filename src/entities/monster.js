@@ -146,6 +146,11 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     stats,
   });
 
+  monster.baseTextureKey = def.textureKey;
+  if (def.animation && def.animation.basePath) {
+    monster.animPrefix = def.animation.prefix || def.id || def.textureKey;
+  }
+
   // Réglages de rendu spécifiques au monstre (origin/offset).
   const render = def.render || {};
   monster.renderOffsetX = typeof render.offsetX === "number" ? render.offsetX : 0;

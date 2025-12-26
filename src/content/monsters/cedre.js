@@ -3,6 +3,11 @@ export default {
   label: "Cèdre",
   textureKey: "cedre",
   spritePath: "assets/monsters/Cedre/rotations/south-west.png",
+  animation: {
+    prefix: "cedre",
+    basePath: "assets/monsters/Cedre/animations/walk-4-frames",
+    frameCount: 4,
+  },
   render: {
     originX: 0.5,
     originY: 1,

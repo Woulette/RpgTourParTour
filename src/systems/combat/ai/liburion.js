@@ -15,6 +15,9 @@ import {
 } from "../../../monsters/aiUtils.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 
+const POST_MOVE_DELAY_MS = 250;
+const POST_ATTACK_DELAY_MS = 150;
+
 function findPathToTile(scene, map, fromX, fromY, toX, toY, maxNodes = 120, self) {
   if (!map) return null;
   const width = map.width;
@@ -189,7 +192,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
       return;
     }
 
-    delay(scene, 220, () => {
+    delay(scene, POST_ATTACK_DELAY_MS, () => {
       const pm = state.pmRestants ?? 0;
       if (pm <= 0) {
         onComplete?.();
@@ -220,7 +223,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
               color: "#22c55e",
             });
           }
-        delay(scene, 140, () => onComplete?.());
+        delay(scene, POST_MOVE_DELAY_MS, () => onComplete?.());
       });
     });
   };
@@ -244,7 +247,9 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
       return;
     }
     didAttackThisTurn = true;
-    if (scene.time?.delayedCall) scene.time.delayedCall(450, () => castSequenceEclat(count - 1));
+    if (scene.time?.delayedCall) {
+      scene.time.delayedCall(POST_ATTACK_DELAY_MS, () => castSequenceEclat(count - 1));
+    }
     else castSequenceEclat(count - 1);
   };
 
@@ -320,7 +325,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
   const runOffense = () => {
     if (eclat && canCastSpellOnTile(scene, monster, eclat, px, py, map)) {
-      delay(scene, 220, () => castSequenceEclat(2));
+      delay(scene, POST_ATTACK_DELAY_MS, () => castSequenceEclat(2));
       return;
     }
 
@@ -338,7 +343,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
           color: "#22c55e",
         });
       }
-      delay(scene, 520, () => {
+      delay(scene, POST_MOVE_DELAY_MS, () => {
         if (canCastSpellOnTile(scene, monster, eclat, px, py, map)) {
           castSequenceEclat(2);
           return;
@@ -374,7 +379,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
       const pathTiles = best.path || [];
       const castAfterMove = () => {
         if (tryCastRugissement()) {
-          delay(scene, 260, runOffense);
+          delay(scene, POST_ATTACK_DELAY_MS, runOffense);
         } else {
           runOffense();
         }
@@ -392,7 +397,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
             color: "#22c55e",
           });
         }
-        delay(scene, 200, castAfterMove);
+        delay(scene, POST_MOVE_DELAY_MS, castAfterMove);
       });
       return;
     }

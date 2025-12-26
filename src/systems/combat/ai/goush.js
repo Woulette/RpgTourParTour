@@ -7,6 +7,9 @@ import {
   findPathToReachAdjacentToTarget,
 } from "../../../monsters/aiUtils.js";
 
+const POST_MOVE_DELAY_MS = 250;
+const POST_ATTACK_DELAY_MS = 150;
+
 // IA du Goush :
 // - priorité à Bave puante si possible
 // - ensuite morsure si au contact
@@ -61,7 +64,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
   const doMelee = () => {
     const didPoison = tryBavePuante();
-    delay(scene, didPoison ? 260 : 120, () => {
+    delay(scene, POST_ATTACK_DELAY_MS, () => {
       tryMorsure();
       onComplete?.();
     });
@@ -90,9 +93,9 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
         });
       }
 
-      delay(scene, 520, () => {
+      delay(scene, POST_MOVE_DELAY_MS, () => {
         const didPoison = tryBavePuante();
-        delay(scene, didPoison ? 260 : 140, () => {
+        delay(scene, POST_ATTACK_DELAY_MS, () => {
           tryMorsure();
           onComplete?.();
         });
@@ -106,6 +109,6 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
   }
 
   const didPoison = tryBavePuante();
-  if (didPoison) delay(scene, 260, doMoveThenActions);
+  if (didPoison) delay(scene, POST_ATTACK_DELAY_MS, doMoveThenActions);
   else doMoveThenActions();
 }

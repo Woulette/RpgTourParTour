@@ -8,6 +8,7 @@ const OPEN_CLASSES = [
   "hud-spells-open",
   "hud-stats-open",
   "hud-achievements-open",
+  "shop-open",
   "npc-dialog-open",
 ];
 

@@ -39,6 +39,7 @@ import { initDomRewardPops } from "./ui/domRewardPops.js";
 import {
   preloadMonsters,
   processPendingRespawnsForCurrentMap,
+  setupMonsterAnimations,
   spawnInitialMonsters,
 } from "./monsters/index.js";
 import { defaultClassId } from "./config/classes.js";
@@ -48,6 +49,7 @@ import { initCharacterMenus } from "./ui/characterMenus.js";
 import { onAfterMapLoaded } from "./dungeons/hooks.js";
 import { spawnTestTrees } from "./metier/bucheron/trees.js";
 import { spawnTestHerbs } from "./metier/alchimiste/plants.js";
+import { spawnTestWells } from "./maps/world/wells.js";
 import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
 import { getPlayer, initStore } from "./state/store.js";
 import { initQuestRuntime } from "./quests/runtime/init.js";
@@ -134,14 +136,20 @@ class MainScene extends Phaser.Scene {
       "eryon",
       "assets/animations/animations-Eryon/animations/running-6-frames"
     );
-    this.load.image("tree_chene", "assets/metier/bucheron/Chene.png");
+    this.load.image("tree_chene", "assets/metier/Bucheron/Ressources/Chene.png");
     this.load.image(
       "tree_chene_stump",
-      "assets/metier/bucheron/SoucheChene.png"
+      "assets/metier/Bucheron/Ressources/SoucheChene.png"
     );
-    // Placeholder pour l'alchimiste (a remplacer par ses assets plus tard)
-    this.load.image("herb_ortie", "assets/metier/bucheron/Chene.png");
-    this.load.image("herb_ortie_stump", "assets/metier/bucheron/SoucheChene.png");
+    this.load.image(
+      "ScierieDuBucheron",
+      "assets/metier/Bucheron/ScierieDuBucheron.png"
+    );
+    this.load.image("Boutique", "assets/Boutique.png");
+    this.load.image("puits", "assets/Puits.png");
+    // Ressources alchimiste (ortie)
+    this.load.image("herb_ortie", "assets/metier/alchimiste/ressources/Ortie.png");
+    this.load.image("herb_ortie_stump", "assets/metier/Alchimiste/Ressources/SoucheOrtie.png");
     this.load.image("chene", "assets/tileset/chene.png");
     this.load.image("boulleau_single", "assets/tileset/Boulleau.png");
 
@@ -253,6 +261,7 @@ class MainScene extends Phaser.Scene {
     setupCharacterAnimations(this, "tank");
     setupCharacterAnimations(this, "animiste");
     setupCharacterAnimations(this, "eryon");
+    setupMonsterAnimations(this);
     setupSpellAnimations(this);
     this.player.setDepth(startY);
 
@@ -311,6 +320,8 @@ class MainScene extends Phaser.Scene {
       spawnTestTrees(this, map, this.player, mapDef);
       // --- PLANTES DE TEST (METIER ALCHIMISTE) ---
       spawnTestHerbs(this, map, this.player, mapDef);
+      // --- PUITS ---
+      spawnTestWells(this, map, this.player, mapDef);
 
     }
 

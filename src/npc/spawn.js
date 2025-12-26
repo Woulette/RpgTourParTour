@@ -83,8 +83,10 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
       undefined,
       groundLayer
     );
-    const x = worldPos.x + map.tileWidth / 2;
-    const y = worldPos.y + map.tileHeight;
+    const offsetX = typeof def.offsetX === "number" ? def.offsetX : 0;
+    const offsetY = typeof def.offsetY === "number" ? def.offsetY : 0;
+    const x = worldPos.x + map.tileWidth / 2 + offsetX;
+    const y = worldPos.y + map.tileHeight + offsetY;
 
     const sprite = scene.add.sprite(x, y, def.textureKey);
     sprite.setOrigin(0.5, 1);

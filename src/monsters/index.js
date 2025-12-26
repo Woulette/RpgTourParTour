@@ -1,9 +1,15 @@
 import { monsters } from "../content/monsters/index.js";
 import { createMonster } from "../entities/monster.js";
 import { computeScaledMonsterOverrides } from "../entities/monster.js";
+import { setupCharacterAnimations } from "../entities/animation.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { getRespawnsForMap, setRespawnsForMap } from "./respawnState.js";
 import { createStats } from "../core/stats.js";
+import {
+  DEFAULT_MONSTER_ANIM_DIRECTIONS,
+  playMonsterMoveAnimation,
+  stopMonsterMoveAnimation,
+} from "./animations.js";
 
 function rollMonsterLevel(monsterId) {
   const def = monsters[monsterId] || null;
@@ -24,6 +30,31 @@ function syncMonsterStatsToDisplayedLevel(monster) {
   monster.stats = createStats(computeScaledMonsterOverrides(def, lvl));
 }
 
+function loadMonsterAnimationFrames(scene, m) {
+  const anim = m?.animation;
+  if (!anim || !anim.basePath) return;
+
+  const prefix = anim.prefix || m.id || m.textureKey;
+  const directions =
+    Array.isArray(anim.directions) && anim.directions.length > 0
+      ? anim.directions
+      : DEFAULT_MONSTER_ANIM_DIRECTIONS;
+  const frameCount =
+    typeof anim.frameCount === "number" && anim.frameCount > 0
+      ? Math.round(anim.frameCount)
+      : 4;
+
+  directions.forEach((dir) => {
+    for (let i = 0; i < frameCount; i += 1) {
+      const index = i.toString().padStart(3, "0");
+      scene.load.image(
+        `${prefix}_run_${dir}_${i}`,
+        `${anim.basePath}/${dir}/frame_${index}.png`
+      );
+    }
+  });
+}
+
 // Précharge toutes les textures de monstres déclarées dans la config
 export function preloadMonsters(scene) {
   Object.values(monsters).forEach((m) => {
@@ -36,6 +67,24 @@ export function preloadMonsters(scene) {
       return;
     }
     scene.load.image(m.textureKey, m.spritePath);
+    loadMonsterAnimationFrames(scene, m);
+  });
+}
+
+export function setupMonsterAnimations(scene) {
+  Object.values(monsters).forEach((m) => {
+    const anim = m?.animation;
+    if (!anim || !anim.basePath) return;
+    const prefix = anim.prefix || m.id || m.textureKey;
+    const directions =
+      Array.isArray(anim.directions) && anim.directions.length > 0
+        ? anim.directions
+        : DEFAULT_MONSTER_ANIM_DIRECTIONS;
+    const frameCount =
+      typeof anim.frameCount === "number" && anim.frameCount > 0
+        ? Math.round(anim.frameCount)
+        : 4;
+    setupCharacterAnimations(scene, prefix, { directions, frameCount });
   });
 }
 
@@ -570,6 +619,8 @@ function tweenAlongPath(scene, monster, map, groundLayer, steps, onComplete) {
   const targetX = wp.x + map.tileWidth / 2 + offX;
   const targetY = wp.y + map.tileHeight + offY;
 
+  playMonsterMoveAnimation(scene, monster, targetX - monster.x, targetY - monster.y);
+
   monster.roamTween = monster.scene.tweens.add({
     targets: monster,
     x: targetX,
@@ -581,11 +632,13 @@ function tweenAlongPath(scene, monster, map, groundLayer, steps, onComplete) {
       monster.tileY = next.y;
       if (steps.length > 1) {
         tweenAlongPath(scene, monster, map, groundLayer, steps.slice(1), onComplete);
-      } else if (onComplete) {
-        onComplete();
+      } else {
+        stopMonsterMoveAnimation(monster);
+        if (onComplete) onComplete();
       }
     },
     onStop: () => {
+      stopMonsterMoveAnimation(monster);
       if (onComplete) onComplete();
     },
   });

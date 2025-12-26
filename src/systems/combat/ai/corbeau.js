@@ -7,6 +7,9 @@ import {
   findPathToReachAdjacentToTarget,
 } from "../../../monsters/aiUtils.js";
 
+const POST_MOVE_DELAY_MS = 250;
+const POST_ATTACK_DELAY_MS = 150;
+
 // IA du corbeau : approche simple + coup de bec au corps a corps.
 export function runTurn(scene, state, monster, player, map, groundLayer, onComplete) {
   let pmRestants = state.pmRestants ?? 0;
@@ -66,7 +69,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
   };
 
   if (!fleeing && tryMeleeAttack()) {
-    onComplete?.();
+    delay(scene, POST_ATTACK_DELAY_MS, () => onComplete?.());
     return;
   }
 
@@ -102,11 +105,11 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     const finalMy = monster.tileY ?? my;
     const distAfterMove = Math.abs(px - finalMx) + Math.abs(py - finalMy);
 
-    delay(scene, 520, () => {
+    delay(scene, POST_MOVE_DELAY_MS, () => {
       if (!fleeing && distAfterMove === 1) {
         tryMeleeAttack();
       }
-      delay(scene, 140, () => onComplete?.());
+      delay(scene, POST_ATTACK_DELAY_MS, () => onComplete?.());
     });
   });
 }

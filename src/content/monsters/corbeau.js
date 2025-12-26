@@ -24,14 +24,14 @@ export default {
   },
   spells: ["bec_de_zephyr"],
   loot: [
-    { itemId: "plume_corbeau", min: 1, max: 1, dropRate: 0.5 },
-    { itemId: "patte_corbeau", min: 1, max: 1, dropRate: 0.5 },
-    { itemId: "bec_corbeau", min: 1, max: 1, dropRate: 0.4 },
+    { itemId: "plume_corbeau", min: 1, max: 1, dropRate: 0.4 },
+    { itemId: "patte_corbeau", min: 1, max: 1, dropRate: 0.4 },
+    { itemId: "bec_corbeau", min: 1, max: 1, dropRate: 0.2 },
     {
       itemId: "essence_corbeau",
       min: 1,
       max: 1,
-      dropRate: 0.1,
+      dropRate: 0.15,
       requiresJob: "alchimiste",
       minJobLevel: 1,
     },

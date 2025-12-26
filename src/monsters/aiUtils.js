@@ -1,5 +1,9 @@
 import { PLAYER_SPEED } from "../config/constants.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
+import {
+  playMonsterMoveAnimation,
+  stopMonsterMoveAnimation,
+} from "./animations.js";
 
 export function delay(scene, ms, fn) {
   const duration = Math.max(0, ms | 0);
@@ -28,6 +32,7 @@ export function moveMonsterAlongPath(
   const queue = Array.isArray(path) ? path.slice() : [];
 
   if (queue.length === 0) {
+    stopMonsterMoveAnimation(monster);
     if (typeof onDone === "function") onDone();
     return;
   }
@@ -53,6 +58,8 @@ export function moveMonsterAlongPath(
     const targetX = worldPos.x + map.tileWidth / 2 + offX;
     const targetY = worldPos.y + map.tileHeight + offY;
 
+    playMonsterMoveAnimation(scene, monster, targetX - monster.x, targetY - monster.y);
+
     const dist = Phaser.Math.Distance.Between(
       monster.x,
       monster.y,
@@ -74,6 +81,9 @@ export function moveMonsterAlongPath(
         monster.tileY = next.y;
         monster.currentTileX = next.x;
         monster.currentTileY = next.y;
+        if (queue.length === 0) {
+          stopMonsterMoveAnimation(monster);
+        }
         stepNext();
       },
     });

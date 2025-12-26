@@ -10,6 +10,7 @@ import {
 } from "../inventory/equipmentCore.js";
 import { purgeDeprecatedItemsFromPlayer } from "../inventory/deprecatedItems.js";
 import { emit as emitStoreEvent } from "../state/store.js";
+import { ensureAllMetiers } from "../metier/ensureAllMetiers.js";
 
 export function createPlayer(scene, x, y, classId) {
   const classDef = classes[classId] || classes.archer;
@@ -94,6 +95,7 @@ export function createPlayer(scene, x, y, classId) {
   };
 
   purgeDeprecatedItemsFromPlayer(player);
+  ensureAllMetiers(player);
 
   return player;
 }

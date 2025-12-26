@@ -316,8 +316,12 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    // Pas de nouveau déplacement pendant la récolte d'un arbre.
-    if (player.isHarvestingTree) {
+    // Pas de nouveau déplacement pendant une récolte.
+    if (
+      player.isHarvestingTree ||
+      player.isHarvestingHerb ||
+      player.isHarvestingWell
+    ) {
       return;
     }
 

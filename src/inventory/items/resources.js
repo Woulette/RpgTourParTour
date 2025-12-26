@@ -8,7 +8,7 @@ export const resourceItems = {
     level: 1,
     stackable: true,
     maxStack: 9999,
-    icon: "assets/monsters/corbeau/ressources/PlumeDeCorbeau.png",
+    icon: "assets/ressources/Plume/PlumeDeCorbeau.png",
   },
 
   patte_corbeau: {
@@ -18,7 +18,7 @@ export const resourceItems = {
     level: 1,
     stackable: true,
     maxStack: 9999,
-    icon: "assets/monsters/corbeau/ressources/PatteDeCorbeau.png",
+    icon: "assets/ressources/Os/PatteDeCorbeau.png",
   },
 
   bec_corbeau: {
@@ -28,7 +28,7 @@ export const resourceItems = {
     level: 1,
     stackable: true,
     maxStack: 9999,
-    icon: "assets/monsters/corbeau/ressources/BecDeCorbeau.png",
+    icon: "assets/ressources/Os/BecDeCorbeau.png",
   },
 
   essence_corbeau: {
@@ -38,7 +38,7 @@ export const resourceItems = {
     level: 1,
     stackable: true,
     maxStack: 9999,
-    icon: "assets/monsters/corbeau/ressources/EssenceDeCorbeau.png",
+    icon: "assets/ressources/Divers/EssenceDeCorbeau.png",
   },
 
   poussiere_temporelle: {
@@ -48,7 +48,16 @@ export const resourceItems = {
     level: 20,
     stackable: true,
     maxStack: 9999,
-    icon: "assets/monsters/corbeau/ressources/Poussiere.png",
+    icon: "assets/ressources/Special/Poussiere.png",
+  },
+  eau: {
+    id: "eau",
+    label: "Eau",
+    category: "ressource",
+    level: 1,
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/ressources/Divers/eau.png",
   },
 
   bois_chene: {
@@ -57,7 +66,42 @@ export const resourceItems = {
     category: "ressource",
     stackable: true,
     maxStack: 9999,
-    icon: "assets/metier/bucheron/boisDeChene.png",
+    icon: "assets/metier/Bucheron/Ressources/boisDeChene.png",
+  },
+  bois_frene: {
+    id: "bois_frene",
+    label: "Bois de frene",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/metier/Bucheron/Ressources/boisDeChene.png",
+  },
+  copeau_frene: {
+    id: "copeau_frene",
+    label: "Copeau de frene",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/ressources/Divers/Copeau De Frene.png",
+  },
+  papier: {
+    id: "papier",
+    label: "Papier",
+    category: "ressource",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/ressources/Divers/Papier.png",
+  },
+  talisman_inferieur_tier_1: {
+    id: "talisman_inferieur_tier_1",
+    label: "Talisman inferieur tier 1",
+    category: "ressource",
+    description:
+      "Un talisman charge d'energie. Applique sur une feuille de papier, il peut liberer sa puissance pour vous.",
+    bonusInfo: "Puissance du talisman : 10",
+    stackable: true,
+    maxStack: 9999,
+    icon: "assets/ressources/Special/TalismanInferieurTier1.png",
   },
   plante_ortie: {
     id: "plante_ortie",
@@ -65,7 +109,7 @@ export const resourceItems = {
     category: "ressource",
     stackable: true,
     maxStack: 9999,
-    icon: "assets/monsters/corbeau/ressources/EssenceDeCorbeau.png",
+    icon: "assets/metier/alchimiste/ressources/Ortie.png",
   },
   plante_sauge: {
     id: "plante_sauge",
@@ -84,4 +128,3 @@ export const resourceItems = {
     icon: "assets/monsters/corbeau/ressources/EssenceDeCorbeau.png",
   },
 };
-

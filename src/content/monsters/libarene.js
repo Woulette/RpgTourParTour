@@ -3,6 +3,11 @@ export default {
   label: "Libarene",
   textureKey: "libarene",
   spritePath: "assets/monsters/Libarene/rotations/south-west.png",
+  animation: {
+    prefix: "libarene",
+    basePath: "assets/monsters/Libarene/animations/running-4-frames",
+    frameCount: 4,
+  },
   render: {
     originX: 0.6,
     originY: 0.85,

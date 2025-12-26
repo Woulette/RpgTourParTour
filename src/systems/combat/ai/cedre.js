@@ -8,6 +8,10 @@ import {
 } from "../../../monsters/aiUtils.js";
 import { getAliveCombatMonsters, isTileOccupiedByMonster } from "../../../monsters/aiUtils.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
+import { isTileAvailableForSpell } from "../spells/util.js";
+
+const POST_MOVE_DELAY_MS = 250;
+const POST_ATTACK_DELAY_MS = 300;
 
 // IA Cèdre :
 // - repousse au corps a corps si possible
@@ -110,6 +114,59 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     return results;
   };
 
+  const computeBlockedCellsForPush = (casterX, casterY, playerTile, pushDistance) => {
+    const dist = typeof pushDistance === "number" ? Math.max(0, pushDistance) : 0;
+    if (dist <= 0) return 0;
+    if (!playerTile) return 0;
+    const dx = playerTile.x - casterX;
+    const dy = playerTile.y - casterY;
+    const stepX = dx === 0 ? 0 : Math.sign(dx);
+    const stepY = dy === 0 ? 0 : Math.sign(dy);
+    if (stepX === 0 && stepY === 0) return 0;
+
+    let moved = 0;
+    for (let i = 1; i <= dist; i += 1) {
+      const nx = playerTile.x + stepX * i;
+      const ny = playerTile.y + stepY * i;
+      if (!isTileAvailableForSpell(map, nx, ny)) break;
+      if (isTileBlocked(scene, nx, ny)) break;
+      if (isTileOccupiedByMonster(scene, nx, ny, monster)) break;
+      moved = i;
+    }
+    return dist - moved;
+  };
+
+  const findBestPushSetup = (maxSteps) => {
+    if (!push || !canCastSpell(scene, monster, push)) return null;
+    const playerTile = getPlayerTile();
+    if (!playerTile) return null;
+    const dist = push.pushbackDistance ?? 0;
+    if (dist <= 0) return null;
+
+    const reachable = buildReachableTiles(monster.tileX, monster.tileY, maxSteps);
+    let best = null;
+
+    reachable.forEach((entry) => {
+      const isAdjacent =
+        Math.abs(entry.x - playerTile.x) + Math.abs(entry.y - playerTile.y) === 1;
+      if (!isAdjacent) return;
+      const blocked = computeBlockedCellsForPush(entry.x, entry.y, playerTile, dist);
+      if (blocked <= 0) return;
+      if (!best) {
+        best = { entry, blocked };
+        return;
+      }
+      if (
+        blocked > best.blocked ||
+        (blocked === best.blocked && entry.path.length < best.entry.path.length)
+      ) {
+        best = { entry, blocked };
+      }
+    });
+
+    return best;
+  };
+
   const moveTowardPlayer = (onArrive) => {
     if (state.pmRestants <= 0) {
       if (typeof onArrive === "function") onArrive();
@@ -146,8 +203,35 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
           color: "#22c55e",
         });
       }
-      if (typeof onArrive === "function") onArrive();
-      else finish();
+      delay(scene, POST_MOVE_DELAY_MS, () => {
+        if (typeof onArrive === "function") onArrive();
+        else finish();
+      });
+    });
+  };
+
+  const moveTowardBestPushSetup = (onArrive) => {
+    if (!push || !canCastSpell(scene, monster, push)) {
+      moveTowardPlayer(onArrive);
+      return;
+    }
+    const bestSetup = findBestPushSetup(state.pmRestants ?? 0);
+    if (!bestSetup || !bestSetup.entry || bestSetup.entry.path.length === 0) {
+      moveTowardPlayer(onArrive);
+      return;
+    }
+    const pathTiles = bestSetup.entry.path;
+    moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
+      state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - pathTiles.length);
+      if (pathTiles.length > 0) {
+        showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
+          color: "#22c55e",
+        });
+      }
+      delay(scene, POST_MOVE_DELAY_MS, () => {
+        if (typeof onArrive === "function") onArrive();
+        else finish();
+      });
     });
   };
 
@@ -157,7 +241,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     const reachable = buildReachableTiles(monster.tileX, monster.tileY, state.pmRestants ?? 0);
     if (reachable.length === 0) {
       debug();
-      if (tryAura()) delay(scene, 240, () => moveTowardPlayer(onAfter));
+      if (tryAura()) delay(scene, POST_ATTACK_DELAY_MS, () => moveTowardBestPushSetup(onAfter));
       return true;
     }
 
@@ -189,10 +273,10 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     const castAfterMove = () => {
       if (tryAura()) {
         debug();
-        delay(scene, 240, () => moveTowardPlayer(onAfter));
+        delay(scene, POST_ATTACK_DELAY_MS, () => moveTowardBestPushSetup(onAfter));
       } else {
         debug();
-        moveTowardPlayer(onAfter);
+        moveTowardBestPushSetup(onAfter);
       }
     };
 
@@ -209,7 +293,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
           color: "#22c55e",
         });
       }
-      delay(scene, 120, castAfterMove);
+      delay(scene, POST_MOVE_DELAY_MS, castAfterMove);
     });
     return true;
   };
@@ -231,6 +315,24 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
       }
 
       const dist = Math.abs(playerTile.x - monster.tileX) + Math.abs(playerTile.y - monster.tileY);
+
+      if (state.pmRestants > 0) {
+        const bestSetup = findBestPushSetup(state.pmRestants ?? 0);
+        if (bestSetup && bestSetup.entry.path.length > 0) {
+          const pathTiles = bestSetup.entry.path;
+          moveMonsterAlongPath(scene, monster, map, groundLayer, pathTiles, () => {
+            state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - pathTiles.length);
+            if (pathTiles.length > 0) {
+              showFloatingTextOverEntity(scene, monster, `${pathTiles.length}`, {
+                color: "#22c55e",
+              });
+            }
+            delay(scene, POST_MOVE_DELAY_MS, step);
+          });
+          return;
+        }
+      }
+
       if (dist !== 1) {
         debug();
         if (state.pmRestants <= 0) {
@@ -261,7 +363,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
               color: "#22c55e",
             });
           }
-          delay(scene, 120, step);
+          delay(scene, POST_MOVE_DELAY_MS, step);
         });
         return;
       }
@@ -282,7 +384,7 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
       debug();
       tryCast(push);
       casts += 1;
-      delay(scene, 240, () => {
+      delay(scene, POST_ATTACK_DELAY_MS, () => {
         const afterTile = getPlayerTile();
         const afterKey = afterTile ? `${afterTile.x},${afterTile.y}` : null;
         if (afterKey && afterKey === beforeTileKey && lastTargetTileKey === beforeTileKey) {
@@ -324,17 +426,17 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     if (push && canCastSpell(scene, monster, push)) {
       tryMeleePushCombo(() => {
         if (tryAuraSequence()) return;
-        moveTowardPlayer();
+        moveTowardBestPushSetup();
       });
       return;
     }
     if (tryAuraSequence()) {
       return;
     }
-    moveTowardPlayer();
+    moveTowardBestPushSetup();
     return;
   }
 
   if (tryAuraSequence(tryEngageAfterMove)) return;
-  moveTowardPlayer(tryEngageAfterMove);
+  moveTowardBestPushSetup(tryEngageAfterMove);
 }

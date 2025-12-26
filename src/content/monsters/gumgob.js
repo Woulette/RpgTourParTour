@@ -3,6 +3,11 @@ export default {
   label: "Gumgob",
   textureKey: "gumgob",
   spritePath: "assets/monsters/Gumgob/rotations/south-west.png",
+  animation: {
+    prefix: "gumgob",
+    basePath: "assets/monsters/Gumgob/animations/running-4-frames",
+    frameCount: 4,
+  },
   render: {
     originX: 0.5,
     originY: 1.12,

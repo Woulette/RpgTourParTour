@@ -3,6 +3,11 @@ export default {
   label: "Cazard",
   textureKey: "cazard",
   spritePath: "assets/monsters/Cazard/rotations/south-west.png",
+  animation: {
+    prefix: "cazard",
+    basePath: "assets/monsters/Cazard/animations/walk-4-frames",
+    frameCount: 4,
+  },
   render: {
     originX: 0.55,
     originY: 0.9,

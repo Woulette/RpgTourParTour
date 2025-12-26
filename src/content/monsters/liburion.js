@@ -3,6 +3,11 @@ export default {
   label: "Liburion",
   textureKey: "liburion",
   spritePath: "assets/monsters/Liburion/rotations/south-west.png",
+  animation: {
+    prefix: "liburion",
+    basePath: "assets/monsters/Liburion/animations/walk-4-frames",
+    frameCount: 4,
+  },
   render: {
     originX: 0.6,
     originY: 0.85,

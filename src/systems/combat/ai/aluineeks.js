@@ -11,6 +11,9 @@ import {
   isTileOccupiedByMonster,
 } from "../../../monsters/aiUtils.js";
 
+const POST_MOVE_DELAY_MS = 250;
+const POST_ATTACK_DELAY_MS = 150;
+
 // IA d'Aluineeks :
 // - ne recule jamais
 // - se place en ligne à 1-2 cases pour lancer Fissure (jusqu'à 2 fois)
@@ -169,15 +172,17 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
         onComplete?.();
         return;
       }
-      if (scene.time?.delayedCall) scene.time.delayedCall(500, () => castSequence(castIndex + 1));
+      if (scene.time?.delayedCall) {
+        scene.time.delayedCall(POST_ATTACK_DELAY_MS, () => castSequence(castIndex + 1));
+      }
       else castSequence(castIndex + 1);
     };
 
-    delay(scene, moved ? 520 : 260, () => castSequence(0));
+    delay(scene, moved ? POST_MOVE_DELAY_MS : POST_ATTACK_DELAY_MS, () => castSequence(0));
   };
 
   if (pathTiles.length === 0) {
-    delay(scene, 160, () => afterMoveAndCast(false));
+    delay(scene, POST_ATTACK_DELAY_MS, () => afterMoveAndCast(false));
     return;
   }
 

@@ -3,6 +3,11 @@ export default {
   label: "Goush",
   textureKey: "goush",
   spritePath: "assets/monsters/goush/south-west.png",
+  animation: {
+    prefix: "goush",
+    basePath: "assets/monsters/goush/animations/running-4-frames",
+    frameCount: 4,
+  },
   render: {
     originX: 0.5,
     originY: 1,
