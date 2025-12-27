@@ -192,10 +192,51 @@ export function processPendingRespawnsForCurrentMap(scene) {
         if (leaderId !== monster.monsterId) {
           const leaderDef = monsters[leaderId];
           if (leaderDef) {
+            const prevOffX =
+              typeof monster.renderOffsetX === "number" ? monster.renderOffsetX : 0;
+            const prevOffY =
+              typeof monster.renderOffsetY === "number" ? monster.renderOffsetY : 0;
+            const render = leaderDef.render || {};
+            const nextOffX =
+              typeof render.offsetX === "number" ? render.offsetX : 0;
+            const nextOffY =
+              typeof render.offsetY === "number" ? render.offsetY : 0;
+            const baseScale =
+              typeof render.scale === "number" && Number.isFinite(render.scale)
+                ? render.scale
+                : 1;
+            const animScale =
+              typeof leaderDef.animation?.scale === "number" &&
+              Number.isFinite(leaderDef.animation.scale)
+                ? leaderDef.animation.scale
+                : null;
+
             monster.monsterId = leaderId;
             monster.classId = leaderId;
             if (monster.setTexture) {
               monster.setTexture(leaderDef.textureKey);
+            }
+            monster.baseTextureKey = leaderDef.textureKey;
+            monster.animPrefix = leaderDef.animation?.basePath
+              ? leaderDef.animation.prefix || leaderDef.id || leaderDef.textureKey
+              : null;
+            monster.animScale = animScale;
+            monster.baseScale = baseScale;
+            if (typeof monster.setScale === "function" && baseScale !== 1) {
+              monster.setScale(baseScale);
+            }
+            if (typeof monster.setOrigin === "function") {
+              const ox = typeof render.originX === "number" ? render.originX : 0.5;
+              const oy = typeof render.originY === "number" ? render.originY : 1;
+              monster.setOrigin(ox, oy);
+            }
+            monster.renderOffsetX = nextOffX;
+            monster.renderOffsetY = nextOffY;
+            if (typeof monster.x === "number") {
+              monster.x += nextOffX - prevOffX;
+            }
+            if (typeof monster.y === "number") {
+              monster.y += nextOffY - prevOffY;
             }
             monster.xpReward = leaderDef.xpReward || 0;
             monster.xpRewardBase = leaderDef.xpReward || monster.xpReward || 0;

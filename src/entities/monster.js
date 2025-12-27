@@ -337,6 +337,9 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
       if (monster.frame && overlay.setFrame) {
         overlay.setFrame(monster.frame.name);
       }
+      if (typeof monster.scaleX === "number" && typeof monster.scaleY === "number") {
+        overlay.setScale(monster.scaleX, monster.scaleY);
+      }
 
       overlay.setBlendMode(Phaser.BlendModes.ADD); // effet lumineux
       overlay.setAlpha(0.6); // intensité

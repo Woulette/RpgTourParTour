@@ -5,7 +5,7 @@ export const baseStats = {
   // Caractéristiques principales
   force: 0,
   intelligence: 0,
-  agilite: 0,
+  agilite: 2220,
   chance: 0,
   // Puissance : bonus générique de dégâts (équivaut à +1 sur force/intel/agi/chance
   // uniquement pour le calcul des dégâts, sans donner les effets secondaires).

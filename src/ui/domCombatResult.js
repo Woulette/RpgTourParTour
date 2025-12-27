@@ -187,7 +187,7 @@ export function initDomCombatResult(scene, player) {
       const icon = document.createElement("div");
       icon.className = "combat-result-loot-icon";
       if (def && def.icon) {
-        icon.style.backgroundImage = `url(${def.icon})`;
+        icon.style.backgroundImage = `url("${def.icon}")`;
       } else {
         icon.textContent = "?";
       }

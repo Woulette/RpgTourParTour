@@ -32,6 +32,7 @@ export default {
       dropRate: 0.15,
       requiresJob: "alchimiste",
       minJobLevel: 1,
+      requiresItem: "extracteur_essence",
     },
     { itemId: "poussiere_temporelle", min: 1, max: 1, dropRate: 0.03 },
     { itemId: "coiffe_corbeau_feu", min: 1, max: 1, dropRate: 0.04 },

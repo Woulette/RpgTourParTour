@@ -11,7 +11,12 @@ import { computeSpellDamage } from "./damage.js";
 import { clearSpellRangePreview } from "./preview.js";
 import { isTileAvailableForSpell, getCasterOriginTile } from "./util.js";
 import { canApplyCapture, startCaptureAttempt } from "../summons/capture.js";
-import { getAliveSummon, spawnSummonFromCaptured } from "../summons/summon.js";
+import {
+  getAliveSummon,
+  spawnSummonFromCaptured,
+  spawnSummonMonster,
+  findSummonSpawnTile,
+} from "../summons/summon.js";
 import { registerNoCastMeleeViolation } from "../../../challenges/runtime.js";
 import {
   applyEryonElementAfterCast,
@@ -347,6 +352,66 @@ function tryPushEntity(scene, map, groundLayer, caster, target, distance) {
   return true;
 }
 
+function tryPullEntity(scene, map, groundLayer, caster, target, distance, toMelee = false) {
+  if (!scene || !map || !caster || !target) return false;
+  if (!distance && !toMelee) return false;
+
+  const origin = getEntityTile(caster, map, groundLayer);
+  const targetPos = getEntityTile(target, map, groundLayer);
+  if (!origin || !targetPos) return false;
+
+  const dx = origin.x - targetPos.x;
+  const dy = origin.y - targetPos.y;
+  const stepX = dx === 0 ? 0 : Math.sign(dx);
+  const stepY = dy === 0 ? 0 : Math.sign(dy);
+  if (stepX === 0 && stepY === 0) return false;
+
+  let dist = typeof distance === "number" ? Math.max(0, distance) : 0;
+  if (toMelee) {
+    const manhattan = Math.abs(dx) + Math.abs(dy);
+    dist = Math.max(dist, Math.max(0, manhattan - 1));
+  }
+  if (dist <= 0) return false;
+
+  let last = null;
+  for (let i = 1; i <= dist; i += 1) {
+    const nx = targetPos.x + stepX * i;
+    const ny = targetPos.y + stepY * i;
+    if (!isTileAvailableForSpell(map, nx, ny)) break;
+    if (isTileBlocked(scene, nx, ny)) break;
+    if (isTileOccupiedByMonster(scene, nx, ny, target)) break;
+    if (nx === origin.x && ny === origin.y) break;
+    if (
+      isPlayerAtTile(scene, map, groundLayer, nx, ny) &&
+      target !== scene?.combatState?.joueur
+    ) {
+      break;
+    }
+    last = { x: nx, y: ny };
+  }
+
+  if (!last) return false;
+
+  const wp = map.tileToWorldXY(last.x, last.y, undefined, undefined, groundLayer);
+  const isPlayerTarget = target === scene?.combatState?.joueur;
+  const offX = !isPlayerTarget && typeof target.renderOffsetX === "number" ? target.renderOffsetX : 0;
+  const offY = !isPlayerTarget && typeof target.renderOffsetY === "number" ? target.renderOffsetY : 0;
+  target.x = wp.x + map.tileWidth / 2 + offX;
+  target.y = wp.y + (isPlayerTarget ? map.tileHeight / 2 : map.tileHeight) + offY;
+  if (typeof target.setDepth === "function") {
+    target.setDepth(target.y);
+  }
+  if (typeof target.tileX === "number") target.tileX = last.x;
+  if (typeof target.tileY === "number") target.tileY = last.y;
+  if (typeof target.currentTileX === "number") target.currentTileX = last.x;
+  if (typeof target.currentTileY === "number") target.currentTileY = last.y;
+  if (target === scene?.combatState?.joueur) {
+    target.currentTileX = last.x;
+    target.currentTileY = last.y;
+  }
+  return true;
+}
+
 function applyEryonAfterCast(scene, caster, spell, { isSelfCast = false } = {}) {
   if (!scene || !caster || !spell) return null;
   if (!isEryonCaster(caster)) return null;
@@ -453,6 +518,13 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
     const alive = getAliveSummon(scene, caster);
     if (alive) return false;
   }
+  if (spell?.summonMonster) {
+    const spawnTile = findSummonSpawnTile(scene, map, caster, {
+      x: tileX,
+      y: tileY,
+    });
+    if (!spawnTile) return false;
+  }
 
   const paCost = spell.paCost ?? 0;
   state.paRestants = Math.max(0, state.paRestants - paCost);
@@ -511,6 +583,21 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   state.castsThisTurn = state.castsThisTurn || {};
   const prev = state.castsThisTurn[spell.id] || 0;
   state.castsThisTurn[spell.id] = prev + 1;
+
+  if (spell?.summonMonster) {
+    const summon = spawnSummonMonster(scene, caster, map, groundLayer, {
+      monsterId: spell.summonMonster.monsterId,
+      preferTile: { x: tileX, y: tileY },
+    });
+    if (!summon) return false;
+
+    clearActiveSpell(caster);
+    clearSpellRangePreview(scene);
+    if (scene && typeof scene.updateCombatUi === "function") {
+      scene.updateCombatUi();
+    }
+    return true;
+  }
 
   if (isPlayerCaster) {
     // --- Capture (0 dégâts) ---
@@ -936,6 +1023,20 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
       if ((spell.pushbackDistance ?? 0) > 0 && newHp > 0) {
         tryPushEntity(scene, map, groundLayer, caster, target, spell.pushbackDistance);
       }
+      if (
+        newHp > 0 &&
+        ((spell.pullDistance ?? 0) > 0 || spell.pullTargetToMeleeOnHit)
+      ) {
+        tryPullEntity(
+          scene,
+          map,
+          groundLayer,
+          caster,
+          target,
+          spell.pullDistance ?? 0,
+          spell.pullTargetToMeleeOnHit === true
+        );
+      }
 
       if (newHp <= 0) {
         if (typeof target.onKilled === "function") {
@@ -1085,6 +1186,20 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
         if ((spell.pushbackDistance ?? 0) > 0 && newHp > 0) {
           tryPushEntity(scene, map, groundLayer, caster, victim, spell.pushbackDistance);
+        }
+        if (
+          newHp > 0 &&
+          ((spell.pullDistance ?? 0) > 0 || spell.pullTargetToMeleeOnHit)
+        ) {
+          tryPullEntity(
+            scene,
+            map,
+            groundLayer,
+            caster,
+            victim,
+            spell.pullDistance ?? 0,
+            spell.pullTargetToMeleeOnHit === true
+          );
         }
 
         if (damageOnHit && newHp <= 0) {

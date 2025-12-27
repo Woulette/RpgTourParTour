@@ -1,12 +1,11 @@
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
-import { ensureAluineeksDungeonEntranceNpc } from "./entranceNpc.js";
+import { setupCamera } from "../maps/camera.js";
 import { maps } from "../maps/index.js";
 
 export function onAfterMapLoaded(scene) {
   if (!scene || !scene.map || !scene.groundLayer) return;
 
-  // Entrance NPC (outside the dungeon).
-  ensureAluineeksDungeonEntranceNpc(scene);
+  // Entrance NPC handled by map-placed guard (MapAndemiaNouvelleVersion9).
 
   // Track last non-dungeon position for safe return, and auto-init dungeonState
   // when a dungeon room is loaded directly (dev convenience).
@@ -21,12 +20,14 @@ export function onAfterMapLoaded(scene) {
   } else if (scene.currentMapDef && scene.currentMapDef.isDungeon && !scene.dungeonState) {
     const roomIndexRaw = scene.currentMapDef.dungeonRoomIndex ?? 1;
     const fallbackReturnTile =
-      maps?.MapAndemia3?.dungeonReturnTile || maps?.MapAndemia3?.entranceNpcTile || { x: 0, y: 0 };
+      maps?.MapAndemiaNouvelleVersion9?.dungeonReturnTile ||
+      maps?.MapAndemiaNouvelleVersion9?.entranceNpcTile ||
+      { x: 0, y: 0 };
     scene.dungeonState = {
       active: true,
       dungeonId: scene.currentMapDef.dungeonId || "aluineeks",
       roomIndex: Math.max(0, Number(roomIndexRaw) - 1),
-      returnMapKey: scene._lastNonDungeonMapKey || "MapAndemia3",
+      returnMapKey: scene._lastNonDungeonMapKey || "MapAndemiaNouvelleVersion9",
       // Si on charge une salle de donjon directement (reco/dev), on force une tuile de retour fixe
       // pour éviter un retour "hors champ" en sortie.
       returnTile: scene._lastNonDungeonTile || fallbackReturnTile,
@@ -55,5 +56,42 @@ export function onAfterMapLoaded(scene) {
     scene.dungeonExitTiles = tiles;
   } else {
     scene.dungeonExitTiles = null;
+  }
+
+  if (
+    scene.currentMapDef &&
+    scene.currentMapDef.key === "MapAndemiaNouvelleVersion9" &&
+    scene.player
+  ) {
+    const px = scene.player.currentTileX;
+    const py = scene.player.currentTileY;
+    const returnTile = scene.currentMapDef.dungeonReturnTile;
+    const isZeroZero = px === 0 && py === 0;
+    if (
+      isZeroZero &&
+      returnTile &&
+      typeof returnTile.x === "number" &&
+      typeof returnTile.y === "number"
+    ) {
+      const wp = scene.map.tileToWorldXY(
+        returnTile.x,
+        returnTile.y,
+        undefined,
+        undefined,
+        scene.groundLayer
+      );
+      if (wp) {
+        const nx = wp.x + scene.map.tileWidth / 2;
+        const ny = wp.y + scene.map.tileHeight / 2;
+        scene.player.x = nx;
+        scene.player.y = ny;
+        scene.player.currentTileX = returnTile.x;
+        scene.player.currentTileY = returnTile.y;
+        if (typeof scene.player.setDepth === "function") {
+          scene.player.setDepth(ny);
+        }
+        setupCamera(scene, scene.map, nx, ny, scene.currentMapDef.cameraOffsets);
+      }
+    }
   }
 }

@@ -237,6 +237,11 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
       typeof options.startTile.x === "number" &&
       typeof options.startTile.y === "number" &&
       options.startTile) ||
+    (options?.forceExactStartTile &&
+      mapDef.dungeonReturnTile &&
+      typeof mapDef.dungeonReturnTile.x === "number" &&
+      typeof mapDef.dungeonReturnTile.y === "number" &&
+      mapDef.dungeonReturnTile) ||
     mapDef.startTile ||
     null;
 
@@ -252,16 +257,32 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
       ? desiredTile.y
       : fallbackTileY;
 
+  let safeStartTileX = startTileX;
+  let safeStartTileY = startTileY;
+  if (
+    mapDef.key === "MapAndemiaNouvelleVersion9" &&
+    safeStartTileX === 0 &&
+    safeStartTileY === 0 &&
+    mapDef.dungeonReturnTile &&
+    typeof mapDef.dungeonReturnTile.x === "number" &&
+    typeof mapDef.dungeonReturnTile.y === "number"
+  ) {
+    safeStartTileX = mapDef.dungeonReturnTile.x;
+    safeStartTileY = mapDef.dungeonReturnTile.y;
+  }
+
   // Certains maps ont des zones "vides" (tuiles index=-1) autour des bords.
   // Si on spawn sur une tuile vide (ex: retour de donjon sur {0,0}), on replace
   // sur la tuile jouable la plus proche.
-  const safeStart = findNearestSpawnableTile(
-    scene,
-    map,
-    scene.groundLayer,
-    startTileX,
-    startTileY
-  );
+  const safeStart = options?.forceExactStartTile
+    ? { x: safeStartTileX, y: safeStartTileY }
+    : findNearestSpawnableTile(
+        scene,
+        map,
+        scene.groundLayer,
+        safeStartTileX,
+        safeStartTileY
+      );
   const safeTileX = safeStart.x;
   const safeTileY = safeStart.y;
 

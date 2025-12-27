@@ -4,9 +4,11 @@
 import { resourceItems } from "./items/resources.js";
 import { consumableItems } from "./items/consumables.js";
 import { equipmentItems } from "./items/equipment.js";
+import { questItems } from "./items/questItems.js";
 
 export const items = {
   ...resourceItems,
   ...consumableItems,
+  ...questItems,
   ...equipmentItems,
 };

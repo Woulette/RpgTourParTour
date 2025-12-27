@@ -34,6 +34,7 @@
   <link rel="stylesheet" href="assets/css/quests.css" />
   <link rel="stylesheet" href="assets/css/questTracker.css" />
   <link rel="stylesheet" href="assets/css/achievements.css" />
+  <link rel="stylesheet" href="assets/css/claimPanel.css" />
   <link rel="stylesheet" href="assets/css/toasts.css" />
   <link rel="stylesheet" href="assets/css/chat.css" />
   <link rel="stylesheet" href="assets/css/menu.css" />
@@ -617,6 +618,14 @@
             >
               Bonjour.
             </button>
+            <button
+              id="npc-dialog-choice-2"
+              type="button"
+              class="npc-dialog-choice"
+              style="display: none"
+            >
+              Bonjour.
+            </button>
             <span id="npc-dialog-quest-badge" class="npc-dialog-quest-badge" aria-hidden="true">!</span>
           </div>
         </div>
@@ -687,6 +696,18 @@
           </div>
         </div>
       </section>
+    </aside>
+
+    <!-- Fenetre de reclamation des succes -->
+    <aside id="hud-claim-panel" aria-label="Fenetre des succes a reclamer">
+      <header class="claim-header">
+        <h2 class="claim-title">Succes a reclamer</h2>
+        <button id="hud-claim-close" class="claim-close-btn" type="button">x</button>
+      </header>
+      <section id="hud-claim-list" class="claim-list" aria-label="Liste des succes"></section>
+      <footer class="claim-footer">
+        <button id="hud-claim-all" class="claim-btn" type="button">Reclamer tout</button>
+      </footer>
     </aside>
   </div>
 

@@ -30,6 +30,7 @@ import { initDomInventory } from "./ui/domInventory.js";
 import { initDomMetiers } from "./ui/domMetiers.js";
 import { initDomQuests } from "./ui/domQuests.js";
 import { initDomAchievements } from "./ui/domAchievements.js";
+import { initDomAchievementClaimPanel } from "./ui/domAchievementClaimPanel.js";
 import { initAchievementClaimHint } from "./ui/domAchievementClaimHint.js";
 import { initDomLevelUpPopup } from "./ui/domLevelUpPopup.js";
 import { initDomPanelClose } from "./ui/domPanelClose.js";
@@ -397,6 +398,7 @@ class MainScene extends Phaser.Scene {
     initDomMetiers(this.player);
     initDomQuests(this.player);
     initDomAchievements(this.player);
+    initDomAchievementClaimPanel(this.player);
     initAchievementClaimHint(this.player);
     initDomLevelUpPopup();
     initDomPanelClose();

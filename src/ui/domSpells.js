@@ -3,6 +3,16 @@ import { spells } from "../config/spells.js";
 import { setActiveSpell } from "../core/spellSystem.js";
 import { removeItem } from "../inventory/inventoryCore.js";
 import { monsters as monsterDefs } from "../content/monsters/index.js";
+import {
+  QUEST_STATES,
+  getCurrentQuestStage,
+  getQuestDef,
+  getQuestState,
+} from "../quests/index.js";
+import {
+  hasEquippedParchment,
+} from "../quests/runtime/objectives.js";
+import { emit as emitStoreEvent } from "../state/store.js";
 
 // Initialise la barre de sorts en bas + la fenetre "grimoire" des sorts.
 export function initDomSpells(player) {
@@ -29,6 +39,20 @@ export function initDomSpells(player) {
   };
   if (!player.spellParchments || typeof player.spellParchments !== "object") {
     player.spellParchments = {};
+  }
+
+  if (hasEquippedParchment(player)) {
+    const questId = "alchimiste_marchand_5";
+    const questDef = getQuestDef(questId);
+    if (questDef) {
+      const state = getQuestState(player, questId, { emit: false });
+      const stage = getCurrentQuestStage(questDef, state);
+      if (state?.state === QUEST_STATES.IN_PROGRESS && stage?.id === "apply_parchemin") {
+        state.progress = state.progress || {};
+        state.progress.applied = true;
+        emitStoreEvent("quest:updated", { questId, state });
+      }
+    }
   }
 
   const knownSpells = spellIds
@@ -415,6 +439,19 @@ export function initDomSpells(player) {
                 }
               };
 
+              const markParchmentApplied = () => {
+                const questId = "alchimiste_marchand_5";
+                const questDef = getQuestDef(questId);
+                if (!questDef) return;
+                const state = getQuestState(player, questId, { emit: false });
+                if (!state || state.state !== QUEST_STATES.IN_PROGRESS) return;
+                const stage = getCurrentQuestStage(questDef, state);
+                if (!stage || stage.id !== "apply_parchemin") return;
+                state.progress = state.progress || {};
+                state.progress.applied = true;
+                emitStoreEvent("quest:updated", { questId, state });
+              };
+
               const countItem = (itemId) => {
                 const inv = player?.inventory;
                 if (!inv || !Array.isArray(inv.slots)) return 0;
@@ -456,6 +493,7 @@ export function initDomSpells(player) {
                     if (!canEquip) return;
                     removeItem(player.inventory, def.itemId, 1);
                     setEquippedTier(tier);
+                    markParchmentApplied();
                     applyEquippedDamageDisplay();
                     renderParchmentPreview(tier);
                     updateSlotVisuals();

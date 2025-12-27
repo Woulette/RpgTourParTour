@@ -1,58 +1,83 @@
-import { QUEST_STATES } from "../../quests/catalog.js";
-
 export const papiDialog = {
   questDialogs: {
     andemia_intro_1: {
-      find_meme: {
-        [QUEST_STATES.NOT_STARTED]: {
+      meet_meme: {
+        not_started: {
           sequence: [
             {
-              text: "…Ah. Encore un qui tombe du ciel.",
-              choice: "Où… où je suis ?",
-            },
-            {
-              text: "Andémia.\n\nOu ce qu’il en reste, depuis la fracture.",
-              choice: "Une fracture ?",
+              text:
+                "Tu viens d'apparaitre, hein ?\n" +
+                "La faille t'a arrache a ton monde et t'a jete ici.",
+              choice: "Ou suis-je ?",
             },
             {
               text:
-                "Rien n’est normal ici.\n" +
-                "Le sol, les bêtes, la magie… tout est tordu.\n\n" +
-                "Des gens apparaissent comme toi. Arrachés à leur réalité.",
-              choice: "Je ne me souviens de rien…",
+                "Andemia. Un monde isole.\n" +
+                "Aucun systeme voisin, aucune voie de retour.",
+              choice: "On est seuls ?",
             },
             {
               text:
-                "Si tu restes seul, tu finiras mangé. Ou perdu.\n\n" +
-                "Alors écoute bien.",
-              choice: "D’accord… j’ai besoin d’aide.",
+                "Ici, tout est marque par la fracture.\n" +
+                "Avant d'agir, apprends a connaitre les tiens.",
+              choice: "D'accord.",
             },
             {
               text:
-                "Va voir Mémé. Ma femme.\n" +
-                "Elle comprend mieux la fracture que moi… et elle sait parler aux nouveaux.\n\n" +
-                "Reviens me voir après. Si tu tiens encore debout.",
-              choice: "Où est-elle ?",
+                "Va voir Meme, l'Alchimiste, le Marchand et le Maire.\n" +
+                "Reviens ensuite, je t'expliquerai la suite.",
+              choice: "J'y vais.",
             },
           ],
         },
-        [QUEST_STATES.IN_PROGRESS]: {
+        in_progress: {
           text:
-            "Ne traîne pas.\n" +
-            "Va voir Mémé. Elle t’aidera à comprendre ce qui se passe.",
-          choice: "J’y vais.",
+            "Va voir Meme, l'Alchimiste, le Marchand et le Maire.\n" +
+            "Reviens ensuite.",
+          choice: "J'y vais.",
         },
       },
-      __default: {
-        [QUEST_STATES.COMPLETED]: {
-          text: "Alors ? Mémé t’a remis les idées en place ?",
-          choice: "Je continue.",
+      return_to_papi: {
+        in_progress: {
+          sequence: [
+            {
+              text: "Tu as fini de rencontrer les habitants du village ?",
+              choice: "Oui.",
+            },
+            {
+              text:
+                "Tres bien. Je ne vais pas te laisser comme ca.\n" +
+                "Va voir ma femme : elle t'apprendra la couture\n",              
+              choice: "J'y vais.",
+            },
+          ],
+        },
+      },
+    },
+    alchimiste_marchand_4: {
+      meet_papi: {
+        in_progress: {
+          sequence: [
+            {
+              text:
+                "Le papier se fabrique avec des copeaux de bois.\n" +
+                "Va couper du chene et utilise l'atelier pres du grand tronc.\n" +
+                "Il te faudra aussi de l'eau.",
+              choice: "D'accord.",
+            },
+            {
+              text:
+                "Avec ces deux ressources, utilise l'atelier d'alchimie\n" +
+                "chez l'alchimiste.",
+              choice: "Merci Papi.",
+            },
+          ],
         },
       },
     },
   },
   generic: {
     text: "Bonjour.",
-    choice: "À plus tard.",
+    choice: "A plus tard.",
   },
 };

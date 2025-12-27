@@ -7,6 +7,10 @@ import { runTurn as runLibareneTurn } from "../systems/combat/ai/libarene.js";
 import { runTurn as runCazardTurn } from "../systems/combat/ai/cazard.js";
 import { runTurn as runCedreTurn } from "../systems/combat/ai/cedre.js";
 import { runTurn as runGumgobTurn } from "../systems/combat/ai/gumgob.js";
+import { runTurn as runDonjonKeeperTurn } from "../systems/combat/ai/donjon_keeper.js";
+import { runTurn as runChiboneTurn } from "../systems/combat/ai/chibone.js";
+import { runTurn as runSkelboneTurn } from "../systems/combat/ai/skelbone.js";
+import { runTurn as runSenboneTurn } from "../systems/combat/ai/senbone.js";
 
 const AI_HANDLERS = {
   corbeau: runCorbeauTurn,
@@ -14,15 +18,16 @@ const AI_HANDLERS = {
   flamorbeau: runCorbeauTurn,
   ondoreau: runCorbeauTurn,
   aluineeks: runAluineeksTurn,
-  chibone: runCorbeauTurn,
-  skelbone: runCorbeauTurn,
-  senbone: runAluineeksTurn,
+  chibone: runChiboneTurn,
+  skelbone: runSkelboneTurn,
+  senbone: runSenboneTurn,
   goush: runGoushTurn,
   liburion: runLiburionTurn,
   libarene: runLibareneTurn,
   cazard: runCazardTurn,
   cedre: runCedreTurn,
   gumgob: runGumgobTurn,
+  donjon_keeper: runDonjonKeeperTurn,
 };
 
 // Point d'entrée générique : choisit l'IA en fonction du monsterId.

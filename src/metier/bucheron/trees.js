@@ -231,7 +231,15 @@ export function spawnTestTrees(scene, map, player, mapDef) {
       }
 
       // Ne pas lancer une nouvelle coupe si un autre arbre est en cours de récolte
-      if (node.harvested || node.isHarvesting || player.isHarvestingTree) return;
+      if (
+        node.harvested ||
+        node.isHarvesting ||
+        player.isHarvestingTree ||
+        player.isHarvestingHerb ||
+        player.isHarvestingWell
+      ) {
+        return;
+      }
 
       // Si l'overlay de fin de combat est visible, on ignore le clic (pour éviter les actions fantômes après combat)
       const combatOverlay = document.getElementById("combat-result-overlay");

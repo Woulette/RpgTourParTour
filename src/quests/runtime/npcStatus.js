@@ -89,3 +89,9 @@ export function getQuestContextForNpc(player, npcId) {
 
   return null;
 }
+
+export function getOfferableQuestsForNpc(player, npcId) {
+  if (!player || !npcId) return [];
+  const entries = Object.values(quests);
+  return entries.filter((questDef) => isOfferable(player, questDef, npcId));
+}

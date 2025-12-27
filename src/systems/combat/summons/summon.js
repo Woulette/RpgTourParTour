@@ -1,5 +1,6 @@
 import { monsters } from "../../../content/monsters/index.js";
 import { createCharacter } from "../../../entities/character.js";
+import { createMonster } from "../../../entities/monster.js";
 import { createStats } from "../../../core/stats.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 import { getAliveCombatMonsters } from "../../../monsters/aiUtils.js";
@@ -115,6 +116,19 @@ function findNearestFreeSpawnTile(scene, map, fromX, fromY) {
     return c;
   }
   return null;
+}
+
+export function findSummonSpawnTile(scene, map, owner, preferTile = null) {
+  if (!scene || !map || !owner) return null;
+  const { x: ox, y: oy } = getCasterOriginTile(owner);
+  const preferX = typeof preferTile?.x === "number" ? preferTile.x : null;
+  const preferY = typeof preferTile?.y === "number" ? preferTile.y : null;
+
+  return (
+    (typeof preferX === "number" && typeof preferY === "number"
+      ? findNearestFreeSpawnTile(scene, map, preferX, preferY)
+      : null) || findNearestFreeSpawnTile(scene, map, ox, oy)
+  );
 }
 
 export function getAliveSummon(scene, owner) {
@@ -260,6 +274,56 @@ export function spawnSummonFromCaptured(
 
   scene.combatSummons = scene.combatSummons || [];
   scene.combatSummons.push(summon);
+
+  return summon;
+}
+
+export function spawnSummonMonster(
+  scene,
+  owner,
+  map,
+  groundLayer,
+  { monsterId, preferTile = null } = {}
+) {
+  const state = scene?.combatState;
+  if (!state || !state.enCours || !owner || !map || !groundLayer) return null;
+  if (!monsterId) return null;
+
+  const def = monsters[monsterId];
+  if (!def) return null;
+
+  const spawnTile = findSummonSpawnTile(scene, map, owner, preferTile);
+  if (!spawnTile) return null;
+
+  const wp = map.tileToWorldXY(spawnTile.x, spawnTile.y, undefined, undefined, groundLayer);
+  const render = def.render || {};
+  const offX = typeof render.offsetX === "number" ? render.offsetX : 0;
+  const offY = typeof render.offsetY === "number" ? render.offsetY : 0;
+
+  const sx = wp.x + map.tileWidth / 2 + offX;
+  const sy = wp.y + map.tileHeight + offY;
+
+  const summon = createMonster(scene, sx, sy, monsterId);
+  summon.tileX = spawnTile.x;
+  summon.tileY = spawnTile.y;
+  summon.currentTileX = spawnTile.x;
+  summon.currentTileY = spawnTile.y;
+  summon.isCombatMember = true;
+  summon.isCombatOnly = true;
+  summon.respawnEnabled = false;
+  summon.summonedBy = owner;
+
+  scene.monsters = scene.monsters || [];
+  if (!scene.monsters.includes(summon)) {
+    scene.monsters.push(summon);
+  }
+  scene.combatMonsters = scene.combatMonsters || [];
+  scene.combatMonsters.push(summon);
+
+  if (state.actors && Array.isArray(state.actors)) {
+    const insertAt = Math.max(0, (state.actorIndex ?? 0) + 1);
+    state.actors.splice(insertAt, 0, { kind: "monstre", entity: summon });
+  }
 
   return summon;
 }

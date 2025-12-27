@@ -15,6 +15,22 @@ export function countItemInInventory(player, itemId) {
   return count;
 }
 
+export function hasAppliedParchment(player, state) {
+  return Boolean(state?.progress?.applied) || hasEquippedParchment(player);
+}
+
+export function hasEquippedParchment(player) {
+  if (!player || !player.spellParchments) return false;
+  return Object.keys(player.spellParchments).length > 0;
+}
+
+export function getCraftedCount(player, state, itemId) {
+  if (!itemId) return 0;
+  const crafted = state?.progress?.crafted?.[itemId] || 0;
+  const inInventory = countItemInInventory(player, itemId);
+  return Math.max(crafted, inInventory);
+}
+
 export function isTurnInReadyAtNpc(player, questDef, state, stage, npcId) {
   if (!questDef || !state || !stage || !npcId) return false;
   if (state.state !== "in_progress") return false;
@@ -25,6 +41,12 @@ export function isTurnInReadyAtNpc(player, questDef, state, stage, npcId) {
   if (!objective || !objective.type) return false;
 
   if (objective.type === "talk_to_npc") {
+    if (
+      questDef?.id === "alchimiste_marchand_5" &&
+      stage?.id === "apply_parchemin"
+    ) {
+      return hasAppliedParchment(player, state);
+    }
     return true;
   }
 
@@ -65,12 +87,11 @@ export function isTurnInReadyAtNpc(player, questDef, state, stage, npcId) {
 
   if (objective.type === "craft_items") {
     const items = Array.isArray(objective.items) ? objective.items : [];
-    const crafted = state.progress?.crafted || {};
     if (items.length === 0) return false;
     return items.every((it) => {
       if (!it || !it.itemId) return false;
       const required = it.qty || 1;
-      const current = crafted[it.itemId] || 0;
+      const current = getCraftedCount(player, state, it.itemId);
       return current >= required;
     });
   }
@@ -97,6 +118,13 @@ export function tryTurnInStage(scene, player, questId, questDef, state, stage) {
   if (!objective || !objective.type) return { ok: false };
 
   if (objective.type === "talk_to_npc") {
+    if (
+      questDef?.id === "alchimiste_marchand_5" &&
+      stage?.id === "apply_parchemin" &&
+      !hasAppliedParchment(player, state)
+    ) {
+      return { ok: false, reason: "not_complete" };
+    }
     const required = objective.requiredCount || 1;
     state.progress = state.progress || {};
     state.progress.currentCount = required;
@@ -186,12 +214,11 @@ export function tryTurnInStage(scene, player, questId, questDef, state, stage) {
 
   if (objective.type === "craft_items") {
     const items = Array.isArray(objective.items) ? objective.items : [];
-    const crafted = state.progress?.crafted || {};
     if (items.length === 0) return { ok: false };
     const complete = items.every((it) => {
       if (!it || !it.itemId) return false;
       const required = it.qty || 1;
-      const current = crafted[it.itemId] || 0;
+      const current = getCraftedCount(player, state, it.itemId);
       return current >= required;
     });
     if (!complete) return { ok: false, reason: "not_complete" };

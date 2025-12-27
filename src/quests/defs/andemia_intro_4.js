@@ -1,26 +1,37 @@
 export const andemia_intro_4 = {
   id: "andemia_intro_4",
-  title: "Panoplie du Corbeau",
-  giverNpcId: "meme_village",
+  title: "Une panoplie ca se merite",
+  offerChoiceLabel: "On en etait ou deja ?",
+  offerChoiceOrder: 2,
+  giverNpcId: "alchimiste_provisoire",
   requires: ["andemia_intro_3"],
-  description:
-    "Meme veut te montrer comment transformer le butin en equipement.",
+  description: "L'Alchimiste te renvoie voir Meme.",
   stages: [
     {
-      id: "craft_panoplie_corbeau",
+      id: "meet_meme",
       npcId: "meme_village",
-      description:
-        "Fabriquer une panoplie du Corbeau (coiffe, cape, amulette, ceinture, bottes, anneau), puis retourner voir Meme.",
+      description: "Retourner voir Meme.",
+      objective: {
+        type: "talk_to_npc",
+        npcId: "meme_village",
+        requiredCount: 1,
+        label: "Parler a Meme",
+      },
+    },
+    {
+      id: "craft_corbeau_set",
+      npcId: "meme_village",
+      description: "Crafter une panoplie du corbeau complete.",
       objective: {
         type: "craft_set",
         setId: "corbeau",
         requiredSlots: ["head", "cape", "amulet", "belt", "boots", "ring1"],
-        label: "Panoplie du Corbeau fabriquee",
+        label: "Panoplie du corbeau complete",
       },
     },
   ],
   rewards: {
-    xpPlayer: 180,
-    gold: 90,
+    xpPlayer: 100,
+    gold: 50,
   },
 };

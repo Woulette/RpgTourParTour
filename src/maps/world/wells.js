@@ -7,6 +7,30 @@ const WELL_TEXTURE_KEY = "puits";
 const COOLDOWN_MS = 60000;
 const HARVEST_MS = 3000;
 
+function isPlayerHarvestingAny(player) {
+  return (
+    player?.isHarvestingTree ||
+    player?.isHarvestingHerb ||
+    player?.isHarvestingWell
+  );
+}
+
+function cancelPendingWellHarvest(player, node) {
+  if (!player) return;
+  if (player.currentWellHarvestTimer?.remove) {
+    player.currentWellHarvestTimer.remove(false);
+  }
+  if (node) {
+    node.isHarvesting = false;
+  }
+  if (player.currentWellHarvestNode) {
+    player.currentWellHarvestNode.isHarvesting = false;
+  }
+  player.currentWellHarvestTimer = null;
+  player.currentWellHarvestNode = null;
+  player.isHarvestingWell = false;
+}
+
 function showWellReward(scene, node, qty) {
   if (!scene) return;
   const style = {
@@ -131,6 +155,7 @@ export function spawnTestWells(scene, map, player, mapDef) {
       if (node.cooldownUntil > now || node.isHarvesting) return;
       node.isHarvesting = true;
       player.isHarvestingWell = true;
+      player.currentWellHarvestNode = node;
 
       if (player.currentMoveTween) {
         player.currentMoveTween.stop();
@@ -141,13 +166,17 @@ export function spawnTestWells(scene, map, player, mapDef) {
 
       if (scene.time && scene.time.delayedCall) {
         player.currentWellHarvestTimer = scene.time.delayedCall(HARVEST_MS, () => {
-          if (!sprite.active) return;
+          if (!sprite.active) {
+            cancelPendingWellHarvest(player, node);
+            return;
+          }
           const qty = Phaser.Math.Between(1, 10);
           addItem(player.inventory, "eau", qty);
           showWellReward(scene, node, qty);
           node.cooldownUntil = Date.now() + COOLDOWN_MS;
           node.isHarvesting = false;
           player.isHarvestingWell = false;
+          player.currentWellHarvestNode = null;
           player.currentWellHarvestTimer = null;
           sprite.setTint(0x555555);
           sprite.setAlpha(0.6);
@@ -166,10 +195,19 @@ export function spawnTestWells(scene, map, player, mapDef) {
       if (event?.stopPropagation) event.stopPropagation();
       if (scene.combatState && scene.combatState.enCours) return;
       if (scene.prepState && scene.prepState.actif) return;
-      if (node.isHarvesting || player.isHarvestingWell) return;
+      if (node.isHarvesting || isPlayerHarvestingAny(player)) return;
       const combatOverlay = document.getElementById("combat-result-overlay");
       if (combatOverlay && !combatOverlay.classList.contains("combat-result-hidden")) {
         return;
+      }
+
+      player.isHarvestingWell = true;
+      player.currentWellHarvestNode = node;
+      if (player.currentMoveTween) {
+        player.currentMoveTween.stop();
+        player.currentMoveTween = null;
+        player.isMoving = false;
+        player.movePath = [];
       }
 
       const isAdjacent =
@@ -184,7 +222,10 @@ export function spawnTestWells(scene, map, player, mapDef) {
       }
 
       const targetTile = findAdjacentTileNearNode(scene, map, node, player);
-      if (!targetTile) return;
+      if (!targetTile) {
+        cancelPendingWellHarvest(player, node);
+        return;
+      }
 
       const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
       const path = findPathForPlayer(
@@ -196,7 +237,10 @@ export function spawnTestWells(scene, map, player, mapDef) {
         targetTile.y,
         allowDiagonal
       );
-      if (!path || path.length === 0) return;
+      if (!path || path.length === 0) {
+        cancelPendingWellHarvest(player, node);
+        return;
+      }
 
       movePlayerAlongPath(
         scene,
@@ -212,7 +256,11 @@ export function spawnTestWells(scene, map, player, mapDef) {
             Math.abs(player.currentTileX - node.tileX) +
               Math.abs(player.currentTileY - node.tileY) ===
               1;
-          if (adj) interact();
+          if (adj) {
+            interact();
+          } else {
+            cancelPendingWellHarvest(player, node);
+          }
         }
       );
     });

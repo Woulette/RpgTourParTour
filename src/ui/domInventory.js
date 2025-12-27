@@ -251,7 +251,7 @@ export function initDomInventory(player) {
     // Icône
     if (iconEl) {
       if (def && def.icon) {
-        iconEl.style.backgroundImage = `url(${def.icon})`;
+        iconEl.style.backgroundImage = `url("${def.icon}")`;
       } else {
         iconEl.style.backgroundImage = "";
       }
@@ -496,7 +496,7 @@ export function initDomInventory(player) {
       if (def.icon) {
         const icon = document.createElement("div");
         icon.className = "inventory-slot-icon";
-        icon.style.backgroundImage = `url(${def.icon})`;
+        icon.style.backgroundImage = `url("${def.icon}")`;
         slotEl.appendChild(icon);
       } else {
         const label = document.createElement("span");
@@ -548,7 +548,7 @@ export function initDomInventory(player) {
           if (def && def.icon) {
             const icon = document.createElement("div");
             icon.className = "inventory-slot-icon";
-            icon.style.backgroundImage = `url(${def.icon})`;
+            icon.style.backgroundImage = `url("${def.icon}")`;
             slot.appendChild(icon);
           } else {
             const label = document.createElement("span");
@@ -636,7 +636,7 @@ export function initDomInventory(player) {
         if (def && def.icon) {
           const icon = document.createElement("div");
           icon.className = "inventory-slot-icon";
-          icon.style.backgroundImage = `url(${def.icon})`;
+          icon.style.backgroundImage = `url("${def.icon}")`;
           slot.appendChild(icon);
         } else {
           const label = document.createElement("span");

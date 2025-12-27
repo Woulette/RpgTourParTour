@@ -2,6 +2,7 @@ import { on as onStoreEvent } from "../state/store.js";
 import { quests as questDefs, QUEST_STATES } from "../quests/index.js";
 import { claimAchievement, getAchievementProgress } from "../achievements/runtime.js";
 import { achievementDefs, achievementPackDefs } from "../achievements/defs/index.js";
+import { getItemDef } from "../inventory/inventoryCore.js";
 import { showToast } from "./domToasts.js";
 
 let domAchievementsInitialized = false;
@@ -45,23 +46,80 @@ function categoryLabel(categoryId) {
   return CATEGORY_LABELS[categoryId] || categoryId;
 }
 
-function formatRewards(rewards) {
+function renderRewardItems(container, rewards) {
+  const items = Array.isArray(rewards?.items) ? rewards.items : [];
+  if (items.length === 0) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "achievement-reward-items";
+
+  items.forEach((item) => {
+    if (!item || !item.itemId) return;
+    const def = getItemDef(item.itemId);
+    const label = def?.label || item.itemId;
+    const qty = item.qty || 1;
+
+    const entry = document.createElement("div");
+    entry.className = "achievement-reward-item";
+    entry.title = label;
+
+    if (def?.icon) {
+      const img = document.createElement("img");
+      img.className = "achievement-reward-icon";
+      img.src = def.icon;
+      img.alt = label;
+      img.loading = "lazy";
+      entry.appendChild(img);
+    } else {
+      const fallback = document.createElement("span");
+      fallback.className = "achievement-reward-fallback";
+      fallback.textContent = label;
+      entry.appendChild(fallback);
+    }
+
+    if (qty > 1) {
+      const qtyEl = document.createElement("span");
+      qtyEl.className = "achievement-reward-qty";
+      qtyEl.textContent = `x${qty}`;
+      entry.appendChild(qtyEl);
+    }
+
+    wrap.appendChild(entry);
+  });
+
+  container.appendChild(wrap);
+}
+
+function renderRewards(container, rewards) {
+  if (!container) return;
   const r = rewards || {};
+  container.innerHTML = "";
+
+  const label = document.createElement("span");
+  label.className = "achievement-reward-label";
+  label.textContent = "Recompense :";
+  container.appendChild(label);
+
   const parts = [];
   if (r.xpPlayer) parts.push(`+${r.xpPlayer} XP`);
   if (r.gold) parts.push(`+${r.gold} or`);
   if (r.honorPoints) parts.push(`+${r.honorPoints} honneur fracturel`);
 
-  const items = Array.isArray(r.items) ? r.items : [];
-  if (items.length > 0) {
-    parts.push(
-      items
-        .filter((it) => it && it.itemId)
-        .map((it) => `${it.itemId} x${it.qty || 1}`)
-        .join(", ")
-    );
+  if (parts.length > 0) {
+    const text = document.createElement("span");
+    text.className = "achievement-reward-text";
+    text.textContent = parts.join(" \u2022 ");
+    container.appendChild(text);
   }
-  return parts.length > 0 ? parts.join(" \u2022 ") : "Aucune r\u00e9compense";
+
+  renderRewardItems(container, r);
+
+  if (parts.length === 0 && (!r.items || r.items.length === 0)) {
+    const empty = document.createElement("span");
+    empty.className = "achievement-reward-text";
+    empty.textContent = "Aucune recompense";
+    container.appendChild(empty);
+  }
 }
 
 function packProgress(player, packDef) {
@@ -217,7 +275,7 @@ function updateHonor() {
       detailListEl.appendChild(li);
     });
 
-    detailRewardsEl.textContent = `R\u00e9compense : ${formatRewards(entry.def.rewards)}`;
+    renderRewards(detailRewardsEl, entry.def.rewards);
 
     const canClaim = entry.unlocked && !entry.claimed;
     if (claimBtn) claimBtn.disabled = !canClaim;

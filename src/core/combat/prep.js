@@ -50,7 +50,7 @@ function computePlacementTiles(map, originX, originY, offsets) {
 }
 
 // Lance la phase de préparation (placement) avant le combat.
-export function startPrep(scene, player, monster, map, groundLayer) {
+export function startPrep(scene, player, monster, map, groundLayer, options = {}) {
   // Nettoie un ancien indicateur de challenge (si on relance une préparation).
   cleanupCombatChallenge(scene);
 
@@ -151,14 +151,23 @@ export function startPrep(scene, player, monster, map, groundLayer) {
   }
 
   // Choix du paterne et des ancres (joueur / monstres)
-  const patternId = "close_melee";
-  const pattern = COMBAT_PATTERNS[patternId];
+  const desiredPatternId =
+    typeof options.patternId === "string" ? options.patternId : "close_melee";
+  const pattern = COMBAT_PATTERNS[desiredPatternId] || COMBAT_PATTERNS.close_melee;
+  const patternId = pattern === COMBAT_PATTERNS[desiredPatternId] ? desiredPatternId : "close_melee";
 
   // Origines par défaut : autour du monstre cliqué (comportement actuel)
   let playerOriginX = monster.tileX;
   let playerOriginY = monster.tileY;
   let enemyOriginX = monster.tileX;
   let enemyOriginY = monster.tileY;
+
+  if (options.playerOrigin && options.enemyOrigin) {
+    if (typeof options.playerOrigin.x === "number") playerOriginX = options.playerOrigin.x;
+    if (typeof options.playerOrigin.y === "number") playerOriginY = options.playerOrigin.y;
+    if (typeof options.enemyOrigin.x === "number") enemyOriginX = options.enemyOrigin.x;
+    if (typeof options.enemyOrigin.y === "number") enemyOriginY = options.enemyOrigin.y;
+  }
 
   // Si des ancres sont définies pour cette map + ce paterne,
   // on en choisit une au hasard.
@@ -169,7 +178,13 @@ export function startPrep(scene, player, monster, map, groundLayer) {
       ? COMBAT_START_POSITIONS[mapKey][patternId]
       : null;
 
-  if (anchorsForMap && Array.isArray(anchorsForMap) && anchorsForMap.length > 0) {
+  if (
+    !options.playerOrigin &&
+    !options.enemyOrigin &&
+    anchorsForMap &&
+    Array.isArray(anchorsForMap) &&
+    anchorsForMap.length > 0
+  ) {
     const idx = Math.floor(Math.random() * anchorsForMap.length);
     const anchor = anchorsForMap[idx];
     if (anchor && anchor.playerOrigin && anchor.enemyOrigin) {

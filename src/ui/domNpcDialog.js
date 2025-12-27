@@ -9,6 +9,7 @@ function getElements() {
   const speakerNpcEl = document.getElementById("npc-dialog-speaker-npc");
   const textEl = document.getElementById("npc-dialog-text");
   const choiceBtn = document.getElementById("npc-dialog-choice-1");
+  const choiceBtn2 = document.getElementById("npc-dialog-choice-2");
   const questBadge = document.getElementById("npc-dialog-quest-badge");
   const closeBtn = document.getElementById("npc-dialog-close");
 
@@ -18,6 +19,7 @@ function getElements() {
     speakerNpcEl,
     textEl,
     choiceBtn,
+    choiceBtn2,
     questBadge,
     closeBtn,
   };
@@ -26,6 +28,7 @@ function getElements() {
 function closeNpcDialog() {
   const els = getElements();
   if (!els) return;
+  els.panel.setAttribute("aria-hidden", "true");
   document.body.classList.remove("npc-dialog-open");
   currentNpc = null;
   currentDialog = null;
@@ -40,6 +43,7 @@ export function openNpcDialog(npc, player, dialogData) {
     speakerNpcEl,
     textEl,
     choiceBtn,
+    choiceBtn2,
     questBadge,
     closeBtn,
   } = els;
@@ -62,7 +66,11 @@ export function openNpcDialog(npc, player, dialogData) {
 
   if (choiceBtn) {
     choiceBtn.textContent = dialogData?.choice || "À plus tard.";
+    choiceBtn.disabled = false;
     choiceBtn.onclick = () => {
+      if (choiceBtn.disabled) return;
+      choiceBtn.disabled = true;
+      if (choiceBtn2) choiceBtn2.disabled = true;
       if (dialogData && typeof dialogData.onChoice === "function") {
         dialogData.onChoice();
       }
@@ -70,6 +78,34 @@ export function openNpcDialog(npc, player, dialogData) {
         closeNpcDialog();
       }
     };
+  }
+
+  if (choiceBtn2) {
+    const choice2Text = dialogData?.choice2;
+    if (choice2Text) {
+      choiceBtn2.style.display = "";
+      choiceBtn2.textContent = choice2Text;
+      choiceBtn2.disabled = false;
+      choiceBtn2.onclick = () => {
+        if (choiceBtn2.disabled) return;
+        choiceBtn2.disabled = true;
+        if (choiceBtn) choiceBtn.disabled = true;
+        if (dialogData && typeof dialogData.onChoice2 === "function") {
+          dialogData.onChoice2();
+        }
+        const closeOnChoice2 =
+          dialogData?.closeOnChoice2 === undefined
+            ? dialogData?.closeOnChoice
+            : dialogData?.closeOnChoice2;
+        if (closeOnChoice2 !== false) {
+          closeNpcDialog();
+        }
+      };
+    } else {
+      choiceBtn2.style.display = "none";
+      choiceBtn2.disabled = true;
+      choiceBtn2.onclick = null;
+    }
   }
 
   if (closeBtn) {

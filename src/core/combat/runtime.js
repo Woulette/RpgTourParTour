@@ -11,6 +11,7 @@ import { addXpToPlayer } from "../../entities/player.js";
 import { clearActiveSpell } from "../../systems/combat/spells/activeSpell.js";
 import { queueMonsterRespawn } from "../../monsters/respawnState.js";
 import { createMonster } from "../../entities/monster.js";
+import { advanceQuestStage, getQuestState, QUEST_STATES } from "../../quests/index.js";
 import {
   cleanupCombatChallenge,
   finalizeCombatChallenge,
@@ -129,6 +130,13 @@ function getJobLevel(player, jobId) {
   return typeof level === "number" && level > 0 ? level : 0;
 }
 
+function hasItem(player, itemId) {
+  if (!player || !player.inventory || !itemId) return false;
+  const slots = player.inventory.slots;
+  if (!Array.isArray(slots)) return false;
+  return slots.some((slot) => slot && slot.itemId === itemId && slot.qty > 0);
+}
+
 function rollLootFromSources(lootSources, dropMultiplier = 1, player = null) {
   const sources = Array.isArray(lootSources) ? lootSources : [];
   const mult = clampNonNegativeFinite(dropMultiplier) || 1;
@@ -146,6 +154,13 @@ function rollLootFromSources(lootSources, dropMultiplier = 1, player = null) {
           typeof entry.minJobLevel === "number" ? entry.minJobLevel : 1;
         if (getJobLevel(player, requiredJob) < minLevel) return;
       }
+
+      const requiredItem =
+        entry.requiresItem ||
+        (typeof entry.itemId === "string" && entry.itemId.startsWith("essence_")
+          ? "extracteur_essence"
+          : null);
+      if (requiredItem && !hasItem(player, requiredItem)) return;
 
       const baseRate = typeof entry.dropRate === "number" ? entry.dropRate : 1.0;
       const finalRate = Math.min(1, Math.max(0, baseRate * mult));
@@ -467,8 +482,10 @@ export function endCombat(scene) {
       queueMonsterRespawn(scene, state.worldMonsterSnapshot, 5000);
     }
   } else {
-    // Défaite / inconnu : pas de récompenses, et on restaure le monstre monde (PV/position).
-    restoreWorldMonsterFromSnapshot(scene, state.worldMonsterSnapshot, state.monstre);
+    // D?faite / inconnu : pas de r?compenses, et on restaure le monstre monde (PV/position).
+    if (!state.monstre?.isCombatOnly) {
+      restoreWorldMonsterFromSnapshot(scene, state.worldMonsterSnapshot, state.monstre);
+    }
   }
 
   // Reset des cooldowns à la sortie du combat.
@@ -610,6 +627,20 @@ export function endCombat(scene) {
   }
 
   scene.combatState = null;
+
+  if (scene?.pendingQuestAfterDuel) {
+    const { questId, monsterId } = scene.pendingQuestAfterDuel;
+    scene.pendingQuestAfterDuel = null;
+    if (issue === "victoire" && questId && monsterId) {
+      const expected = result?.monsterId;
+      if (!expected || expected === monsterId) {
+        const qState = getQuestState(scene.player, questId, { emit: false });
+        if (qState?.state === QUEST_STATES.IN_PROGRESS) {
+          advanceQuestStage(scene.player, questId, { scene });
+        }
+      }
+    }
+  }
 
   // Donjons : auto-exit after boss kill.
   onAfterCombatEnded(scene, result);

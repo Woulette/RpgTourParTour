@@ -13,7 +13,17 @@ function ensureQuestContainer(player) {
 }
 
 function resetStageProgress(state) {
-  state.progress = { currentCount: 0, crafted: {}, kills: {} };
+  state.progress = { currentCount: 0, crafted: {}, kills: {}, applied: false };
+}
+
+function runStageHook(hookName, stage, context) {
+  if (!stage || typeof stage[hookName] !== "function") return;
+  try {
+    stage[hookName](context);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[quest] stage ${hookName} error`, context?.questId, err);
+  }
 }
 
 function getMonsterFamilyId(monsterId) {
@@ -74,6 +84,14 @@ export function acceptQuest(player, questId) {
     state.state = QUEST_STATES.IN_PROGRESS;
     state.stageIndex = 0;
     resetStageProgress(state);
+    const stage = getCurrentQuestStage(questDef, state);
+    runStageHook("onStart", stage, {
+      player,
+      questId,
+      questDef,
+      stage,
+      state,
+    });
     emitStoreEvent("quest:updated", { questId, state });
     addChatMessage(
       {
@@ -94,21 +112,14 @@ export function advanceQuestStage(player, questId, { scene } = {}) {
   if (state.state !== QUEST_STATES.IN_PROGRESS) return;
 
   const currentStage = getCurrentQuestStage(questDef, state);
-  if (currentStage && typeof currentStage.onComplete === "function") {
-    try {
-      currentStage.onComplete({
-        player,
-        scene,
-        questId,
-        questDef,
-        stage: currentStage,
-        state,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[quest] stage onComplete error", questId, err);
-    }
-  }
+  runStageHook("onComplete", currentStage, {
+    player,
+    scene,
+    questId,
+    questDef,
+    stage: currentStage,
+    state,
+  });
 
   const hasStages =
     Array.isArray(questDef.stages) && questDef.stages.length > 0;
@@ -121,6 +132,15 @@ export function advanceQuestStage(player, questId, { scene } = {}) {
 
   state.stageIndex = nextIndex;
   resetStageProgress(state);
+  const nextStage = getCurrentQuestStage(questDef, state);
+  runStageHook("onStart", nextStage, {
+    player,
+    scene,
+    questId,
+    questDef,
+    stage: nextStage,
+    state,
+  });
   emitStoreEvent("quest:updated", { questId, state });
 }
 

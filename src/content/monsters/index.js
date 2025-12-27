@@ -12,6 +12,7 @@ import libarene from "./libarene.js";
 import cazard from "./cazard.js";
 import cedre from "./cedre.js";
 import gumgob from "./gumgob.js";
+import donjon_keeper from "./donjon_keeper.js";
 
 export const monsters = {
   corbeau,
@@ -28,4 +29,5 @@ export const monsters = {
   cazard,
   cedre,
   gumgob,
+  donjon_keeper,
 };

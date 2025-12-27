@@ -10,7 +10,11 @@ import {
   advanceQuestStage,
   getCurrentQuestStage,
 } from "./state.js";
-import { getNpcMarker, getQuestContextForNpc } from "./runtime/npcStatus.js";
+import {
+  getNpcMarker,
+  getQuestContextForNpc,
+  getOfferableQuestsForNpc,
+} from "./runtime/npcStatus.js";
 
 export {
   quests,
@@ -26,6 +30,7 @@ export {
   getCurrentQuestStage,
   getNpcMarker,
   getQuestContextForNpc,
+  getOfferableQuestsForNpc,
 };
 
 export function getPrimaryQuestForNpc(npcId, player) {

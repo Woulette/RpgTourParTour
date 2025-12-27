@@ -1,87 +1,158 @@
-import { QUEST_STATES } from "../../quests/catalog.js";
-import { DIALOG_STATES } from "./dialogStates.js";
-
 export const alchimisteProvisoireDialog = {
   questDialogs: {
-    andemia_intro_2: {
-      talk_to_alchimiste: {
-        [QUEST_STATES.IN_PROGRESS]: {
+    andemia_intro_1: {
+      meet_alchimiste: {
+        in_progress: {
           sequence: [
             {
-              text: "Ah, tu viens de la part de Mémé.",
-              choice: "Oui.",
+              text: "Bienvenue.",
+              choice: "Se presenter",
             },
             {
               text:
-                "Parfait.\n" +
-                "Je vois que tu sais déjà te débrouiller.\n\n" +
-                "Je vais te confier la suite.",
-              choice: "Je t’écoute.",
+                "Je suis l'alchimiste, le medecin du village.\n" +
+                "Un conseil, fais attention au marchand. Il sait tirer profit de tout.",
+              choice: "Compris.",
+              closeOnChoice: true,
             },
           ],
         },
       },
-      __default: {
-        [QUEST_STATES.COMPLETED]: {
-          text: "Bien. On va pouvoir passer aux essences.",
-          choice: "D'accord.",
+    },
+    andemia_intro_2: {
+      meet_alchimiste: {
+        in_progress: {
+          sequence: [
+            {
+              text: "Tu viens chercher des essences ?",
+              choice: "Oui.",
+            },
+          ],
         },
       },
     },
     andemia_intro_3: {
-      bring_essence_corbeau: {
-        [QUEST_STATES.NOT_STARTED]: {
+      bring_orties: {
+        not_started: {
           sequence: [
             {
-              text: "Très bien. Passons aux essences.",
-              choice: "D’accord.",
+              text: "Tu devras etre digne d'un vrai alchimiste !",
+              choice: "Je t'ecoute.",
             },
             {
               text:
-                "Entendu.\n" +
-                "Tu as besoin de te perfectionner, et elle veut s’assurer que tu tiens le coup.",
-              choice: "C’est ça.",
+                "Je peux t'aider a te procurer un extracteur d'essence,\n" +
+                "mais pour ca, tu vas devoir me rendre service.",
+              choice: "Quel service ?",
             },
             {
-              text:
-                "Alors écoute bien.\n" +
-                "Chasse des corbeaux dehors. Sur leurs carcasses, tu trouveras parfois une essence.\n\n" +
-                "Ramène-moi 2 essences de corbeau.",
-              choice: "Je m’en charge.",
+              text: "Amene-moi 20 orties.",
+              choice: "D'accord.",
             },
           ],
         },
-        [QUEST_STATES.IN_PROGRESS]: {
-          text: "Il me faut 2 essences de corbeau.\nReviens quand tu les as.",
-          choice: "J’y retourne.",
+        in_progress: {
+          text: "Il me faut 20 orties.",
+          choice: "Je m'en occupe.",
         },
-        [DIALOG_STATES.READY_TO_TURN_IN]: {
+        ready_to_turn_in: {
           sequence: [
             {
-              text: "Parfait. C’est exactement ce que je voulais voir.",
-              choice: "Voilà.",
+              text:
+                "Parfait. Grace a ca, je vais pouvoir preparer les potions pour le marchand.",
+              choice: "Tant mieux.",
+            },
+            {
+              text: "Tiens, voici un extracteur d'essence. Il t'appartient.",
+              choice: "Merci.",
             },
             {
               text:
-                "Bien. Tu as récolté ce qu’il fallait.\n" +
-                "Garde les essences, tu en auras besoin pour la suite.\n\n" +
-                "Retourne voir Mémé : elle t’expliquera quoi faire ensuite.",
-              choice: "J’y vais.",
+                "Avec cet extracteur, tu pourras extraire l'essence des monstres que tu as vaincus.",
+              choice: "D'accord.",
+            },
+            {
+              text:
+                "Mais si ton niveau d'alchimiste n'est pas suffisant, tu n'en tireras rien.",
+              choice: "Compris.",
             },
           ],
         },
       },
-      __default: {
-        [QUEST_STATES.COMPLETED]: {
-          text:
-            "Bien. Reviens me voir quand tu seras prêt, on ira plus loin dans l’alchimie.",
-          choice: "À plus tard.",
+    },
+    andemia_intro_4: {
+      meet_meme: {
+        not_started: {
+          sequence: [
+            {
+              text: "L'extracteur est a toi. Va voir Meme maintenant.",
+              choice: "J'y vais.",
+            },
+          ],
+        },
+        in_progress: {
+          text: "Va voir Meme.",
+          choice: "D'accord.",
+        },
+      },
+    },
+    alchimiste_marchand_1: {
+      deliver_invoice: {
+        not_started: {
+          sequence: [
+            {
+              text:
+                "Je dois envoyer une facture au Marchand,\n" +
+                "mais je n'ai pas le temps, mes potions m'attendent.",
+              choice: "Je peux y aller.",
+            },
+            {
+              text: "Parfait. Va le voir a ma place.",
+              choice: "J'y vais.",
+            },
+          ],
+        },
+        in_progress: {
+          text: "Va voir le Marchand et remets-lui la facture.",
+          choice: "D'accord.",
+        },
+      },
+    },
+    alchimiste_marchand_2: {
+      return_to_alchimiste: {
+        in_progress: {
+          sequence: [
+            {
+              text: "Tu as bien remis la facture ?",
+              choice: "Oui.",
+            },
+            {
+              text:
+                "Le marchand t'a arnaque ?\n" +
+                "Je t'avais prevenu de te mefier de cette fripouille.\n" +
+                "C'est pour ca que j'ai augmente le prix de la facture.",
+              choice: "Je vois.",
+            },        
+
+          ],
+        },
+      },
+    },
+    alchimiste_marchand_3: {
+      meet_maire: {
+        not_started: {
+          text: "Va voir le maire pour te plaindre du marchand.",
+          choice: "J'y vais.",
+        },
+        in_progress: {
+          text: "Va voir le maire.",
+          choice: "D'accord.",
         },
       },
     },
   },
   generic: {
     text: "Bonjour.",
-    choice: "À plus tard.",
+    choice: "A plus tard.",
   },
 };

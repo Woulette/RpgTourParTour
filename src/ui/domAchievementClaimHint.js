@@ -1,7 +1,7 @@
 import { on as onStoreEvent } from "../state/store.js";
 import { getAchievementProgress } from "../achievements/runtime.js";
 import { achievementPackDefs } from "../achievements/defs/index.js";
-import { openAchievementsTo } from "./domAchievements.js";
+import { openAchievementClaimPanel } from "./domAchievementClaimPanel.js";
 
 let initialized = false;
 let hintButtonEl = null;
@@ -55,23 +55,6 @@ function computeClaimable(player) {
   return claimables;
 }
 
-function pickBestTarget(claimables, player) {
-  // Priorité : dans l'ordre du pack, et plutôt micro avant la récompense globale.
-  for (const pack of achievementPackDefs) {
-    const ids = Array.isArray(pack.objectiveAchievementIds) ? pack.objectiveAchievementIds : [];
-    const microIds = ids.filter((id) => id !== pack.rewardAchievementId);
-    const ordered = [...microIds, pack.rewardAchievementId].filter(Boolean);
-    for (const id of ordered) {
-      const progress = getAchievementProgress(player, id);
-      if (progress?.unlocked && !progress?.claimed) {
-        return { packId: pack.id, achievementId: id };
-      }
-    }
-  }
-
-  return claimables[0] || null;
-}
-
 function update(player) {
   if (!player) return;
   const btn = ensureHintButton();
@@ -84,9 +67,11 @@ function update(player) {
   btn.classList.toggle("hud-claim-hint-hidden", count === 0);
 
   btn.onclick = () => {
-    const target = pickBestTarget(claimables, player);
-    if (!target) return;
-    openAchievementsTo(target);
+    if (document.body.classList.contains("hud-claim-open")) {
+      document.body.classList.remove("hud-claim-open");
+      return;
+    }
+    openAchievementClaimPanel(player);
   };
 }
 
@@ -106,4 +91,3 @@ export function teardownAchievementClaimHint() {
   unsubscribeAchievements = null;
   initialized = false;
 }
-

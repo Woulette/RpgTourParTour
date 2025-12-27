@@ -1,0 +1,192 @@
+/* Fenetre de reclamation des succes */
+
+#hud-claim-panel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
+  width: min(520px, 92vw);
+  max-height: 70vh;
+  pointer-events: auto;
+  background:
+    radial-gradient(circle at top left, rgba(255, 244, 214, 0.85), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(255, 210, 140, 0.65), transparent 55%),
+    linear-gradient(160deg, rgba(255, 236, 201, 0.98), rgba(255, 212, 140, 0.98));
+  border: 2px solid rgba(255, 200, 94, 0.75);
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 2px rgba(255, 236, 186, 0.9) inset,
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    0 0 36px rgba(255, 205, 110, 0.85);
+  color: #1f2937;
+  display: none;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  box-sizing: border-box;
+  z-index: 80;
+}
+
+body.hud-claim-open #hud-claim-panel {
+  display: flex;
+  animation: claim-pop 0.35s ease-out forwards;
+}
+
+.claim-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  padding-bottom: 0.4rem;
+}
+
+.claim-title {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.claim-close-btn {
+  border: none;
+  background: transparent;
+  color: #b45309;
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.claim-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.claim-empty {
+  color: rgba(55, 65, 81, 0.75);
+  font-size: 13px;
+}
+
+.claim-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.6);
+  background: rgba(255, 248, 231, 0.9);
+}
+
+.claim-item-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.claim-item-desc {
+  font-size: 17px;
+  font-weight: 600;
+  color: rgba(55, 65, 81, 0.75);
+  line-height: 1.3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
+}
+
+.claim-reward-text {
+  color: rgba(55, 65, 81, 0.8);
+}
+
+.claim-reward-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.claim-reward-item {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(180, 83, 9, 0.45);
+  background: rgba(255, 244, 214, 0.95);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.claim-reward-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.claim-reward-fallback {
+  font-size: 9px;
+  text-align: center;
+  padding: 0 2px;
+}
+
+.claim-reward-qty {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  background: rgba(255, 244, 214, 0.98);
+  border: 1px solid rgba(180, 83, 9, 0.55);
+  border-radius: 8px;
+  padding: 0 3px;
+  font-size: 9px;
+  line-height: 1.2;
+  color: rgba(55, 65, 81, 0.9);
+}
+
+.claim-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.claim-btn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(180, 83, 9, 0.7);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.95), rgba(245, 158, 11, 0.95));
+  color: #3b2108;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.claim-btn:hover {
+  background: linear-gradient(135deg, rgba(252, 211, 77, 0.98), rgba(251, 146, 60, 0.98));
+  border-color: rgba(217, 119, 6, 0.9);
+}
+
+.claim-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@keyframes claim-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

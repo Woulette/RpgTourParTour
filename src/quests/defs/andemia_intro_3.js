@@ -1,37 +1,31 @@
+import { addItem } from "../../inventory/inventoryCore.js";
+
 export const andemia_intro_3 = {
   id: "andemia_intro_3",
-  title: "Les essences du corbeau",
+  title: "L'extracteur d'essence",
   giverNpcId: "alchimiste_provisoire",
   requires: ["andemia_intro_2"],
-  description:
-    "L'alchimiste veut verifier ta determination. Recupere des essences de corbeau, puis vois Meme.",
+  description: "L'Alchimiste veut tester ta valeur.",
   stages: [
     {
-      id: "bring_essence_corbeau",
+      id: "bring_orties",
       npcId: "alchimiste_provisoire",
-      description: "Rapporter 2 essences de corbeau a l'alchimiste.",
+      description: "Ramener 20 orties a l'Alchimiste.",
       objective: {
         type: "deliver_item",
-        itemId: "essence_corbeau",
-        qty: 2,
-        consume: false,
-        label: "Essences de corbeau recuperees",
+        itemId: "plante_ortie",
+        qty: 20,
+        consume: true,
+        label: "20 orties",
       },
-    },
-    {
-      id: "talk_to_meme",
-      npcId: "meme_village",
-      description: "Retourner voir Meme.",
-      objective: {
-        type: "talk_to_npc",
-        npcId: "meme_village",
-        requiredCount: 1,
-        label: "Parler a Meme",
+      onComplete: ({ player }) => {
+        if (!player?.inventory) return;
+        addItem(player.inventory, "extracteur_essence", 1);
       },
     },
   ],
   rewards: {
-    xpPlayer: 140,
-    gold: 60,
+    xpPlayer: 480,
+    gold: 35,
   },
 };

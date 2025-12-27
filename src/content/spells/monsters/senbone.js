@@ -1,0 +1,28 @@
+export default {
+  fissure: {
+    id: "fissure",
+    label: "Fissure",
+    paCost: 4,
+    rangeMin: 1,
+    rangeMax: 1,
+    lineOfSight: true,
+    zone: "cell",
+    element: "terre",
+    damageMin: 14,
+    damageMax: 18,
+    maxCastsPerTurn: 2,
+    description: "Fissure de terre au corps a corps.",
+  },
+  solitude: {
+    id: "solitude",
+    label: "Solitude",
+    paCost: 4,
+    rangeMin: 1,
+    rangeMax: 1,
+    lineOfSight: false,
+    zone: "cell",
+    cooldownTurns: 5,
+    summonMonster: { monsterId: "skelbone" },
+    description: "Invoque un Skelbone a proximite.",
+  },
+};

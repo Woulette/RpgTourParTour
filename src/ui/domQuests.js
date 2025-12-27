@@ -1,6 +1,11 @@
 import { getAllQuestStates, QUEST_STATES } from "../quests/index.js";
 import { on as onStoreEvent } from "../state/store.js";
-import { countItemInInventory } from "../quests/runtime/objectives.js";
+import {
+  countItemInInventory,
+  getCraftedCount,
+  hasAppliedParchment,
+} from "../quests/runtime/objectives.js";
+import { getItemDef } from "../inventory/inventoryCore.js";
 
 let domQuestsInitialized = false;
 let unsubscribeQuests = null;
@@ -168,10 +173,13 @@ export function initDomQuests(player) {
         }
       } else if (objective && objective.type === "talk_to_npc") {
         const required = objective.requiredCount || 1;
-        const current = Math.min(
-          required,
-          state.progress?.currentCount || 0
-        );
+        const isParchmentStep =
+          def?.id === "alchimiste_marchand_5" && stage?.id === "apply_parchemin";
+        const current = isParchmentStep
+          ? hasAppliedParchment(player, state)
+            ? 1
+            : 0
+          : Math.min(required, state.progress?.currentCount || 0);
         detailProgressEl.textContent = `${objective.label}: ${current}/${required}`;
         if (detailProgressBarFillEl) {
           const percent = (current / required) * 100;
@@ -194,10 +202,49 @@ export function initDomQuests(player) {
             `${percent}%`
           );
         }
+      } else if (objective && objective.type === "deliver_items") {
+        const items = Array.isArray(objective.items) ? objective.items : [];
+        const parts = items
+          .filter((it) => it && it.itemId)
+          .map((it) => {
+            const required = it.qty || 1;
+            const current = Math.min(
+              required,
+              countItemInInventory(player, it.itemId)
+            );
+            const label = it.label || getItemDef(it.itemId)?.label || it.itemId;
+            return `${label}: ${current}/${required}`;
+          });
+        detailProgressEl.textContent = parts.join(" | ");
+        if (detailProgressBarFillEl) {
+          const totalRequired = items.reduce((acc, it) => acc + (it?.qty || 1), 0);
+          const totalCurrent = items.reduce((acc, it) => {
+            if (!it || !it.itemId) return acc;
+            const required = it.qty || 1;
+            const current = Math.min(
+              required,
+              countItemInInventory(player, it.itemId)
+            );
+            return acc + current;
+          }, 0);
+          const percent = totalRequired > 0 ? (totalCurrent / totalRequired) * 100 : 0;
+          detailProgressBarFillEl.style.setProperty(
+            "--quest-progress-percent",
+            `${percent}%`
+          );
+        }
       } else if (objective && objective.type === "craft_items") {
         const items = Array.isArray(objective.items) ? objective.items : [];
         const required = items.reduce((acc, it) => acc + (it?.qty || 1), 0);
-        const current = Math.min(required, state.progress?.currentCount || 0);
+        const current = Math.min(
+          required,
+          items.reduce((acc, it) => {
+            if (!it || !it.itemId) return acc;
+            const req = it.qty || 1;
+            const cur = Math.min(req, getCraftedCount(player, state, it.itemId));
+            return acc + cur;
+          }, 0)
+        );
         detailProgressEl.textContent = `${objective.label}: ${current}/${required}`;
         if (detailProgressBarFillEl) {
           const percent = required > 0 ? (current / required) * 100 : 0;

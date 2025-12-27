@@ -28,7 +28,7 @@ function refreshQuestMarkerForNpc(scene, player, npcInstance) {
   const markerY = sprite.y - sprite.displayHeight - margin;
   const marker = scene.add.image(sprite.x, markerY, markerTexture);
   marker.setOrigin(0.5, 1);
-  marker.setDepth((sprite.depth || 0) + 2);
+  marker.setDepth(Math.max((sprite.depth || 0) + 2, 100010));
   if (scene.hudCamera) {
     scene.hudCamera.ignore(marker);
   }

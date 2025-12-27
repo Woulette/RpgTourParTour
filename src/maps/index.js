@@ -495,6 +495,8 @@ export const maps = {
       },
     ],
     treePositions: [],
+    dungeonReturnTile: { x: 14, y: 20 },
+    entranceNpcTile: { x: 21, y: 15 },
     exitBounds: null,
   },
   MapAndemiaNouvelleVersion7: {
@@ -868,7 +870,7 @@ export const maps = {
     dungeonRoomIndex: 1,
     monsterSpawns: [
       // Un seul pack de 4 (les membres supplémentaires apparaissent en combat)
-      { type: "chibone", groupSize: 4, offsetFromCenter: { x: 0, y: 0 } },
+      { type: "chibone", groupSizeMin: 4, groupSizeMax: 4, offsetFromCenter: { x: 0, y: 0 } },
     ],
     treePositions: [],
     exitBounds: null,
@@ -884,7 +886,7 @@ export const maps = {
     dungeonRoomIndex: 2,
     monsterSpawns: [
       // Un seul pack de 4
-      { type: "chibone", groupSize: 4, offsetFromCenter: { x: 0, y: 0 } },
+      { type: "chibone", groupSizeMin: 4, groupSizeMax: 4, offsetFromCenter: { x: 0, y: 0 } },
     ],
     treePositions: [],
     exitBounds: null,
@@ -900,7 +902,7 @@ export const maps = {
     dungeonRoomIndex: 3,
     monsterSpawns: [
       // Un seul pack de 4
-      { type: "skelbone", groupSize: 4, offsetFromCenter: { x: 0, y: 0 } },
+      { type: "skelbone", groupSizeMin: 4, groupSizeMax: 4, offsetFromCenter: { x: 0, y: 0 } },
     ],
     treePositions: [],
     exitBounds: null,

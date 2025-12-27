@@ -1,6 +1,146 @@
-import { chapitre1Achievements } from "./chapitre1.js";
-import { maireAchievements } from "./maire.js";
-import { achievementPacks } from "./packs.js";
+export const achievementDefs = [
+  {
+    id: "andemia_intro_1_completed",
+    title: "Saluer nos voisin",
+    description: "Terminer la quete Saluer nos voisin.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "andemia_intro_1" }],
+    rewards: { xpPlayer: 640, gold: 80, honorPoints: 5 },
+  },
+  {
+    id: "andemia_intro_2_completed",
+    title: "Deplumer nos corbeau",
+    description: "Terminer la quete Deplumer nos corbeau.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "andemia_intro_2" }],
+    rewards: {
+      xpPlayer: 1030,
+      gold: 105,
+      honorPoints: 5,
+      items: [
+        { itemId: "plante_ortie", qty: 10 },
+        { itemId: "peau_goush", qty: 1 },
+      ],
+    },
+  },
+  {
+    id: "andemia_intro_3_completed",
+    title: "L'extracteur d'essence",
+    description: "Terminer la quete L'extracteur d'essence.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "andemia_intro_3" }],
+    rewards: {
+      xpPlayer: 1390,
+      gold: 120,
+      honorPoints: 5,
+      items: [{ itemId: "papier", qty: 2 }],
+    },
+  },
+  {
+    id: "andemia_intro_4_completed",
+    title: "Une panoplie ca se merite",
+    description: "Terminer la quete Une panoplie ca se merite.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "andemia_intro_4" }],
+    rewards: { xpPlayer: 1890, gold: 145, honorPoints: 5 },
+  },
+  {
+    id: "andemia_intro_complete",
+    title: "Les premiers pas de nos nouveau nee",
+    description: "Terminer toutes les quetes d'introduction.",
+    category: "quetes",
+    requirements: [
+      { type: "achievement_unlocked", achievementId: "andemia_intro_1_completed" },
+      { type: "achievement_unlocked", achievementId: "andemia_intro_2_completed" },
+      { type: "achievement_unlocked", achievementId: "andemia_intro_3_completed" },
+      { type: "achievement_unlocked", achievementId: "andemia_intro_4_completed" },
+    ],
+    rewards: { xpPlayer: 3800, gold: 550, honorPoints: 15 },
+  },
+  {
+    id: "alchimiste_marchand_1_completed",
+    title: "Le marchand ambulant 1",
+    description: "Terminer la quete Le marchand ambulant 1.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "alchimiste_marchand_1" }],
+    rewards: { xpPlayer: 520, gold: 70, honorPoints: 5 },
+  },
+  {
+    id: "alchimiste_marchand_2_completed",
+    title: "Le marchand ambulant 2",
+    description: "Terminer la quete Le marchand ambulant 2.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "alchimiste_marchand_2" }],
+    rewards: { xpPlayer: 620, gold: 85, honorPoints: 5 },
+  },
+  {
+    id: "alchimiste_marchand_3_completed",
+    title: "Le marchand ambulant 3",
+    description: "Terminer la quete Le marchand ambulant 3.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "alchimiste_marchand_3" }],
+    rewards: { xpPlayer: 740, gold: 95, honorPoints: 5 },
+  },
+  {
+    id: "alchimiste_marchand_4_completed",
+    title: "Le marchand ambulant 4",
+    description: "Terminer la quete Le marchand ambulant 4.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "alchimiste_marchand_4" }],
+    rewards: { xpPlayer: 860, gold: 110, honorPoints: 5 },
+  },
+  {
+    id: "alchimiste_marchand_5_completed",
+    title: "Le marchand ambulant 5",
+    description: "Terminer la quete Le marchand ambulant 5.",
+    category: "quetes",
+    requirements: [{ type: "quest_completed", questId: "alchimiste_marchand_5" }],
+    rewards: { xpPlayer: 980, gold: 130, honorPoints: 5 },
+  },
+  {
+    id: "alchimiste_marchand_complete",
+    title: "Chroniques d'un accord",
+    description: "Terminer toutes les quetes du marchand ambulant.",
+    category: "quetes",
+    requirements: [
+      { type: "achievement_unlocked", achievementId: "alchimiste_marchand_1_completed" },
+      { type: "achievement_unlocked", achievementId: "alchimiste_marchand_2_completed" },
+      { type: "achievement_unlocked", achievementId: "alchimiste_marchand_3_completed" },
+      { type: "achievement_unlocked", achievementId: "alchimiste_marchand_4_completed" },
+      { type: "achievement_unlocked", achievementId: "alchimiste_marchand_5_completed" },
+    ],
+    rewards: { xpPlayer: 2400, gold: 320, honorPoints: 15 },
+  },
+];
 
-export const achievementDefs = [...chapitre1Achievements, ...maireAchievements];
-export const achievementPackDefs = [...achievementPacks];
+export const achievementPackDefs = [
+  {
+    id: "andemia_intro",
+    title: "Les premiers pas de nos nouveau nee",
+    description: "Accomplissements lies a l'introduction d'Andemia.",
+    category: "quetes",
+    objectiveAchievementIds: [
+      "andemia_intro_1_completed",
+      "andemia_intro_2_completed",
+      "andemia_intro_3_completed",
+      "andemia_intro_4_completed",
+      "andemia_intro_complete",
+    ],
+    rewardAchievementId: "andemia_intro_complete",
+  },
+  {
+    id: "alchimiste_marchand",
+    title: "Chroniques d'un accord",
+    description: "Accomplissements lies aux quetes du marchand ambulant.",
+    category: "quetes",
+    objectiveAchievementIds: [
+      "alchimiste_marchand_1_completed",
+      "alchimiste_marchand_2_completed",
+      "alchimiste_marchand_3_completed",
+      "alchimiste_marchand_4_completed",
+      "alchimiste_marchand_5_completed",
+      "alchimiste_marchand_complete",
+    ],
+    rewardAchievementId: "alchimiste_marchand_complete",
+  },
+];

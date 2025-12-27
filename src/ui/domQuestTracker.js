@@ -1,6 +1,11 @@
 import { getAllQuestStates, QUEST_STATES } from "../quests/index.js";
 import { on as onStoreEvent } from "../state/store.js";
-import { countItemInInventory } from "../quests/runtime/objectives.js";
+import {
+  countItemInInventory,
+  getCraftedCount,
+  hasAppliedParchment,
+} from "../quests/runtime/objectives.js";
+import { getItemDef } from "../inventory/inventoryCore.js";
 
 let trackerInitialized = false;
 let unsubscribeTracker = null;
@@ -29,7 +34,13 @@ function pickObjectiveText(stage, state, questDef, player) {
   }
   if (objective && objective.type === "talk_to_npc") {
     const required = objective.requiredCount || 1;
-    const current = Math.min(required, state.progress?.currentCount || 0);
+    const isParchmentStep =
+      questDef?.id === "alchimiste_marchand_5" && stage?.id === "apply_parchemin";
+    const current = isParchmentStep
+      ? hasAppliedParchment(player, state)
+        ? 1
+        : 0
+      : Math.min(required, state.progress?.currentCount || 0);
     return `${objective.label}: ${current}/${required}`;
   }
   if (objective && objective.type === "deliver_item") {
@@ -37,10 +48,31 @@ function pickObjectiveText(stage, state, questDef, player) {
     const current = Math.min(required, countItemInInventory(player, objective.itemId));
     return `${objective.label}: ${current}/${required}`;
   }
+  if (objective && objective.type === "deliver_items") {
+    const items = Array.isArray(objective.items) ? objective.items : [];
+    if (items.length === 0) return stage?.description || questDef?.description || "";
+    const parts = items
+      .filter((it) => it && it.itemId)
+      .map((it) => {
+        const required = it.qty || 1;
+        const current = Math.min(required, countItemInInventory(player, it.itemId));
+        const label = it.label || getItemDef(it.itemId)?.label || it.itemId;
+        return `${label}: ${current}/${required}`;
+      });
+    return parts.join(" | ");
+  }
   if (objective && objective.type === "craft_items") {
     const items = Array.isArray(objective.items) ? objective.items : [];
     const required = items.reduce((acc, it) => acc + (it?.qty || 1), 0);
-    const current = Math.min(required, state.progress?.currentCount || 0);
+    const current = Math.min(
+      required,
+      items.reduce((acc, it) => {
+        if (!it || !it.itemId) return acc;
+        const req = it.qty || 1;
+        const cur = Math.min(req, getCraftedCount(player, state, it.itemId));
+        return acc + cur;
+      }, 0)
+    );
     return `${objective.label}: ${current}/${required}`;
   }
   if (objective && objective.type === "craft_set") {

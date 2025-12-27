@@ -1,9 +1,8 @@
 export const maire_corbeaux_1 = {
   id: "maire_corbeaux_1",
-  title: "Ordres du maire : Corbeaux",
+  title: "Menace des corbeaux",
   giverNpcId: "maire_albinos",
-  description:
-    "Le maire veut securiser la region. Elimine quelques corbeaux.",
+  description: "Le maire veut que tu elimines 4 corbeaux pres du village.",
   stages: [
     {
       id: "kill_corbeaux",
@@ -11,7 +10,7 @@ export const maire_corbeaux_1 = {
       description: "Eliminer 4 corbeaux.",
       objective: {
         type: "kill_monster",
-        monsterId: "corbeau",
+        monsterFamily: "corbeau",
         requiredCount: 4,
         label: "Corbeaux elimines",
       },
@@ -29,7 +28,7 @@ export const maire_corbeaux_1 = {
     },
   ],
   rewards: {
-    xpPlayer: 60,
-    gold: 25,
+    xpPlayer: 180,
+    gold: 40,
   },
 };

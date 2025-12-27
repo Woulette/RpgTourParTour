@@ -2,6 +2,9 @@ import { emit as emitStoreEvent, getPlayer } from "../state/store.js";
 import { quests, QUEST_STATES, getQuestState, acceptQuest, advanceQuestStage, getCurrentQuestStage, incrementCraftProgress } from "../quests/index.js";
 import { completeQuest } from "../quests/state.js";
 import { addItem } from "../inventory/inventoryCore.js";
+import { enterDungeon } from "../dungeons/runtime.js";
+import { maps } from "../maps/index.js";
+import { loadMapLikeMain } from "../maps/world/load.js";
 
 function isCheatsEnabled() {
   if (typeof window === "undefined") return false;
@@ -195,6 +198,29 @@ export function initDevCheats(scene) {
         setQuestCompletedNoRewards(player, "papi_meme_1");
         setQuestInProgressAtStage(player, "meme_panoplie_corbeau_1", 0);
         return questSnapshot(player, "meme_panoplie_corbeau_1");
+      },
+    },
+    dungeon: {
+      enter(roomIndex = 0) {
+        const scene = window.__scene;
+        if (!scene) throw new Error("Cheats: scene introuvable");
+        enterDungeon(scene, "aluineeks", { roomIndex });
+      },
+      boss() {
+        const scene = window.__scene;
+        if (!scene) throw new Error("Cheats: scene introuvable");
+        enterDungeon(scene, "aluineeks", { roomIndex: 3 });
+      },
+    },
+    map: {
+      go(mapKey, x = null, y = null) {
+        const scene = window.__scene;
+        if (!scene) throw new Error("Cheats: scene introuvable");
+        const mapDef = maps?.[mapKey];
+        if (!mapDef) throw new Error(`Cheats: map inconnue ${mapKey}`);
+        const startTile =
+          typeof x === "number" && typeof y === "number" ? { x, y } : null;
+        loadMapLikeMain(scene, mapDef, startTile ? { startTile } : {});
       },
     },
   };

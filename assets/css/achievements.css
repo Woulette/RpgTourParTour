@@ -218,6 +218,62 @@ body.hud-achievements-open #hud-achievements-panel {
   margin-top: 0.8rem;
   font-size: 12px;
   color: rgba(226, 232, 240, 0.92);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+}
+
+.achievement-reward-label {
+  font-weight: 700;
+}
+
+.achievement-reward-text {
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.achievement-reward-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.achievement-reward-item {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.7);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.achievement-reward-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.achievement-reward-fallback {
+  font-size: 9px;
+  text-align: center;
+  padding: 0 2px;
+}
+
+.achievement-reward-qty {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  border-radius: 8px;
+  padding: 0 3px;
+  font-size: 9px;
+  line-height: 1.2;
+  color: rgba(226, 232, 240, 0.95);
 }
 
 .achievement-claim-row {

@@ -101,7 +101,7 @@ export const resourceItems = {
     level: 1,
     stackable: true,
     maxStack: 9999,
-    icon: "assets/ressources/etoffe/Fourure De liburion.png",
+    icon: "assets/ressources/etoffe/FourrureDeLiburion.png",
   },
 
   poussiere_temporelle: {

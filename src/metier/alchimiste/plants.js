@@ -214,7 +214,15 @@ export function spawnTestHerbs(scene, map, player, mapDef) {
         return;
       }
 
-      if (node.harvested || node.isHarvesting || player.isHarvestingHerb) return;
+      if (
+        node.harvested ||
+        node.isHarvesting ||
+        player.isHarvestingHerb ||
+        player.isHarvestingTree ||
+        player.isHarvestingWell
+      ) {
+        return;
+      }
 
       const combatOverlay = document.getElementById("combat-result-overlay");
       if (combatOverlay && !combatOverlay.classList.contains("combat-result-hidden")) {

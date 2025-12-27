@@ -1,150 +1,172 @@
-import { QUEST_STATES } from "../../quests/catalog.js";
-import { DIALOG_STATES } from "./dialogStates.js";
-
 export const maireDialog = {
   questDialogs: {
+    andemia_intro_1: {
+      meet_maire: {
+        in_progress: {
+          sequence: [
+            {
+              text: "Bonjour.",
+              choice: "Se presenter",
+            },
+            {
+              text:
+                "Je suis le Maire du village.\n" +
+                "Ne te fie pas aux apparences \n" +
+                "C'est l'evolution qui a agrandi mes oreilles.",
+              choice: "Enchante.",
+              closeOnChoice: true,
+            },
+          ],
+        },
+      },
+    },
     maire_corbeaux_1: {
       kill_corbeaux: {
-        [QUEST_STATES.NOT_STARTED]: {
+        not_started: {
           sequence: [
             {
               text:
-                "La ville doit rester sure. Va eliminer 4 corbeaux autour des chemins.",
+                "J'ai un mauvais pressentiment.\n" +
+                "Depuis plusieurs jours, les monstres sont plus presents\n" +
+                "dans les zones, et je crains une apparition du titan.",
+              choice: "Je comprends.",
+            },
+            {
+              text:
+                "Va stopper ces creatures et chasse les corbeaux.\n" +
+                "Elimine 4 corbeaux puis reviens me voir.",
               choice: "J'y vais.",
             },
           ],
         },
-        [QUEST_STATES.IN_PROGRESS]: {
-          text: "Il me faut 4 corbeaux elimines.",
-          choice: "J'y retourne.",
+        in_progress: {
+          text: "Elimine 4 corbeaux et reviens me voir.",
+          choice: "J'y vais.",
         },
       },
       return_to_maire: {
-        [DIALOG_STATES.READY_TO_TURN_IN]: {
-          sequence: [
-            {
-              text: "Bien. La zone est plus sure.",
-              choice: "Mission accomplie.",
-            },
-            {
-              text:
-                "On continue. Cette fois, va t'occuper des cazards.",
-              choice: "Compris.",
-            },
-          ],
-        },
-      },
-      __default: {
-        [QUEST_STATES.COMPLETED]: {
-          text: "La ville compte sur toi pour la suite.",
-          choice: "A plus tard.",
+        in_progress: {
+          text:
+            "Merci. Le village te doit une fiere chandelle.\n" +
+            "J'ai d'autres taches a te confier.",
+          choice: "Je t'ecoute.",
         },
       },
     },
-    maire_cazard_1: {
-      kill_cazard_gumgobs: {
-        [QUEST_STATES.NOT_STARTED]: {
+    maire_gobelins_cazards_1: {
+      kill_monsters: {
+        not_started: {
           sequence: [
             {
               text:
-                "Les cazards sont devenus dangereux. Elimine-en 3, et 2 gumgobs.",
+                "Les gobelins et les cazards se multiplient.\n" +
+                "Il faut endiguer ca vite.",
+              choice: "Je suis pret.",
+            },
+            {
+              text: "Elimine 2 gobelins et 3 cazards.",
               choice: "J'y vais.",
             },
           ],
         },
-        [QUEST_STATES.IN_PROGRESS]: {
-          text: "Il me faut 3 cazards et 2 gumgobs elimines.",
-          choice: "J'y retourne.",
+        in_progress: {
+          text: "Elimine 2 gobelins et 3 cazards.",
+          choice: "J'y vais.",
         },
       },
       return_to_maire: {
-        [DIALOG_STATES.READY_TO_TURN_IN]: {
-          sequence: [
-            {
-              text: "Parfait. La ville respire mieux.",
-              choice: "De rien.",
-            },
-            {
-              text: "On continue. Il faut maintenant eliminer des goushs et des cedres.",
-              choice: "Compris.",
-            },
-          ],
-        },
-      },
-      __default: {
-        [QUEST_STATES.COMPLETED]: {
-          text: "Bien travaille. Je te donnerai d'autres missions.",
-          choice: "A plus tard.",
+        in_progress: {
+          text:
+            "Bien. La menace recule pour le moment.\n" +
+            "J'ai encore une mission pour toi.",
+          choice: "Je t'ecoute.",
         },
       },
     },
-    maire_goush_1: {
-      kill_goush_cedres: {
-        [QUEST_STATES.NOT_STARTED]: {
+    maire_goush_cedre_1: {
+      kill_monsters: {
+        not_started: {
           sequence: [
             {
               text:
-                "Les goushs et les cedres menacent les abords. Elimine-en 3 et 2.",
-              choice: "J'y vais.",
+                "Elimine 3 goush et 2 cedres.\n" +
+                "Mais ne t'approche pas du donjon,\n" +
+                "et n'y entre en aucun cas.",
+              choice: "D'accord.",
             },
           ],
         },
-        [QUEST_STATES.IN_PROGRESS]: {
-          text: "Il me faut 3 goushs et 2 cedres elimines.",
-          choice: "J'y retourne.",
+        in_progress: {
+          text:
+            "Elimine 3 goush et 2 cedres.\n" +
+            "N'approche pas du donjon.",
+          choice: "J'y vais.",
         },
       },
       return_to_maire: {
-        [DIALOG_STATES.READY_TO_TURN_IN]: {
-          sequence: [
-            {
-              text: "Bien joue. La zone est plus sure.",
-              choice: "Avec plaisir.",
-            },
-            {
-              text: "La prochaine cible : les liburions et les libarenes.",
-              choice: "Compris.",
-            },
-          ],
-        },
-      },
-      __default: {
-        [QUEST_STATES.COMPLETED]: {
-          text: "Merci pour ton aide.",
-          choice: "A plus tard.",
+        in_progress: {
+          text:
+            "Ouf, tu m'as bien ecoute.\n" +
+            "Il reste un type de monstre a eradiquer.\n" +
+            "Meffie-toi en comme la peste,\n" +
+            "ils sont plus coriaces que les autres.",
+          choice: "J'ai compris.",
         },
       },
     },
-    maire_liburion_1: {
-      kill_liburion_libarene: {
-        [QUEST_STATES.NOT_STARTED]: {
+    maire_libarene_liburion_1: {
+      kill_monsters: {
+        not_started: {
           sequence: [
             {
-              text:
-                "Les liburions et les libarenes se rapprochent. Elimine-en 3 de chaque.",
+              text: "Elimine 3 libarene et 3 liburion.",
               choice: "J'y vais.",
             },
           ],
         },
-        [QUEST_STATES.IN_PROGRESS]: {
-          text: "Il me faut 3 liburions et 3 libarenes elimines.",
-          choice: "J'y retourne.",
+        in_progress: {
+          text: "Elimine 3 libarene et 3 liburion.",
+          choice: "J'y vais.",
         },
       },
       return_to_maire: {
-        [DIALOG_STATES.READY_TO_TURN_IN]: {
-          sequence: [
-            {
-              text: "Parfait. Tu fais du bon travail.",
-              choice: "Merci.",
-            },
-          ],
+        in_progress: {
+          text: "Excellent boulot !",
+          choice: "Merci.",
+          closeOnChoice: false,
         },
       },
-      __default: {
-        [QUEST_STATES.COMPLETED]: {
-          text: "Je compte sur toi pour la suite.",
-          choice: "A plus tard.",
+    },
+    maire_donjon_keeper_1: {
+      talk_to_keeper: {
+        not_started: {
+          text:
+            "J'ai recu un appel a l'aide du gardien du donjon.\n" +
+            "Je ne sais pas exactement ce qu'il veut. Va le voir.",
+          choice: "J'y vais.",
+        },
+      },
+    },
+    alchimiste_marchand_3: {
+      meet_maire: {
+        in_progress: {
+          text:
+            "Le marchand t'a arnaque ?\n" +
+            "Tres bien. Retrouve-moi chez le marchand.",
+          choice: "D'accord.",
+        },
+      },
+      meet_maire_marchand: {
+        in_progress: {
+          text:
+            "Peux-tu me confirmer les faits devant le marchand ?",
+          choice: "Oui.",
+        },
+      },
+      return_to_maire: {
+        in_progress: {
+          text: "Merci. Je vais regler ca avec lui.",
+          choice: "Merci, monsieur le maire.",
         },
       },
     },

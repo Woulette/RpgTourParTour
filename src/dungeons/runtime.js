@@ -1,5 +1,6 @@
 import { maps } from "../maps/index.js";
 import { loadMapLikeMain } from "../maps/world/load.js";
+import { setupCamera } from "../maps/camera.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { createCalibratedWorldToTile } from "../maps/world/util.js";
 import { setRespawnsForMap } from "../monsters/respawnState.js";
@@ -99,35 +100,57 @@ export function isDungeonRoomCleared(scene) {
   return getAliveWorldMonsters(scene).length === 0;
 }
 
-export function enterDungeon(scene, dungeonId) {
+export function enterDungeon(scene, dungeonId, options = {}) {
   if (!scene || !scene.player) return false;
   if (scene.combatState && scene.combatState.enCours) return false;
 
   const def = getDungeonDef(dungeonId);
   if (!def) return false;
 
+  const desiredIndexRaw =
+    typeof options.roomIndex === "number" ? options.roomIndex : 0;
+  const desiredIndex = Math.max(
+    0,
+    Math.min(def.rooms.length - 1, Math.round(desiredIndexRaw))
+  );
+
   // New run: clear pending respawns from previous runs for these rooms.
   resetDungeonRespawns(scene, def);
   scene._dungeonRunCounter = (scene._dungeonRunCounter ?? 0) + 1;
   const runId = scene._dungeonRunCounter;
 
+  const fallbackReturnMapKey =
+    dungeonId === "aluineeks" ? "MapAndemiaNouvelleVersion9" : null;
+  const candidateReturnKey = !scene.currentMapDef?.isDungeon
+    ? scene.currentMapKey || scene.currentMapDef?.key || null
+    : scene._lastNonDungeonMapKey || null;
+  const returnMapKey =
+    (candidateReturnKey && maps?.[candidateReturnKey] ? candidateReturnKey : null) ||
+    (fallbackReturnMapKey && maps?.[fallbackReturnMapKey] ? fallbackReturnMapKey : null) ||
+    candidateReturnKey ||
+    null;
+  const returnTile =
+    !scene.currentMapDef?.isDungeon
+      ? computePlayerTile(scene)
+      : scene._lastNonDungeonTile || null;
+
   scene.dungeonState = {
     active: true,
     dungeonId: def.id,
-    roomIndex: 0,
-    returnMapKey: scene.currentMapKey || (scene.currentMapDef && scene.currentMapDef.key) || null,
+    roomIndex: desiredIndex,
+    returnMapKey,
     // On mémorise la position exacte du joueur (tuiles) au moment de l'entrée,
     // pour revenir au même endroit (et donc recentrer correctement la caméra).
-    returnTile: computePlayerTile(scene) || pickFallbackReturnTile(scene),
+    returnTile: returnTile || pickFallbackReturnTile(scene),
     runId,
   };
 
-  const roomKey = def.rooms[0];
+  const roomKey = def.rooms[desiredIndex];
   const mapDef = maps[roomKey];
   if (!mapDef) return false;
 
   loadMapLikeMain(scene, mapDef);
-  scene.dungeonState.roomIndex = 0;
+  scene.dungeonState.roomIndex = desiredIndex;
   return true;
 }
 
@@ -138,21 +161,105 @@ export function exitDungeon(scene) {
   const returnTile = state.returnTile;
   scene.dungeonState = null;
 
-  const mapDef = returnKey ? maps[returnKey] : null;
+  let mapDef = returnKey ? maps[returnKey] : null;
+  if (!mapDef && state.dungeonId === "aluineeks") {
+    mapDef = maps.MapAndemiaNouvelleVersion9 || null;
+  }
   if (!mapDef) return false;
 
-  const startTile =
-    returnTile &&
-    typeof returnTile.x === "number" &&
-    typeof returnTile.y === "number"
-      ? returnTile
-      : mapDef.dungeonReturnTile &&
+  const isValidTile = (tile) =>
+    !!(
+      tile &&
+      typeof tile.x === "number" &&
+      typeof tile.y === "number" &&
+      Number.isFinite(tile.x) &&
+      Number.isFinite(tile.y)
+    );
+
+  const forcedReturnTile =
+    mapDef.key === "MapAndemiaNouvelleVersion9"
+      ? (mapDef.dungeonReturnTile &&
         typeof mapDef.dungeonReturnTile.x === "number" &&
         typeof mapDef.dungeonReturnTile.y === "number"
-        ? mapDef.dungeonReturnTile
-        : null;
+          ? mapDef.dungeonReturnTile
+          : mapDef.entranceNpcTile &&
+            typeof mapDef.entranceNpcTile.x === "number" &&
+            typeof mapDef.entranceNpcTile.y === "number"
+          ? mapDef.entranceNpcTile
+          : null)
+      : null;
+  const fallbackTile =
+    (mapDef.dungeonReturnTile &&
+    typeof mapDef.dungeonReturnTile.x === "number" &&
+    typeof mapDef.dungeonReturnTile.y === "number"
+      ? mapDef.dungeonReturnTile
+      : mapDef.entranceNpcTile &&
+        typeof mapDef.entranceNpcTile.x === "number" &&
+        typeof mapDef.entranceNpcTile.y === "number"
+      ? mapDef.entranceNpcTile
+      : null);
 
-  loadMapLikeMain(scene, mapDef, startTile ? { startTile } : {});
+  const hardcodedReturnTile =
+    mapDef.key === "MapAndemiaNouvelleVersion9" ? { x: 14, y: 20 } : null;
+  let startTile = isValidTile(forcedReturnTile)
+    ? forcedReturnTile
+    : isValidTile(returnTile)
+      ? returnTile
+      : isValidTile(fallbackTile)
+        ? fallbackTile
+        : null;
+  if (
+    mapDef.key === "MapAndemiaNouvelleVersion9" &&
+    (!startTile || (startTile.x === 0 && startTile.y === 0))
+  ) {
+    startTile = hardcodedReturnTile;
+  }
+
+  const forceExactStartTile = mapDef.key === "MapAndemiaNouvelleVersion9";
+  loadMapLikeMain(
+    scene,
+    mapDef,
+    startTile || forceExactStartTile
+      ? { startTile: startTile || undefined, forceExactStartTile }
+      : {}
+  );
+
+  if (mapDef.key === "MapAndemiaNouvelleVersion9") {
+    const forceTile = startTile ||
+      (mapDef.dungeonReturnTile &&
+      typeof mapDef.dungeonReturnTile.x === "number" &&
+      typeof mapDef.dungeonReturnTile.y === "number"
+        ? mapDef.dungeonReturnTile
+        : mapDef.entranceNpcTile &&
+          typeof mapDef.entranceNpcTile.x === "number" &&
+          typeof mapDef.entranceNpcTile.y === "number"
+        ? mapDef.entranceNpcTile
+        : null);
+    if (!forceTile) return true;
+    if (scene.time?.delayedCall) {
+      scene.time.delayedCall(0, () => {
+        if (!scene.map || !scene.groundLayer || !scene.player) return;
+        const wp = scene.map.tileToWorldXY(
+          forceTile.x,
+          forceTile.y,
+          undefined,
+          undefined,
+          scene.groundLayer
+        );
+        if (!wp) return;
+        const px = wp.x + scene.map.tileWidth / 2;
+        const py = wp.y + scene.map.tileHeight / 2;
+        scene.player.x = px;
+        scene.player.y = py;
+        scene.player.currentTileX = forceTile.x;
+        scene.player.currentTileY = forceTile.y;
+        if (typeof scene.player.setDepth === "function") {
+          scene.player.setDepth(py);
+        }
+        setupCamera(scene, scene.map, px, py, mapDef.cameraOffsets);
+      });
+    }
+  }
   return true;
 }
 
@@ -204,7 +311,16 @@ export function onAfterCombatEnded(scene, result) {
   const def = state ? getDungeonDef(state.dungeonId) : null;
   if (!def) return;
 
-  if (result && result.issue && result.issue !== "victoire") return;
+  if (result && result.issue && result.issue !== "victoire") {
+    if (scene.player) {
+      scene.player.dungeonResume = {
+        dungeonId: state.dungeonId,
+        roomIndex: typeof state.roomIndex === "number" ? state.roomIndex : 0,
+      };
+    }
+    exitDungeon(scene);
+    return;
+  }
   if (!isDungeonRoomCleared(scene)) return;
 
   const isLast = state.roomIndex >= def.rooms.length - 1;
