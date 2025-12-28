@@ -7,10 +7,10 @@ Resume
 - Une faille fermee se grise et ne peut plus etre relancee.
 
 Fichiers principaux
-- Spawner + logique faille: src/maps/world/rifts.js
-- UI modale: src/ui/domRifts.js
+- Spawner + logique faille: src/features/maps/world/rifts.js
+- UI modale: src/features/ui/domRifts.js
 - Styles modale: assets/css/rifts.css (injecte dans index.html)
-- Positions: src/maps/index.js (propriete riftPositions)
+- Positions: src/features/maps/index.js (propriete riftPositions)
 
 Configuration (MapDef)
 Exemple:

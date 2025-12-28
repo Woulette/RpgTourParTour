@@ -1,2 +1,1 @@
-export { startCombat } from "./runtime/start.js";
-export { endCombat } from "./runtime/end.js";
+export * from "../../features/combat/runtime/runtime.js";

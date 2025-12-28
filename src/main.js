@@ -1,7 +1,8 @@
 import { BACKGROUND_COLOR, GAME_HEIGHT, GAME_WIDTH } from "./config/constants.js";
 import { preloadAssets } from "./game/preload/preloadAssets.js";
 import { createMainScene } from "./game/scene/createScene.js";
-import { initCharacterMenus } from "./ui/characterMenus.js";
+import { initCharacterMenus } from "./features/ui/characterMenus.js";
+import { closeAllHudPanels } from "./features/ui/domPanelClose.js";
 import { getPlayer } from "./state/store.js";
 import { buildSnapshotFromPlayer, saveCharacterSnapshot } from "./save/index.js";
 
@@ -49,6 +50,7 @@ function destroyGame() {
 function startGame(character) {
   window.__andemiaSelectedCharacter = character || null;
   destroyGame();
+  closeAllHudPanels();
   gameInstance = new Phaser.Game(config);
   document.body.classList.add("game-running");
   document.body.classList.remove("menu-open");

@@ -1,7 +1,7 @@
 import { enableClickToMove } from "../../entities/playerMovement.js";
-import { attachCombatPreview } from "../../ui/combatPreview.js";
-import { attachMonsterTooltip } from "../../ui/monsterTooltip.js";
-import { attachCombatTileHover } from "../../ui/combatTileHover.js";
+import { attachCombatPreview } from "../../features/ui/combatPreview.js";
+import { attachMonsterTooltip } from "../../features/ui/monsterTooltip.js";
+import { attachCombatTileHover } from "../../features/ui/combatTileHover.js";
 
 export function setupSceneInput(scene, hudY, map, groundLayer) {
   enableClickToMove(scene, scene.player, hudY, map, groundLayer);

@@ -3,14 +3,14 @@ import { classes } from "../config/classes.js";
 import { createStats, applyBonuses } from "../core/stats.js";
 import { createLevelState, ajouterXp } from "../core/level.js";
 import { XP_CONFIG } from "../config/xp.js";
-import { createPlayerInventory } from "../inventory/inventoryContainers.js";
+import { createPlayerInventory } from "../features/inventory/runtime/inventoryContainers.js";
 import {
   createEmptyEquipment,
   recomputePlayerStatsWithEquipment,
-} from "../inventory/equipmentCore.js";
-import { purgeDeprecatedItemsFromPlayer } from "../inventory/deprecatedItems.js";
+} from "../features/inventory/runtime/equipmentCore.js";
+import { purgeDeprecatedItemsFromPlayer } from "../features/inventory/runtime/deprecatedItems.js";
 import { emit as emitStoreEvent } from "../state/store.js";
-import { ensureAllMetiers } from "../metier/ensureAllMetiers.js";
+import { ensureAllMetiers } from "../features/metier/ensureAllMetiers.js";
 
 export function createPlayer(scene, x, y, classId) {
   const classDef = classes[classId] || classes.archer;

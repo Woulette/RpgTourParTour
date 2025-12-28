@@ -6,7 +6,13 @@ const listeners = new Map(); // event -> Set(callback)
 
 export function initStore(player) {
   playerRef = player;
+  emit("player:changed", playerRef);
   return playerRef;
+}
+
+export function resetStore({ clearListeners = false } = {}) {
+  playerRef = null;
+  if (clearListeners) listeners.clear();
 }
 
 export function getPlayer() {

@@ -1,6 +1,6 @@
-import { buildMap } from "../../maps/loader.js";
-import { applyCustomLayerDepths, rebuildCollisionGridFromMap, spawnObjectLayerTrees } from "../../maps/world.js";
-import { setupWorkstations } from "../../metier/workstations.js";
+import { buildMap } from "../../features/maps/loader.js";
+import { applyCustomLayerDepths, rebuildCollisionGridFromMap, spawnObjectLayerTrees } from "../../features/maps/world.js";
+import { setupWorkstations } from "../../features/metier/workstations.js";
 
 export function buildInitialMap(scene, mapDef, snapshot) {
   const { map, groundLayer, layers } = buildMap(scene, mapDef);

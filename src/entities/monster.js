@@ -3,10 +3,10 @@ import { monsters } from "../content/monsters/index.js";
 import { createStats } from "../core/stats.js";
 import { XP_CONFIG } from "../config/xp.js";
 import { addXpToPlayer } from "./player.js";
-import { incrementKillProgressForAll } from "../quests/index.js";
-import { createCalibratedWorldToTile } from "../maps/world/util.js";
-import { queueMonsterRespawn } from "../monsters/respawnState.js";
-import { tryResolveCaptureOnMonsterDeath } from "../systems/combat/summons/capture.js";
+import { incrementKillProgressForAll } from "../features/quests/index.js";
+import { createCalibratedWorldToTile } from "../features/maps/world/util.js";
+import { queueMonsterRespawn } from "../features/monsters/runtime/respawnState.js";
+import { tryResolveCaptureOnMonsterDeath } from "../features/combat/summons/capture.js";
 
 // On ne scale que les stats principales (pas PA/PM/initiative/PO/etc.).
 const MONSTER_SCALABLE_STAT_KEYS = new Set([

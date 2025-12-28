@@ -1,17 +1,17 @@
 import { GAME_WIDTH } from "../config/constants.js";
+import { startPrep } from "../features/combat/runtime/prep.js";
 import {
-  startPrep,
   limitPathForCombat,
   updateCombatPreview,
-} from "../core/combat.js";
+} from "../features/combat/runtime/movement.js";
 import {
   tryCastActiveSpellAtTile,
   getActiveSpell,
   clearActiveSpell,
   updateSpellRangePreview,
   clearSpellRangePreview,
-} from "../core/spellSystem.js";
-import { findExitTileForDirection } from "../maps/world.js";
+} from "../features/combat/spells/index.js";
+import { findExitTileForDirection } from "../features/maps/world.js";
 import { findPathForPlayer } from "./movement/pathfinding.js";
 import { movePlayerAlongPath } from "./movement/runtime.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";

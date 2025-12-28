@@ -6,6 +6,20 @@ const DEFAULT_COOLDOWN_MS = 1200;
 let autosaveInitialized = false;
 let lastSaveAt = 0;
 let pendingTimer = null;
+let intervalId = null;
+let storeUnsubs = [];
+
+function handleBeforeUnload() {
+  trySaveNow();
+}
+
+function handlePageHide() {
+  trySaveNow();
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) trySaveNow();
+}
 
 function trySaveNow() {
   const player = getPlayer();
@@ -49,24 +63,48 @@ export function initAutosave() {
   ];
 
   events.forEach((evt) => {
-    onStoreEvent(evt, () => scheduleSave());
+    const unsub = onStoreEvent(evt, () => scheduleSave());
+    storeUnsubs.push(unsub);
   });
 
   // Déconnexion / fermeture onglet : on force une sauvegarde immédiate.
   // (Important pour ne pas perdre la progression si l'onglet se ferme.)
-  window.addEventListener("beforeunload", () => {
-    trySaveNow();
-  });
-  window.addEventListener("pagehide", () => {
-    trySaveNow();
-  });
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) trySaveNow();
-  });
+  window.addEventListener("beforeunload", handleBeforeUnload);
+  window.addEventListener("pagehide", handlePageHide);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 
   // Filet de sécurité : autosave régulier (si le joueur oublie de déclencher des events)
-  setInterval(() => {
+  intervalId = setInterval(() => {
     if (!document.body.classList.contains("game-running")) return;
     scheduleSave();
   }, 30000);
+}
+
+export function resetAutosave() {
+  if (!autosaveInitialized) return;
+
+  storeUnsubs.forEach((unsub) => {
+    try {
+      unsub();
+    } catch (err) {
+      // ignore cleanup errors
+    }
+  });
+  storeUnsubs = [];
+
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+  window.removeEventListener("pagehide", handlePageHide);
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
+
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+  if (pendingTimer) {
+    clearTimeout(pendingTimer);
+    pendingTimer = null;
+  }
+
+  lastSaveAt = 0;
+  autosaveInitialized = false;
 }

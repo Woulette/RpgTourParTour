@@ -1,8 +1,8 @@
 import { loadSaveFile, writeSaveFile } from "./storage.js";
-import { createPlayerInventory } from "../inventory/inventoryContainers.js";
-import { createEmptyEquipment } from "../inventory/equipmentCore.js";
+import { createPlayerInventory } from "../features/inventory/runtime/inventoryContainers.js";
+import { createEmptyEquipment } from "../features/inventory/runtime/equipmentCore.js";
 import { normalizeLevelState } from "../core/level.js";
-import { ensureAllMetiers } from "../metier/ensureAllMetiers.js";
+import { ensureAllMetiers } from "../features/metier/ensureAllMetiers.js";
 
 function cloneJson(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));

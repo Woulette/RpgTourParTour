@@ -1,7 +1,7 @@
-import { maps } from "../../maps/index.js";
-import { preloadMap } from "../../maps/loader.js";
-import { preloadMonsters } from "../../monsters/index.js";
-import { preloadNpcs } from "../../npc/spawn.js";
+import { maps } from "../../features/maps/index.js";
+import { preloadMap } from "../../features/maps/loader.js";
+import { preloadMonsters } from "../../features/monsters/runtime/index.js";
+import { preloadNpcs } from "../../features/npc/runtime/spawn.js";
 
 const ANIM_DIRS = [
   "south",

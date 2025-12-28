@@ -3,9 +3,9 @@ import {
   setupPlayerAnimations,
   setupCharacterAnimations,
 } from "../../entities/animation.js";
-import { setupMonsterAnimations } from "../../monsters/index.js";
-import { setupSpellAnimations } from "../../spells/animations.js";
-import { recalcDepths } from "../../maps/world.js";
+import { setupMonsterAnimations } from "../../features/monsters/runtime/index.js";
+import { setupSpellAnimations } from "../../features/spells/runtime/animations.js";
+import { recalcDepths } from "../../features/maps/world.js";
 import { applySnapshotToPlayer } from "../../save/index.js";
 import { defaultClassId } from "../../config/classes.js";
 

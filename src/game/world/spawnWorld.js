@@ -1,14 +1,14 @@
-import { loadMapLikeMain } from "../../maps/world.js";
+import { loadMapLikeMain } from "../../features/maps/world.js";
 import {
   processPendingRespawnsForCurrentMap,
   spawnInitialMonsters,
-} from "../../monsters/index.js";
-import { spawnTestTrees } from "../../metier/bucheron/trees.js";
-import { spawnTestHerbs } from "../../metier/alchimiste/plants.js";
-import { spawnTestWells } from "../../maps/world/wells.js";
-import { spawnRifts } from "../../maps/world/rifts.js";
-import { spawnStoryPortals } from "../../maps/world/storyPortals.js";
-import { spawnNpcsForMap } from "../../npc/spawn.js";
+} from "../../features/monsters/runtime/index.js";
+import { spawnTestTrees } from "../../features/metier/bucheron/trees.js";
+import { spawnTestHerbs } from "../../features/metier/alchimiste/plants.js";
+import { spawnTestWells } from "../../features/maps/world/wells.js";
+import { spawnRifts } from "../../features/maps/world/rifts.js";
+import { spawnStoryPortals } from "../../features/maps/world/storyPortals.js";
+import { spawnNpcsForMap } from "../../features/npc/runtime/spawn.js";
 
 export function ensureRespawnTick(scene) {
   if (!scene || scene.respawnTick || !scene.time?.addEvent) return;

@@ -1,7 +1,7 @@
-import { defaultMapKey, maps } from "../../maps/index.js";
-import { rebuildDebugGrid, initWorldExitsForScene } from "../../maps/world.js";
-import { createMapExits } from "../../maps/exits.js";
-import { onAfterMapLoaded } from "../../dungeons/hooks.js";
+import { defaultMapKey, maps } from "../../features/maps/index.js";
+import { rebuildDebugGrid, initWorldExitsForScene } from "../../features/maps/world.js";
+import { createMapExits } from "../../features/maps/exits.js";
+import { onAfterMapLoaded } from "../../features/dungeons/hooks.js";
 import { loadCharacterSnapshot } from "../../save/index.js";
 import { buildInitialMap } from "./sceneMap.js";
 import { setupPlayerForScene } from "./scenePlayer.js";

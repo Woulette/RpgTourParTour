@@ -1,10 +1,10 @@
 import { PLAYER_SPEED } from "../../config/constants.js";
-import { applyMoveCost } from "../../core/combat.js";
-import { showFloatingTextOverEntity } from "../../core/combat/floatingText.js";
-import { maybeHandleMapExit, maybeHandlePortal } from "../../maps/world.js";
-import { maybeHandleDungeonExit } from "../../dungeons/runtime.js";
+import { applyMoveCost } from "../../features/combat/runtime/movement.js";
+import { showFloatingTextOverEntity } from "../../features/combat/runtime/floatingText.js";
+import { maybeHandleMapExit, maybeHandlePortal } from "../../features/maps/world.js";
+import { maybeHandleDungeonExit } from "../../features/dungeons/runtime.js";
 import { isTileBlocked } from "../../collision/collisionGrid.js";
-import { recalcDepths } from "../../maps/world/decor.js";
+import { recalcDepths } from "../../features/maps/world/decor.js";
 
 // Détermine le nom de direction d'animation à partir d'un vecteur.
 function getDirectionName(dx, dy) {

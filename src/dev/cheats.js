@@ -1,10 +1,10 @@
 import { emit as emitStoreEvent, getPlayer } from "../state/store.js";
-import { quests, QUEST_STATES, getQuestState, acceptQuest, advanceQuestStage, getCurrentQuestStage, incrementCraftProgress } from "../quests/index.js";
-import { completeQuest } from "../quests/state.js";
-import { addItem } from "../inventory/inventoryCore.js";
-import { enterDungeon } from "../dungeons/runtime.js";
-import { maps } from "../maps/index.js";
-import { loadMapLikeMain } from "../maps/world/load.js";
+import { quests, QUEST_STATES, getQuestState, acceptQuest, advanceQuestStage, getCurrentQuestStage, incrementCraftProgress } from "../features/quests/index.js";
+import { completeQuest } from "../features/quests/state.js";
+import { addItem } from "../features/inventory/runtime/inventoryCore.js";
+import { enterDungeon } from "../features/dungeons/runtime.js";
+import { maps } from "../features/maps/index.js";
+import { loadMapLikeMain } from "../features/maps/world/load.js";
 import { createMonster } from "../entities/monster.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 
