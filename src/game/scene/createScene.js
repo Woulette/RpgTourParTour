@@ -1,0 +1,70 @@
+import { defaultMapKey, maps } from "../../maps/index.js";
+import { rebuildDebugGrid, initWorldExitsForScene } from "../../maps/world.js";
+import { createMapExits } from "../../maps/exits.js";
+import { onAfterMapLoaded } from "../../dungeons/hooks.js";
+import { loadCharacterSnapshot } from "../../save/index.js";
+import { buildInitialMap } from "./sceneMap.js";
+import { setupPlayerForScene } from "./scenePlayer.js";
+import { initRuntime } from "../runtime/initRuntime.js";
+import { spawnWorldEntities } from "../world/spawnWorld.js";
+import { setupHudAndCameras, initDomUi } from "../ui/initUi.js";
+import { setupSceneInput } from "../input/setupInput.js";
+
+export function createMainScene(scene) {
+  const selected = window.__andemiaSelectedCharacter || null;
+  const snapshot = selected?.id ? loadCharacterSnapshot(selected.id) : null;
+  const requestedMapKey = snapshot?.mapKey || defaultMapKey;
+  const mapDef = maps[requestedMapKey] || maps[defaultMapKey];
+
+  if (selected && snapshot) {
+    if (snapshot.name) selected.name = snapshot.name;
+    if (snapshot.classId) selected.classId = snapshot.classId;
+    if (Number.isFinite(snapshot.level)) selected.level = snapshot.level;
+  }
+
+  const mapState = buildInitialMap(scene, mapDef, snapshot);
+
+  const player = setupPlayerForScene(scene, {
+    startX: mapState.startX,
+    startY: mapState.startY,
+    startTileX: mapState.startTileX,
+    startTileY: mapState.startTileY,
+    snapshot,
+    selected,
+  });
+
+  initRuntime(scene, player);
+  initWorldExitsForScene(scene);
+
+  spawnWorldEntities(
+    scene,
+    mapState.map,
+    mapState.groundLayer,
+    mapDef,
+    mapState.centerTileX,
+    mapState.centerTileY
+  );
+
+  const grid = rebuildDebugGrid(
+    scene,
+    mapState.map,
+    mapState.groundLayer,
+    mapState.mapLayers
+  );
+
+  const hudY = setupHudAndCameras(
+    scene,
+    mapState.map,
+    mapState.mapLayers,
+    mapState.startX,
+    mapState.startY,
+    mapDef,
+    grid
+  );
+
+  createMapExits(scene);
+  onAfterMapLoaded(scene);
+
+  setupSceneInput(scene, hudY, mapState.map, mapState.groundLayer);
+  initDomUi(scene, player);
+}
