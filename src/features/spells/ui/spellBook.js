@@ -502,7 +502,7 @@ function renderSpellsForTier({
 }
 
 export function initSpellBook({
-  player,
+  getPlayer,
   classDef,
   classId,
   spellIds,
@@ -513,32 +513,39 @@ export function initSpellBook({
   spellsDetailEl,
   tierButtons,
 }) {
-  if (!player || !spellsListEl) return;
+  if (typeof getPlayer !== "function" || !spellsListEl) return;
 
-  ensureParchmentState(player);
-
+  let currentClassDef = classDef;
+  let currentClassId = classId;
+  let currentSpellIds = spellIds;
   let currentTier = 1;
 
   if (spellsButtonEl && spellsPanelEl && spellsListEl) {
-    if (spellsClassNameEl) {
-      spellsClassNameEl.textContent = classDef.label || classId;
+    if (spellsButtonEl.dataset.bound !== "true") {
+      spellsButtonEl.dataset.bound = "true";
+      spellsButtonEl.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const willOpen = !document.body.classList.contains("hud-spells-open");
+        document.body.classList.toggle("hud-spells-open");
+        const player = getPlayer();
+        if (!player) return;
+        ensureParchmentState(player);
+        if (spellsClassNameEl) {
+          spellsClassNameEl.textContent =
+            currentClassDef?.label || currentClassId || "";
+        }
+
+        if (willOpen) {
+          renderSpellsForTier({
+            player,
+            spellIds: currentSpellIds,
+            spellsListEl,
+            spellsDetailEl,
+            tier: currentTier,
+          });
+        }
+      });
     }
-
-    spellsButtonEl.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const willOpen = !document.body.classList.contains("hud-spells-open");
-      document.body.classList.toggle("hud-spells-open");
-
-      if (willOpen) {
-        renderSpellsForTier({
-          player,
-          spellIds,
-          spellsListEl,
-          spellsDetailEl,
-          tier: currentTier,
-        });
-      }
-    });
   }
 
   if (tierButtons && tierButtons.length > 0) {
@@ -548,21 +555,51 @@ export function initSpellBook({
         btn.classList.add("active");
       }
 
-      btn.addEventListener("click", () => {
-        currentTier = tier;
-        tierButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
+      if (btn.dataset.bound !== "true") {
+        btn.dataset.bound = "true";
+        btn.addEventListener("click", () => {
+          currentTier = tier;
+          tierButtons.forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
 
-        if (document.body.classList.contains("hud-spells-open")) {
-          renderSpellsForTier({
-            player,
-            spellIds,
-            spellsListEl,
-            spellsDetailEl,
-            tier: currentTier,
-          });
-        }
-      });
+          if (document.body.classList.contains("hud-spells-open")) {
+            const player = getPlayer();
+            if (!player) return;
+            ensureParchmentState(player);
+            renderSpellsForTier({
+              player,
+              spellIds: currentSpellIds,
+              spellsListEl,
+              spellsDetailEl,
+              tier: currentTier,
+            });
+          }
+        });
+      }
     });
   }
+
+  const setSpellBookConfig = ({ classDef, classId, spellIds }) => {
+    currentClassDef = classDef;
+    currentClassId = classId;
+    currentSpellIds = Array.isArray(spellIds) ? spellIds : [];
+    if (document.body.classList.contains("hud-spells-open")) {
+      const player = getPlayer();
+      if (!player) return;
+      ensureParchmentState(player);
+      if (spellsClassNameEl) {
+        spellsClassNameEl.textContent =
+          currentClassDef?.label || currentClassId || "";
+      }
+      renderSpellsForTier({
+        player,
+        spellIds: currentSpellIds,
+        spellsListEl,
+        spellsDetailEl,
+        tier: currentTier,
+      });
+    }
+  };
+
+  return { setSpellBookConfig };
 }

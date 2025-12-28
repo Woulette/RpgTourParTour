@@ -64,8 +64,8 @@ function computeDisableInfo(player, spell) {
   return { disabled: false, label: "" };
 }
 
-export function initSpellBar(player, bar, knownSpells) {
-  if (!player || !bar) return;
+export function initSpellBar(getPlayer, bar, knownSpells) {
+  if (typeof getPlayer !== "function" || !bar) return;
   const slots = bar.querySelectorAll(".hud-spell-slot");
 
   const slotByIndex = {};
@@ -73,6 +73,8 @@ export function initSpellBar(player, bar, knownSpells) {
   const cooldownBadgeByIndex = {};
 
   const updateSpellBarState = () => {
+    const player = getPlayer();
+    if (!player) return;
     slots.forEach((slot, index) => {
       const spell = slotSpellByIndex[index] || null;
       if (!slot || !spell) return;
@@ -86,31 +88,38 @@ export function initSpellBar(player, bar, knownSpells) {
     });
   };
 
-  player.updateSpellBar = updateSpellBarState;
+  const setKnownSpells = (nextKnownSpells) => {
+    slots.forEach((slot, index) => {
+      const slotIndex = parseInt(slot.dataset.slot, 10);
+      if (!Number.isNaN(slotIndex)) {
+        slotByIndex[slotIndex] = slot;
+      }
+
+      const spell = nextKnownSpells[index];
+      const nameEl = slot.querySelector(".hud-spell-name");
+
+      if (!spell) {
+        slot.classList.add("empty");
+        if (nameEl) nameEl.textContent = "";
+        slotSpellByIndex[index] = null;
+        return;
+      }
+
+      slot.classList.remove("empty");
+      if (nameEl) {
+        nameEl.textContent = spell.label;
+      }
+      slotSpellByIndex[index] = spell;
+      cooldownBadgeByIndex[index] = ensureCooldownBadge(slot);
+    });
+    updateSpellBarState();
+  };
 
   slots.forEach((slot, index) => {
-    const slotIndex = parseInt(slot.dataset.slot, 10);
-    if (!Number.isNaN(slotIndex)) {
-      slotByIndex[slotIndex] = slot;
-    }
-
-    const spell = knownSpells[index];
-    const nameEl = slot.querySelector(".hud-spell-name");
-
-    if (!spell) {
-      slot.classList.add("empty");
-      if (nameEl) nameEl.textContent = "";
-      return;
-    }
-
-    slot.classList.remove("empty");
-    if (nameEl) {
-      nameEl.textContent = spell.label;
-    }
-    slotSpellByIndex[index] = spell;
-    cooldownBadgeByIndex[index] = ensureCooldownBadge(slot);
-
     slot.addEventListener("click", (event) => {
+      const player = getPlayer();
+      const spell = slotSpellByIndex[index] || null;
+      if (!player || !spell) return;
       event.stopPropagation();
       slots.forEach((s) => s.classList.remove("selected"));
       slot.classList.add("selected");
@@ -119,21 +128,31 @@ export function initSpellBar(player, bar, knownSpells) {
     });
   });
 
-  updateSpellBarState();
+  const player = getPlayer();
+  if (player) {
+    player.updateSpellBar = updateSpellBarState;
+  }
 
-  window.addEventListener("keydown", (event) => {
-    const target = event.target;
-    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
-      return;
-    }
+  setKnownSpells(knownSpells || []);
 
-    const slotIndex = codeToSlot[event.code] || keyToSlot[event.key];
-    if (!slotIndex) return;
+  if (!keydownBound) {
+    keydownBound = true;
+    window.addEventListener("keydown", (event) => {
+      const target = event.target;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+        return;
+      }
 
-    const slot = slotByIndex[slotIndex];
-    if (!slot || slot.classList.contains("empty")) return;
+      const slotIndex = codeToSlot[event.code] || keyToSlot[event.key];
+      if (!slotIndex) return;
 
-    slot.click();
-    updateSpellBarState();
-  });
+      const slot = slotByIndex[slotIndex];
+      if (!slot || slot.classList.contains("empty")) return;
+
+      slot.click();
+    });
+  }
+
+  return { setKnownSpells, updateSpellBarState };
 }
+let keydownBound = false;

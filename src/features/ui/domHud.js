@@ -5,6 +5,7 @@
 
 import { classes } from "../../config/classes.js";
 import { getXpTotalForLevel } from "../../core/level.js";
+import { getPlayer, on as onStoreEvent } from "../../state/store.js";
 
 let uiInputGuardMounted = false;
 
@@ -38,9 +39,12 @@ export function initDomHud(player) {
   const mpValueEl = document.getElementById("hud-mp-value");
   const hpValueEl = document.getElementById("hud-hp-value");
 
-  if (!statsButtonEl || !statsPanelEl || !player) {
+  if (!statsButtonEl || !statsPanelEl) {
     return;
   }
+
+  let hudPlayer = player || null;
+  const getActivePlayer = () => getPlayer() || hudPlayer;
 
   mountUiInputGuard();
 
@@ -48,43 +52,60 @@ export function initDomHud(player) {
   mountHudDockMenu();
 
   // Panneau de stats joueur
-  statsButtonEl.addEventListener("click", (event) => {
-    event.stopPropagation();
-    const willOpen = !document.body.classList.contains("hud-stats-open");
-    document.body.classList.toggle("hud-stats-open");
+  if (statsButtonEl.dataset.bound !== "true") {
+    statsButtonEl.dataset.bound = "true";
+    statsButtonEl.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const willOpen = !document.body.classList.contains("hud-stats-open");
+      document.body.classList.toggle("hud-stats-open");
 
-    if (willOpen) {
-      mettreAJourStatsPanel(player);
-    }
-  });
+      if (willOpen) {
+        const current = getActivePlayer();
+        if (current) mettreAJourStatsPanel(current);
+      }
+    });
+  }
 
   initStatsTabs(statsPanelEl);
 
   // Initialisation des controles de stats (boutons +/- et inputs)
-  initStatControls(player);
+  initStatControls(getActivePlayer);
 
   // Initialisation PA / PM / PV dans le HUD bas
-  if (apValueEl && mpValueEl && hpValueEl && player.stats) {
-    apValueEl.textContent = player.stats.pa ?? 0;
-    mpValueEl.textContent = player.stats.pm ?? 0;
-    const hp = player.stats.hp ?? player.stats.hpMax ?? 0;
-    const hpMax = player.stats.hpMax ?? hp;
+  const current = getActivePlayer();
+  if (apValueEl && mpValueEl && hpValueEl && current?.stats) {
+    apValueEl.textContent = current.stats.pa ?? 0;
+    mpValueEl.textContent = current.stats.pm ?? 0;
+    const hp = current.stats.hp ?? current.stats.hpMax ?? 0;
+    const hpMax = current.stats.hpMax ?? hp;
     hpValueEl.textContent = `${hp}/${hpMax}`;
   }
 
   // Utilitaire pour mettre a jour PA/PM depuis le jeu
-  player.updateHudApMp = (pa, pm) => {
-    if (apValueEl) apValueEl.textContent = pa;
-    if (mpValueEl) mpValueEl.textContent = pm;
+  const attachHudHelpers = (targetPlayer) => {
+    if (!targetPlayer) return;
+    targetPlayer.updateHudApMp = (pa, pm) => {
+      if (apValueEl) apValueEl.textContent = pa;
+      if (mpValueEl) mpValueEl.textContent = pm;
+    };
+    targetPlayer.updateHudHp = (hp, hpMax) => {
+      if (hpValueEl) hpValueEl.textContent = `${hp}/${hpMax}`;
+      if (document.body.classList.contains("hud-stats-open")) {
+        mettreAJourStatsPanel(targetPlayer);
+      }
+    };
   };
+  attachHudHelpers(current);
 
-  // Utilitaire pour mettre a jour les PV du joueur
-  player.updateHudHp = (hp, hpMax) => {
-    if (hpValueEl) hpValueEl.textContent = `${hp}/${hpMax}`;
+  onStoreEvent("player:changed", (nextPlayer) => {
+    hudPlayer = nextPlayer || hudPlayer;
+    const active = getActivePlayer();
+    if (!active) return;
+    attachHudHelpers(active);
     if (document.body.classList.contains("hud-stats-open")) {
-      mettreAJourStatsPanel(player);
+      mettreAJourStatsPanel(active);
     }
-  };
+  });
 }
 
 function mountHudDockMenu() {
@@ -216,9 +237,9 @@ function mettreAJourStatsPanel(player) {
   });
 }
 
-function initStatControls(player) {
+function initStatControls(getActivePlayer) {
   // Stats de base "nues" (sans equipement), qu'on modifie quand on depense des points
-  const getBaseStats = () => {
+  const getBaseStats = (player) => {
     if (!player.baseStats) {
       player.baseStats = { ...(player.stats || {}) };
     }
@@ -226,18 +247,8 @@ function initStatControls(player) {
   };
 
   // S'assure qu'on a un levelState de base
-  if (!player.levelState) {
-    player.levelState = {
-      niveau: 1,
-      xp: 0,
-      xpTotal: 0,
-      xpProchain: getXpTotalForLevel(2),
-      pointsCaracLibres: 0,
-    };
-  }
-
   // Toujours lire l'etat actuel (il peut etre remplace par addXpToPlayer)
-  const getLevelState = () => {
+  const getLevelState = (player) => {
     if (!player.levelState) {
       player.levelState = {
         niveau: 1,
@@ -264,7 +275,7 @@ function initStatControls(player) {
 
   const getInput = (key) => document.getElementById(`stat-${key}-input`);
 
-  const updateAll = () => {
+  const updateAll = (player) => {
     mettreAJourStatsPanel(player);
   };
 
@@ -277,9 +288,11 @@ function initStatControls(player) {
     if (!statKeys.includes(key)) return;
 
     btn.addEventListener("click", () => {
-      const levelState = getLevelState();
+      const player = getActivePlayer();
+      if (!player) return;
+      const levelState = getLevelState(player);
       if ((levelState.pointsCaracLibres ?? 0) <= 0) return;
-      const base = getBaseStats();
+      const base = getBaseStats(player);
       const current = base[key] ?? 0;
       const cost = statCosts[key] ?? 1;
       if ((levelState.pointsCaracLibres ?? 0) < cost) return;
@@ -289,7 +302,7 @@ function initStatControls(player) {
       if (typeof player.recomputeStatsWithEquipment === "function") {
         player.recomputeStatsWithEquipment();
       }
-      updateAll();
+      updateAll(player);
     });
   });
 
@@ -298,8 +311,10 @@ function initStatControls(player) {
     if (!statKeys.includes(key)) return;
 
     btn.addEventListener("click", () => {
-      const levelState = getLevelState();
-      const base = getBaseStats();
+      const player = getActivePlayer();
+      if (!player) return;
+      const levelState = getLevelState(player);
+      const base = getBaseStats(player);
       const current = base[key] ?? 0;
       if (current <= 0) return;
       const cost = statCosts[key] ?? 1;
@@ -309,7 +324,7 @@ function initStatControls(player) {
       if (typeof player.recomputeStatsWithEquipment === "function") {
         player.recomputeStatsWithEquipment();
       }
-      updateAll();
+      updateAll(player);
     });
   });
 
@@ -319,8 +334,10 @@ function initStatControls(player) {
     if (!input) return;
 
     input.addEventListener("change", () => {
-      const levelState = getLevelState();
-      const base = getBaseStats();
+      const player = getActivePlayer();
+      if (!player) return;
+      const levelState = getLevelState(player);
+      const base = getBaseStats(player);
       let newValue = parseInt(input.value, 10);
       if (Number.isNaN(newValue) || newValue < 0) {
         newValue = 0;
@@ -354,9 +371,10 @@ function initStatControls(player) {
       if (typeof player.recomputeStatsWithEquipment === "function") {
         player.recomputeStatsWithEquipment();
       }
-      updateAll();
+      updateAll(player);
     });
   });
 
-  mettreAJourStatsPanel(player);
+  const initial = getActivePlayer();
+  if (initial) mettreAJourStatsPanel(initial);
 }
