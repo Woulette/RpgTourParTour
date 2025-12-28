@@ -11,9 +11,11 @@ const NPC_DIALOGS = {
   meme_village: memeDialog,
   donjon_aluineeks_keeper: dungeonKeeperDialog,
   donjonaluineekspnj: dungeonKeeperDialog,
+  donjonaluineekspnj_north: dungeonKeeperDialog,
   mentor_map5: mentorMap5Dialog,
   alchimiste_provisoire: alchimisteProvisoireDialog,
   maire_albinos: maireDialog,
+  maire_albinos_north: maireDialog,
   maire_albinos_marchand: maireDialog,
   marchand_boutique: marchandDialog,
 };

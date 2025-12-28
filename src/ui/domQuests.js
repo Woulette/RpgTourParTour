@@ -171,6 +171,21 @@ export function initDomQuests(player) {
             `${percent}%`
           );
         }
+      } else if (objective && objective.type === "close_rifts") {
+        const required = objective.requiredCount || 1;
+        const current = state.progress?.currentCount || 0;
+        detailProgressEl.textContent = `${objective.label}: ${current}/${required}`;
+
+        const percent = Math.max(
+          0,
+          Math.min(100, (current / required) * 100)
+        );
+        if (detailProgressBarFillEl) {
+          detailProgressBarFillEl.style.setProperty(
+            "--quest-progress-percent",
+            `${percent}%`
+          );
+        }
       } else if (objective && objective.type === "talk_to_npc") {
         const required = objective.requiredCount || 1;
         const isParchmentStep =

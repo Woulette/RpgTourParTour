@@ -5,6 +5,8 @@ import { addItem } from "../inventory/inventoryCore.js";
 import { enterDungeon } from "../dungeons/runtime.js";
 import { maps } from "../maps/index.js";
 import { loadMapLikeMain } from "../maps/world/load.js";
+import { createMonster } from "../entities/monster.js";
+import { isTileBlocked } from "../collision/collisionGrid.js";
 
 function isCheatsEnabled() {
   if (typeof window === "undefined") return false;
@@ -115,6 +117,7 @@ export function initDevCheats(scene) {
           "cheat.inv.give('bois_chene', 50)",
           "cheat.craft.add('coiffe_corbeau_air', 1)",
           "cheat.presets.afterWood()",
+          "cheat.spawn.monster('ombre_titan', 12, 12)",
         ].join("\n")
       );
     },
@@ -221,6 +224,40 @@ export function initDevCheats(scene) {
         const startTile =
           typeof x === "number" && typeof y === "number" ? { x, y } : null;
         loadMapLikeMain(scene, mapDef, startTile ? { startTile } : {});
+      },
+    },
+    spawn: {
+      monster(monsterId, tileX = null, tileY = null) {
+        const scene = window.__scene;
+        if (!scene) throw new Error("Cheats: scene introuvable");
+        const map = scene.map;
+        const layer = scene.groundLayer;
+        if (!map || !layer) throw new Error("Cheats: map introuvable");
+
+        const tx =
+          typeof tileX === "number" ? tileX : ensurePlayer().currentTileX ?? 0;
+        const ty =
+          typeof tileY === "number" ? tileY : ensurePlayer().currentTileY ?? 0;
+        if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) {
+          throw new Error("Cheats: tuile invalide");
+        }
+        if (isTileBlocked(scene, tx, ty)) {
+          throw new Error("Cheats: tuile bloquee");
+        }
+
+        const wp = map.tileToWorldXY(tx, ty, undefined, undefined, layer);
+        const m = createMonster(
+          scene,
+          wp.x + map.tileWidth / 2,
+          wp.y + map.tileHeight,
+          monsterId
+        );
+        m.tileX = tx;
+        m.tileY = ty;
+        m.spawnMapKey = scene.currentMapKey ?? scene.currentMapDef?.key ?? null;
+        scene.monsters = scene.monsters || [];
+        scene.monsters.push(m);
+        return m;
       },
     },
   };

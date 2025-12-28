@@ -1,9 +1,10 @@
 import { findMonsterAtTile } from "../../../monsters/index.js";
-import { isTileBlocked } from "../../../collision/collisionGrid.js";
+import { isTileBlocked, unblockTile } from "../../../collision/collisionGrid.js";
 import { isTileOccupiedByMonster } from "../../../monsters/aiUtils.js";
 import { endCombat } from "../../../core/combat.js";
 import { addChatMessage } from "../../../chat/chat.js";
 import { showFloatingTextOverEntity } from "../../../core/combat/floatingText.js";
+import { maybeSpawnRiftWaveOnClear } from "../../combat/waves.js";
 
 import { getActiveSpell, clearActiveSpell } from "./activeSpell.js";
 import { canCastSpellAtTile } from "./canCast.js";
@@ -197,6 +198,76 @@ function applyAreaBuffToMonsters(scene, map, groundLayer, caster, buffDef) {
 
   effects.forEach((effect) => {
     targets.forEach((target) => {
+      let resolved = effect;
+      if (effect?.type === "shield") {
+        const casterHpMax =
+          typeof caster?.stats?.hpMax === "number"
+            ? caster.stats.hpMax
+            : typeof caster?.stats?.hp === "number"
+              ? caster.stats.hp
+              : 0;
+        const percent =
+          typeof effect.percent === "number" ? effect.percent : null;
+        const amount =
+          typeof effect.amount === "number"
+            ? effect.amount
+            : percent !== null
+              ? Math.round(casterHpMax * percent)
+              : 0;
+        resolved = {
+          ...effect,
+          amount,
+          label: effect.label || `Bouclier ${amount}`,
+        };
+      }
+
+      applyStatusEffectToEntity(target, resolved, caster);
+      if (effect?.type === "pm" && target && activeEntity === target && state) {
+        const bonus = typeof effect.amount === "number" ? effect.amount : 0;
+        if (bonus !== 0) {
+          state.pmRestants = Math.max(0, (state.pmRestants ?? 0) + bonus);
+        }
+      }
+    });
+  });
+}
+
+function applyAreaBuffToAllies(scene, map, groundLayer, caster, buffDef) {
+  const radius =
+    typeof buffDef?.radius === "number" && buffDef.radius >= 0
+      ? buffDef.radius
+      : 0;
+  const effects = Array.isArray(buffDef?.effects) ? buffDef.effects : [];
+  if (effects.length === 0) return;
+
+  const state = scene?.combatState;
+  const activeEntity =
+    state?.tour === "joueur" ? state.joueur : state?.monstre || null;
+  const origin = getEntityTile(caster, map, groundLayer);
+  if (!origin) return;
+
+  const allies =
+    scene?.combatSummons && Array.isArray(scene.combatSummons)
+      ? scene.combatSummons
+      : [];
+  const targets = [
+    state?.joueur || null,
+    caster || null,
+    ...allies,
+  ].filter((m, index, list) => m && list.indexOf(m) === index);
+
+  const inRange = targets.filter((m) => {
+    if (!m || !m.stats) return false;
+    const hp = typeof m.stats.hp === "number" ? m.stats.hp : m.stats.hpMax ?? 0;
+    if (hp <= 0) return false;
+    const pos = getEntityTile(m, map, groundLayer);
+    if (!pos) return false;
+    const dist = Math.abs(pos.x - origin.x) + Math.abs(pos.y - origin.y);
+    return dist <= radius;
+  });
+
+  effects.forEach((effect) => {
+    inRange.forEach((target) => {
       let resolved = effect;
       if (effect?.type === "shield") {
         const casterHpMax =
@@ -480,6 +551,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   if (!state) return false;
 
   const isPlayerCaster = state.joueur === caster;
+  const isAllyCaster = caster?.isCombatAlly === true;
 
   // Challenge : si le joueur caste alors qu'un ennemi est au corps-à-corps,
   // on laisse le sort partir mais le challenge est raté (pas de bonus).
@@ -645,6 +717,16 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
       return true;
     }
 
+  }
+
+  if (isPlayerCaster || isAllyCaster) {
+    if (isAllyCaster && spell?.areaBuff) {
+      applyAreaBuffToAllies(scene, map, groundLayer, caster, spell.areaBuff);
+      clearActiveSpell(caster);
+      clearSpellRangePreview(scene);
+      return true;
+    }
+
     if (spell.effectPattern === "line_forward") {
       const { x: originX, y: originY } = getCasterOriginTile(caster);
       const dx = tileX === originX ? 0 : Math.sign(tileX - originX);
@@ -721,6 +803,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
           }
 
           if (scene.combatState && remaining <= 0) {
+            if (maybeSpawnRiftWaveOnClear(scene)) return;
             scene.combatState.issue = "victoire";
             endCombat(scene);
           }
@@ -810,6 +893,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
           }
 
           if (scene.combatState && remaining <= 0) {
+            if (maybeSpawnRiftWaveOnClear(scene)) return;
             scene.combatState.issue = "victoire";
             endCombat(scene);
           }
@@ -905,6 +989,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
           }
 
           if (scene.combatState && remaining <= 0) {
+            if (maybeSpawnRiftWaveOnClear(scene)) return;
             scene.combatState.issue = "victoire";
             endCombat(scene);
           }
@@ -1061,6 +1146,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         }
 
         if (scene.combatState && remaining <= 0) {
+          if (maybeSpawnRiftWaveOnClear(scene)) return;
           scene.combatState.issue = "victoire";
           endCombat(scene);
         }
@@ -1217,6 +1303,10 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
               victim.destroy();
             }
             if (scene.combatSummons && Array.isArray(scene.combatSummons)) {
+              if (victim.blocksMovement && victim._blockedTile) {
+                unblockTile(scene, victim._blockedTile.x, victim._blockedTile.y);
+                victim._blockedTile = null;
+              }
               scene.combatSummons = scene.combatSummons.filter((s) => s !== victim);
             }
           }

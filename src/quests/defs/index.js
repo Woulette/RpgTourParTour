@@ -13,6 +13,7 @@ import { maire_goush_cedre_1 } from "./maire_goush_cedre_1.js";
 import { maire_libarene_liburion_1 } from "./maire_libarene_liburion_1.js";
 import { maire_donjon_keeper_1 } from "./maire_donjon_keeper_1.js";
 import { keeper_senbone_1 } from "./keeper_senbone_1.js";
+import { keeper_north_explosion_1 } from "./keeper_north_explosion_1.js";
 
 export const quests = {
   [andemia_intro_1.id]: andemia_intro_1,
@@ -30,4 +31,5 @@ export const quests = {
   [maire_libarene_liburion_1.id]: maire_libarene_liburion_1,
   [maire_donjon_keeper_1.id]: maire_donjon_keeper_1,
   [keeper_senbone_1.id]: keeper_senbone_1,
+  [keeper_north_explosion_1.id]: keeper_north_explosion_1,
 };

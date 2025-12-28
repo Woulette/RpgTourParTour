@@ -4,7 +4,11 @@ import { COMBAT_PATTERNS } from "../../combatPatterns.js";
 import { COMBAT_START_POSITIONS } from "../../config/combatStartPositions.js";
 import { createMonster } from "../../entities/monster.js";
 import { startCombat } from "./runtime.js";
+import { initRiftCombatWave } from "../../systems/combat/waves.js";
+import { spawnCombatAlly } from "../../systems/combat/summons/summon.js";
 import { cleanupCombatChallenge, initPrepChallenge } from "../../challenges/runtime.js";
+import { getQuestDef, getQuestState, getCurrentQuestStage } from "../../quests/index.js";
+import { isTileBlocked } from "../../collision/collisionGrid.js";
 
 // Calcule une liste de tuiles à partir d'une origine et d'une liste d'offsets.
 // Utilisé pour les cases joueurs et ennemies.
@@ -362,8 +366,12 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
 
     // On évite de reprendre exactement la tuile actuelle si possible.
     let playerCandidates = allowedTiles.filter(
-      (t) => t.x !== currentX || t.y !== currentY
+      (t) =>
+        (t.x !== currentX || t.y !== currentY) && !isTileBlocked(scene, t.x, t.y)
     );
+    if (playerCandidates.length === 0) {
+      playerCandidates = allowedTiles.filter((t) => !isTileBlocked(scene, t.x, t.y));
+    }
     if (playerCandidates.length === 0) {
       playerCandidates = allowedTiles;
     }
@@ -470,6 +478,51 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     highlights,
   };
 
+  // Alliés de faille visibles dès la préparation.
+  let spawnedAllies = false;
+  const mapDef = scene.currentMapDef || null;
+  if (player && mapDef?.riftEncounter) {
+    const qState = getQuestState(player, "keeper_north_explosion_1", { emit: false });
+    const qDef = getQuestDef("keeper_north_explosion_1");
+    const stage = getCurrentQuestStage(qDef, qState);
+    if (qState?.state === "in_progress" && stage?.id === "close_rifts") {
+      const hasAlly = (id) =>
+        scene.combatSummons &&
+        scene.combatSummons.some((s) => s && s.isCombatAlly && s.monsterId === id);
+      const pickPrepTile = () => {
+        const px = player.currentTileX;
+        const py = player.currentTileY;
+        const candidates = allowedTiles.filter(
+          (t) =>
+            !isTileBlocked(scene, t.x, t.y) &&
+            (t.x !== px || t.y !== py)
+        );
+        if (candidates.length === 0) return null;
+        return candidates[Math.floor(Math.random() * candidates.length)];
+      };
+      const mapForSpawn = scene.combatMap || scene.map;
+      const layerForSpawn = scene.combatGroundLayer || scene.groundLayer;
+      if (mapForSpawn && layerForSpawn) {
+        if (!hasAlly("donjon_keeper")) {
+          const preferTile = pickPrepTile();
+          spawnedAllies = !!spawnCombatAlly(scene, player, mapForSpawn, layerForSpawn, {
+            monsterId: "donjon_keeper",
+            preferTile,
+          }) || spawnedAllies;
+        }
+        if (!hasAlly("maire_combat")) {
+          const preferTile = pickPrepTile();
+          spawnedAllies = !!spawnCombatAlly(scene, player, mapForSpawn, layerForSpawn, {
+            monsterId: "maire_combat",
+            preferTile,
+          }) || spawnedAllies;
+        }
+      }
+    }
+  }
+
+  scene.prepState.spawnedAllies = spawnedAllies;
+
   // Challenge : tirage dès la préparation pour que le joueur puisse se placer en conséquence.
   initPrepChallenge(scene, scene.prepState, player);
 
@@ -493,8 +546,24 @@ export function startCombatFromPrep(scene) {
     prep.highlights.forEach((g) => g.destroy());
   }
 
+  scene.prepAllies = prep.spawnedAllies === true;
   scene.prepState = null;
   document.body.classList.remove("combat-prep");
 
   startCombat(scene, prep.joueur, prep.monstre);
+
+  const mapDef = scene.currentMapDef || null;
+  const encounter = mapDef?.riftEncounter || null;
+  if (encounter && Array.isArray(encounter.wave2Monsters) && encounter.wave2Monsters.length > 0) {
+    const spawnTiles = Array.isArray(scene.combatMonsters)
+      ? scene.combatMonsters
+          .filter((m) => m && typeof m.tileX === "number" && typeof m.tileY === "number")
+          .map((m) => ({ x: m.tileX, y: m.tileY }))
+      : [];
+    initRiftCombatWave(scene, {
+      turn: encounter.waveTurn ?? 3,
+      waveMonsters: encounter.wave2Monsters,
+      spawnTiles,
+    });
+  }
 }

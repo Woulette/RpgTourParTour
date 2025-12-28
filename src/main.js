@@ -37,6 +37,7 @@ import { initDomPanelClose } from "./ui/domPanelClose.js";
 import { initQuestTracker } from "./ui/domQuestTracker.js";
 import { initDomChat } from "./ui/domChat.js";
 import { initDomRewardPops } from "./ui/domRewardPops.js";
+import { initDomRifts } from "./ui/domRifts.js";
 import {
   preloadMonsters,
   processPendingRespawnsForCurrentMap,
@@ -51,6 +52,8 @@ import { onAfterMapLoaded } from "./dungeons/hooks.js";
 import { spawnTestTrees } from "./metier/bucheron/trees.js";
 import { spawnTestHerbs } from "./metier/alchimiste/plants.js";
 import { spawnTestWells } from "./maps/world/wells.js";
+import { spawnRifts } from "./maps/world/rifts.js";
+import { spawnStoryPortals } from "./maps/world/storyPortals.js";
 import { preloadNpcs, spawnNpcsForMap } from "./npc/spawn.js";
 import { getPlayer, initStore } from "./state/store.js";
 import { initQuestRuntime } from "./quests/runtime/init.js";
@@ -105,8 +108,14 @@ class MainScene extends Phaser.Scene {
     };
 
     // Archer (actuel)
-    this.load.image("player", "assets/rotations/south-east.png");
-    loadRunFrames("player", "assets/animations/running-6-frames");
+    this.load.image(
+      "player",
+      "assets/animations/animation archer/rotations/south-east.png"
+    );
+    loadRunFrames(
+      "player",
+      "assets/animations/animation archer/running-6-frames"
+    );
 
     // Tank (nouveau perso) - assets dans "assets/animations/animation tank"
     this.load.image(
@@ -150,12 +159,36 @@ class MainScene extends Phaser.Scene {
       "EtablieDuBricoleur",
       "assets/metier/Bricoleur/EtablieDuBricoleur.png"
     );
-    this.load.image("Boutique", "assets/Boutique.png");
-    this.load.image("puits", "assets/Puits.png");
+    this.load.image("Boutique", "assets/tileset/Boutique.png");
+    this.load.image("puits", "assets/tileset/Puits.png");
+    this.load.image(
+      "rift_dim_1",
+      "assets/Sprite/portaildimentionelle/FailledimentionelleOuvert1.png"
+    );
+    this.load.image(
+      "rift_dim_2",
+      "assets/Sprite/portaildimentionelle/FailledimentionelleOuvert2.png"
+    );
+    this.load.image(
+      "rift_dim_1_closed",
+      "assets/Sprite/portaildimentionelle/FailledimentionelleFermer1.png"
+    );
+    this.load.image(
+      "rift_dim_2_closed",
+      "assets/Sprite/portaildimentionelle/FailledimentionelleFermer2.png"
+    );
+    this.load.image(
+      "portal_dim_closed",
+      "assets/Sprite/PortailDimentionelle/PortailDimentionelleFermer.png"
+    );
+    this.load.image(
+      "portal_dim_open",
+      "assets/Sprite/PortailDimentionelle/PortailDimentionelleOuvert.png"
+    );
     // Ressources alchimiste (ortie)
     this.load.image("herb_ortie", "assets/metier/alchimiste/ressources/Ortie.png");
     this.load.image("herb_ortie_stump", "assets/metier/Alchimiste/Ressources/SoucheOrtie.png");
-    this.load.image("chene", "assets/tileset/chene.png");
+    this.load.image("chene", "assets/metier/Bucheron/Ressources/Chene.png");
     this.load.image("boulleau_single", "assets/tileset/Boulleau.png");
 
     preloadMonsters(this);
@@ -327,8 +360,40 @@ class MainScene extends Phaser.Scene {
       spawnTestHerbs(this, map, this.player, mapDef);
       // --- PUITS ---
       spawnTestWells(this, map, this.player, mapDef);
+      // --- FAILLES DIMENSIONNELLES ---
+      spawnRifts(this, map, this.player, mapDef, {
+        onTeleport: ({ targetMap, targetStartTile, riftId }) => {
+          if (!targetMap) return;
+          this.player.activeRiftId = riftId || null;
+          const startTile =
+            targetStartTile &&
+            typeof targetStartTile.x === "number" &&
+            typeof targetStartTile.y === "number"
+              ? targetStartTile
+              : null;
+          const cam = this.cameras && this.cameras.main;
+          const doChange = () =>
+            loadMapLikeMain(this, targetMap, startTile ? { startTile } : undefined);
+          if (this.time?.delayedCall) {
+            this.time.delayedCall(50, () => {
+              if (cam?.fadeOut && cam?.fadeIn) {
+                cam.once("camerafadeoutcomplete", () => {
+                  doChange();
+                  cam.fadeIn(150, 0, 0, 0);
+                });
+                cam.fadeOut(150, 0, 0, 0);
+              } else {
+                doChange();
+              }
+            });
+          } else {
+            doChange();
+          }
+        },
+      });
 
     }
+    spawnStoryPortals(this, map, this.player, mapDef);
 
     // --- PNJ (toujours, même si spawnDefaults=false) ---
     spawnNpcsForMap(this, map, groundLayer, mapDef.key);
@@ -403,6 +468,7 @@ class MainScene extends Phaser.Scene {
     initDomLevelUpPopup();
     initDomPanelClose();
     initQuestTracker(this.player);
+    initDomRifts();
 
     // DEBUG : touche "N" -> charge Map2Andemia avec le mÃªme centrage
     this.input.keyboard.on("keydown-N", () => {

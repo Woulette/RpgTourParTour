@@ -11,6 +11,8 @@ import { runTurn as runDonjonKeeperTurn } from "../systems/combat/ai/donjon_keep
 import { runTurn as runChiboneTurn } from "../systems/combat/ai/chibone.js";
 import { runTurn as runSkelboneTurn } from "../systems/combat/ai/skelbone.js";
 import { runTurn as runSenboneTurn } from "../systems/combat/ai/senbone.js";
+import { runTurn as runMaireCombatTurn } from "../systems/combat/ai/maire_combat.js";
+import { runTurn as runOmbreTitanTurn } from "../systems/combat/ai/ombre_titan.js";
 
 const AI_HANDLERS = {
   corbeau: runCorbeauTurn,
@@ -28,6 +30,8 @@ const AI_HANDLERS = {
   cedre: runCedreTurn,
   gumgob: runGumgobTurn,
   donjon_keeper: runDonjonKeeperTurn,
+  maire_combat: runMaireCombatTurn,
+  ombre_titan: runOmbreTitanTurn,
 };
 
 // Point d'entrée générique : choisit l'IA en fonction du monsterId.
@@ -48,25 +52,35 @@ export function runMonsterTurn(scene) {
       scene?.combatSummons && Array.isArray(scene.combatSummons)
         ? scene.combatSummons
         : [];
-    const aliveSummon = summons.find((s) => {
+    const aliveSummons = summons.filter((s) => {
       if (!s || !s.stats) return false;
       const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
       return hp > 0;
     });
-    if (!aliveSummon) return player;
+    if (aliveSummons.length === 0) return player;
 
     const mx = monster.tileX ?? 0;
     const my = monster.tileY ?? 0;
-
-    const pTx = typeof player.currentTileX === "number" ? player.currentTileX : player.tileX ?? 0;
-    const pTy = typeof player.currentTileY === "number" ? player.currentTileY : player.tileY ?? 0;
-    const sTx = aliveSummon.tileX ?? 0;
-    const sTy = aliveSummon.tileY ?? 0;
-
+    const pTx =
+      typeof player.currentTileX === "number" ? player.currentTileX : player.tileX ?? 0;
+    const pTy =
+      typeof player.currentTileY === "number" ? player.currentTileY : player.tileY ?? 0;
     const dp = Math.abs(pTx - mx) + Math.abs(pTy - my);
-    const ds = Math.abs(sTx - mx) + Math.abs(sTy - my);
 
-    return ds <= dp ? aliveSummon : player;
+    let bestSummon = null;
+    let bestDist = Infinity;
+    aliveSummons.forEach((s) => {
+      const sx = s.tileX ?? 0;
+      const sy = s.tileY ?? 0;
+      const ds = Math.abs(sx - mx) + Math.abs(sy - my);
+      if (ds < bestDist) {
+        bestDist = ds;
+        bestSummon = s;
+      }
+    });
+
+    if (!bestSummon) return player;
+    return bestDist <= dp ? bestSummon : player;
   };
 
   const target = pickTargetForMonster();
@@ -97,4 +111,13 @@ export function runMonsterTurn(scene) {
   } else {
     finishTurn();
   }
+}
+
+export function runMonsterAi(scene, state, monster, target, map, groundLayer, onComplete) {
+  const handler = AI_HANDLERS[monster?.monsterId];
+  if (!handler) {
+    onComplete?.();
+    return;
+  }
+  handler(scene, state, monster, target, map, groundLayer, onComplete);
 }

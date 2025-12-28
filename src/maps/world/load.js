@@ -8,6 +8,8 @@ import { spawnNpcsForMap } from "../../npc/spawn.js";
 import { spawnTestTrees } from "../../metier/bucheron/trees.js";
 import { spawnTestHerbs } from "../../metier/alchimiste/plants.js";
 import { spawnTestWells } from "./wells.js";
+import { spawnRifts } from "./rifts.js";
+import { clearStoryPortals, spawnStoryPortals } from "./storyPortals.js";
 import { createMapExits } from "../exits.js";
 import { rebuildCollisionGridFromMap } from "./collision.js";
 import { rebuildDebugGrid } from "./debugGrid.js";
@@ -177,6 +179,15 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
     });
     scene.wellNodes = [];
   }
+  if (Array.isArray(scene.riftNodes)) {
+    scene.riftNodes.forEach((node) => {
+      if (node?.hoverHighlight?.destroy) node.hoverHighlight.destroy();
+      node.hoverHighlight = null;
+      if (node?.sprite?.destroy) node.sprite.destroy();
+    });
+    scene.riftNodes = [];
+  }
+  clearStoryPortals(scene);
   if (Array.isArray(scene.staticTrees)) {
     scene.staticTrees.forEach((s) => {
       if (s?.destroy) s.destroy();
@@ -315,7 +326,45 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
     spawnTestTrees(scene, map, scene.player, mapDef);
     spawnTestHerbs(scene, map, scene.player, mapDef);
     spawnTestWells(scene, map, scene.player, mapDef);
+    spawnRifts(scene, map, scene.player, mapDef, {
+      onTeleport: ({ targetMap, targetStartTile, riftId }) => {
+        if (!targetMap) return;
+        if (scene.player) {
+          scene.player.activeRiftId = riftId || null;
+          scene.player.riftReturnMapKey = scene.currentMapKey || null;
+          scene.player.riftReturnTile = {
+            x: scene.player.currentTileX,
+            y: scene.player.currentTileY,
+          };
+        }
+        const startTile =
+          targetStartTile &&
+          typeof targetStartTile.x === "number" &&
+          typeof targetStartTile.y === "number"
+            ? targetStartTile
+            : null;
+        const cam = scene.cameras && scene.cameras.main;
+        const doChange = () =>
+          loadMapLikeMain(scene, targetMap, startTile ? { startTile } : undefined);
+        if (scene.time?.delayedCall) {
+          scene.time.delayedCall(50, () => {
+            if (cam?.fadeOut && cam?.fadeIn) {
+              cam.once("camerafadeoutcomplete", () => {
+                doChange();
+                cam.fadeIn(150, 0, 0, 0);
+              });
+              cam.fadeOut(150, 0, 0, 0);
+            } else {
+              doChange();
+            }
+          });
+        } else {
+          doChange();
+        }
+      },
+    });
   }
+  spawnStoryPortals(scene, map, scene.player, mapDef);
 
   // Respawns dus uniquement pour cette map (scopés par clé de map).
   processPendingRespawnsForCurrentMap(scene);

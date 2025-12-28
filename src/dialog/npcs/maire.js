@@ -147,6 +147,49 @@ export const maireDialog = {
         },
       },
     },
+    keeper_north_explosion_1: {
+      meet_maire_north: {
+        in_progress: {
+          sequence: [
+            {
+              text:
+                "Mon mauvais pressentiment vient clairement de se realiser.",
+              choice: "Et alors ?",
+            },
+            {
+              text:
+                "Si on ne referme pas les portails dans la minute,\n" +
+                "on va tous se faire aneantir.",
+              choice: "Je comprends.",
+            },
+            {
+              text:
+                "Je vais t'aider a refermer les failles.\n" +
+                "Il faut en fermer deux.",
+              choice: "On y va.",
+              closeOnChoice: true,
+            },
+          ],
+        },
+      },
+      return_to_maire_north: {
+        in_progress: {
+          sequence: [
+            {
+              text:
+                "Bien joue. Les failles se referment.",
+              choice: "Qu'est-ce que c'est ???",
+            },
+            {
+              text:
+                "Un titan !\n" +
+                "Retroussez vos manches, ca va etre du lourd.",
+              choice: "D'accord.",
+            },
+          ],
+        },
+      },
+    },
     alchimiste_marchand_3: {
       meet_maire: {
         in_progress: {

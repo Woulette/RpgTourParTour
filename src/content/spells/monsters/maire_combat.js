@@ -1,0 +1,53 @@
+export default {
+  decret_maire: {
+    id: "decret_maire",
+    label: "Decret du maire",
+    paCost: 4,
+    rangeMin: 0,
+    rangeMax: 0,
+    lineOfSight: false,
+    zone: "cell",
+    cooldownTurns: 5,
+    maxCastsPerTurn: 1,
+    areaBuff: {
+      radius: 2,
+      effects: [
+        {
+          id: "decret_puissance",
+          type: "puissance",
+          amount: 100,
+          turns: 3,
+          label: "+100 Puissance",
+        },
+        {
+          id: "decret_pm",
+          type: "pm",
+          amount: 1,
+          turns: 3,
+          label: "+1 PM",
+        },
+        {
+          id: "decret_bouclier",
+          type: "shield",
+          amount: 100,
+          turns: 3,
+          label: "+100 Bouclier",
+        },
+      ],
+    },
+    description: "Boost en zone (rayon 2) : +100 puissance, +1 PM, +100 bouclier.",
+  },
+  jugement_maire: {
+    id: "jugement_maire",
+    label: "Jugement du maire",
+    paCost: 4,
+    rangeMin: 1,
+    rangeMax: 3,
+    lineOfSight: true,
+    zone: "cell",
+    element: "feu",
+    damageMin: 14,
+    damageMax: 18,
+    description: "Frappe feu a moyenne portee.",
+  },
+};

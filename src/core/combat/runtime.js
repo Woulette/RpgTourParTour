@@ -3,15 +3,24 @@
 import { startOutOfCombatRegen } from "../regen.js";
 import { createCombatState, buildTurnOrder } from "./state.js";
 import { onAfterCombatEnded } from "../../dungeons/runtime.js";
+import { loadMapLikeMain } from "../../maps/world/load.js";
+import { maps } from "../../maps/index.js";
+import { closeRiftForPlayer } from "../../maps/world/rifts.js";
 import { addChatMessage } from "../../chat/chat.js";
 import { items } from "../../inventory/itemsConfig.js";
 import { addItem } from "../../inventory/inventoryCore.js";
-import { clearAllSummons } from "../../systems/combat/summons/summon.js";
+import { clearAllSummons, spawnCombatAlly } from "../../systems/combat/summons/summon.js";
 import { addXpToPlayer } from "../../entities/player.js";
 import { clearActiveSpell } from "../../systems/combat/spells/activeSpell.js";
 import { queueMonsterRespawn } from "../../monsters/respawnState.js";
 import { createMonster } from "../../entities/monster.js";
-import { advanceQuestStage, getQuestState, QUEST_STATES } from "../../quests/index.js";
+import {
+  advanceQuestStage,
+  getQuestDef,
+  getQuestState,
+  getCurrentQuestStage,
+  QUEST_STATES,
+} from "../../quests/index.js";
 import {
   cleanupCombatChallenge,
   finalizeCombatChallenge,
@@ -340,8 +349,58 @@ export function startCombat(scene, player, monster) {
 
   scene.combatState = createCombatState(player, monster);
   scene.combatState.worldMonsterSnapshot = snapshotMonsterForWorld(scene, monster);
-  scene.combatSummons = [];
+  const keepPrepSummons = scene.prepAllies === true;
+  const existingSummons = keepPrepSummons && Array.isArray(scene.combatSummons)
+    ? scene.combatSummons.filter((s) => s && s.isCombatAlly)
+    : [];
+  scene.combatSummons = existingSummons;
+  scene.prepAllies = false;
   document.body.classList.add("combat-active");
+
+  // Alliés automatiques dans les failles (maire + gardien).
+  const riftQuestId = "keeper_north_explosion_1";
+  if (player && scene.currentMapDef?.riftEncounter) {
+    const qState = getQuestState(player, riftQuestId, { emit: false });
+    const qDef = getQuestDef(riftQuestId);
+    const stage = getCurrentQuestStage(qDef, qState);
+    if (qState?.state === "in_progress" && stage?.id === "close_rifts") {
+      const map = scene.combatMap || scene.map;
+      const layer = scene.combatGroundLayer || scene.groundLayer;
+      if (map && layer) {
+        const hasAlly = (id) =>
+          scene.combatSummons &&
+          scene.combatSummons.some((s) => s && s.isCombatAlly && s.monsterId === id);
+        if (!hasAlly("donjon_keeper")) {
+          spawnCombatAlly(scene, player, map, layer, { monsterId: "donjon_keeper" });
+        }
+        if (!hasAlly("maire_combat")) {
+          spawnCombatAlly(scene, player, map, layer, { monsterId: "maire_combat" });
+        }
+      }
+    }
+  }
+
+  // Allies pour le combat contre l'ombre du titan.
+  if (player && monster?.monsterId === "ombre_titan") {
+    const qState = getQuestState(player, riftQuestId, { emit: false });
+    const qDef = getQuestDef(riftQuestId);
+    const stage = getCurrentQuestStage(qDef, qState);
+    if (qState?.state === "in_progress" && stage?.id === "kill_ombre_titan") {
+      const map = scene.combatMap || scene.map;
+      const layer = scene.combatGroundLayer || scene.groundLayer;
+      if (map && layer) {
+        const hasAlly = (id) =>
+          scene.combatSummons &&
+          scene.combatSummons.some((s) => s && s.isCombatAlly && s.monsterId === id);
+        if (!hasAlly("donjon_keeper")) {
+          spawnCombatAlly(scene, player, map, layer, { monsterId: "donjon_keeper" });
+        }
+        if (!hasAlly("maire_combat")) {
+          spawnCombatAlly(scene, player, map, layer, { monsterId: "maire_combat" });
+        }
+      }
+    }
+  }
 
   // Si un challenge a été tiré pendant la préparation, on le réutilise.
   if (scene.prepState?.challenge && !scene.combatState.challenge) {
@@ -639,6 +698,34 @@ export function endCombat(scene) {
           advanceQuestStage(scene.player, questId, { scene });
         }
       }
+    }
+  }
+
+  // Sortie automatique des failles (retour map d'origine + fermeture).
+  if (
+    result?.issue === "victoire" &&
+    scene?.currentMapDef?.riftEncounter &&
+    player
+  ) {
+    const returnKey = player.riftReturnMapKey || "MapAndemiaNouvelleVersion10";
+    const returnMap = maps?.[returnKey] || null;
+    const returnTile =
+      player.riftReturnTile &&
+      typeof player.riftReturnTile.x === "number" &&
+      typeof player.riftReturnTile.y === "number"
+        ? player.riftReturnTile
+        : null;
+
+    if (player.activeRiftId) {
+      closeRiftForPlayer(scene, player.activeRiftId);
+    }
+
+    player.activeRiftId = null;
+    player.riftReturnMapKey = null;
+    player.riftReturnTile = null;
+
+    if (returnMap) {
+      loadMapLikeMain(scene, returnMap, returnTile ? { startTile: returnTile } : undefined);
     }
   }
 

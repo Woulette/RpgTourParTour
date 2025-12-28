@@ -2,7 +2,7 @@ import { monsters } from "../../../content/monsters/index.js";
 import { createCharacter } from "../../../entities/character.js";
 import { createMonster } from "../../../entities/monster.js";
 import { createStats } from "../../../core/stats.js";
-import { isTileBlocked } from "../../../collision/collisionGrid.js";
+import { blockTile, isTileBlocked, unblockTile } from "../../../collision/collisionGrid.js";
 import { getAliveCombatMonsters } from "../../../monsters/aiUtils.js";
 
 function getPlayerLevel(player) {
@@ -79,7 +79,8 @@ function getCasterOriginTile(caster) {
 
 function isTileOccupiedByPlayerOrSummon(scene, tileX, tileY) {
   const state = scene?.combatState;
-  const p = state?.joueur ? getCasterOriginTile(state.joueur) : null;
+  const playerRef = state?.joueur || scene?.player || null;
+  const p = playerRef ? getCasterOriginTile(playerRef) : null;
   if (p && p.x === tileX && p.y === tileY) return true;
 
   const summons =
@@ -132,16 +133,21 @@ export function findSummonSpawnTile(scene, map, owner, preferTile = null) {
 }
 
 export function getAliveSummon(scene, owner) {
+  const list = getAliveSummons(scene, owner);
+  return list.length > 0 ? list[0] : null;
+}
+
+export function getAliveSummons(scene, owner) {
   const list =
     scene?.combatSummons && Array.isArray(scene.combatSummons)
       ? scene.combatSummons
       : [];
-  const alive = list.find((s) => {
+  const alive = list.filter((s) => {
     if (!s || s.owner !== owner || !s.stats) return false;
     const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
     return hp > 0;
   });
-  return alive || null;
+  return alive;
 }
 
 export function findAliveSummonAtTile(scene, tileX, tileY) {
@@ -328,6 +334,120 @@ export function spawnSummonMonster(
   return summon;
 }
 
+function attachSummonHover(scene, summon) {
+  if (typeof summon.setInteractive !== "function") return;
+  const w = (summon.displayWidth ?? summon.width ?? 48) * 1.35;
+  const h = (summon.displayHeight ?? summon.height ?? 48) * 1.35;
+  const ox = typeof summon.originX === "number" ? summon.originX : 0.5;
+  const oy = typeof summon.originY === "number" ? summon.originY : 1;
+  const rect = new Phaser.Geom.Rectangle(-w * ox, -h * oy, w, h);
+  summon.setInteractive(rect, Phaser.Geom.Rectangle.Contains);
+
+  summon.on("pointerover", () => {
+    const cs = scene?.combatState;
+    if (!cs || !cs.enCours) return;
+
+    if (typeof scene.showDamagePreview === "function") {
+      scene.showDamagePreview(summon);
+    }
+    if (typeof scene.showMonsterTooltip === "function") {
+      scene.showMonsterTooltip(summon);
+    }
+    if (typeof scene.showCombatTargetPanel === "function") {
+      scene.showCombatTargetPanel(summon);
+    }
+  });
+
+  summon.on("pointerout", () => {
+    if (typeof scene.clearDamagePreview === "function") {
+      scene.clearDamagePreview();
+    }
+    if (typeof scene.hideMonsterTooltip === "function") {
+      scene.hideMonsterTooltip();
+    }
+    if (typeof scene.hideCombatTargetPanel === "function") {
+      scene.hideCombatTargetPanel();
+    }
+  });
+}
+
+export function spawnCombatAlly(
+  scene,
+  owner,
+  map,
+  groundLayer,
+  { monsterId, preferTile = null } = {}
+) {
+  const state = scene?.combatState;
+  const inCombat = state && state.enCours;
+  const inPrep = scene?.prepState && scene.prepState.actif;
+  if ((!inCombat && !inPrep) || !owner || !map || !groundLayer) return null;
+  if (!monsterId) return null;
+
+  const def = monsters[monsterId];
+  if (!def) return null;
+
+  const spawnTile = findSummonSpawnTile(scene, map, owner, preferTile);
+  if (!spawnTile) return null;
+
+  const wp = map.tileToWorldXY(spawnTile.x, spawnTile.y, undefined, undefined, groundLayer);
+  const render = def.render || {};
+  const offX = typeof render.offsetX === "number" ? render.offsetX : 0;
+  const offY = typeof render.offsetY === "number" ? render.offsetY : 0;
+
+  const sx = wp.x + map.tileWidth / 2 + offX;
+  const sy = wp.y + map.tileHeight + offY;
+
+  const stats = createStats(def.statsOverrides || {});
+  const hpMax = stats.hpMax ?? stats.hp ?? 1;
+  stats.hpMax = hpMax;
+  stats.hp = hpMax;
+
+  const ally = createCharacter(scene, sx, sy, {
+    textureKey: def.textureKey,
+    classId: monsterId,
+    stats,
+  });
+
+  ally.monsterId = monsterId;
+  ally.isSummon = true;
+  ally.isCombatAlly = true;
+  ally.owner = owner;
+  ally.useMonsterAi = true;
+  ally.spellIds = def.spells || [];
+  ally.displayName = def.label || def.displayName || monsterId;
+  ally.level = def.baseLevel ?? def.level ?? 1;
+  ally.spellCooldowns = {};
+
+  ally.renderOffsetX = offX;
+  ally.renderOffsetY = offY;
+  if (ally.setOrigin) {
+    const rx = typeof render.originX === "number" ? render.originX : 0.5;
+    const ry = typeof render.originY === "number" ? render.originY : 1;
+    ally.setOrigin(rx, ry);
+  }
+  if (typeof render.scale === "number" && ally.setScale) {
+    ally.setScale(render.scale);
+  }
+  ally.setDepth(ally.y);
+  if (scene.hudCamera) scene.hudCamera.ignore(ally);
+
+  ally.tileX = spawnTile.x;
+  ally.tileY = spawnTile.y;
+  ally.currentTileX = spawnTile.x;
+  ally.currentTileY = spawnTile.y;
+  ally.blocksMovement = true;
+  ally._blockedTile = { x: spawnTile.x, y: spawnTile.y };
+  blockTile(scene, spawnTile.x, spawnTile.y);
+
+  attachSummonHover(scene, ally);
+
+  scene.combatSummons = scene.combatSummons || [];
+  scene.combatSummons.push(ally);
+
+  return ally;
+}
+
 export function clearAllSummons(scene) {
   const list =
     scene?.combatSummons && Array.isArray(scene.combatSummons)
@@ -339,6 +459,10 @@ export function clearAllSummons(scene) {
   });
   list.forEach((s) => {
     if (!s) return;
+    if (s.blocksMovement && s._blockedTile) {
+      unblockTile(scene, s._blockedTile.x, s._blockedTile.y);
+      s._blockedTile = null;
+    }
     if (typeof s.destroy === "function") {
       s.destroy();
     }

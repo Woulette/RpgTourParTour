@@ -154,6 +154,14 @@ export function attachMonsterTooltip(scene) {
       const totalLevel = levels.reduce((sum, lvl) => sum + lvl, 0);
       lines.push(`XP : ${xpTotal}`);
       lines.push(`Niv. total : ${totalLevel}`);
+      const encounter = scene.currentMapDef?.riftEncounter || null;
+      const waveCount =
+        Array.isArray(encounter?.wave2Monsters) && encounter.wave2Monsters.length > 0
+          ? 2
+          : 1;
+      if (waveCount > 1) {
+        lines.push(`Vagues : x${waveCount}`);
+      }
     }
     for (let i = 0; i < groupSize; i += 1) {
       const lvl = levels[i] ?? monster.level ?? 1;

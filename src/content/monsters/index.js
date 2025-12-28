@@ -13,6 +13,8 @@ import cazard from "./cazard.js";
 import cedre from "./cedre.js";
 import gumgob from "./gumgob.js";
 import donjon_keeper from "./donjon_keeper.js";
+import maire_combat from "./MaireCombat.js";
+import ombre_titan from "./ombre_titan.js";
 
 export const monsters = {
   corbeau,
@@ -30,4 +32,6 @@ export const monsters = {
   cedre,
   gumgob,
   donjon_keeper,
+  maire_combat,
+  ombre_titan,
 };

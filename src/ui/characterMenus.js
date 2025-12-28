@@ -46,7 +46,7 @@ export function initCharacterMenus({ onStartGame }) {
       title: "Archer",
       desc: "Dégâts à distance, mobilité.",
       bullets: ["Attaques à distance", "Bon repositionnement", "Jeu safe"],
-      previewImage: "assets/rotations/south.png",
+      previewImage: "assets/animations/animation archer/rotations/south.png",
       selectable: true,
     },
     tank: {

@@ -3,9 +3,11 @@ import { computeSpellDamage } from "../spells/damage.js";
 import { showFloatingTextOverEntity } from "../../../core/combat/floatingText.js";
 import { delay, moveMonsterAlongPath, findPathToReachAdjacentToTarget } from "../../../monsters/aiUtils.js";
 import { getAliveCombatMonsters } from "../../../monsters/aiUtils.js";
-import { getAliveSummon } from "./summon.js";
+import { getAliveSummons } from "./summon.js";
 import { addChatMessage } from "../../../chat/chat.js";
 import { endCombat } from "../../../core/combat.js";
+import { maybeSpawnRiftWaveOnClear } from "../waves.js";
+import { runMonsterAi } from "../../../monsters/ai.js";
 
 function getHp(entity) {
   const stats = entity?.stats || {};
@@ -92,6 +94,7 @@ function applyDamageToEnemy(scene, summon, target, spell) {
 
     const remaining = getAliveCombatMonsters(scene).length;
     if (remaining <= 0) {
+      if (maybeSpawnRiftWaveOnClear(scene)) return;
       if (scene.combatState) scene.combatState.issue = "victoire";
       endCombat(scene);
     }
@@ -115,13 +118,13 @@ export function runSummonTurn(scene, onComplete) {
     return;
   }
 
-  const summon = getAliveSummon(scene, player);
-  if (!summon) {
+  const summons = getAliveSummons(scene, player);
+  if (!summons || summons.length === 0) {
     onComplete?.();
     return;
   }
 
-  // Sauvegarde le vrai monstre qui doit jouer après le joueur (déjà sélectionné par passerTour)
+  // Sauvegarde le vrai monstre qui doit jouer apres le joueur (deja selectionne par passerTour)
   const nextMonster = state.monstre;
   const nextPa = state.paRestants;
   const nextPm = state.pmRestants;
@@ -136,96 +139,154 @@ export function runSummonTurn(scene, onComplete) {
     onComplete?.();
   };
 
-  // Le summon "joue" pendant la phase monstre pour réutiliser les coûts/PM sans toucher au système de tour.
   state.summonActing = true;
-  state.tour = "monstre";
-  state.monstre = summon;
-  state.paRestants = summon.stats?.pa ?? state.paBaseMonstre;
-  state.pmRestants = summon.stats?.pm ?? state.pmBaseMonstre;
+  let index = 0;
 
-  if (typeof scene.updateCombatUi === "function") {
-    scene.updateCombatUi();
-  }
-
-  let pmRestants = state.pmRestants ?? 0;
-  if (pmRestants <= 0) {
-    finish();
-    return;
-  }
-
-  if (typeof summon.tileX !== "number" || typeof summon.tileY !== "number") {
-    const t = map.worldToTileXY(summon.x, summon.y, true, undefined, undefined, groundLayer);
-    if (t) {
-      summon.tileX = t.x;
-      summon.tileY = t.y;
+  const runNextSummon = () => {
+    const summon = summons[index];
+    index += 1;
+    if (!summon || !summon.stats || (summon.stats.hp ?? summon.stats.hpMax ?? 0) <= 0) {
+      if (index >= summons.length) {
+        finish();
+      } else {
+        runNextSummon();
+      }
+      return;
     }
-  }
 
-  let sx = summon.tileX ?? 0;
-  let sy = summon.tileY ?? 0;
+    // Le summon "joue" pendant la phase monstre pour reutiliser les couts/PM sans toucher au systeme de tour.
+    state.tour = "monstre";
+    state.monstre = summon;
+    state.paRestants = summon.stats?.pa ?? state.paBaseMonstre;
+    state.pmRestants = summon.stats?.pm ?? state.pmBaseMonstre;
 
-  const enemy = findNearestEnemy(scene, sx, sy);
-  if (!enemy) {
-    finish();
-    return;
-  }
+    if (typeof scene.updateCombatUi === "function") {
+      scene.updateCombatUi();
+    }
 
-  const ex = enemy.tileX ?? 0;
-  const ey = enemy.tileY ?? 0;
+    if (typeof summon.tileX !== "number" || typeof summon.tileY !== "number") {
+      const t = map.worldToTileXY(
+        summon.x,
+        summon.y,
+        true,
+        undefined,
+        undefined,
+        groundLayer
+      );
+      if (t) {
+        summon.tileX = t.x;
+        summon.tileY = t.y;
+        summon.currentTileX = t.x;
+        summon.currentTileY = t.y;
+      }
+    }
 
-  const spell = pickSummonSpell(summon);
-  const tryAttackIfMelee = () => {
-    if (!spell) return false;
-    const dist = Math.abs(ex - sx) + Math.abs(ey - sy);
-    if (dist !== 1) return false;
-    applyDamageToEnemy(scene, summon, enemy, spell);
-    return true;
+    const sx = summon.tileX ?? 0;
+    const sy = summon.tileY ?? 0;
+
+    const enemy = findNearestEnemy(scene, sx, sy);
+    if (!enemy) {
+      if (index >= summons.length) {
+        finish();
+      } else {
+        runNextSummon();
+      }
+      return;
+    }
+
+    if (typeof enemy.currentTileX !== "number") enemy.currentTileX = enemy.tileX ?? 0;
+    if (typeof enemy.currentTileY !== "number") enemy.currentTileY = enemy.tileY ?? 0;
+
+    if (summon.useMonsterAi) {
+      runMonsterAi(scene, state, summon, state.joueur, map, groundLayer, () => {
+        if (index >= summons.length) {
+          finish();
+        } else {
+          runNextSummon();
+        }
+      });
+      return;
+    }
+
+    let pmRestants = state.pmRestants ?? 0;
+    if (pmRestants <= 0) {
+      if (index >= summons.length) {
+        finish();
+      } else {
+        runNextSummon();
+      }
+      return;
+    }
+
+    const ex = enemy.tileX ?? 0;
+    const ey = enemy.tileY ?? 0;
+
+    const spell = pickSummonSpell(summon);
+    const tryAttackIfMelee = () => {
+      if (!spell) return false;
+      const dist = Math.abs(ex - sx) + Math.abs(ey - sy);
+      if (dist !== 1) return false;
+      applyDamageToEnemy(scene, summon, enemy, spell);
+      return true;
+    };
+
+    if (tryAttackIfMelee()) {
+      if (index >= summons.length) {
+        finish();
+      } else {
+        runNextSummon();
+      }
+      return;
+    }
+
+    let stepsUsed = 0;
+    const pathTiles = [];
+    const bfsPath =
+      findPathToReachAdjacentToTarget(scene, map, sx, sy, ex, ey, 50, summon) || [];
+
+    if (bfsPath.length > 0) {
+      const slice = bfsPath.slice(0, pmRestants);
+      slice.forEach((step) => {
+        stepsUsed += 1;
+        pathTiles.push({ x: step.x, y: step.y });
+      });
+    }
+
+    if (stepsUsed === 0 || pathTiles.length === 0) {
+      if (index >= summons.length) {
+        finish();
+      } else {
+        runNextSummon();
+      }
+      return;
+    }
+
+    moveMonsterAlongPath(scene, summon, map, groundLayer, pathTiles, () => {
+      state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - stepsUsed);
+      if (stepsUsed > 0) {
+        showFloatingTextOverEntity(scene, summon, `${stepsUsed}`, {
+          color: "#22c55e",
+        });
+      }
+
+      delay(scene, 420, () => {
+        // Re-sync tile after move
+        const tx = summon.tileX ?? pathTiles[pathTiles.length - 1]?.x ?? sx;
+        const ty = summon.tileY ?? pathTiles[pathTiles.length - 1]?.y ?? sy;
+        const dist = Math.abs(ex - tx) + Math.abs(ey - ty);
+        if (dist === 1) {
+          tryAttackIfMelee();
+        }
+        delay(scene, 120, () => {
+          if (index >= summons.length) {
+            finish();
+          } else {
+            runNextSummon();
+          }
+        });
+      });
+    });
   };
 
-  if (tryAttackIfMelee()) {
-    finish();
-    return;
-  }
-
-  let stepsUsed = 0;
-  const pathTiles = [];
-  const bfsPath =
-    findPathToReachAdjacentToTarget(scene, map, sx, sy, ex, ey, 50, summon) || [];
-
-  if (bfsPath.length > 0) {
-    const slice = bfsPath.slice(0, pmRestants);
-    slice.forEach((step) => {
-      sx = step.x;
-      sy = step.y;
-      stepsUsed += 1;
-      pathTiles.push({ x: sx, y: sy });
-    });
-  }
-
-  if (stepsUsed === 0 || pathTiles.length === 0) {
-    finish();
-    return;
-  }
-
-  moveMonsterAlongPath(scene, summon, map, groundLayer, pathTiles, () => {
-    state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - stepsUsed);
-    if (stepsUsed > 0) {
-      showFloatingTextOverEntity(scene, summon, `${stepsUsed}`, {
-        color: "#22c55e",
-      });
-    }
-
-    delay(scene, 420, () => {
-      // Re-sync tile after move
-      const tx = summon.tileX ?? sx;
-      const ty = summon.tileY ?? sy;
-      const dist = Math.abs(ex - tx) + Math.abs(ey - ty);
-      if (dist === 1) {
-        tryAttackIfMelee();
-      }
-      delay(scene, 120, () => {
-        finish();
-      });
-    });
-  });
+  runNextSummon();
 }

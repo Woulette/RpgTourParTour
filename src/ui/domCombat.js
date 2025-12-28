@@ -5,7 +5,7 @@
 import { startCombatFromPrep, passerTour } from "../core/combat.js";
 import { runMonsterTurn } from "../monsters/ai.js";
 import { runSummonTurn } from "../systems/combat/summons/turn.js";
-import { getAliveSummon } from "../systems/combat/summons/summon.js";
+import { getAliveSummon, getAliveSummons } from "../systems/combat/summons/summon.js";
 import { monsters as monsterDefs } from "../content/monsters/index.js";
 import { getActiveSpell } from "../systems/combat/spells/activeSpell.js";
 import { tryCastActiveSpellAtTile } from "../systems/combat/spells/cast.js";
@@ -66,7 +66,7 @@ export function initDomCombat(scene) {
       if (actor?.kind === "joueur") {
         const classId = actor?.entity?.classId || "archer";
         const pathByClass = {
-          archer: "assets/rotations/south-east.png",
+          archer: "assets/animations/animation archer/rotations/south-east.png",
           tank: "assets/animations/animation tank/rotations/south-east.png",
           mage: "assets/animations/animations-Animiste/rotations/south-east.png",
           eryon: "assets/animations/animations-Eryon/rotations/south-east.png",
@@ -213,26 +213,31 @@ export function initDomCombat(scene) {
       activeIndex = state.tour === "joueur" ? 0 : 1;
     }
 
-    const aliveSummon = state?.joueur ? getAliveSummon(scene, state.joueur) : null;
+    const aliveSummons = state?.joueur ? getAliveSummons(scene, state.joueur) : [];
     let renderActors = actors;
     let renderActiveIndex = activeIndex;
 
-    const alreadyListed =
-      !!aliveSummon &&
-      Array.isArray(actors) &&
-      actors.some((a) => a && a.entity === aliveSummon);
+    const summonActors = Array.isArray(aliveSummons)
+      ? aliveSummons
+          .filter((s) => s)
+          .map((s) => ({ kind: "invocation", entity: s }))
+      : [];
 
-    if (aliveSummon && !alreadyListed) {
-      const summonActor = { kind: "invocation", entity: aliveSummon };
+    const alreadyListed =
+      summonActors.length > 0 &&
+      Array.isArray(actors) &&
+      summonActors.every((sa) => actors.some((a) => a && a.entity === sa.entity));
+
+    if (summonActors.length > 0 && !alreadyListed) {
       const playerIdx = actors.findIndex((a) => a && a.kind === "joueur");
       const insertAt = playerIdx >= 0 ? playerIdx + 1 : 0;
       renderActors = [
         ...actors.slice(0, insertAt),
-        summonActor,
+        ...summonActors,
         ...actors.slice(insertAt),
       ];
 
-      if (insertAt <= renderActiveIndex) renderActiveIndex += 1;
+      if (insertAt <= renderActiveIndex) renderActiveIndex += summonActors.length;
       if (state?.summonActing) renderActiveIndex = insertAt;
     }
 

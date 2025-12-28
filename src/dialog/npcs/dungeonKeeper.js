@@ -43,14 +43,29 @@ export const dungeonKeeperDialog = {
           choice: "J'y vais.",
         },
         ready_to_turn_in: {
-          text: "Bien. Le donjon est en securite pour le moment.",
-          choice: "Parfait.",
+          text: "Tu as vaincu Senbone ?",
+          choice: "Oui.",
         },
       },
       return_to_keeper: {
         in_progress: {
-          text: "Tu as vaincu Senbone ?",
+          text: "Impressionnant, tu as reussi a refermer le donjon.",
           choice: "Oui.",
+        },
+      },
+    },
+    keeper_north_explosion_1: {
+      meet_north: {
+        not_started: {
+          text:
+            "Je viens d'entendre une explosion en direction du nord,\n" +
+            "ce n'est pas bon signe. Retrouve-moi la-bas.",
+          choice: "Compris.",
+        },
+        in_progress: {
+          text: "Ca craint.",
+          choice: "Ok.",
+          closeOnChoice: true,
         },
       },
     },

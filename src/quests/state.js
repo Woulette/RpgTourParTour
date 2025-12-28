@@ -202,6 +202,60 @@ export function incrementKillProgress(scene, player, questId, monsterId) {
   }
 }
 
+export function incrementRiftProgress(scene, player, questId, count = 1) {
+  const questDef = getQuestDef(questId);
+  if (!questDef || !player) return;
+  if (!Number.isFinite(count) || count <= 0) return;
+
+  const state = getQuestState(player, questId);
+  if (state.state !== QUEST_STATES.IN_PROGRESS) return;
+
+  const stage = getCurrentQuestStage(questDef, state);
+  if (!stage || !stage.objective) return;
+  const objective = stage.objective;
+
+  if (objective.type !== "close_rifts") return;
+
+  const required = objective.requiredCount || 1;
+  const current = state.progress?.currentCount || 0;
+  const next = Math.min(required, current + count);
+  state.progress = state.progress || {};
+  state.progress.currentCount = next;
+  emitStoreEvent("quest:updated", { questId, state });
+
+  if (next >= required) {
+    advanceQuestStage(player, questId, { scene });
+  }
+}
+
+export function incrementRiftProgressForAll(scene, player, count = 1) {
+  if (!player) return;
+  if (!Number.isFinite(count) || count <= 0) return;
+
+  Object.values(quests).forEach((questDef) => {
+    if (!questDef) return;
+
+    const state = getQuestState(player, questDef.id, { emit: false });
+    if (state.state !== QUEST_STATES.IN_PROGRESS) return;
+
+    const stage = getCurrentQuestStage(questDef, state);
+    const objective = stage?.objective;
+    if (!objective || objective.type !== "close_rifts") return;
+
+    const required = objective.requiredCount || 1;
+    const current = state.progress?.currentCount || 0;
+    const next = Math.min(required, current + count);
+
+    state.progress = state.progress || {};
+    state.progress.currentCount = next;
+    emitStoreEvent("quest:updated", { questId: questDef.id, state });
+
+    if (next >= required) {
+      advanceQuestStage(player, questDef.id, { scene });
+    }
+  });
+}
+
 export function incrementKillProgressForAll(scene, player, monsterId) {
   if (!player || !monsterId) return;
 

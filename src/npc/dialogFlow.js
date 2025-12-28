@@ -20,6 +20,7 @@ import { enterDungeon } from "../dungeons/runtime.js";
 import { addChatMessage } from "../chat/chat.js";
 import { startPrep } from "../core/combat.js";
 import { createMonster } from "../entities/monster.js";
+import { isTileBlocked } from "../collision/collisionGrid.js";
 
 const DUNGEON_KEY_ITEM_ID = "clef_aluineeks";
 
@@ -183,6 +184,67 @@ function startDungeonKeeperDuel(scene, npcInstance, player) {
     playerOrigin: { x: 12, y: 21 },
     enemyOrigin: { x: 12, y: 10 },
   });
+}
+
+function findFreeSpawnTile(scene, map, baseX, baseY) {
+  if (!scene || !map) return null;
+  const offsets = [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: -1, y: 0 },
+    { x: 0, y: 1 },
+    { x: 0, y: -1 },
+    { x: 1, y: 1 },
+    { x: -1, y: 1 },
+    { x: 1, y: -1 },
+    { x: -1, y: -1 },
+  ];
+
+  for (const off of offsets) {
+    const tx = baseX + off.x;
+    const ty = baseY + off.y;
+    if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) continue;
+    if (isTileBlocked(scene, tx, ty)) continue;
+    const occupied = Array.isArray(scene.monsters)
+      ? scene.monsters.some((m) => m && m.tileX === tx && m.tileY === ty)
+      : false;
+    if (occupied) continue;
+    return { x: tx, y: ty };
+  }
+  return null;
+}
+
+function spawnOmbreTitan(scene, npcInstance, player) {
+  if (!scene || !scene.map || !scene.groundLayer) return;
+  if (!player) return;
+  const already =
+    Array.isArray(scene.monsters) &&
+    scene.monsters.some((m) => m && m.monsterId === "ombre_titan");
+  if (already) return;
+
+  const tile = findFreeSpawnTile(scene, scene.map, 12, 12);
+  if (!tile) return;
+
+  const wp = scene.map.tileToWorldXY(
+    tile.x,
+    tile.y,
+    undefined,
+    undefined,
+    scene.groundLayer
+  );
+  const monster = createMonster(
+    scene,
+    wp.x + scene.map.tileWidth / 2,
+    wp.y + scene.map.tileHeight,
+    "ombre_titan"
+  );
+  monster.tileX = tile.x;
+  monster.tileY = tile.y;
+  monster.spawnMapKey = scene.currentMapKey ?? scene.currentMapDef?.key ?? null;
+  monster.respawnEnabled = false;
+
+  scene.monsters = scene.monsters || [];
+  scene.monsters.push(monster);
 }
 
 export function startNpcDialogFlow(scene, player, npc) {
@@ -370,7 +432,8 @@ export function startNpcDialogFlow(scene, player, npc) {
         (npc.id === "maire_albinos" && quest.id === "maire_corbeaux_1") ||
         (npc.id === "maire_albinos" && quest.id === "maire_gobelins_cazards_1") ||
         (npc.id === "maire_albinos" && quest.id === "maire_goush_cedre_1") ||
-        (npc.id === "maire_albinos" && quest.id === "maire_libarene_liburion_1");
+        (npc.id === "maire_albinos" && quest.id === "maire_libarene_liburion_1") ||
+        (npc.id === "donjonaluineekspnj" && quest.id === "keeper_senbone_1");
       dialogData = {
         ...base,
         questTurnIn: true,
@@ -406,6 +469,13 @@ export function startNpcDialogFlow(scene, player, npc) {
 
         const nextState = getQuestState(player, quest.id, { emit: false });
         const nextStage = getCurrentQuestStage(quest, nextState);
+        if (
+          quest.id === "keeper_north_explosion_1" &&
+          stage?.id === "return_to_maire_north" &&
+          nextStage?.id === "kill_ombre_titan"
+        ) {
+          spawnOmbreTitan(scene, npc, player);
+        }
         const offersAfter = getOfferableQuestsForNpc(player, npc.id);
         if (
           nextState.state === QUEST_STATES.IN_PROGRESS &&
@@ -475,6 +545,11 @@ export function startNpcDialogFlow(scene, player, npc) {
             quest.id === "maire_goush_cedre_1"
           ) {
             forcedQuestId = "maire_libarene_liburion_1";
+          } else if (
+            npc.id === "donjonaluineekspnj" &&
+            quest.id === "keeper_senbone_1"
+          ) {
+            forcedQuestId = "keeper_north_explosion_1";
           }
 
           if (forcedQuestId) {

@@ -6,6 +6,10 @@ import { endCombat } from "./runtime.js";
 import { addChatMessage } from "../../chat/chat.js";
 import { showFloatingTextOverEntity } from "./floatingText.js";
 import { tickCaptureAttemptAtStartOfPlayerTurn } from "../../systems/combat/summons/capture.js";
+import {
+  maybeSpawnRiftWave,
+  maybeSpawnRiftWaveOnClear,
+} from "../../systems/combat/waves.js";
 
 export function createCombatState(player, monster) {
   const paJoueur = player.stats?.pa ?? 6;
@@ -237,6 +241,9 @@ export function passerTour(scene) {
     }
   }
 
+  // Vague de faille : spawn au debut du tour 3 (ou config).
+  maybeSpawnRiftWave(scene);
+
   // reset des compteurs de sorts a chaque changement de tour
   state.castsThisTurn = {};
 
@@ -438,6 +445,7 @@ function applyStartOfTurnStatusEffects(scene, entity) {
       }
 
       if (remainingEnemies <= 0) {
+        if (maybeSpawnRiftWaveOnClear(scene)) return;
         state.issue = "victoire";
         endCombat(scene);
         return;

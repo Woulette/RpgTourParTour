@@ -28,11 +28,11 @@ export function preloadNpcs(scene) {
   // Icônes de quêtes
   scene.load.image(
     "npc_aluineeks_keeper",
-    "assets/npc/PnjAluineeksSouth-west.png"
+    "assets/npc/DonjonALuineeksPNJsouth-west.png"
   );
 
-  scene.load.image("quest_exclamation", "assets/exclamations.png");
-  scene.load.image("quest_question", "assets/interogations.png");
+  scene.load.image("quest_exclamation", "assets/tileset/exclamations.png");
+  scene.load.image("quest_question", "assets/tileset/interogations.png");
 }
 
 function shouldSpawnNpc(def, player) {

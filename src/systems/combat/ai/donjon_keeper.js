@@ -11,6 +11,7 @@ import {
   moveMonsterAlongPath,
   findPathToReachAdjacentToTarget,
   isTileOccupiedByMonster,
+  getAliveCombatMonsters,
 } from "../../../monsters/aiUtils.js";
 
 const POST_MOVE_DELAY_MS = 250;
@@ -105,6 +106,27 @@ function moveAlong(scene, state, monster, map, groundLayer, path, cb) {
   });
 }
 
+function findNearestEnemy(scene, monster) {
+  const alive = getAliveCombatMonsters(scene);
+  const mx = monster.tileX ?? 0;
+  const my = monster.tileY ?? 0;
+  let best = null;
+  let bestDist = Infinity;
+  for (const m of alive) {
+    if (!m || !m.stats) continue;
+    const hp = typeof m.stats.hp === "number" ? m.stats.hp : m.stats.hpMax ?? 0;
+    if (hp <= 0) continue;
+    const dx = Math.abs((m.tileX ?? 0) - mx);
+    const dy = Math.abs((m.tileY ?? 0) - my);
+    const d = dx + dy;
+    if (d < bestDist) {
+      bestDist = d;
+      best = m;
+    }
+  }
+  return best;
+}
+
 export function runTurn(scene, state, monster, player, map, groundLayer, onComplete) {
   const finish = () => onComplete?.();
   const pmRestants = state.pmRestants ?? 0;
@@ -122,10 +144,16 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
   let mx = monster.tileX ?? 0;
   let my = monster.tileY ?? 0;
 
-  let px = player.currentTileX;
-  let py = player.currentTileY;
+  const target = monster.isCombatAlly ? findNearestEnemy(scene, monster) : player;
+  if (!target) {
+    finish();
+    return;
+  }
+
+  let px = target.currentTileX;
+  let py = target.currentTileY;
   if (typeof px !== "number" || typeof py !== "number") {
-    const t = map.worldToTileXY(player.x, player.y, true, undefined, undefined, groundLayer);
+    const t = map.worldToTileXY(target.x, target.y, true, undefined, undefined, groundLayer);
     if (t) {
       px = t.x;
       py = t.y;

@@ -1,9 +1,9 @@
 import { PLAYER_SPEED } from "../config/constants.js";
-import { isTileBlocked } from "../collision/collisionGrid.js";
 import {
   playMonsterMoveAnimation,
   stopMonsterMoveAnimation,
 } from "./animations.js";
+import { blockTile, isTileBlocked, unblockTile } from "../collision/collisionGrid.js";
 
 export function delay(scene, ms, fn) {
   const duration = Math.max(0, ms | 0);
@@ -29,7 +29,67 @@ export function moveMonsterAlongPath(
   path,
   onDone
 ) {
-  const queue = Array.isArray(path) ? path.slice() : [];
+  const raw = Array.isArray(path) ? path.slice() : [];
+  const queue = [];
+  let prevX = monster.tileX;
+  let prevY = monster.tileY;
+
+  const isFreeStep = (x, y) => {
+    if (!map) return false;
+    if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
+    if (isTileBlocked(scene, x, y)) return false;
+    if (isTileOccupiedByMonster(scene, x, y, monster)) return false;
+    return true;
+  };
+
+  raw.forEach((step) => {
+    if (!step || typeof step.x !== "number" || typeof step.y !== "number") return;
+    if (typeof prevX !== "number" || typeof prevY !== "number") {
+      queue.push({ x: step.x, y: step.y });
+      prevX = step.x;
+      prevY = step.y;
+      return;
+    }
+
+    let dx = step.x - prevX;
+    let dy = step.y - prevY;
+
+    while (dx !== 0 || dy !== 0) {
+      const stepX = dx === 0 ? 0 : Math.sign(dx);
+      const stepY = dy === 0 ? 0 : Math.sign(dy);
+
+      if (stepX !== 0 && stepY !== 0) {
+        const candX = { x: prevX + stepX, y: prevY };
+        const candY = { x: prevX, y: prevY + stepY };
+        if (isFreeStep(candX.x, candX.y)) {
+          queue.push(candX);
+          prevX = candX.x;
+          prevY = candX.y;
+          dx = step.x - prevX;
+          dy = step.y - prevY;
+          continue;
+        }
+        if (isFreeStep(candY.x, candY.y)) {
+          queue.push(candY);
+          prevX = candY.x;
+          prevY = candY.y;
+          dx = step.x - prevX;
+          dy = step.y - prevY;
+          continue;
+        }
+        break;
+      }
+
+      const nextX = prevX + stepX;
+      const nextY = prevY + stepY;
+      if (!isFreeStep(nextX, nextY)) break;
+      queue.push({ x: nextX, y: nextY });
+      prevX = nextX;
+      prevY = nextY;
+      dx = step.x - prevX;
+      dy = step.y - prevY;
+    }
+  });
 
   if (queue.length === 0) {
     stopMonsterMoveAnimation(monster);
@@ -68,6 +128,8 @@ export function moveMonsterAlongPath(
     );
     const duration = (dist / PLAYER_SPEED) * 1000;
 
+    const prevTileX = monster.tileX;
+    const prevTileY = monster.tileY;
     scene.tweens.add({
       targets: monster,
       x: targetX,
@@ -81,6 +143,13 @@ export function moveMonsterAlongPath(
         monster.tileY = next.y;
         monster.currentTileX = next.x;
         monster.currentTileY = next.y;
+        if (monster.blocksMovement) {
+          if (typeof prevTileX === "number" && typeof prevTileY === "number") {
+            unblockTile(scene, prevTileX, prevTileY);
+          }
+          blockTile(scene, next.x, next.y);
+          monster._blockedTile = { x: next.x, y: next.y };
+        }
         if (queue.length === 0) {
           stopMonsterMoveAnimation(monster);
         }
@@ -114,6 +183,16 @@ export function isTileOccupiedByMonster(scene, tileX, tileY, self) {
     scene?.combatSummons && Array.isArray(scene.combatSummons)
       ? scene.combatSummons
       : [];
+  const player = scene?.combatState?.enCours ? scene.combatState.joueur : null;
+  if (
+    player &&
+    typeof player.currentTileX === "number" &&
+    typeof player.currentTileY === "number" &&
+    player.currentTileX === tileX &&
+    player.currentTileY === tileY
+  ) {
+    return true;
+  }
   return alive.some((m) => {
     if (!m) return false;
     if (self && m === self) return false;

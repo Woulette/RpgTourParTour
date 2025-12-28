@@ -4,6 +4,7 @@ import {
   getCasterOriginTile,
   hasLineOfSight,
 } from "./util.js";
+import { isTileOccupiedByMonster } from "../../../monsters/aiUtils.js";
 
 // ---------- Conditions de lancement ----------
 
@@ -41,9 +42,11 @@ export function canCastSpell(scene, caster, spell) {
 // Vérifie toutes les conditions pour lancer un sort sur une tuile donnée.
 export function canCastSpellAtTile(scene, caster, spell, tileX, tileY, map) {
   if (!canCastSpell(scene, caster, spell)) return false;
-  if (!isTileTargetableForSpell(scene, map, tileX, tileY)) return false;
-
   const { x: originX, y: originY } = getCasterOriginTile(caster);
+  const isSelf = tileX === originX && tileY === originY;
+  if (!isSelf && !isTileTargetableForSpell(scene, map, tileX, tileY)) {
+    if (!isTileOccupiedByMonster(scene, tileX, tileY, null)) return false;
+  }
 
   // Lancer "en ligne" : uniquement sur la même ligne/colonne (4 directions).
   if (spell.lineOfSight) {

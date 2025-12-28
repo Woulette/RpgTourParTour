@@ -13,6 +13,8 @@ import donjon_keeper from "./donjon_keeper.js";
 import chibone from "./chibone.js";
 import skelbone from "./skelbone.js";
 import senbone from "./senbone.js";
+import maire_combat from "./maire_combat.js";
+import ombre_titan from "./ombre_titan.js";
 
 export const monsterSpells = {
   corbeau,
@@ -30,4 +32,6 @@ export const monsterSpells = {
   chibone,
   skelbone,
   senbone,
+  maire_combat,
+  ombre_titan,
 };

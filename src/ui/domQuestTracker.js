@@ -18,6 +18,11 @@ function pickObjectiveText(stage, state, questDef, player) {
     const current = state.progress?.currentCount || 0;
     return `${objective.label}: ${current}/${required}`;
   }
+  if (objective && objective.type === "close_rifts") {
+    const required = objective.requiredCount || 1;
+    const current = state.progress?.currentCount || 0;
+    return `${objective.label}: ${current}/${required}`;
+  }
   if (objective && objective.type === "kill_monsters") {
     const list = Array.isArray(objective.monsters) ? objective.monsters : [];
     if (list.length === 0) return stage?.description || questDef?.description || "";
