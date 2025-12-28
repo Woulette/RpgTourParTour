@@ -1,4 +1,5 @@
 import { getPlayer, on as onStoreEvent } from "../state/store.js";
+import { getSelectedCharacter } from "../app/session.js";
 import { buildSnapshotFromPlayer, saveCharacterSnapshot } from "./index.js";
 
 const DEFAULT_COOLDOWN_MS = 1200;
@@ -26,7 +27,7 @@ function trySaveNow() {
   if (!player) return;
 
   const characterId =
-    player.characterId || window.__andemiaSelectedCharacter?.id || null;
+    player.characterId || getSelectedCharacter()?.id || null;
   if (!characterId) return;
 
   const snapshot = buildSnapshotFromPlayer(player);

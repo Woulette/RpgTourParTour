@@ -3,6 +3,7 @@ import { rebuildDebugGrid, initWorldExitsForScene } from "../../features/maps/wo
 import { createMapExits } from "../../features/maps/exits.js";
 import { onAfterMapLoaded } from "../../features/dungeons/hooks.js";
 import { loadCharacterSnapshot } from "../../save/index.js";
+import { getSelectedCharacter } from "../../app/session.js";
 import { buildInitialMap } from "./sceneMap.js";
 import { setupPlayerForScene } from "./scenePlayer.js";
 import { initRuntime } from "../runtime/initRuntime.js";
@@ -11,7 +12,7 @@ import { setupHudAndCameras, initDomUi } from "../ui/initUi.js";
 import { setupSceneInput } from "../input/setupInput.js";
 
 export function createMainScene(scene) {
-  const selected = window.__andemiaSelectedCharacter || null;
+  const selected = getSelectedCharacter() || null;
   const snapshot = selected?.id ? loadCharacterSnapshot(selected.id) : null;
   const requestedMapKey = snapshot?.mapKey || defaultMapKey;
   const mapDef = maps[requestedMapKey] || maps[defaultMapKey];

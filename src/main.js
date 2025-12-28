@@ -3,6 +3,12 @@ import { preloadAssets } from "./game/preload/preloadAssets.js";
 import { createMainScene } from "./game/scene/createScene.js";
 import { initCharacterMenus } from "./features/ui/characterMenus.js";
 import { closeAllHudPanels } from "./features/ui/domPanelClose.js";
+import {
+  getSelectedCharacter,
+  setSelectedCharacter,
+  setUiApi,
+  getUiApi,
+} from "./app/session.js";
 import { getPlayer } from "./state/store.js";
 import { buildSnapshotFromPlayer, saveCharacterSnapshot } from "./save/index.js";
 
@@ -48,7 +54,7 @@ function destroyGame() {
 }
 
 function startGame(character) {
-  window.__andemiaSelectedCharacter = character || null;
+  setSelectedCharacter(character || null);
   destroyGame();
   closeAllHudPanels();
   gameInstance = new Phaser.Game(config);
@@ -60,7 +66,7 @@ function openMenu() {
   try {
     const player = getPlayer();
     const characterId =
-      player?.characterId || window.__andemiaSelectedCharacter?.id || null;
+      player?.characterId || getSelectedCharacter()?.id || null;
     if (player && characterId) {
       const snap = buildSnapshotFromPlayer(player);
       if (snap) saveCharacterSnapshot(characterId, snap);
@@ -77,8 +83,9 @@ function openMenu() {
 const returnMenuBtn = document.getElementById("ui-return-menu");
 if (returnMenuBtn) {
   returnMenuBtn.addEventListener("click", () => {
-    if (typeof window.__andemiaUi?.openMenu === "function") {
-      window.__andemiaUi.openMenu();
+    const uiApi = getUiApi();
+    if (typeof uiApi?.openMenu === "function") {
+      uiApi.openMenu();
       return;
     }
     openMenu();
@@ -88,9 +95,9 @@ if (returnMenuBtn) {
 const menus = initCharacterMenus({
   onStartGame: (character) => startGame(character),
 });
-window.__andemiaUi = {
+setUiApi({
   openMenu: () => {
     openMenu();
     if (menus && typeof menus.openMenu === "function") menus.openMenu();
   },
-};
+});
