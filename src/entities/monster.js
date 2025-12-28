@@ -146,9 +146,27 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     stats,
   });
 
-  monster.baseTextureKey = def.textureKey;
-  if (def.animation && def.animation.basePath) {
-    monster.animPrefix = def.animation.prefix || def.id || def.textureKey;
+  const animPrefix = def.animation?.prefix || def.id || def.textureKey;
+  monster.animPrefix = animPrefix;
+
+  const defaultDir = (() => {
+    const marker = "/rotations/";
+    if (def.spritePath && def.spritePath.includes(marker)) {
+      const file = def.spritePath.split(marker)[1] || "";
+      const dot = file.lastIndexOf(".");
+      if (dot > 0) return file.slice(0, dot);
+      if (file) return file;
+    }
+    return "south-west";
+  })();
+
+  monster.lastDirection = defaultDir;
+  const idleKey = `${animPrefix}_idle_${defaultDir}`;
+  if (scene?.textures?.exists && scene.textures.exists(idleKey)) {
+    monster.baseTextureKey = idleKey;
+    if (monster.setTexture) monster.setTexture(idleKey);
+  } else {
+    monster.baseTextureKey = def.textureKey;
   }
   monster.animScale =
     typeof def.animation?.scale === "number" && Number.isFinite(def.animation.scale)

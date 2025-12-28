@@ -41,7 +41,8 @@ export function createPlayer(scene, x, y, classId) {
 
   // Utilisés par le système d'animation/déplacement.
   player.animPrefix = textureKey;
-  player.baseTextureKey = textureKey;
+  player.baseTextureKey = `${textureKey}_idle_south-east`;
+  player.lastDirection = "south-east";
 
   // Rend le joueur survolable (en combat) pour afficher la fiche cible.
   if (player && typeof player.setInteractive === "function") {

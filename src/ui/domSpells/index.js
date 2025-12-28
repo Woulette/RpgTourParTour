@@ -1,7 +1,7 @@
-import { classes } from "../config/classes.js";
-import { spells } from "../config/spells.js";
-import { initSpellBook } from "./domSpells/spellBook.js";
-import { initSpellBar } from "./domSpells/spellBar.js";
+import { classes } from "../../config/classes.js";
+import { spells } from "../../config/spells.js";
+import { initSpellBook } from "./spellBook.js";
+import { initSpellBar } from "./spellBar.js";
 
 // Initialise la barre de sorts en bas + la fenetre grimoire des sorts.
 export function initDomSpells(player) {

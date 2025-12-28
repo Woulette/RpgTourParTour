@@ -53,6 +53,43 @@ function computePlacementTiles(map, originX, originY, offsets) {
   return tiles;
 }
 
+function resolveCombatDiagonalFacing(dx, dy) {
+  if (dx >= 0 && dy < 0) return "north-east";
+  if (dx < 0 && dy < 0) return "north-west";
+  if (dx >= 0 && dy >= 0) return "south-east";
+  return "south-west";
+}
+
+function orientPlayerTowardMonsters(scene, player, combatMonsters, map, groundLayer) {
+  if (!scene || !player || !Array.isArray(combatMonsters) || !map || !groundLayer) return;
+  if (typeof player.currentTileX !== "number" || typeof player.currentTileY !== "number") return;
+
+  let nearest = null;
+  let bestDist = Infinity;
+  combatMonsters.forEach((m) => {
+    if (!m || typeof m.tileX !== "number" || typeof m.tileY !== "number") return;
+    const dist = Math.abs(m.tileX - player.currentTileX) + Math.abs(m.tileY - player.currentTileY);
+    if (dist < bestDist) {
+      bestDist = dist;
+      nearest = m;
+    }
+  });
+
+  if (!nearest) return;
+  const dx = nearest.tileX - player.currentTileX;
+  const dy = nearest.tileY - player.currentTileY;
+  const dir = resolveCombatDiagonalFacing(dx, dy);
+  player.lastDirection = dir;
+
+  const animPrefix = player.animPrefix || "player";
+  const idleKey = `${animPrefix}_idle_${dir}`;
+  if (scene?.textures?.exists?.(idleKey)) {
+    player.setTexture(idleKey);
+  } else if (player.baseTextureKey) {
+    player.setTexture(player.baseTextureKey);
+  }
+}
+
 // Lance la phase de préparation (placement) avant le combat.
 export function startPrep(scene, player, monster, map, groundLayer, options = {}) {
   // Nettoie un ancien indicateur de challenge (si on relance une préparation).
@@ -392,6 +429,8 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     player.x = worldPosPlayer.x + map.tileWidth / 2;
     player.y = worldPosPlayer.y + map.tileHeight / 2;
   }
+
+  orientPlayerTowardMonsters(scene, player, combatMonsters, map, groundLayer);
 
   const highlights = [];
   const halfW = map.tileWidth / 2;

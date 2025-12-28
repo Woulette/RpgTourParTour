@@ -124,6 +124,7 @@ export function movePlayerAlongPath(
   const dyWorld = targetY - player.y;
   const dir = getDirectionName(dxWorld, dyWorld);
   const animPrefix = player.animPrefix || "player";
+  player.lastDirection = dir;
   if (
     player.anims &&
     scene.anims &&
@@ -179,7 +180,12 @@ export function movePlayerAlongPath(
 
         if (player.anims && player.anims.currentAnim) {
           player.anims.stop();
-          player.setTexture(player.baseTextureKey || animPrefix);
+          const idleKey = `${animPrefix}_idle_${player.lastDirection || "south-east"}`;
+          if (scene.textures?.exists && scene.textures.exists(idleKey)) {
+            player.setTexture(idleKey);
+          } else {
+            player.setTexture(player.baseTextureKey || animPrefix);
+          }
         }
 
         // Si une sortie de map est en attente et que le joueur est sur

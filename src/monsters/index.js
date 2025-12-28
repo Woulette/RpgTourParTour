@@ -55,6 +55,45 @@ function loadMonsterAnimationFrames(scene, m) {
   });
 }
 
+function loadMonsterIdleRotations(scene, m) {
+  if (!scene || !m?.spritePath) return;
+  const marker = "/rotations/";
+  const idx = m.spritePath.lastIndexOf(marker);
+  if (idx === -1) return;
+
+  const basePath = m.spritePath.slice(0, idx + marker.length);
+  const prefix = m.animation?.prefix || m.id || m.textureKey;
+  const directions =
+    Array.isArray(m.animation?.directions) && m.animation.directions.length > 0
+      ? m.animation.directions
+      : DEFAULT_MONSTER_ANIM_DIRECTIONS;
+
+  directions.forEach((dir) => {
+    scene.load.image(`${prefix}_idle_${dir}`, `${basePath}${dir}.png`);
+  });
+}
+
+function resolveMonsterDefaultDir(def) {
+  const marker = "/rotations/";
+  if (def?.spritePath && def.spritePath.includes(marker)) {
+    const file = def.spritePath.split(marker)[1] || "";
+    const dot = file.lastIndexOf(".");
+    if (dot > 0) return file.slice(0, dot);
+    if (file) return file;
+  }
+  return "south-west";
+}
+
+function resolveMonsterIdleKey(scene, def) {
+  const prefix = def?.animation?.prefix || def?.id || def?.textureKey;
+  const dir = resolveMonsterDefaultDir(def);
+  const idleKey = `${prefix}_idle_${dir}`;
+  if (scene?.textures?.exists && scene.textures.exists(idleKey)) {
+    return { idleKey, dir, prefix };
+  }
+  return { idleKey: def?.textureKey || null, dir, prefix };
+}
+
 // Précharge toutes les textures de monstres déclarées dans la config
 export function preloadMonsters(scene) {
   Object.values(monsters).forEach((m) => {
@@ -68,6 +107,7 @@ export function preloadMonsters(scene) {
     }
     scene.load.image(m.textureKey, m.spritePath);
     loadMonsterAnimationFrames(scene, m);
+    loadMonsterIdleRotations(scene, m);
   });
 }
 
@@ -213,13 +253,15 @@ export function processPendingRespawnsForCurrentMap(scene) {
 
             monster.monsterId = leaderId;
             monster.classId = leaderId;
-            if (monster.setTexture) {
+            const idleInfo = resolveMonsterIdleKey(scene, leaderDef);
+            if (monster.setTexture && idleInfo.idleKey) {
+              monster.setTexture(idleInfo.idleKey);
+            } else if (monster.setTexture) {
               monster.setTexture(leaderDef.textureKey);
             }
-            monster.baseTextureKey = leaderDef.textureKey;
-            monster.animPrefix = leaderDef.animation?.basePath
-              ? leaderDef.animation.prefix || leaderDef.id || leaderDef.textureKey
-              : null;
+            monster.baseTextureKey = idleInfo.idleKey || leaderDef.textureKey;
+            monster.animPrefix = idleInfo.prefix || leaderDef.textureKey;
+            monster.lastDirection = idleInfo.dir || "south-west";
             monster.animScale = animScale;
             monster.baseScale = baseScale;
             if (typeof monster.setScale === "function" && baseScale !== 1) {

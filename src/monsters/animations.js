@@ -18,6 +18,7 @@ export function playMonsterMoveAnimation(scene, monster, dx, dy) {
   if (!monster.anims || !monster.animPrefix) return;
 
   const dir = resolveMonsterAnimDirection(dx, dy);
+  monster.lastDirection = dir;
   const key = `${monster.animPrefix}_run_${dir}`;
   if (scene.anims.exists(key)) {
     if (monster.animScale && typeof monster.setScale === "function") {
@@ -32,8 +33,15 @@ export function stopMonsterMoveAnimation(monster) {
   if (monster.anims && monster.anims.currentAnim) {
     monster.anims.stop();
   }
-  if (monster.baseTextureKey && typeof monster.setTexture === "function") {
-    monster.setTexture(monster.baseTextureKey);
+  if (typeof monster.setTexture === "function") {
+    const prefix = monster.animPrefix || monster.texture?.key || null;
+    const dir = monster.lastDirection || "south-west";
+    const idleKey = prefix ? `${prefix}_idle_${dir}` : null;
+    if (idleKey && monster.scene?.textures?.exists && monster.scene.textures.exists(idleKey)) {
+      monster.setTexture(idleKey);
+    } else if (monster.baseTextureKey) {
+      monster.setTexture(monster.baseTextureKey);
+    }
   }
   if (
     typeof monster.baseScale === "number" &&

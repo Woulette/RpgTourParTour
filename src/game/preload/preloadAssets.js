@@ -23,6 +23,12 @@ function loadRunFrames(scene, prefix, basePath) {
   });
 }
 
+function loadIdleRotations(scene, prefix, basePath) {
+  ANIM_DIRS.forEach((dir) => {
+    scene.load.image(`${prefix}_idle_${dir}`, `${basePath}/${dir}.png`);
+  });
+}
+
 export function preloadAssets(scene) {
   if (!scene) return;
 
@@ -37,6 +43,7 @@ export function preloadAssets(scene) {
     "player",
     "assets/animations/animation archer/rotations/south-east.png"
   );
+  loadIdleRotations(scene, "player", "assets/animations/animation archer/rotations");
   loadRunFrames(scene, "player", "assets/animations/animation archer/running-6-frames");
 
   // Tank (nouveau perso)
@@ -44,6 +51,7 @@ export function preloadAssets(scene) {
     "tank",
     "assets/animations/animation tank/rotations/south-east.png"
   );
+  loadIdleRotations(scene, "tank", "assets/animations/animation tank/rotations");
   loadRunFrames(scene, "tank", "assets/animations/animation tank/animations/running-6-frames");
 
   // Animiste (remplace le slot "mage")
@@ -51,6 +59,7 @@ export function preloadAssets(scene) {
     "animiste",
     "assets/animations/animations-Animiste/rotations/south-east.png"
   );
+  loadIdleRotations(scene, "animiste", "assets/animations/animations-Animiste/rotations");
   loadRunFrames(
     scene,
     "animiste",
@@ -62,6 +71,7 @@ export function preloadAssets(scene) {
     "eryon",
     "assets/animations/animations-Eryon/rotations/south-east.png"
   );
+  loadIdleRotations(scene, "eryon", "assets/animations/animations-Eryon/rotations");
   loadRunFrames(
     scene,
     "eryon",
