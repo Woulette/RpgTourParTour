@@ -6,6 +6,11 @@ import {
   upsertCharacterMeta,
 } from "../../save/index.js";
 
+import {
+  clearSelectedCharacter,
+  getSelectedCharacter as getSessionSelectedCharacter,
+} from "../../app/session.js";
+
 export function initCharacterMenus({ onStartGame }) {
   const overlayEl = document.getElementById("menu-overlay");
   const panelEl = overlayEl ? overlayEl.querySelector(".menu-panel") : null;
@@ -495,7 +500,7 @@ function renderCarouselMeta() {
   const openMenu = () => {
     document.body.classList.add("menu-open");
     // Si on revient depuis le jeu, pré-sélectionne le personnage courant.
-    const current = window.__andemiaSelectedCharacter || null;
+    const current = getSessionSelectedCharacter() || null;
     if (current && current.id) {
       const exists = characters.some((c) => c && c.id === current.id);
       if (exists) selectedCharacterId = current.id;
@@ -575,8 +580,8 @@ function renderCarouselMeta() {
         if (idx >= 0) characters.splice(idx, 1);
 
         if (selectedCharacterId === c.id) selectedCharacterId = null;
-        if (window.__andemiaSelectedCharacter?.id === c.id) {
-          window.__andemiaSelectedCharacter = null;
+        if (getSessionSelectedCharacter()?.id === c.id) {
+          clearSelectedCharacter();
         }
 
         refreshSelectAfterCharactersChanged();
@@ -718,7 +723,7 @@ function renderCarouselMeta() {
       payload?.data?.level ?? payload?.player?.levelState?.niveau ?? null;
     if (!levelAfter || !Number.isFinite(levelAfter)) return;
 
-    const current = window.__andemiaSelectedCharacter || null;
+    const current = getSessionSelectedCharacter() || null;
     const id = current?.id ?? selectedCharacterId;
     if (!id) return;
 

@@ -494,6 +494,8 @@ export function initDomAchievements(player) {
   };
 
   unsubscribeAchievements = onStoreEvent("achievements:updated", () => {
+    const currentPlayer = getActivePlayer();
+    if (!currentPlayer) return;
     // Toasts : on notifie quand un succès devient débloqué mais pas encore réclamé.
     const progress = achievementDefs
       .map((def) => getAchievementProgress(currentPlayer, def.id))

@@ -68,9 +68,23 @@ export function saveCharacterSnapshot(characterId, snapshot) {
   if (!characterId || !snapshot) return false;
   const saveFile = loadSaveFile();
   const entry = ensureCharacterEntry(saveFile, characterId);
+
+  const incomingLevel = snapshot.level ?? snapshot.levelState?.niveau ?? 1;
+  const existingLevel =
+    entry.snapshot?.level ?? entry.snapshot?.levelState?.niveau ?? 1;
+  if (entry.snapshot && existingLevel > incomingLevel && incomingLevel <= 1) {
+    // Avoid overwriting a high-level character with a default low-level snapshot.
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[save] blocked snapshot overwrite (level downgrade)",
+      { characterId, incomingLevel, existingLevel }
+    );
+    return false;
+  }
+
   entry.snapshot = snapshot;
   // Keep meta in sync (level/name/class)
-  const lvl = snapshot.level ?? snapshot.levelState?.niveau ?? 1;
+  const lvl = incomingLevel;
   entry.meta = {
     id: characterId,
     name: snapshot.name || entry.meta?.name || "Joueur",
