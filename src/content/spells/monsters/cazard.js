@@ -11,6 +11,9 @@ export default {
     damageMin: 8,
     damageMax: 12,
     maxCastsPerTurn: 2,
+    effects: [
+      { type: "damage", element: "agilite", min: 8, max: 12 },
+    ],
     description: "Un coup de griffes rapide au corps a corps.",
   },
   projectile_epineux: {
@@ -25,6 +28,9 @@ export default {
     damageMin: 10,
     damageMax: 14,
     cooldownTurns: 2,
+    effects: [
+      { type: "damage", element: "agilite", min: 10, max: 14 },
+    ],
     description: "Lance un projectile a moyenne portee (1-4 PO).",
   },
 };

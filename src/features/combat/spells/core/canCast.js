@@ -3,8 +3,8 @@ import {
   isTileInRange,
   getCasterOriginTile,
   hasLineOfSight,
-} from "./util.js";
-import { isTileOccupiedByMonster } from "../../../features/monsters/ai/aiUtils.js";
+} from "../utils/util.js";
+import { isTileOccupiedByMonster } from "../../../../features/monsters/ai/aiUtils.js";
 
 // ---------- Conditions de lancement ----------
 

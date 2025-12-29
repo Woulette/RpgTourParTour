@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 10,
     damageMax: 12,
+    effects: [
+      { type: "damage", element: "terre", min: 10, max: 12 },
+    ],
     maxCastsPerTurn: 2,
     description: "Morsure puissante au corps a corps.",
   },

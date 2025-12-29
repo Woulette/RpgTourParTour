@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 14,
     damageMax: 18,
+    effects: [
+      { type: "damage", element: "terre", min: 14, max: 18 },
+    ],
     maxCastsPerTurn: 2,
     description: "Fissure de terre au corps a corps.",
   },
@@ -22,6 +25,9 @@ export default {
     lineOfSight: false,
     zone: "cell",
     cooldownTurns: 5,
+    effects: [
+      { type: "summonMonster", monsterId: "skelbone" },
+    ],
     summonMonster: { monsterId: "skelbone" },
     description: "Invoque un Skelbone a proximite.",
   },

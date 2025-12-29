@@ -9,6 +9,9 @@ export default {
     zone: "cell",
     cooldownTurns: 5,
     maxCastsPerTurn: 1,
+    effects: [
+      { type: "areaBuff", useSpellAreaBuff: true },
+    ],
     areaBuff: {
       radius: 2,
       effects: [
@@ -48,6 +51,9 @@ export default {
     element: "feu",
     damageMin: 14,
     damageMax: 18,
+    effects: [
+      { type: "damage", element: "feu", min: 14, max: 18 },
+    ],
     description: "Frappe feu a moyenne portee.",
   },
 };

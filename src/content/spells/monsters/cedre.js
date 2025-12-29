@@ -9,6 +9,9 @@
     zone: "cell",
     cooldownTurns: 3,
     maxCastsPerTurn: 2,
+    effects: [
+      { type: "areaBuff", useSpellAreaBuff: true },
+    ],
     areaBuff: {
       radius: 2,
       effects: [
@@ -44,6 +47,10 @@
     damageMax: 11,
     pushbackDistance: 1,
     maxCastsPerTurn: 2,
+    effects: [
+      { type: "damage", element: "terre", min: 9, max: 11 },
+      { type: "push", distance: 1 },
+    ],
     description: "Repousse la cible d'une case au corps a corps.",
   },
 };

@@ -4,7 +4,7 @@ import {
   canCastSpellOnTile,
   isSpellInRangeFromPosition,
 } from "../spells/index.js";
-import { hasLineOfSight } from "../spells/util.js";
+import { hasLineOfSight } from "../spells/utils/util.js";
 import { showFloatingTextOverEntity } from "../runtime/floatingText.js";
 import {
   moveMonsterAlongPath,

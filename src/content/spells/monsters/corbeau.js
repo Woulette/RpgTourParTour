@@ -10,6 +10,9 @@ export default {
     element: "agilite",
     damageMin: 5,
     damageMax: 9,
+    effects: [
+      { type: "damage", element: "agilite", min: 5, max: 9 },
+    ],
     description: "Un coup de bec rapide au corps a corps.",
   },
   bec_de_zephyr: {
@@ -23,6 +26,9 @@ export default {
     element: "air",
     damageMin: 5,
     damageMax: 9,
+    effects: [
+      { type: "damage", element: "air", min: 5, max: 9 },
+    ],
     description: "Un bec rapide porté par le vent.",
   },
 };

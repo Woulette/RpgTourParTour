@@ -8,9 +8,9 @@ import { runMonsterTurn } from "../../../features/monsters/ai/ai.js";
 import { runSummonTurn } from "../summons/turn.js";
 import { getAliveSummon, getAliveSummons } from "../summons/summon.js";
 import { monsters as monsterDefs } from "../../../content/monsters/index.js";
-import { getActiveSpell } from "../spells/activeSpell.js";
-import { tryCastActiveSpellAtTile } from "../spells/cast.js";
-import { updateSpellRangePreview, clearSpellRangePreview } from "../spells/preview.js";
+import { getActiveSpell } from "../spells/core/activeSpell.js";
+import { tryCastActiveSpellAtTile } from "../spells/core/cast.js";
+import { updateSpellRangePreview, clearSpellRangePreview } from "../spells/core/preview.js";
 import { initDomCombatChallenge } from "./domCombatChallenge.js";
 
 export function initDomCombat(scene) {

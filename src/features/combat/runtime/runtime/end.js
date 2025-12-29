@@ -7,7 +7,7 @@ import { addChatMessage } from "../../../../chat/chat.js";
 import { items } from "../../../inventory/data/itemsConfig.js";
 import { addXpToPlayer } from "../../../../entities/player.js";
 import { clearAllCombatAllies, clearAllSummons } from "../../summons/summon.js";
-import { clearActiveSpell } from "../../spells/activeSpell.js";
+import { clearActiveSpell } from "../../spells/core/activeSpell.js";
 import { queueMonsterRespawn } from "../../../../features/monsters/runtime/respawnState.js";
 import {
   advanceQuestStage,

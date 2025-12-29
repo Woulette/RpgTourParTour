@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 22,
     damageMax: 28,
+    effects: [
+      { type: "damage", element: "terre", min: 22, max: 28 },
+    ],
     maxCastsPerTurn: 2,
     description: "Coup de melee puissant.",
   },
@@ -24,6 +27,9 @@ export default {
     element: "feu",
     damageMin: 16,
     damageMax: 20,
+    effects: [
+      { type: "damage", element: "feu", min: 16, max: 20 },
+    ],
     maxCastsPerTurn: 1,
     description: "Attaque sombre a distance.",
   },

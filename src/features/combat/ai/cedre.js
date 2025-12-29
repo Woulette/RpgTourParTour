@@ -8,7 +8,7 @@ import {
 } from "../../../features/monsters/ai/aiUtils.js";
 import { getAliveCombatMonsters, isTileOccupiedByMonster } from "../../../features/monsters/ai/aiUtils.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
-import { isTileAvailableForSpell } from "../spells/util.js";
+import { isTileAvailableForSpell } from "../spells/utils/util.js";
 
 const POST_MOVE_DELAY_MS = 250;
 const POST_ATTACK_DELAY_MS = 300;

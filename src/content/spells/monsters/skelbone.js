@@ -10,6 +10,9 @@ export default {
     element: "air",
     damageMin: 10,
     damageMax: 14,
+    effects: [
+      { type: "damage", element: "air", min: 10, max: 14 },
+    ],
     maxCastsPerTurn: 1,
     description: "Attaque a moyenne portee.",
   },

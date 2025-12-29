@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 16,
     damageMax: 20,
+    effects: [
+      { type: "damage", element: "terre", min: 16, max: 20 },
+    ],
     maxCastsPerTurn: 1,
     cooldownTurns: 2,
     description: "Frappe lourde au corps a corps.",
@@ -25,6 +28,9 @@ export default {
     element: "terre",
     damageMin: 11,
     damageMax: 14,
+    effects: [
+      { type: "damage", element: "terre", min: 11, max: 14 },
+    ],
     maxCastsPerTurn: 2,
     description: "Attaque rapide au corps a corps.",
   },

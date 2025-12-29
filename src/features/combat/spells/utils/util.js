@@ -1,9 +1,9 @@
 // Helpers "briques" utilisees par le spell system
 
 // Distance en "cases" (Manhattan) pour la portee.
-import { isTileBlocked } from "../../../collision/collisionGrid.js";
-import { getAliveCombatMonsters } from "../../../features/monsters/ai/aiUtils.js";
-import { getAliveCombatAllies } from "../summons/summon.js";
+import { isTileBlocked } from "../../../../collision/collisionGrid.js";
+import { getAliveCombatMonsters } from "../../../../features/monsters/ai/aiUtils.js";
+import { getAliveCombatAllies } from "../../summons/summon.js";
 
 function getAliveCombatSummons(scene) {
   const list =

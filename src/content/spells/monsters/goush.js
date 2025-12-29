@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 8,
     damageMax: 12,
+    effects: [
+      { type: "damage", element: "terre", min: 8, max: 12 },
+    ],
     maxCastsPerTurn: 1,
     description: "Une morsure brutale au corps a corps.",
   },
@@ -26,6 +29,9 @@ export default {
     damageMin: 0,
     damageMax: 0,
     cooldownTurns: 3,
+    effects: [
+      { type: "status", useSpellStatus: true },
+    ],
     statusEffect: {
       id: "bave_puante",
       type: "poison",

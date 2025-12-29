@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 5,
     damageMax: 9,
+    effects: [
+      { type: "damage", element: "terre", min: 5, max: 9 },
+    ],
     description: "Un coup de bec lourd, chargé de terre.",
   },
 };

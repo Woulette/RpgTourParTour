@@ -12,6 +12,9 @@ export default {
     damageMax: 14,
     castPattern: "line4",
     maxCastsPerTurn: 2,
+    effects: [
+      { type: "damage", element: "feu", min: 10, max: 14 },
+    ],
     description: "Un eclat en ligne, a moyenne portee.",
   },
   rugissement: {
@@ -24,6 +27,9 @@ export default {
     zone: "cell",
     cooldownTurns: 3,
     maxCastsPerTurn: 1,
+    effects: [
+      { type: "areaBuff", useSpellAreaBuff: true },
+    ],
     areaBuff: {
       radius: 2,
       effects: [

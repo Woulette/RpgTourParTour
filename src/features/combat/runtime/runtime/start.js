@@ -1,5 +1,5 @@
 import { createCombatState, buildTurnOrder } from "../state.js";
-import { clearActiveSpell } from "../../spells/activeSpell.js";
+import { clearActiveSpell } from "../../spells/core/activeSpell.js";
 import { resetEryonChargeState } from "../../eryon/charges.js";
 import { spawnCombatAlly } from "../../summons/summon.js";
 import {

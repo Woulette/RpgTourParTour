@@ -11,6 +11,9 @@ export default {
     damageOnHit: false,
     damageMin: 0,
     damageMax: 0,
+    effects: [
+      { type: "pull", toMelee: true },
+    ],
     pullTargetToMeleeOnHit: true,
     description: "Attire la cible en ligne vers le gardien (1-5 PO).",
   },
@@ -25,6 +28,9 @@ export default {
     element: "terre",
     damageMin: 12,
     damageMax: 15,
+    effects: [
+      { type: "damage", element: "terre", min: 12, max: 15 },
+    ],
     maxCastsPerTurn: 2,
     description: "Frappe terre a moyenne portee.",
   },

@@ -1,5 +1,5 @@
 import { monsterSpells } from "../../../content/spells/monsters/index.js";
-import { computeSpellDamage } from "../spells/damage.js";
+import { computeSpellDamage } from "../spells/utils/damage.js";
 import { showFloatingTextOverEntity } from "../runtime/floatingText.js";
 import { delay, moveMonsterAlongPath, findPathToReachAdjacentToTarget } from "../../../features/monsters/ai/aiUtils.js";
 import { getAliveCombatMonsters } from "../../../features/monsters/ai/aiUtils.js";

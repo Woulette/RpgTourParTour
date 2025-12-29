@@ -10,6 +10,9 @@ export default {
     element: "eau",
     damageMin: 5,
     damageMax: 9,
+    effects: [
+      { type: "damage", element: "eau", min: 5, max: 9 },
+    ],
     description: "Un coup de bec fluide comme l'eau.",
   },
 };

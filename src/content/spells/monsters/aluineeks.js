@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 12,
     damageMax: 15,
+    effects: [
+      { type: "damage", element: "terre", min: 12, max: 15 },
+    ],
     description: "Fissure de terre en ligne (1-2 cases).",
   },
 };

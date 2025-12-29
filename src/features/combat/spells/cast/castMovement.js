@@ -2,7 +2,7 @@ import { blockTile, isTileBlocked, unblockTile } from "../../../../collision/col
 import { isTileOccupiedByMonster } from "../../../monsters/ai/aiUtils.js";
 import { endCombat } from "../../runtime/runtime.js";
 import { showFloatingTextOverEntity } from "../../runtime/floatingText.js";
-import { isTileAvailableForSpell } from "../util.js";
+import { isTileAvailableForSpell } from "../utils/util.js";
 import { getEntityTile } from "./castPosition.js";
 
 function isPlayerAtTile(scene, map, groundLayer, tileX, tileY) {

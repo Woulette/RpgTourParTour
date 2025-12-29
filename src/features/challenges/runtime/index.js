@@ -1,6 +1,6 @@
 import { combatChallenges } from "../data/defs.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
-import { getCasterOriginTile } from "../../combat/spells/util.js";
+import { getCasterOriginTile } from "../../combat/spells/utils/util.js";
 import { getAliveCombatMonsters } from "../../monsters/ai/aiUtils.js";
 
 function clamp01(n) {

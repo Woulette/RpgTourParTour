@@ -1,6 +1,6 @@
 import { addChatMessage } from "../../../../chat/chat.js";
 import { showFloatingTextOverEntity } from "../../runtime/floatingText.js";
-import { computeSpellDamage } from "../damage.js";
+import { computeSpellDamage } from "../utils/damage.js";
 import {
   applyEryonElementAfterCast,
   convertEryonChargesToPuissance,

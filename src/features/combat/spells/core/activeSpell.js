@@ -1,5 +1,5 @@
-import { spells } from "../../../config/spells.js";
-import { emit as emitStoreEvent } from "../../../state/store.js";
+import { spells } from "../../../../config/spells.js";
+import { emit as emitStoreEvent } from "../../../../state/store.js";
 
 // ---------- Gestion du sort actif (joueur) ----------
 

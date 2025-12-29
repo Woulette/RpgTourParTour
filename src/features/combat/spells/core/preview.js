@@ -4,7 +4,7 @@ import {
   getCasterOriginTile,
   hasLineOfSight,
   isTileTargetableForSpell,
-} from "./util.js";
+} from "../utils/util.js";
 
 // ---------- Prévisualisation de portée (cases bleues) ----------
 
@@ -179,7 +179,10 @@ export function updateSpellRangePreview(
       ];
 
       // Case ciblée discrète (remplie), sans masquer les autres previews (dégâts, etc.).
-      const hasZonePreview = !!spell.effectPattern;
+      const effectPattern = Array.isArray(spell.effects)
+        ? spell.effects.find((eff) => eff && eff.type === "patternDamage")?.pattern
+        : null;
+      const hasZonePreview = !!effectPattern;
 
       // Sorts mono-cible : on garde la case rouge discrète pour montrer exactement la cible.
       // Sorts de zone : on n'affiche pas la case rouge (évite la double prévisu).
@@ -195,7 +198,7 @@ export function updateSpellRangePreview(
       // ---------- Prévisu de zone d'effet (si applicable) ----------
       const computeEffectTiles = () => {
         const tiles = [];
-        const pattern = spell.effectPattern;
+        const pattern = effectPattern;
         if (!pattern) return tiles;
 
         if (pattern === "front_cross") {
@@ -216,16 +219,6 @@ export function updateSpellRangePreview(
           tiles.push({ x: tx - 1, y: ty });
           tiles.push({ x: tx, y: ty + 1 });
           tiles.push({ x: tx, y: ty - 1 });
-          return tiles;
-        }
-
-        if (pattern === "line_forward") {
-          const dx = tx === originX ? 0 : Math.sign(tx - originX);
-          const dy = ty === originY ? 0 : Math.sign(ty - originY);
-          const length = spell.effectLength ?? 4;
-          for (let i = 1; i <= length; i += 1) {
-            tiles.push({ x: originX + dx * i, y: originY + dy * i });
-          }
           return tiles;
         }
 
