@@ -11,596 +11,27 @@ import { canCastSpellAtTile } from "./canCast.js";
 import { computeSpellDamage } from "./damage.js";
 import { clearSpellRangePreview } from "./preview.js";
 import { isTileAvailableForSpell, getCasterOriginTile } from "./util.js";
+import { playSpellAnimation } from "./cast/castAnimations.js";
+import {
+  applyAreaBuffToAllies,
+  applyAreaBuffToMonsters,
+  applyShieldToDamage,
+  showShieldAbsorbText,
+  addShieldAbsorbChat,
+} from "./cast/castBuffs.js";
+import { applyCasterFacing, getEntityTile } from "./cast/castPosition.js";
+import { tryPullEntity, tryPushEntity } from "./cast/castMovement.js";
+import { applyEryonAfterCast, computeDamageForSpell } from "./cast/castEryon.js";
 import { canApplyCapture, startCaptureAttempt } from "../summons/capture.js";
 import {
   getAliveSummon,
   spawnSummonFromCaptured,
   spawnSummonMonster,
   findSummonSpawnTile,
+  findAliveCombatAllyAtTile,
+  findAliveSummonAtTile,
 } from "../summons/summon.js";
 import { registerNoCastMeleeViolation } from "../../challenges/runtime/index.js";
-import {
-  applyEryonElementAfterCast,
-  convertEryonChargesToPuissance,
-  consumeEryonCharges,
-  getEryonChargeState,
-} from "../eryon/charges.js";
-
-function playSpellAnimation(scene, spellId, fromX, fromY, toX, toY) {
-  if (!scene || !spellId) return;
-
-  if (spellId === "punch_furtif") {
-    const atlasKey = "spell_punch_furtif_atlas";
-    const animKey = "spell_punch_furtif_anim";
-    if (!scene.textures?.exists?.(atlasKey) || !scene.anims?.exists?.(animKey)) return;
-
-    const fx = scene.add.sprite(toX, toY, atlasKey);
-    fx.setOrigin(0.5, 0.75);
-    fx.setDepth(toY + 5);
-    fx.play(animKey);
-    fx.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => fx.destroy());
-  }
-
-  if (spellId === "recharge_flux") {
-    const atlasKey = "spell_recharge_flux_atlas";
-    const animKey = "spell_recharge_flux_anim";
-    if (!scene.textures?.exists?.(atlasKey) || !scene.anims?.exists?.(animKey)) return;
-
-    const fx = scene.add.sprite(fromX, fromY, atlasKey);
-    fx.setOrigin(0.5, 0.5);
-    fx.setDepth(Math.max(fromY, toY) + 5);
-    fx.play(animKey);
-
-    // Sur soi : pas de projectile, juste un flash.
-    const dist = Phaser.Math.Distance.Between(fromX, fromY, toX, toY);
-    if (dist < 6) {
-      scene.time.delayedCall(260, () => {
-        if (fx?.destroy) fx.destroy();
-      });
-      return;
-    }
-
-    const duration = Math.max(180, Math.min(650, Math.round(dist * 1.2)));
-
-    scene.tweens.add({
-      targets: fx,
-      x: toX,
-      y: toY,
-      duration,
-      ease: "Linear",
-      onComplete: () => {
-        if (fx?.destroy) fx.destroy();
-      },
-    });
-
-    // Sécurité : si quelque chose empêche le tween/anim de se terminer.
-    scene.time.delayedCall(2000, () => {
-      if (fx && fx.active && fx.destroy) fx.destroy();
-    });
-  }
-}
-
-function isEryonCaster(caster) {
-  const id = caster?.classId;
-  return id === "eryon" || id === "assassin";
-}
-
-function applyStatusEffectToEntity(entity, effect, caster) {
-  if (!entity || !effect) return;
-  const turns =
-    typeof effect.turns === "number"
-      ? effect.turns
-      : typeof effect.turnsLeft === "number"
-        ? effect.turnsLeft
-        : 0;
-  const next = {
-    id: effect.id || effect.type || "buff",
-    type: effect.type || "buff",
-    label: effect.label || effect.type || "Buff",
-    turnsLeft: Math.max(0, turns),
-    amount: typeof effect.amount === "number" ? effect.amount : 0,
-    sourceName: caster?.displayName || caster?.label || caster?.monsterId || "Monstre",
-  };
-
-  entity.statusEffects = Array.isArray(entity.statusEffects) ? entity.statusEffects : [];
-  const idx = entity.statusEffects.findIndex((e) => e && e.id === next.id);
-  if (idx >= 0) entity.statusEffects[idx] = next;
-  else entity.statusEffects.push(next);
-}
-
-function applyShieldToDamage(entity, damage) {
-  if (!entity || !Array.isArray(entity.statusEffects)) {
-    return { damage, absorbed: 0 };
-  }
-  let remaining = Math.max(0, damage);
-  let absorbed = 0;
-  let touched = false;
-
-  entity.statusEffects.forEach((effect) => {
-    if (!effect || effect.type !== "shield") return;
-    if ((effect.turnsLeft ?? 0) <= 0) return;
-    if (remaining <= 0) return;
-    const amount = typeof effect.amount === "number" ? effect.amount : 0;
-    if (amount <= 0) return;
-    const used = Math.min(amount, remaining);
-    effect.amount = amount - used;
-    remaining -= used;
-    absorbed += used;
-    touched = true;
-    if (effect.amount <= 0) {
-      effect.turnsLeft = 0;
-    }
-  });
-
-  if (touched) {
-    entity.statusEffects = entity.statusEffects.filter(
-      (effect) =>
-        effect &&
-        (effect.type !== "shield" ||
-          ((effect.turnsLeft ?? 0) > 0 && (effect.amount ?? 0) > 0))
-    );
-  }
-
-  return { damage: remaining, absorbed };
-}
-
-function getEntityTile(entity, map, groundLayer) {
-  const tx =
-    typeof entity?.tileX === "number"
-      ? entity.tileX
-      : typeof entity?.currentTileX === "number"
-        ? entity.currentTileX
-        : null;
-  const ty =
-    typeof entity?.tileY === "number"
-      ? entity.tileY
-      : typeof entity?.currentTileY === "number"
-        ? entity.currentTileY
-        : null;
-  if (typeof tx === "number" && typeof ty === "number") {
-    return { x: tx, y: ty };
-  }
-  if (!map || !groundLayer || typeof map.worldToTileXY !== "function") return null;
-  const t = map.worldToTileXY(entity.x, entity.y, true, undefined, undefined, groundLayer);
-  return t ? { x: t.x, y: t.y } : null;
-}
-
-function getDirectionName(dx, dy) {
-  const absDx = Math.abs(dx);
-  const absDy = Math.abs(dy);
-
-  if (absDx < 1e-3 && absDy < 1e-3) {
-    return null;
-  }
-
-  if (dx >= 0 && dy < 0) return "north-east";
-  if (dx < 0 && dy < 0) return "north-west";
-  if (dx >= 0 && dy >= 0) return "south-east";
-  return "south-west";
-}
-
-function resolveMonsterFacing(dx, dy) {
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    return dx > 0 ? "east" : "west";
-  }
-  return dy > 0 ? "south" : "north";
-}
-
-function applyCasterFacing(scene, caster, originTile, targetTile, isPlayerCaster, map, groundLayer) {
-  if (!scene || !caster || !originTile || !targetTile || !map || !groundLayer) return;
-  const originWorld = map.tileToWorldXY(
-    originTile.x,
-    originTile.y,
-    undefined,
-    undefined,
-    groundLayer
-  );
-  const targetWorld = map.tileToWorldXY(
-    targetTile.x,
-    targetTile.y,
-    undefined,
-    undefined,
-    groundLayer
-  );
-  if (!originWorld || !targetWorld) return;
-
-  const originX = originWorld.x + map.tileWidth / 2;
-  const originY = originWorld.y + map.tileHeight / 2;
-  const targetX = targetWorld.x + map.tileWidth / 2;
-  const targetY = targetWorld.y + map.tileHeight / 2;
-  const dx = targetX - originX;
-  const dy = targetY - originY;
-  const dir = isPlayerCaster ? getDirectionName(dx, dy) : resolveMonsterFacing(dx, dy);
-  if (!dir) return;
-
-  caster.lastDirection = dir;
-  if (typeof caster?.setTexture !== "function") return;
-
-  const prefix = caster.animPrefix || caster.baseTextureKey;
-  if (!prefix) return;
-
-  const idleKey = `${prefix}_idle_${dir}`;
-  if (scene?.textures?.exists?.(idleKey)) {
-    caster.setTexture(idleKey);
-  }
-}
-
-function applyAreaBuffToMonsters(scene, map, groundLayer, caster, buffDef) {
-  const radius =
-    typeof buffDef?.radius === "number" && buffDef.radius >= 0
-      ? buffDef.radius
-      : 0;
-  const effects = Array.isArray(buffDef?.effects) ? buffDef.effects : [];
-  if (effects.length === 0) return;
-
-  const state = scene?.combatState;
-  const activeEntity =
-    state?.tour === "joueur" ? state.joueur : state?.monstre || null;
-
-  const origin = getEntityTile(caster, map, groundLayer);
-  if (!origin) return;
-
-  const list =
-    scene?.combatMonsters && Array.isArray(scene.combatMonsters)
-      ? scene.combatMonsters
-      : [caster];
-
-  const targets = list.filter((m) => {
-    if (!m || !m.stats) return false;
-    const hp =
-      typeof m.stats.hp === "number" ? m.stats.hp : m.stats.hpMax ?? 0;
-    if (hp <= 0) return false;
-    const pos = getEntityTile(m, map, groundLayer);
-    if (!pos) return false;
-    const dist = Math.abs(pos.x - origin.x) + Math.abs(pos.y - origin.y);
-    return dist <= radius;
-  });
-
-  effects.forEach((effect) => {
-    targets.forEach((target) => {
-      let resolved = effect;
-      if (effect?.type === "shield") {
-        const casterHpMax =
-          typeof caster?.stats?.hpMax === "number"
-            ? caster.stats.hpMax
-            : typeof caster?.stats?.hp === "number"
-              ? caster.stats.hp
-              : 0;
-        const percent =
-          typeof effect.percent === "number" ? effect.percent : null;
-        const amount =
-          typeof effect.amount === "number"
-            ? effect.amount
-            : percent !== null
-              ? Math.round(casterHpMax * percent)
-              : 0;
-        resolved = {
-          ...effect,
-          amount,
-          label: effect.label || `Bouclier ${amount}`,
-        };
-      }
-
-      applyStatusEffectToEntity(target, resolved, caster);
-      if (effect?.type === "pm" && target && activeEntity === target && state) {
-        const bonus = typeof effect.amount === "number" ? effect.amount : 0;
-        if (bonus !== 0) {
-          state.pmRestants = Math.max(0, (state.pmRestants ?? 0) + bonus);
-        }
-      }
-    });
-  });
-}
-
-function applyAreaBuffToAllies(scene, map, groundLayer, caster, buffDef) {
-  const radius =
-    typeof buffDef?.radius === "number" && buffDef.radius >= 0
-      ? buffDef.radius
-      : 0;
-  const effects = Array.isArray(buffDef?.effects) ? buffDef.effects : [];
-  if (effects.length === 0) return;
-
-  const state = scene?.combatState;
-  const activeEntity =
-    state?.tour === "joueur" ? state.joueur : state?.monstre || null;
-  const origin = getEntityTile(caster, map, groundLayer);
-  if (!origin) return;
-
-  const allies =
-    scene?.combatSummons && Array.isArray(scene.combatSummons)
-      ? scene.combatSummons
-      : [];
-  const targets = [
-    state?.joueur || null,
-    caster || null,
-    ...allies,
-  ].filter((m, index, list) => m && list.indexOf(m) === index);
-
-  const inRange = targets.filter((m) => {
-    if (!m || !m.stats) return false;
-    const hp = typeof m.stats.hp === "number" ? m.stats.hp : m.stats.hpMax ?? 0;
-    if (hp <= 0) return false;
-    const pos = getEntityTile(m, map, groundLayer);
-    if (!pos) return false;
-    const dist = Math.abs(pos.x - origin.x) + Math.abs(pos.y - origin.y);
-    return dist <= radius;
-  });
-
-  effects.forEach((effect) => {
-    inRange.forEach((target) => {
-      let resolved = effect;
-      if (effect?.type === "shield") {
-        const casterHpMax =
-          typeof caster?.stats?.hpMax === "number"
-            ? caster.stats.hpMax
-            : typeof caster?.stats?.hp === "number"
-              ? caster.stats.hp
-              : 0;
-        const percent =
-          typeof effect.percent === "number" ? effect.percent : null;
-        const amount =
-          typeof effect.amount === "number"
-            ? effect.amount
-            : percent !== null
-              ? Math.round(casterHpMax * percent)
-              : 0;
-        resolved = {
-          ...effect,
-          amount,
-          label: effect.label || `Bouclier ${amount}`,
-        };
-      }
-
-      applyStatusEffectToEntity(target, resolved, caster);
-      if (effect?.type === "pm" && target && activeEntity === target && state) {
-        const bonus = typeof effect.amount === "number" ? effect.amount : 0;
-        if (bonus !== 0) {
-          state.pmRestants = Math.max(0, (state.pmRestants ?? 0) + bonus);
-        }
-      }
-    });
-  });
-}
-
-function isPlayerAtTile(scene, map, groundLayer, tileX, tileY) {
-  const player = scene?.combatState?.joueur;
-  if (!player) return false;
-  const pos = getEntityTile(player, map, groundLayer);
-  if (!pos) return false;
-  return pos.x === tileX && pos.y === tileY;
-}
-
-function applyPushbackDamage(scene, caster, target, blockedCells) {
-  if (!scene || !target || !caster) return false;
-  const cells = Math.max(0, blockedCells | 0);
-  if (cells <= 0) return false;
-
-  const stats = target.stats || {};
-  const currentHp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
-  if (currentHp <= 0) return false;
-
-  const casterBonus =
-    typeof caster.stats?.pushDamage === "number" ? caster.stats.pushDamage : 0;
-  const damage = Math.max(0, cells * 9 + casterBonus);
-  if (damage <= 0) return false;
-
-  const newHp = Math.max(0, currentHp - damage);
-  stats.hp = newHp;
-
-  showFloatingTextOverEntity(scene, target, `-${damage}`, { color: "#ff4444" });
-
-  const isPlayerTarget = target === scene?.combatState?.joueur;
-  if (isPlayerTarget && typeof target.updateHudHp === "function") {
-    const hpMax = stats.hpMax ?? newHp;
-    target.updateHudHp(newHp, hpMax);
-  }
-  if (scene && typeof scene.updateCombatUi === "function") {
-    scene.updateCombatUi();
-  }
-
-  if (newHp > 0) return true;
-
-  if (isPlayerTarget) {
-    if (scene.combatState) {
-      scene.combatState.issue = "defaite";
-    }
-    endCombat(scene);
-    return true;
-  }
-
-  if (typeof target.onKilled === "function") {
-    target.onKilled(scene, caster);
-  }
-  if (typeof target.destroy === "function") {
-    target.destroy();
-  }
-  if (scene.monsters) {
-    scene.monsters = scene.monsters.filter((m) => m !== target);
-  }
-  if (scene.combatMonsters && Array.isArray(scene.combatMonsters)) {
-    scene.combatMonsters = scene.combatMonsters.filter((m) => m && m !== target);
-  }
-  return true;
-}
-
-function tryPushEntity(scene, map, groundLayer, caster, target, distance) {
-  if (!scene || !map || !caster || !target) return false;
-  const dist = typeof distance === "number" ? Math.max(0, distance) : 0;
-  if (dist <= 0) return false;
-
-  const origin = getEntityTile(caster, map, groundLayer);
-  const targetPos = getEntityTile(target, map, groundLayer);
-  if (!origin || !targetPos) return false;
-
-  const dx = targetPos.x - origin.x;
-  const dy = targetPos.y - origin.y;
-  const stepX = dx === 0 ? 0 : Math.sign(dx);
-  const stepY = dy === 0 ? 0 : Math.sign(dy);
-  if (stepX === 0 && stepY === 0) return false;
-
-  let moved = 0;
-  let last = null;
-  for (let i = 1; i <= dist; i += 1) {
-    const nx = targetPos.x + stepX * i;
-    const ny = targetPos.y + stepY * i;
-    if (!isTileAvailableForSpell(map, nx, ny)) break;
-    if (isTileBlocked(scene, nx, ny)) break;
-    if (isTileOccupiedByMonster(scene, nx, ny, target)) break;
-    if (
-      isPlayerAtTile(scene, map, groundLayer, nx, ny) &&
-      target !== scene?.combatState?.joueur
-    ) {
-      break;
-    }
-    last = { x: nx, y: ny };
-    moved = i;
-  }
-
-  const blockedCells = dist - moved;
-  if (blockedCells > 0) {
-    applyPushbackDamage(scene, caster, target, blockedCells);
-  }
-
-  if (!last) return blockedCells > 0;
-
-  const wp = map.tileToWorldXY(last.x, last.y, undefined, undefined, groundLayer);
-  const isPlayerTarget = target === scene?.combatState?.joueur;
-  const offX = !isPlayerTarget && typeof target.renderOffsetX === "number" ? target.renderOffsetX : 0;
-  const offY = !isPlayerTarget && typeof target.renderOffsetY === "number" ? target.renderOffsetY : 0;
-  target.x = wp.x + map.tileWidth / 2 + offX;
-  target.y = wp.y + (isPlayerTarget ? map.tileHeight / 2 : map.tileHeight) + offY;
-  if (typeof target.setDepth === "function") {
-    target.setDepth(target.y);
-  }
-  if (typeof target.tileX === "number") target.tileX = last.x;
-  if (typeof target.tileY === "number") target.tileY = last.y;
-  if (typeof target.currentTileX === "number") target.currentTileX = last.x;
-  if (typeof target.currentTileY === "number") target.currentTileY = last.y;
-  if (target === scene?.combatState?.joueur) {
-    target.currentTileX = last.x;
-    target.currentTileY = last.y;
-  }
-  return true;
-}
-
-function tryPullEntity(scene, map, groundLayer, caster, target, distance, toMelee = false) {
-  if (!scene || !map || !caster || !target) return false;
-  if (!distance && !toMelee) return false;
-
-  const origin = getEntityTile(caster, map, groundLayer);
-  const targetPos = getEntityTile(target, map, groundLayer);
-  if (!origin || !targetPos) return false;
-
-  const dx = origin.x - targetPos.x;
-  const dy = origin.y - targetPos.y;
-  const stepX = dx === 0 ? 0 : Math.sign(dx);
-  const stepY = dy === 0 ? 0 : Math.sign(dy);
-  if (stepX === 0 && stepY === 0) return false;
-
-  let dist = typeof distance === "number" ? Math.max(0, distance) : 0;
-  if (toMelee) {
-    const manhattan = Math.abs(dx) + Math.abs(dy);
-    dist = Math.max(dist, Math.max(0, manhattan - 1));
-  }
-  if (dist <= 0) return false;
-
-  let last = null;
-  for (let i = 1; i <= dist; i += 1) {
-    const nx = targetPos.x + stepX * i;
-    const ny = targetPos.y + stepY * i;
-    if (!isTileAvailableForSpell(map, nx, ny)) break;
-    if (isTileBlocked(scene, nx, ny)) break;
-    if (isTileOccupiedByMonster(scene, nx, ny, target)) break;
-    if (nx === origin.x && ny === origin.y) break;
-    if (
-      isPlayerAtTile(scene, map, groundLayer, nx, ny) &&
-      target !== scene?.combatState?.joueur
-    ) {
-      break;
-    }
-    last = { x: nx, y: ny };
-  }
-
-  if (!last) return false;
-
-  const wp = map.tileToWorldXY(last.x, last.y, undefined, undefined, groundLayer);
-  const isPlayerTarget = target === scene?.combatState?.joueur;
-  const offX = !isPlayerTarget && typeof target.renderOffsetX === "number" ? target.renderOffsetX : 0;
-  const offY = !isPlayerTarget && typeof target.renderOffsetY === "number" ? target.renderOffsetY : 0;
-  target.x = wp.x + map.tileWidth / 2 + offX;
-  target.y = wp.y + (isPlayerTarget ? map.tileHeight / 2 : map.tileHeight) + offY;
-  if (typeof target.setDepth === "function") {
-    target.setDepth(target.y);
-  }
-  if (typeof target.tileX === "number") target.tileX = last.x;
-  if (typeof target.tileY === "number") target.tileY = last.y;
-  if (typeof target.currentTileX === "number") target.currentTileX = last.x;
-  if (typeof target.currentTileY === "number") target.currentTileY = last.y;
-  if (target === scene?.combatState?.joueur) {
-    target.currentTileX = last.x;
-    target.currentTileY = last.y;
-  }
-  return true;
-}
-
-function applyEryonAfterCast(scene, caster, spell, { isSelfCast = false } = {}) {
-  if (!scene || !caster || !spell) return null;
-  if (!isEryonCaster(caster)) return null;
-  if (!spell.eryonCharges) return null;
-
-  // Si le sort est lancé sur soi : conversion des charges actuelles en Puissance.
-  // Aucun dégât, aucune génération de charge du sort lancé.
-  if (isSelfCast) {
-    const res = convertEryonChargesToPuissance(caster);
-    if (res?.bonusPuissance > 0 && scene.combatState?.joueur) {
-      addChatMessage(
-        {
-          kind: "combat",
-          channel: "global",
-          author: "Eryon",
-        text: `Conversion des charges : +${res.bonusPuissance} Puissance (3 tours).`,
-      },
-      { player: scene.combatState.joueur }
-    );
-      showFloatingTextOverEntity(scene, caster, `+${res.bonusPuissance} Puissance`, {
-        color: "#fbbf24",
-      });
-    }
-    if (scene && typeof scene.updateCombatUi === "function") {
-      scene.updateCombatUi();
-    }
-    return res || null;
-  }
-
-  const gain = spell.eryonCharges.chargeGain ?? 1;
-  const element = spell.eryonCharges.element ?? spell.element;
-  const res = applyEryonElementAfterCast(caster, element, gain);
-
-  if (scene && typeof scene.updateCombatUi === "function") {
-    scene.updateCombatUi();
-  }
-
-  return res || null;
-}
-
-function computeDamageForSpell(caster, spell) {
-  if (!spell || !caster) return { damage: 0, consumedCharges: 0 };
-
-  if (spell.id === "surcharge_instable" && isEryonCaster(caster)) {
-    const before = getEryonChargeState(caster);
-    const base = computeSpellDamage(caster, spell);
-
-    let consumed = 0;
-    if (before.element === "feu" && before.charges > 0) {
-      consumed = consumeEryonCharges(caster, "feu", 5);
-    }
-
-    const mult = 1 + 0.1 * (consumed || 0);
-    return { damage: Math.round(base * mult), consumedCharges: consumed };
-  }
-
-  return { damage: computeSpellDamage(caster, spell), consumedCharges: 0 };
-}
 
 export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundLayer) {
   if (!canCastSpellAtTile(scene, caster, spell, tileX, tileY, map)) {
@@ -658,6 +89,36 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
     if (!spawnTile) return false;
   }
 
+  const { x: originTileX, y: originTileY } = getCasterOriginTile(caster);
+  const isSelfCast = tileX === originTileX && tileY === originTileY;
+
+  if (!isPlayerCaster) {
+    const requiresDirectTarget =
+      !isSelfCast &&
+      !spell?.effectPattern &&
+      !spell?.areaBuff &&
+      !spell?.summon &&
+      !spell?.summonMonster &&
+      !spell?.capture;
+
+    if (requiresDirectTarget) {
+      if (isAllyCaster) {
+        const enemy = findMonsterAtTile(scene, tileX, tileY);
+        if (!enemy) return false;
+      } else {
+        const player = state.joueur;
+        const p = player ? getEntityTile(player, map, groundLayer) : null;
+        const isPlayerTile =
+          p && typeof p.x === "number" && typeof p.y === "number"
+            ? p.x === tileX && p.y === tileY
+            : false;
+        const allyAt = findAliveCombatAllyAtTile(scene, tileX, tileY);
+        const summonAt = findAliveSummonAtTile(scene, tileX, tileY);
+        if (!isPlayerTile && !allyAt && !summonAt) return false;
+      }
+    }
+  }
+
   const paCost = spell.paCost ?? 0;
   state.paRestants = Math.max(0, state.paRestants - paCost);
 
@@ -681,7 +142,6 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   const cx = worldPos.x + map.tileWidth / 2;
   const cy = worldPos.y + map.tileHeight / 2;
 
-  const { x: originTileX, y: originTileY } = getCasterOriginTile(caster);
   applyCasterFacing(
     scene,
     caster,
@@ -691,7 +151,6 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
     map,
     groundLayer
   );
-  const isSelfCast = tileX === originTileX && tileY === originTileY;
 
   // FX animation (si dispo)
   const fromX = caster?.x ?? cx;
@@ -823,6 +282,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
         const shielded = applyShieldToDamage(victim, damage);
         const finalDamage = Math.max(0, shielded.damage);
+        showShieldAbsorbText(scene, victim, shielded.absorbed);
         const currentHp =
           typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
         const newHp = Math.max(0, currentHp - finalDamage);
@@ -839,12 +299,13 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
               kind: "combat",
               channel: "global",
               author: "Combat",
-            text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
-            element: spell?.element ?? null,
-          },
-          { player: state.joueur }
-        );
-      }
+              text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
+              element: spell?.element ?? null,
+            },
+            { player: state.joueur }
+          );
+          addShieldAbsorbChat(scene, state, spellLabel, targetName, shielded.absorbed);
+        }
 
         if (finalDamage > 0) {
           showFloatingTextOverEntity(scene, victim, `-${finalDamage}`, { color: "#ff4444" });
@@ -913,6 +374,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
         const shielded = applyShieldToDamage(victim, damage);
         const finalDamage = Math.max(0, shielded.damage);
+        showShieldAbsorbText(scene, victim, shielded.absorbed);
         const currentHp =
           typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
         const newHp = Math.max(0, currentHp - finalDamage);
@@ -929,12 +391,13 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
               kind: "combat",
               channel: "global",
               author: "Combat",
-            text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
-            element: spell?.element ?? null,
-          },
-          { player: state.joueur }
-        );
-      }
+              text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
+              element: spell?.element ?? null,
+            },
+            { player: state.joueur }
+          );
+          addShieldAbsorbChat(scene, state, spellLabel, targetName, shielded.absorbed);
+        }
 
         if (finalDamage > 0) {
           showFloatingTextOverEntity(scene, victim, `-${finalDamage}`, { color: "#ff4444" });
@@ -1009,6 +472,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
         const shielded = applyShieldToDamage(victim, damage);
         const finalDamage = Math.max(0, shielded.damage);
+        showShieldAbsorbText(scene, victim, shielded.absorbed);
         const currentHp =
           typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
         const newHp = Math.max(0, currentHp - finalDamage);
@@ -1025,12 +489,13 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
               kind: "combat",
               channel: "global",
               author: "Combat",
-            text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
-            element: spell?.element ?? null,
-          },
-          { player: state.joueur }
-        );
-      }
+              text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
+              element: spell?.element ?? null,
+            },
+            { player: state.joueur }
+          );
+          addShieldAbsorbChat(scene, state, spellLabel, targetName, shielded.absorbed);
+        }
 
         if (finalDamage > 0) {
           showFloatingTextOverEntity(scene, victim, `-${finalDamage}`, { color: "#ff4444" });
@@ -1076,6 +541,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
       const shielded = applyShieldToDamage(target, damage);
       const finalDamage = Math.max(0, shielded.damage);
+      showShieldAbsorbText(scene, target, shielded.absorbed);
       const currentHp = typeof target.stats.hp === "number" ? target.stats.hp : target.stats.hpMax ?? 0;
       const newHp = Math.max(0, currentHp - finalDamage);
       target.stats.hp = newHp;
@@ -1096,6 +562,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
           },
           { player: state.joueur }
         );
+        addShieldAbsorbChat(scene, state, spellLabel, targetName, shielded.absorbed);
       }
 
       if (spell.pullCasterToMeleeOnHit && caster) {
@@ -1231,20 +698,6 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
     const player = state.joueur;
 
-    const findAliveSummonAtTile = (x, y) => {
-      const list =
-        scene?.combatSummons && Array.isArray(scene.combatSummons)
-          ? scene.combatSummons
-          : [];
-      return (
-        list.find((s) => {
-          if (!s || !s.stats) return false;
-          const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
-          return hp > 0 && s.tileX === x && s.tileY === y;
-        }) || null
-      );
-    };
-
     if (player && player.stats) {
       let pTx = player.currentTileX;
       let pTy = player.currentTileY;
@@ -1261,9 +714,10 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         }
       }
 
-      const summonAt = findAliveSummonAtTile(tileX, tileY);
+      const allyAt = findAliveCombatAllyAtTile(scene, tileX, tileY);
+      const summonAt = findAliveSummonAtTile(scene, tileX, tileY);
       const isPlayerTile = pTx === tileX && pTy === tileY;
-      const victim = isPlayerTile ? player : summonAt;
+      const victim = isPlayerTile ? player : allyAt || summonAt;
 
       if (victim && victim.stats) {
         const damageOnHit = spell.damageOnHit !== false;
@@ -1271,6 +725,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
         const shielded = applyShieldToDamage(victim, damage);
         const finalDamage = Math.max(0, shielded.damage);
+        showShieldAbsorbText(scene, victim, shielded.absorbed);
         const currentHp = typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
         const newHp = Math.max(0, currentHp - Math.max(0, finalDamage));
         if (damageOnHit && finalDamage > 0) {
@@ -1283,17 +738,26 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         if (state.enCours && state.joueur) {
           const spellLabel = spell?.label || spell?.id || "Sort";
           const casterName = caster?.displayName || caster?.label || caster?.monsterId || "Monstre";
+          const isAllyTarget = !isPlayerTile && victim?.isCombatAlly === true;
+          const targetName = isPlayerTile
+            ? "Vous"
+            : isAllyTarget
+              ? victim?.displayName || victim?.label || "Allie"
+              : "Invocation";
           if (damageOnHit && finalDamage > 0) {
             addChatMessage(
               {
                 kind: "combat",
                 channel: "global",
                 author: "Combat",
-                text: `${spellLabel} : ${isPlayerTile ? "vous subissez" : "l'invocation subit"} -${finalDamage} PV (par ${casterName})`,
+                text: `${spellLabel} : ${isPlayerTile ? "vous subissez" : isAllyTarget ? "l'allie subit" : "l'invocation subit"} -${finalDamage} PV (par ${casterName})`,
                 element: spell?.element ?? null,
               },
               { player: state.joueur }
             );
+          }
+          if (damageOnHit) {
+            addShieldAbsorbChat(scene, state, spellLabel, targetName, shielded.absorbed);
           }
         }
 
@@ -1397,3 +861,4 @@ export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groun
   if (!spell) return false;
   return castSpellAtTile(scene, player, spell, tileX, tileY, map, groundLayer);
 }
+

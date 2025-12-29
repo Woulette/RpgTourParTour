@@ -3,11 +3,13 @@ import { addChatMessage, getChatMessages } from "../../chat/chat.js";
 
 let chatInitialized = false;
 let unsubscribeChat = null;
+let unsubscribePlayerChanged = null;
+let keydownHandler = null;
 
 const CHAT_CHANNELS = [
   { id: "total", label: "TOTAL" },
-  { id: "global", label: "Général" },
-  { id: "quest", label: "Quêtes" },
+  { id: "global", label: "General" },
+  { id: "quest", label: "Quetes" },
   { id: "trade", label: "Commerce" },
   { id: "recruitment", label: "Recrutement" },
 ];
@@ -30,7 +32,7 @@ function normalizeChannel(msg) {
 function labelForChannel(channelId) {
   const entry = CHAT_CHANNELS.find((c) => c.id === channelId);
   if (entry) return entry.label;
-  return String(channelId || "Général");
+  return String(channelId || "General");
 }
 
 function shouldAutoScroll(container) {
@@ -68,6 +70,9 @@ function normalizeElement(rawElement) {
     normalized === "int"
   ) {
     return "feu";
+  }
+  if (normalized === "bouclier" || normalized === "shield") {
+    return "bouclier";
   }
 
   return null;
@@ -155,13 +160,16 @@ function renderMessage(container, msg, { activeChannel } = {}) {
 export function initDomChat(player) {
   if (chatInitialized) return;
 
+  let currentPlayer = player || null;
+  const getPlayer = () => currentPlayer;
+
   const panelEl = document.getElementById("hud-chat");
   const tabsEl = document.getElementById("hud-chat-tabs");
   const messagesEl = document.getElementById("chat-messages");
   const formEl = document.getElementById("chat-form");
   const inputEl = document.getElementById("chat-input");
 
-  if (!panelEl || !tabsEl || !messagesEl || !formEl || !inputEl || !player) {
+  if (!panelEl || !tabsEl || !messagesEl || !formEl || !inputEl) {
     return;
   }
 
@@ -185,7 +193,8 @@ export function initDomChat(player) {
     });
 
     messagesEl.innerHTML = "";
-    const existing = getChatMessages(player);
+    const playerRef = getPlayer();
+    const existing = playerRef ? getChatMessages(playerRef) : [];
     existing.forEach((msg) => {
       if (!passesFilter(msg)) return;
       renderMessage(messagesEl, msg, { activeChannel });
@@ -213,7 +222,7 @@ export function initDomChat(player) {
 
   setActiveChannel("total");
 
-  document.addEventListener("keydown", (event) => {
+  keydownHandler = (event) => {
     if (event.key === "Enter") {
       if (document.activeElement === inputEl) return;
       if (document.activeElement && document.activeElement.tagName === "INPUT") {
@@ -226,22 +235,26 @@ export function initDomChat(player) {
         inputEl.blur();
       }
     }
-  });
+  };
+  document.addEventListener("keydown", keydownHandler);
 
   formEl.addEventListener("submit", (event) => {
     event.preventDefault();
     const text = (inputEl.value || "").trim();
     if (!text) return;
 
+    const playerRef = getPlayer();
+    if (!playerRef) return;
     const sendChannel = activeChannel === "total" ? "global" : activeChannel;
     addChatMessage(
       { kind: "player", author: "Vous", text, channel: sendChannel },
-      { player }
+      { player: playerRef }
     );
     inputEl.value = "";
   });
 
   unsubscribeChat = onStoreEvent("chat:message", (msg) => {
+    if (!getPlayer()) return;
     if (!msg) return;
     if (messagesEl.querySelector(`[data-chat-id="${msg.id}"]`)) return;
     if (!passesFilter(msg)) return;
@@ -252,11 +265,24 @@ export function initDomChat(player) {
     }
   });
 
+  unsubscribePlayerChanged = onStoreEvent("player:changed", (nextPlayer) => {
+    currentPlayer = nextPlayer || null;
+    messagesEl.innerHTML = "";
+    if (!currentPlayer) return;
+    setActiveChannel(activeChannel);
+  });
+
   chatInitialized = true;
 }
 
 export function destroyDomChat() {
   if (unsubscribeChat) unsubscribeChat();
   unsubscribeChat = null;
+  if (unsubscribePlayerChanged) unsubscribePlayerChanged();
+  unsubscribePlayerChanged = null;
+  if (keydownHandler) {
+    document.removeEventListener("keydown", keydownHandler);
+    keydownHandler = null;
+  }
   chatInitialized = false;
 }

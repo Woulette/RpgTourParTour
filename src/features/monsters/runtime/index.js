@@ -94,7 +94,7 @@ function resolveMonsterIdleKey(scene, def) {
   return { idleKey: def?.textureKey || null, dir, prefix };
 }
 
-// Précharge toutes les textures de monstres déclarées dans la config
+// Precharge toutes les textures de monstres declarees dans la config
 export function preloadMonsters(scene) {
   Object.values(monsters).forEach((m) => {
     if (!m || !m.textureKey || !m.spritePath) return;
@@ -133,7 +133,7 @@ export function processPendingRespawnsForCurrentMap(scene) {
   const mapKey =
     scene.currentMapKey || (scene.currentMapDef && scene.currentMapDef.key);
   if (!mapKey) return;
-  // Pendant un combat ou la préparation, on ne fait pas respawn (évite des interactions UI/clics).
+  // Pendant un combat ou la preparation, on ne fait pas respawn (evite des interactions UI/clics).
   if (scene.combatState?.enCours || scene.prepState?.actif) return;
 
   const now = Date.now();
@@ -208,7 +208,7 @@ export function processPendingRespawnsForCurrentMap(scene) {
     monster.tileY = tileY;
     monster.spawnMapKey = mapKey;
 
-    // Respawn "template" : reroll la composition/tailles à chaque respawn.
+    // Respawn "template" : reroll la composition/tailles e chaque respawn.
     if (entry.respawnTemplate && typeof entry.respawnTemplate === "object") {
       const tpl = entry.respawnTemplate;
       const pool = Array.isArray(tpl.groupPool) ? tpl.groupPool.filter(Boolean) : [];
@@ -228,7 +228,7 @@ export function processPendingRespawnsForCurrentMap(scene) {
           Math.max(sizeMin, sizeMax)
         );
 
-        // Le leader affiché en monde doit correspondre au monstre créé.
+        // Le leader affiche en monde doit correspondre au monstre cree.
         if (leaderId !== monster.monsterId) {
           const leaderDef = monsters[leaderId];
           if (leaderDef) {
@@ -346,7 +346,7 @@ export function processPendingRespawnsForCurrentMap(scene) {
   setRespawnsForMap(scene, mapKey, remaining);
 }
 
-// Place les monstres déclarés dans la définition de la map (mapDef.monsterSpawns).
+// Place les monstres declares dans la definition de la map (mapDef.monsterSpawns).
 // Chaque map fournit sa propre liste : pas de partage implicite entre maps.
 export function spawnInitialMonsters(
   scene,
@@ -444,7 +444,7 @@ export function spawnInitialMonsters(
     const y = worldPos.y + map.tileHeight + offY;
 
     const monster = createMonster(scene, x, y, type);
-    // Taille de groupe aléatoire 1..4 pour le combat
+    // Taille de groupe aleatoire 1..4 pour le combat
     const sizeMin =
       typeof spawn.groupSizeMin === "number" && spawn.groupSizeMin > 0
         ? Math.round(spawn.groupSizeMin)
@@ -460,7 +460,7 @@ export function spawnInitialMonsters(
       Math.max(sizeMin, sizeMax)
     );
     monster.groupSize = Math.max(1, desiredGroupSize);
-    // Niveaux individuels aléatoires pour les membres du groupe
+    // Niveaux individuels aleatoires pour les membres du groupe
     if (Array.isArray(groupMonsterIdsFromCounts) && groupMonsterIdsFromCounts.length > 0) {
       // Shuffle for randomness, then force leader's id to match the displayed sprite.
       const shuffled = Phaser.Utils.Array.Shuffle(groupMonsterIdsFromCounts.slice());
@@ -479,7 +479,7 @@ export function spawnInitialMonsters(
       );
       groupMonsterIds[0] = type; // leader = sprite monde
 
-      // Optionnel : force un minimum de mixitÇ¸ si possible (au moins 2 types diffÇ¸rents).
+      // Optionnel : force un minimum de mixitAae si possible (au moins 2 types diffAaerents).
       if (spawn.forceMixedGroup === true && monster.groupSize > 1) {
         const hasDistinct = new Set(groupMonsterIds).size > 1;
         if (!hasDistinct && pool.length > 1) {
@@ -505,7 +505,7 @@ export function spawnInitialMonsters(
         forceMixedGroup: spawn.forceMixedGroup === true,
       };
     }
-    // Le leader hérite du premier niveau
+    // Le leader herite du premier niveau
     monster.level = monster.groupLevels[0];
     syncMonsterStatsToDisplayedLevel(monster);
     monster.groupLevelTotal = monster.groupLevels.reduce(
@@ -522,21 +522,32 @@ export function spawnInitialMonsters(
   });
 }
 
-// Cherche un monstre exactement sur une tuile donnée
+// Cherche un monstre exactement sur une tuile donnee
 export function findMonsterAtTile(scene, tileX, tileY) {
-  // En combat, on ne doit considérer que les monstres
-  // engagés dans le combat courant, jamais les monstres "monde".
+  // En combat, on ne doit considerer que les monstres
+  // engages dans le combat courant, jamais les monstres "monde".
   const list =
     (scene.combatMonsters && Array.isArray(scene.combatMonsters)
       ? scene.combatMonsters
       : scene.monsters || []);
   return (
     list.find(
-      (m) =>
-        typeof m.tileX === "number" &&
-        typeof m.tileY === "number" &&
-        m.tileX === tileX &&
-        m.tileY === tileY
+      (m) => {
+        if (!m) return false;
+        const mx =
+          typeof m.tileX === "number"
+            ? m.tileX
+            : typeof m.currentTileX === "number"
+              ? m.currentTileX
+              : null;
+        const my =
+          typeof m.tileY === "number"
+            ? m.tileY
+            : typeof m.currentTileY === "number"
+              ? m.currentTileY
+              : null;
+        return mx === tileX && my === tileY;
+      }
     ) || null
   );
 }
@@ -682,7 +693,7 @@ function findPathAvoidingBlocks(scene, map, start, target, maxNodes = 64) {
 
 function tweenAlongPath(scene, monster, map, groundLayer, steps, onComplete) {
   // Si le monstre ou sa scene ne sont plus valides (changement de map, destruction),
-  // on abandonne proprement pour éviter les erreurs.
+  // on abandonne proprement pour eviter les erreurs.
   if (!monster || !monster.scene || !monster.scene.tweens) {
     if (onComplete) onComplete();
     return;
@@ -734,7 +745,7 @@ function isTileOccupied(scene, selfMonster, tileX, tileY) {
       m.active &&
       typeof m.tileX === "number" &&
       typeof m.tileY === "number" &&
-      // prend en compte la tuile rÃ©servÃ©e pendant le dÃ©placement
+      // prend en compte la tuile reservee pendant le deplacement
       ((typeof m.targetTileX === "number" &&
         typeof m.targetTileY === "number" &&
         m.targetTileX === tileX &&

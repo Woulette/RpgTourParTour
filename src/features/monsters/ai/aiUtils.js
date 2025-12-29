@@ -20,7 +20,7 @@ export function delay(scene, ms, fn) {
   return null;
 }
 
-// Déplacement fluide case par case en chaînant les tweens.
+// Deplacement fluide case par case en chaenant les tweens.
 export function moveMonsterAlongPath(
   scene,
   monster,
@@ -150,6 +150,10 @@ export function moveMonsterAlongPath(
           blockTile(scene, next.x, next.y);
           monster._blockedTile = { x: next.x, y: next.y };
         }
+        if (typeof monster.setDepth === "function") {
+          const depthY = worldPos.y + map.tileHeight;
+          monster.setDepth(depthY);
+        }
         if (queue.length === 0) {
           stopMonsterMoveAnimation(monster);
         }
@@ -176,12 +180,16 @@ export function getAliveCombatMonsters(scene) {
   });
 }
 
-// True si une tuile est occupée par un autre monstre vivant.
+// True si une tuile est occupee par un autre monstre vivant.
 export function isTileOccupiedByMonster(scene, tileX, tileY, self) {
   const alive = getAliveCombatMonsters(scene);
   const summons =
     scene?.combatSummons && Array.isArray(scene.combatSummons)
       ? scene.combatSummons
+      : [];
+  const allies =
+    scene?.combatAllies && Array.isArray(scene.combatAllies)
+      ? scene.combatAllies
       : [];
   const player = scene?.combatState?.enCours ? scene.combatState.joueur : null;
   if (
@@ -202,13 +210,27 @@ export function isTileOccupiedByMonster(scene, tileX, tileY, self) {
     if (self && s === self) return false;
     const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
     if (hp <= 0) return false;
-    return s.tileX === tileX && s.tileY === tileY;
+    const sx =
+      typeof s.tileX === "number" ? s.tileX : typeof s.currentTileX === "number" ? s.currentTileX : null;
+    const sy =
+      typeof s.tileY === "number" ? s.tileY : typeof s.currentTileY === "number" ? s.currentTileY : null;
+    return sx === tileX && sy === tileY;
+  }) || allies.some((s) => {
+    if (!s || !s.stats) return false;
+    if (self && s === self) return false;
+    const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+    if (hp <= 0) return false;
+    const sx =
+      typeof s.tileX === "number" ? s.tileX : typeof s.currentTileX === "number" ? s.currentTileX : null;
+    const sy =
+      typeof s.tileY === "number" ? s.tileY : typeof s.currentTileY === "number" ? s.currentTileY : null;
+    return sx === tileX && sy === tileY;
   });
 }
 
 // Choisit la meilleure case voisine pour se rapprocher ou fuir une cible,
-// en partant d'une position donnée, en évitant les cases hors carte
-// et les alliés. Retourne { x, y } ou null si aucune case valide.
+// en partant d'une position donnee, en evitant les cases hors carte
+// et les allies. Retourne { x, y } ou null si aucune case valide.
 export function chooseStepTowardsTarget(
   scene,
   map,
@@ -235,11 +257,11 @@ export function chooseStepTowardsTarget(
     // On veut se rapprocher
     if (dirX !== 0) candidates.push({ sx: dirX, sy: 0 });
     if (dirY !== 0) candidates.push({ sx: 0, sy: dirY });
-    // Essais secondaires (permettre un léger contournement)
+    // Essais secondaires (permettre un leger contournement)
     if (dirX !== 0) candidates.push({ sx: -dirX, sy: 0 });
     if (dirY !== 0) candidates.push({ sx: 0, sy: -dirY });
   } else {
-    // Fuite : on s'éloigne
+    // Fuite : on s'eloigne
     if (dirX !== 0) candidates.push({ sx: -dirX, sy: 0 });
     if (dirY !== 0) candidates.push({ sx: 0, sy: -dirY });
     if (dirX !== 0) candidates.push({ sx: dirX, sy: 0 });
@@ -258,14 +280,14 @@ export function chooseStepTowardsTarget(
     // Hors de la carte
     if (nx < 0 || nx >= map.width || ny < 0 || ny >= map.height) continue;
 
-    // Case bloquante : collision ou allié
+    // Case bloquante : collision ou allie
     if (isTileBlocked(scene, nx, ny)) continue;
     if (isTileOccupiedByMonster(scene, nx, ny, monster)) continue;
 
     const d = Math.abs(targetX - nx) + Math.abs(targetY - ny);
 
     if (!fleeing) {
-      // On cherche une case qui ne nous éloigne pas plus qu'avant,
+      // On cherche une case qui ne nous eloigne pas plus qu'avant,
       // et qui rapproche le plus (distance minimale).
       if (d > currentDist) continue;
       if (d < bestDist) {
@@ -273,7 +295,7 @@ export function chooseStepTowardsTarget(
         best = { x: nx, y: ny };
       }
     } else {
-      // En fuite : on cherche à s'éloigner (distance maximale)
+      // En fuite : on cherche e s'eloigner (distance maximale)
       if (d > bestDist) {
         bestDist = d;
         best = { x: nx, y: ny };
@@ -284,10 +306,10 @@ export function chooseStepTowardsTarget(
   return best;
 }
 
-// Pathfinding gǸnǸrique (BFS) : cherche un chemin en 4 directions
-// depuis (fromX, fromY) vers une case adjacente �� la cible (targetX, targetY),
-// en Ǹvitant les cases hors carte et celles occupǸes par d'autres monstres.
-// Renvoie un tableau [{ x, y }, ...] reprǸsentant le chemin complet,
+// Pathfinding generique (BFS) : cherche un chemin en 4 directions
+// depuis (fromX, fromY) vers une case adjacente a la cible (targetX, targetY),
+// en evitant les cases hors carte et celles occupees par d'autres monstres.
+// Renvoie un tableau [{ x, y }, ...] representant le chemin complet,
 // ou null si aucune case de contact n'est atteignable.
 export function findPathToReachAdjacentToTarget(
   scene,
@@ -412,4 +434,3 @@ export function findPathToReachAdjacentToTarget(
   candidatePaths.sort((a, b) => b.score - a.score);
   return candidatePaths[0].path;
 }
-

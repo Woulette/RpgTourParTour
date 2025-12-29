@@ -4,6 +4,7 @@ import { createMonster } from "../../../entities/monster.js";
 import { createStats } from "../../../core/stats.js";
 import { blockTile, isTileBlocked, unblockTile } from "../../../collision/collisionGrid.js";
 import { getAliveCombatMonsters } from "../../../features/monsters/ai/aiUtils.js";
+import { createCalibratedWorldToTile } from "../../../features/maps/world/util.js";
 
 function getPlayerLevel(player) {
   return player?.levelState?.niveau ?? player?.level ?? 1;
@@ -87,7 +88,33 @@ function isTileOccupiedByPlayerOrSummon(scene, tileX, tileY) {
     scene?.combatSummons && Array.isArray(scene.combatSummons)
       ? scene.combatSummons
       : [];
-  return summons.some((s) => s && s.tileX === tileX && s.tileY === tileY && (s.stats?.hp ?? 0) > 0);
+  if (summons.some((s) => {
+    if (!s || !s.stats) return false;
+    const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+    if (hp <= 0) return false;
+    const sx =
+      typeof s.tileX === "number" ? s.tileX : typeof s.currentTileX === "number" ? s.currentTileX : null;
+    const sy =
+      typeof s.tileY === "number" ? s.tileY : typeof s.currentTileY === "number" ? s.currentTileY : null;
+    return sx === tileX && sy === tileY;
+  })) {
+    return true;
+  }
+
+  const allies =
+    scene?.combatAllies && Array.isArray(scene.combatAllies)
+      ? scene.combatAllies
+      : [];
+  return allies.some((s) => {
+    if (!s || !s.stats) return false;
+    const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+    if (hp <= 0) return false;
+    const sx =
+      typeof s.tileX === "number" ? s.tileX : typeof s.currentTileX === "number" ? s.currentTileX : null;
+    const sy =
+      typeof s.tileY === "number" ? s.tileY : typeof s.currentTileY === "number" ? s.currentTileY : null;
+    return sx === tileX && sy === tileY;
+  });
 }
 
 function isTileOccupiedByEnemyMonster(scene, tileX, tileY) {
@@ -144,10 +171,23 @@ export function getAliveSummons(scene, owner) {
       : [];
   const alive = list.filter((s) => {
     if (!s || s.owner !== owner || !s.stats) return false;
+    if (s.isCombatAlly) return false;
     const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
     return hp > 0;
   });
   return alive;
+}
+
+export function getAliveCombatAllies(scene) {
+  const list =
+    scene?.combatAllies && Array.isArray(scene.combatAllies)
+      ? scene.combatAllies
+      : [];
+  return list.filter((s) => {
+    if (!s || !s.stats) return false;
+    const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+    return hp > 0;
+  });
 }
 
 export function findAliveSummonAtTile(scene, tileX, tileY) {
@@ -159,7 +199,29 @@ export function findAliveSummonAtTile(scene, tileX, tileY) {
     list.find((s) => {
       if (!s || !s.stats) return false;
       const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
-      return hp > 0 && s.tileX === tileX && s.tileY === tileY;
+      const sx =
+        typeof s.tileX === "number" ? s.tileX : typeof s.currentTileX === "number" ? s.currentTileX : null;
+      const sy =
+        typeof s.tileY === "number" ? s.tileY : typeof s.currentTileY === "number" ? s.currentTileY : null;
+      return hp > 0 && sx === tileX && sy === tileY;
+    }) || null
+  );
+}
+
+export function findAliveCombatAllyAtTile(scene, tileX, tileY) {
+  const list =
+    scene?.combatAllies && Array.isArray(scene.combatAllies)
+      ? scene.combatAllies
+      : [];
+  return (
+    list.find((s) => {
+      if (!s || !s.stats) return false;
+      const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+      const sx =
+        typeof s.tileX === "number" ? s.tileX : typeof s.currentTileX === "number" ? s.currentTileX : null;
+      const sy =
+        typeof s.tileY === "number" ? s.tileY : typeof s.currentTileY === "number" ? s.currentTileY : null;
+      return hp > 0 && sx === tileX && sy === tileY;
     }) || null
   );
 }
@@ -232,7 +294,9 @@ export function spawnSummonFromCaptured(
     const ry = typeof render.originY === "number" ? render.originY : 1;
     summon.setOrigin(rx, ry);
   }
-  summon.setDepth(summon.y);
+  if (summon.setDepth) {
+    summon.setDepth(wp.y + map.tileHeight);
+  }
   if (scene.hudCamera) scene.hudCamera.ignore(summon);
 
   summon.tileX = spawnTile.x;
@@ -242,41 +306,7 @@ export function spawnSummonFromCaptured(
 
   // Survol direct sur le sprite (plus fiable que le calcul par tuile)
   // pour afficher la bulle + panneau cible.
-  if (typeof summon.setInteractive === "function") {
-    const w = (summon.displayWidth ?? summon.width ?? 48) * 1.35;
-    const h = (summon.displayHeight ?? summon.height ?? 48) * 1.35;
-    const ox = typeof summon.originX === "number" ? summon.originX : 0.5;
-    const oy = typeof summon.originY === "number" ? summon.originY : 1;
-    const rect = new Phaser.Geom.Rectangle(-w * ox, -h * oy, w, h);
-    summon.setInteractive(rect, Phaser.Geom.Rectangle.Contains);
-
-    summon.on("pointerover", (pointer) => {
-      const cs = scene?.combatState;
-      if (!cs || !cs.enCours) return;
-
-      if (typeof scene.showDamagePreview === "function") {
-        scene.showDamagePreview(summon);
-      }
-      if (typeof scene.showMonsterTooltip === "function") {
-        scene.showMonsterTooltip(summon);
-      }
-      if (typeof scene.showCombatTargetPanel === "function") {
-        scene.showCombatTargetPanel(summon);
-      }
-    });
-
-    summon.on("pointerout", () => {
-      if (typeof scene.clearDamagePreview === "function") {
-        scene.clearDamagePreview();
-      }
-      if (typeof scene.hideMonsterTooltip === "function") {
-        scene.hideMonsterTooltip();
-      }
-      if (typeof scene.hideCombatTargetPanel === "function") {
-        scene.hideCombatTargetPanel();
-      }
-    });
-  }
+  attachSummonHover(scene, summon);
 
   scene.combatSummons = scene.combatSummons || [];
   scene.combatSummons.push(summon);
@@ -336,17 +366,90 @@ export function spawnSummonMonster(
 
 function attachSummonHover(scene, summon) {
   if (typeof summon.setInteractive !== "function") return;
-  const w = (summon.displayWidth ?? summon.width ?? 48) * 1.35;
-  const h = (summon.displayHeight ?? summon.height ?? 48) * 1.35;
-  const ox = typeof summon.originX === "number" ? summon.originX : 0.5;
-  const oy = typeof summon.originY === "number" ? summon.originY : 1;
-  const rect = new Phaser.Geom.Rectangle(-w * ox, -h * oy, w, h);
-  summon.setInteractive(rect, Phaser.Geom.Rectangle.Contains);
+  summon.setInteractive({ useHandCursor: true, pixelPerfect: true, alphaTolerance: 1 });
 
-  summon.on("pointerover", () => {
+  const getCombatWorldToTile = () => {
+    const map = scene?.combatMap || scene?.map;
+    const layer = scene?.combatGroundLayer || scene?.groundLayer;
+    if (!map || !layer) return null;
+
+    const cacheKey = map.key || scene.currentMapKey || "default";
+    scene._summonWorldToTileCache = scene._summonWorldToTileCache || {};
+    if (!scene._summonWorldToTileCache[cacheKey]) {
+      scene._summonWorldToTileCache[cacheKey] = createCalibratedWorldToTile(map, layer);
+    }
+    return scene._summonWorldToTileCache[cacheKey];
+  };
+
+  const shouldGateHoverByTile = () =>
+    (scene?.combatState && scene.combatState.enCours) ||
+    (scene?.prepState && scene.prepState.actif);
+
+  const ensureHighlight = () => {
+    if (summon.hoverHighlight || !scene?.add) return;
+    const overlay = scene.add.sprite(summon.x, summon.y, summon.texture.key);
+    overlay.setOrigin(summon.originX, summon.originY);
+    if (summon.frame && overlay.setFrame) {
+      overlay.setFrame(summon.frame.name);
+    }
+    if (typeof summon.scaleX === "number" && typeof summon.scaleY === "number") {
+      overlay.setScale(summon.scaleX, summon.scaleY);
+    }
+    overlay.setBlendMode(Phaser.BlendModes.ADD);
+    overlay.setAlpha(0.6);
+    overlay.setDepth((summon.depth || 0) + 1);
+    if (scene.hudCamera) {
+      scene.hudCamera.ignore(overlay);
+    }
+    summon.hoverHighlight = overlay;
+  };
+
+  const clearHoverUi = () => {
+    if (summon.hoverHighlight) {
+      if (summon.hoverHighlight.destroy) {
+        summon.hoverHighlight.destroy();
+      }
+      summon.hoverHighlight = null;
+    }
+    if (typeof scene.clearDamagePreview === "function") {
+      scene.clearDamagePreview();
+    }
+    if (typeof scene.hideMonsterTooltip === "function") {
+      scene.hideMonsterTooltip();
+    }
+    if (typeof scene.hideCombatTargetPanel === "function") {
+      scene.hideCombatTargetPanel();
+    }
+  };
+
+  summon.on("pointerover", (pointer) => {
     const cs = scene?.combatState;
     if (!cs || !cs.enCours) return;
 
+    if (shouldGateHoverByTile()) {
+      const worldToTile = getCombatWorldToTile();
+      const t =
+        worldToTile && pointer ? worldToTile(pointer.worldX, pointer.worldY) : null;
+      const tx =
+        typeof summon.currentTileX === "number"
+          ? summon.currentTileX
+          : typeof summon.tileX === "number"
+            ? summon.tileX
+            : null;
+      const ty =
+        typeof summon.currentTileY === "number"
+          ? summon.currentTileY
+          : typeof summon.tileY === "number"
+            ? summon.tileY
+            : null;
+      if (!t || t.x !== tx || t.y !== ty) {
+        return;
+      }
+    }
+
+    ensureHighlight();
+    scene.__combatSpriteHoverLock = true;
+    scene.__combatSpriteHoverEntity = summon;
     if (typeof scene.showDamagePreview === "function") {
       scene.showDamagePreview(summon);
     }
@@ -358,16 +461,36 @@ function attachSummonHover(scene, summon) {
     }
   });
 
+  summon.on("pointermove", (pointer) => {
+    if (!shouldGateHoverByTile()) return;
+
+    const worldToTile = getCombatWorldToTile();
+    const t =
+      worldToTile && pointer ? worldToTile(pointer.worldX, pointer.worldY) : null;
+    const tx =
+      typeof summon.currentTileX === "number"
+        ? summon.currentTileX
+        : typeof summon.tileX === "number"
+          ? summon.tileX
+          : null;
+    const ty =
+      typeof summon.currentTileY === "number"
+        ? summon.currentTileY
+        : typeof summon.tileY === "number"
+          ? summon.tileY
+          : null;
+    if (t && t.x === tx && t.y === ty) {
+      summon.emit("pointerover", pointer);
+      return;
+    }
+
+    clearHoverUi();
+  });
+
   summon.on("pointerout", () => {
-    if (typeof scene.clearDamagePreview === "function") {
-      scene.clearDamagePreview();
-    }
-    if (typeof scene.hideMonsterTooltip === "function") {
-      scene.hideMonsterTooltip();
-    }
-    if (typeof scene.hideCombatTargetPanel === "function") {
-      scene.hideCombatTargetPanel();
-    }
+    scene.__combatSpriteHoverLock = false;
+    scene.__combatSpriteHoverEntity = null;
+    clearHoverUi();
   });
 }
 
@@ -410,8 +533,9 @@ export function spawnCombatAlly(
   });
 
   ally.monsterId = monsterId;
-  ally.isSummon = true;
+  ally.isSummon = false;
   ally.isCombatAlly = true;
+  ally.useDiagonalFacing = def.useDiagonalFacing === true;
   ally.owner = owner;
   ally.useMonsterAi = true;
   ally.spellIds = def.spells || [];
@@ -429,7 +553,30 @@ export function spawnCombatAlly(
   if (typeof render.scale === "number" && ally.setScale) {
     ally.setScale(render.scale);
   }
-  ally.setDepth(ally.y);
+  const animPrefix = def.animation?.prefix || def.id || def.textureKey;
+  const defaultDir = (() => {
+    const marker = "/rotations/";
+    if (def.spritePath && def.spritePath.includes(marker)) {
+      const file = def.spritePath.split(marker)[1] || "";
+      const dot = file.lastIndexOf(".");
+      if (dot > 0) return file.slice(0, dot);
+      if (file) return file;
+    }
+    return "south-west";
+  })();
+  const idleKey = `${animPrefix}_idle_${defaultDir}`;
+  ally.animPrefix = animPrefix;
+  ally.lastDirection = defaultDir;
+  ally.baseTextureKey =
+    scene?.textures?.exists && scene.textures.exists(idleKey)
+      ? idleKey
+      : def.textureKey;
+  if (ally.setTexture && ally.baseTextureKey) {
+    ally.setTexture(ally.baseTextureKey);
+  }
+  if (ally.setDepth) {
+    ally.setDepth(wp.y + map.tileHeight);
+  }
   if (scene.hudCamera) scene.hudCamera.ignore(ally);
 
   ally.tileX = spawnTile.x;
@@ -442,8 +589,8 @@ export function spawnCombatAlly(
 
   attachSummonHover(scene, ally);
 
-  scene.combatSummons = scene.combatSummons || [];
-  scene.combatSummons.push(ally);
+  scene.combatAllies = scene.combatAllies || [];
+  scene.combatAllies.push(ally);
 
   return ally;
 }
@@ -468,4 +615,22 @@ export function clearAllSummons(scene) {
     }
   });
   if (scene) scene.combatSummons = [];
+}
+
+export function clearAllCombatAllies(scene) {
+  const list =
+    scene?.combatAllies && Array.isArray(scene.combatAllies)
+      ? scene.combatAllies
+      : [];
+  list.forEach((s) => {
+    if (!s) return;
+    if (s.blocksMovement && s._blockedTile) {
+      unblockTile(scene, s._blockedTile.x, s._blockedTile.y);
+      s._blockedTile = null;
+    }
+    if (typeof s.destroy === "function") {
+      s.destroy();
+    }
+  });
+  if (scene) scene.combatAllies = [];
 }

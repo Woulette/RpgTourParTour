@@ -38,6 +38,7 @@ export function loadMapLikeMain(scene, mapDef, options = {}) {
     scene.player.y = startY;
     scene.player.currentTileX = safeTileX;
     scene.player.currentTileY = safeTileY;
+    scene.player.currentMapKey = scene.currentMapKey || mapDef.key || null;
     if (typeof scene.player.setDepth === "function") {
       scene.player.setDepth(startY);
     }

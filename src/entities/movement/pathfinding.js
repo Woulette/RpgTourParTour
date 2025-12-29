@@ -2,8 +2,8 @@
 
 import { isTileBlocked } from "../../collision/collisionGrid.js";
 
-// Chemin simple "en ligne" (ancienne logique), utilis��� hors combat
-// ou comme fallback. Ne g���re pas les obstacles.
+// Chemin simple "en ligne" (ancienne logique), utilise hors combat
+// ou comme fallback. Ne gere pas les obstacles.
 export function calculatePath(
   startX,
   startY,
@@ -13,7 +13,7 @@ export function calculatePath(
 ) {
   const path = [];
 
-  // S���curit��� : si les coordonn���es ne sont pas valides, on renvoie un chemin vide.
+// Securite : si les coordonnees ne sont pas valides, on renvoie un chemin vide.
   if (
     !Number.isFinite(startX) ||
     !Number.isFinite(startY) ||
@@ -53,9 +53,9 @@ export function calculatePath(
   return path;
 }
 
-// Pathfinding pour le joueur : en combat, on ���vite les cases occup���es
+// Pathfinding pour le joueur : en combat, on evite les cases occupees
 // par des monstres (on ne traverse pas un ennemi). Hors combat, on
-// conserve le chemin simple existant, mais on peut consulter la grille
+// Chemin simple "en ligne" (ancienne logique), utilise hors combat
 // de collision si besoin plus tard.
 export function findPathForPlayer(
   scene,
@@ -91,8 +91,8 @@ export function findPathForPlayer(
 
   const dirs = allowDiagonal ? dirs8 : dirs4;
 
-  // Rayon maximum à explorer autour de la position de départ.
-  // En combat : basé sur les PM du joueur (avec une petite marge).
+  // Rayon maximum e explorer autour de la position de depart.
+  // En combat : base sur les PM du joueur (avec une petite marge).
   // Hors combat : suffisamment grand pour couvrir une bonne partie de la carte.
   const maxStepsFromStart = inCombat
     ? (state.pmRestants ?? state.pmBaseJoueur ?? 3) + 2
@@ -131,7 +131,7 @@ export function findPathForPlayer(
       }
     }
 
-    // Tuile logique bloquée (arbres, murs, etc.)
+    // Tuile logique bloquee (arbres, murs, etc.)
     if (isTileBlocked(scene, x, y)) {
       return true;
     }
@@ -153,7 +153,7 @@ export function findPathForPlayer(
 
       if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
 
-      // On ne regarde que dans un rayon raisonnable autour du d���part.
+      // On ne regarde que dans un rayon raisonnable autour du depart.
       const distFromStart = Math.abs(nx - startX) + Math.abs(ny - startY);
       if (distFromStart > maxStepsFromStart) continue;
 
@@ -173,6 +173,6 @@ export function findPathForPlayer(
     }
   }
 
-  // Aucun chemin trouv���
+  // Aucun chemin trouve
   return [];
 }

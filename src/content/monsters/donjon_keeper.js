@@ -1,11 +1,16 @@
 export default {
   id: "donjon_keeper",
   label: "Gardien du donjon",
-  textureKey: "npc_donjon_aluineeks",
-  spritePath: "assets/npc/DonjonALuineeksPNJsouth-west.png",
+  textureKey: "npc_donjon_aluineeks_combat",
+  spritePath: "assets/npc/pnjDonjonAluineeks/rotations/south-west.png",
+  animation: {
+    directions: ["north-east", "north-west", "south-east", "south-west"],
+  },
+  useDiagonalFacing: true,
   render: {
-    originX: 0.5,
-    originY: 1,
+    originX: 0.4,
+    originY: 1.15,
+    offsetX: 0,
     offsetY: 0,
     scale: 1.3,
   },

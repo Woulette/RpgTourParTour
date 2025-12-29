@@ -103,12 +103,15 @@ export function buildSnapshotFromPlayer(player) {
   const tileX = Number.isFinite(player.currentTileX) ? player.currentTileX : null;
   const tileY = Number.isFinite(player.currentTileY) ? player.currentTileY : null;
 
+  const mapKey =
+    scene?.currentMapKey || scene?.currentMapDef?.key || player.currentMapKey || null;
+
   return {
     id: characterId,
     name: player.displayName || player.name || "Joueur",
     classId: player.classId || "archer",
     level: player.levelState?.niveau ?? 1,
-    mapKey: scene?.currentMapKey || null,
+    mapKey,
     tileX,
     tileY,
     gold: Number.isFinite(player.gold) ? player.gold : 0,

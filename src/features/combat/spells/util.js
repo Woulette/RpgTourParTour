@@ -3,6 +3,7 @@
 // Distance en "cases" (Manhattan) pour la portee.
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 import { getAliveCombatMonsters } from "../../../features/monsters/ai/aiUtils.js";
+import { getAliveCombatAllies } from "../summons/summon.js";
 
 function getAliveCombatSummons(scene) {
   const list =
@@ -11,6 +12,7 @@ function getAliveCombatSummons(scene) {
       : [];
   return list.filter((s) => {
     if (!s || !s.stats) return false;
+    if (s.isCombatAlly) return false;
     const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
     return hp > 0;
   });
@@ -78,7 +80,21 @@ function isTileOccupiedByCombatEntity(scene, tileX, tileY) {
   if (occupiedByMonster) return true;
 
   const summons = getAliveCombatSummons(scene);
-  return summons.some(
+  if (
+    summons.some(
+      (s) =>
+        s &&
+        typeof s.tileX === "number" &&
+        typeof s.tileY === "number" &&
+        s.tileX === tileX &&
+        s.tileY === tileY
+    )
+  ) {
+    return true;
+  }
+
+  const allies = getAliveCombatAllies(scene);
+  return allies.some(
     (s) =>
       s &&
       typeof s.tileX === "number" &&

@@ -15,7 +15,7 @@ import {
 } from "../../../features/monsters/ai/aiUtils.js";
 
 const POST_MOVE_DELAY_MS = 250;
-const POST_ATTACK_DELAY_MS = 150;
+const POST_ATTACK_DELAY_MS = 500;
 
 function canCastFromTile(scene, monster, spell, tileX, tileY, targetX, targetY, map) {
   const prevX = monster.tileX;
@@ -169,6 +169,21 @@ function hasAnyAllyInRadiusAtTile(monster, player, allies, tileX, tileY, radius)
   });
 }
 
+function countAlliesInRadiusAtTile(monster, player, allies, tileX, tileY, radius) {
+  let count = 0;
+  const p = getEntityTile(player);
+  if (Math.abs(p.x - tileX) + Math.abs(p.y - tileY) <= radius) {
+    count += 1;
+  }
+  allies.forEach((m) => {
+    const t = getEntityTile(m);
+    if (Math.abs(t.x - tileX) + Math.abs(t.y - tileY) <= radius) {
+      count += 1;
+    }
+  });
+  return count;
+}
+
 function isTileFreeForMove(scene, map, player, monster, tileX, tileY) {
   if (!map) return false;
   if (tileX < 0 || tileY < 0 || tileX >= map.width || tileY >= map.height) return false;
@@ -179,13 +194,13 @@ function isTileFreeForMove(scene, map, player, monster, tileX, tileY) {
   return true;
 }
 
-function findPathToBuffAlly(scene, map, monster, player, allies, radius, maxSteps) {
+function findPathToBuffAllies(scene, map, monster, player, allies, radius, minAllies, maxSteps) {
   if (!map) return null;
   const steps = Math.max(0, maxSteps | 0);
   const startX = monster.tileX ?? 0;
   const startY = monster.tileY ?? 0;
 
-  if (hasAnyAllyInRadiusAtTile(monster, player, allies, startX, startY, radius)) {
+  if (countAlliesInRadiusAtTile(monster, player, allies, startX, startY, radius) >= minAllies) {
     return [];
   }
 
@@ -218,7 +233,7 @@ function findPathToBuffAlly(scene, map, monster, player, allies, radius, maxStep
       if (!isTileFreeForMove(scene, map, player, monster, nx, ny)) continue;
 
       const nextPath = [...path, { x: nx, y: ny }];
-      if (hasAnyAllyInRadiusAtTile(monster, player, allies, nx, ny, radius)) {
+      if (countAlliesInRadiusAtTile(monster, player, allies, nx, ny, radius) >= minAllies) {
         return nextPath;
       }
 
@@ -270,8 +285,8 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
   const spells = monsterSpells.maire_combat || {};
   const buff = spells.decret_maire;
   const hit = spells.jugement_maire;
-  const allySummons = Array.isArray(scene?.combatSummons)
-    ? scene.combatSummons.filter((s) => s && s.isCombatAlly && s !== monster)
+  const allySummons = Array.isArray(scene?.combatAllies)
+    ? scene.combatAllies.filter((s) => s && s.isCombatAlly && s !== monster)
     : [];
   const allies = isAlly
     ? allySummons
@@ -338,21 +353,52 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
     const tx = t.x;
     const ty = t.y;
+    const dist = Math.abs(tx - mx) + Math.abs(ty - my);
 
     if (buff && canCastSpell(scene, monster, buff)) {
-      if (hasAnyAllyInRadiusAtTile(monster, player, allies, mx, my, 2)) {
+      const alliesInRadius = countAlliesInRadiusAtTile(monster, player, allies, mx, my, 2);
+      if (alliesInRadius >= 2) {
         if (tryCast(buff, mx, my)) {
           continueAfterAction();
           return;
         }
       } else if ((state.pmRestants ?? 0) > 0 && (player || allies.length > 0)) {
-        const pathToBuff = findPathToBuffAlly(
+        const pathToBuff2 = findPathToBuffAllies(
           scene,
           map,
           monster,
           player,
           allies,
           2,
+          2,
+          state.pmRestants ?? 0
+        );
+        if (pathToBuff2 !== null) {
+          moveAlong(scene, state, monster, map, groundLayer, pathToBuff2, () => {
+            mx = monster.tileX ?? mx;
+            my = monster.tileY ?? my;
+            if (countAlliesInRadiusAtTile(monster, player, allies, mx, my, 2) >= 2) {
+              tryCast(buff, mx, my);
+            }
+            continueAfterAction(POST_MOVE_DELAY_MS);
+          });
+          return;
+        }
+      }
+      if (hasAnyAllyInRadiusAtTile(monster, player, allies, mx, my, 2)) {
+        if (tryCast(buff, mx, my)) {
+          continueAfterAction();
+          return;
+        }
+      } else if ((state.pmRestants ?? 0) > 0 && (player || allies.length > 0)) {
+        const pathToBuff = findPathToBuffAllies(
+          scene,
+          map,
+          monster,
+          player,
+          allies,
+          2,
+          1,
           state.pmRestants ?? 0
         );
         if (pathToBuff !== null) {
@@ -371,6 +417,11 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
 
     if (hit && tryCast(hit, tx, ty)) {
       continueAfterAction();
+      return;
+    }
+
+    if (dist <= 1 && (!hit || !canCastSpell(scene, monster, hit))) {
+      delay(scene, 80, finish);
       return;
     }
 

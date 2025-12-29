@@ -1,4 +1,4 @@
-// Gestion de la fen�tre de carte HTML (grande carte)
+// Gestion de la fenetre de carte HTML (grande carte)
 
 export function initDomMap() {
   const button = document.getElementById("hud-map-button");
@@ -15,10 +15,10 @@ export function initDomMap() {
     document.body.classList.toggle("hud-map-open");
   });
 
-  // Zoom � la molette sur la grande carte
-  let zoom = 0.5;
-  const minZoom = 0.5;
-  const maxZoom = 0.7;
+  // Zoom a la molette sur la grande carte
+  // Zoom a la molette sur la grande carte
+  // Zoom a la molette sur la grande carte
+  // Zoom a la molette sur la grande carte
 
   mapMain.addEventListener(
     "wheel",
@@ -26,11 +26,11 @@ export function initDomMap() {
       event.preventDefault();
 
       const delta = event.deltaY < 0 ? 0.1 : -0.1;
-      zoom += delta;
-      if (zoom < minZoom) zoom = minZoom;
-      if (zoom > maxZoom) zoom = maxZoom;
+  // Zoom a la molette sur la grande carte
+  // Zoom a la molette sur la grande carte
+  // Zoom a la molette sur la grande carte
 
-            mapInner.style.transform = `scale(${zoom})`; 
+  // Zoom a la molette sur la grande carte
     },
     { passive: false },
   );

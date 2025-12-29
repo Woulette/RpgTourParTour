@@ -24,8 +24,8 @@ function maybeSpawnRiftAllies(scene, player) {
   if (!map || !layer) return;
 
   const hasAlly = (id) =>
-    scene.combatSummons &&
-    scene.combatSummons.some((s) => s && s.isCombatAlly && s.monsterId === id);
+    scene.combatAllies &&
+    scene.combatAllies.some((s) => s && s.isCombatAlly && s.monsterId === id);
 
   if (!hasAlly("donjon_keeper")) {
     spawnCombatAlly(scene, player, map, layer, { monsterId: "donjon_keeper" });
@@ -49,8 +49,8 @@ function maybeSpawnTitanAllies(scene, player, monster) {
   if (!map || !layer) return;
 
   const hasAlly = (id) =>
-    scene.combatSummons &&
-    scene.combatSummons.some((s) => s && s.isCombatAlly && s.monsterId === id);
+    scene.combatAllies &&
+    scene.combatAllies.some((s) => s && s.isCombatAlly && s.monsterId === id);
 
   if (!hasAlly("donjon_keeper")) {
     spawnCombatAlly(scene, player, map, layer, { monsterId: "donjon_keeper" });
@@ -82,10 +82,15 @@ export function startCombat(scene, player, monster) {
 
   const keepPrepSummons = scene.prepAllies === true;
   const existingSummons =
-    keepPrepSummons && Array.isArray(scene.combatSummons)
-      ? scene.combatSummons.filter((s) => s && s.isCombatAlly)
+    Array.isArray(scene.combatSummons)
+      ? scene.combatSummons.filter((s) => s && !s.isCombatAlly)
+      : [];
+  const existingAllies =
+    keepPrepSummons && Array.isArray(scene.combatAllies)
+      ? scene.combatAllies.filter((s) => s && s.isCombatAlly)
       : [];
   scene.combatSummons = existingSummons;
+  scene.combatAllies = existingAllies;
   scene.prepAllies = false;
 
   document.body.classList.add("combat-active");

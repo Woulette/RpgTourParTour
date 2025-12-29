@@ -20,6 +20,7 @@ export function setupPlayerForScene(scene, options) {
   player.displayName = displayName;
   player.currentTileX = startTileX;
   player.currentTileY = startTileY;
+  player.currentMapKey = scene.currentMapKey || snapshot?.mapKey || null;
 
   setupPlayerAnimations(scene);
   setupCharacterAnimations(scene, "tank");

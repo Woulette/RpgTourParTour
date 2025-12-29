@@ -18,7 +18,7 @@ import { bricoleurRecipes } from "../bricoleur/recipes.js";
 import { getItemDef } from "../../inventory/runtime/inventoryCore.js";
 import { on as onStoreEvent, getPlayer } from "../../../state/store.js";
 
-// Métier unique pour l'instant, mais structuré pour en ajouter d'autres.
+// Metier unique pour l'instant, mais structure pour en ajouter d'autres.
 const METIERS = [
   bucheronDefinition,
   alchimisteDefinition,
@@ -46,7 +46,7 @@ export function initDomMetiers(player) {
 
   if (!buttonEl || !panelEl || !player) return;
 
-  // Construction du container principal (liste + détail)
+  // Construction du container principal (liste + detail)
   const bodyEl =
     panelEl.querySelector(".metiers-body") ||
     (() => {
@@ -67,7 +67,7 @@ export function initDomMetiers(player) {
       const nav = document.createElement("nav");
       nav.id = "metiers-list";
       nav.className = "metiers-list";
-      nav.setAttribute("aria-label", "Liste des métiers");
+      nav.setAttribute("aria-label", "Liste des metiers");
       bodyEl.appendChild(nav);
       return nav;
     })();
@@ -78,7 +78,7 @@ export function initDomMetiers(player) {
       const detail = document.createElement("div");
       detail.id = "metier-detail";
       detail.className = "metier-detail";
-      detail.setAttribute("aria-label", "Détails du métier sélectionné");
+      detail.setAttribute("aria-label", "Details du metier selectionne");
       detail.innerHTML = `
         <header class="metier-detail-header">
           <h3 class="metier-detail-title">
@@ -101,13 +101,13 @@ export function initDomMetiers(player) {
           <button type="button" class="metier-tab" data-tab="drops">Drops</button>
         </div>
         <section class="metier-resources" id="metier-resources-section">
-          <h4 class="metier-resources-title">Ressources récoltables</h4>
+          <h4 class="metier-resources-title">Ressources recoltables</h4>
           <table class="metier-resources-table">
             <thead>
               <tr>
                 <th>Ressource</th>
                 <th>Niveau</th>
-                <th>Quantité</th>
+                <th>Quantite</th>
                 <th>XP</th>
               </tr>
             </thead>
@@ -115,7 +115,7 @@ export function initDomMetiers(player) {
           </table>
         </section>
         <section class="metier-drops" id="metier-drops-section" style="display:none;">
-          <h4 class="metier-resources-title">Drops rÇ¸servÇ¸s</h4>
+          <h4 class="metier-resources-title">Drops reserves</h4>
           <table class="metier-resources-table">
             <thead>
               <tr>
@@ -130,13 +130,13 @@ export function initDomMetiers(player) {
         <section class="metier-craft" id="metier-craft-section" style="display:none; gap:10px; flex-direction:column;">
           <div class="metier-craft-controls" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <div class="metier-craft-filters" id="metier-craft-filters" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-            <input id="metier-craft-search" type="text" placeholder="Rechercher un équipement..." style="flex:1; min-width:180px; padding:6px 8px; border-radius:8px; border:1px solid #4a5560; background:#0f141b; color:#e8eef7;">
+            <input id="metier-craft-search" type="text" placeholder="Rechercher un equipement..." style="flex:1; min-width:180px; padding:6px 8px; border-radius:8px; border:1px solid #4a5560; background:#0f141b; color:#e8eef7;">
           </div>
           <div class="metier-craft-body" style="display:grid; grid-template-columns: 45% 1fr; gap:10px; min-height:0;">
             <div class="metier-craft-list" id="metier-craft-list" style="display:flex; flex-direction:column; gap:6px; overflow:auto; min-height:0;">
             </div>
             <div class="metier-craft-info" id="metier-craft-info" style="border:1px solid #2d3742; border-radius:10px; padding:10px; background:rgba(255,255,255,0.06); min-height:120px; overflow:auto;">
-              <p style="opacity:0.7; margin:0;">Sélectionne un équipement pour voir les détails.</p>
+              <p style="opacity:0.7; margin:0;">Selectionne un equipement pour voir les details.</p>
             </div>
           </div>
         </section>
@@ -190,7 +190,7 @@ export function initDomMetiers(player) {
     if (id === "bricoleur") {
       return ensureBricoleurState(currentPlayer);
     }
-    // Fallback pour futurs métiers
+    // Fallback pour futurs metiers
     if (!currentPlayer.metiers) currentPlayer.metiers = {};
     if (!currentPlayer.metiers[id]) {
       currentPlayer.metiers[id] = { level: 1, xp: 0, xpNext: 100 };
@@ -358,7 +358,7 @@ export function initDomMetiers(player) {
     craftInfoEl.innerHTML = "";
     if (!recipe) {
       craftInfoEl.innerHTML =
-        '<p style="opacity:0.7; margin:0;">Sélectionne un équipement pour voir les détails.</p>';
+        '<p style="opacity:0.7; margin:0;">Selectionne un equipement pour voir les details.</p>';
       return;
     }
     const outDef = getItemDef(recipe.output.itemId);
@@ -382,7 +382,7 @@ export function initDomMetiers(player) {
 
     const xpLine = document.createElement("div");
     xpLine.style.marginTop = "6px";
-    xpLine.textContent = `XP gagné : ${recipe.xpGain ?? 0} XP`;
+    xpLine.textContent = `XP gagne : ${recipe.xpGain ?? 0} XP`;
 
     const stats = outDef?.statsBonus;
     const statsBlock = document.createElement("div");
@@ -443,7 +443,7 @@ export function initDomMetiers(player) {
 
     const ingTitle = document.createElement("div");
     ingTitle.style.marginTop = "10px";
-    ingTitle.innerHTML = "<strong>Ingrédients :</strong>";
+    ingTitle.innerHTML = "<strong>Ingredients :</strong>";
 
     const ingList = document.createElement("ul");
     ingList.style.listStyle = "none";
@@ -522,7 +522,7 @@ export function initDomMetiers(player) {
 
     const search = (craftSearchValue || "").toLowerCase();
 
-    // Recettes filtrées
+    // Recettes filtrees
     const recipes = recipesForMetier.filter((r) => {
       const matchCat = craftCategory === "all" || r.category === craftCategory;
       const label = (r.label || "").toLowerCase();
@@ -632,7 +632,7 @@ export function initDomMetiers(player) {
     }
   };
 
-  // Met à jour l'UI quand le store signale un changement métier.
+  // Met a jour l'UI quand le store signale un changement metier.
   unsubscribeMetier = onStoreEvent("metier:updated", (payload) => {
     if (!payload || payload.id !== currentMetierId) return;
     updatePanel();

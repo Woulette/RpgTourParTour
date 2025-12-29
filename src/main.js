@@ -3,6 +3,7 @@ import { preloadAssets } from "./game/preload/preloadAssets.js";
 import { createMainScene } from "./game/scene/createScene.js";
 import { initCharacterMenus } from "./features/ui/characterMenus.js";
 import { closeAllHudPanels } from "./features/ui/domPanelClose.js";
+import { createSessionSwitch } from "./app/sessionSwitch.js";
 import {
   getSelectedCharacter,
   setSelectedCharacter,
@@ -10,7 +11,6 @@ import {
   getUiApi,
 } from "./app/session.js";
 import { getPlayer } from "./state/store.js";
-import { buildSnapshotFromPlayer, saveCharacterSnapshot } from "./save/index.js";
 
 class MainScene extends Phaser.Scene {
   constructor() {
@@ -53,32 +53,24 @@ function destroyGame() {
   }
 }
 
-function startGame(character) {
-  setSelectedCharacter(character || null);
-  destroyGame();
-  closeAllHudPanels();
-  gameInstance = new Phaser.Game(config);
-  document.body.classList.add("game-running");
-  document.body.classList.remove("menu-open");
-}
-
-function openMenu() {
-  try {
-    const player = getPlayer();
-    const characterId =
-      player?.characterId || getSelectedCharacter()?.id || null;
-    if (player && characterId) {
-      const snap = buildSnapshotFromPlayer(player);
-      if (snap) saveCharacterSnapshot(characterId, snap);
-    }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[save] failed to save before menu:", err);
-  }
-  destroyGame();
-  document.body.classList.remove("game-running");
-  document.body.classList.add("menu-open");
-}
+const sessionSwitch = createSessionSwitch({
+  destroyGame,
+  createGame: () => {
+    gameInstance = new Phaser.Game(config);
+  },
+  closeAllHudPanels,
+  setSelectedCharacter,
+  getSelectedCharacter,
+  getPlayer,
+  onEnterMenu: () => {
+    document.body.classList.remove("game-running");
+    document.body.classList.add("menu-open");
+  },
+  onEnterGame: () => {
+    document.body.classList.add("game-running");
+    document.body.classList.remove("menu-open");
+  },
+});
 
 const returnMenuBtn = document.getElementById("ui-return-menu");
 if (returnMenuBtn) {
@@ -88,16 +80,16 @@ if (returnMenuBtn) {
       uiApi.openMenu();
       return;
     }
-    openMenu();
+    sessionSwitch.openMenu();
   });
 }
 
 const menus = initCharacterMenus({
-  onStartGame: (character) => startGame(character),
+  onStartGame: (character) => sessionSwitch.startGame(character),
 });
 setUiApi({
   openMenu: () => {
-    openMenu();
+    sessionSwitch.openMenu();
     if (menus && typeof menus.openMenu === "function") menus.openMenu();
   },
 });

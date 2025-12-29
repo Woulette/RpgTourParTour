@@ -18,9 +18,9 @@ import { isTileBlocked } from "../collision/collisionGrid.js";
 import { on as onStoreEvent } from "../state/store.js";
 
 /**
- * Crée une fonction worldToTile "calibrée" qui compense
- * le léger décalage entre tileToWorldXY et worldToTileXY
- * sur la carte isométrique.
+ * Cre une fonction worldToTile "calibre" qui compense
+ * le lger dcalage entre tileToWorldXY et worldToTileXY
+ * sur la carte isomtrique.
  */
 function createCalibratedWorldToTile(map, groundLayer) {
   const testTileX = 0;
@@ -36,13 +36,13 @@ function createCalibratedWorldToTile(map, groundLayer) {
   const centerX = worldPos.x + map.tileWidth / 2;
   const centerY = worldPos.y + map.tileHeight / 2;
 
-  // Ce que Phaser "pense" être la tuile à cette position
+  // Ce que Phaser "pense" tre la tuile a cette position
   const tF = groundLayer.worldToTileXY(centerX, centerY, false);
 
   let offsetX = 0;
   let offsetY = 0;
   if (tF) {
-    // On enlève 0.5 car Phaser renvoie le centre de la tuile
+    // On enlve 0.5 car Phaser renvoie le centre de la tuile
     offsetX = tF.x - testTileX - 0.5;
     offsetY = tF.y - testTileY - 0.5;
   }
@@ -58,7 +58,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
   };
 }
 
-// Active le clic pour se déplacer et la prévisu de déplacement / sorts.
+// Active le clic pour se dplacer et la prvisu de dplacement / sorts.
  export function enableClickToMove(scene, player, hudY, map, groundLayer) {
   const worldToTile = createCalibratedWorldToTile(map, groundLayer);
 
@@ -67,7 +67,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
     const pointer = scene.input.activePointer;
     if (!pointer) return;
 
-    // Même logique que le pointermove, mais déclenchée sur changement de sort.
+    // Mme logique que le pointermove, mais dclenche sur changement de sort.
     if (pointer.y > hudY) {
       const hudTile = scene.__combatHudHoverSpellTile;
       const activeSpellHud = getActiveSpell(player);
@@ -131,7 +131,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
     updateCombatPreview(scene, map, groundLayer, null);
   };
 
-  // Rafraîchit la prévisualisation immédiatement quand le sort actif change
+  // Rafrachit la prvisualisation immdiatement quand le sort actif change
   if (scene.__unsubscribeSpellPreview) {
     scene.__unsubscribeSpellPreview();
     scene.__unsubscribeSpellPreview = null;
@@ -142,7 +142,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       if (!payload || payload.caster !== player) return;
       refreshSpellPreviewFromPointer();
 
-      // Si la souris est déjà sur un monstre, on rafraîchit aussi la bulle + dégâts
+      // Si la souris est dja sur un monstre, on rafrachit aussi la bulle + dgots
       // sans exiger un mouvement de souris.
       const hovered = scene.__combatTileHoverEntity;
       if (
@@ -159,7 +159,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
     }
   );
 
-  // Position de départ : on "snap" le joueur sur la tuile sous ses pieds
+  // Position de dpart : on "snap" le joueur sur la tuile sous ses pieds
   const startTile = worldToTile(player.x, player.y);
   if (startTile && isValidTile(map, startTile.x, startTile.y)) {
     player.currentTileX = startTile.x;
@@ -177,15 +177,15 @@ function createCalibratedWorldToTile(map, groundLayer) {
     player.y = worldPos.y + map.tileHeight / 2;
   }
 
-  // --- PRÉVISU : déplacement (vert) + portée de sort (bleu) ---
+  // --- PReVISU : dplacement (vert) + porte de sort (bleu) ---
   scene.input.on("pointermove", (pointer) => {
-    // Pas de prévisu si la souris est sur le HUD
+    // Pas de prvisu si la souris est sur le HUD
     if (pointer.y > hudY) {
       const hudTile = scene.__combatHudHoverSpellTile;
       const activeSpellHud = getActiveSpell(player);
       const stateHud = scene.combatState;
 
-      // Survol d'un portrait (ordre de tour) : on veut quand mÇ¦me voir la prÇ¸visu du sort sur la tuile du monstre.
+      // Survol d'un portrait (ordre de tour) : on veut quand mcme voir la prcvisu du sort sur la tuile du monstre.
       if (
         stateHud &&
         stateHud.enCours &&
@@ -218,14 +218,14 @@ function createCalibratedWorldToTile(map, groundLayer) {
     const activeSpell = getActiveSpell(player);
     const state = scene.combatState;
 
-    // Hors combat : aucune prévisu
+    // Hors combat : aucune prvisu
     if (!state || !state.enCours) {
       updateCombatPreview(scene, map, groundLayer, null);
       clearSpellRangePreview(scene);
       return;
     }
 
-    // Si un sort est sélectionné : on affiche la portée + la zone (si applicable)
+    // Si un sort est slectionn : on affiche la porte + la zone (si applicable)
     if (activeSpell) {
       updateCombatPreview(scene, map, groundLayer, null);
       const t = worldToTile(pointer.worldX, pointer.worldY);
@@ -243,7 +243,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    // Pas de sort : prévisu de déplacement, on nettoie la zone de sort
+    // Pas de sort : prvisu de dplacement, on nettoie la zone de sort
     clearSpellRangePreview(scene);
 
     const t = worldToTile(pointer.worldX, pointer.worldY);
@@ -260,7 +260,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    // En phase de préparation : uniquement les cases autorisées
+    // En phase de prparation : uniquement les cases autorises
     if (scene.prepState && scene.prepState.actif) {
       const allowed = scene.prepState.allowedTiles || [];
       const isAllowed = allowed.some(
@@ -272,7 +272,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       }
     }
 
-    // Chemin sans diagonales pour la prévisu en combat
+    // Chemin sans diagonales pour la prvisu en combat
     let path = findPathForPlayer(
       scene,
       map,
@@ -293,11 +293,15 @@ function createCalibratedWorldToTile(map, groundLayer) {
       updateCombatPreview(scene, map, groundLayer, null);
       return;
     }
+    if (limited.path.length !== path.length) {
+      updateCombatPreview(scene, map, groundLayer, null);
+      return;
+    }
 
     updateCombatPreview(scene, map, groundLayer, limited.path);
   });
 
-  // --- Clic pour déplacer ou lancer un sort ---
+  // --- Clic pour dplacer ou lancer un sort ---
   scene.input.on("pointerdown", (pointer) => {
     if (window.__uiPointerBlock) {
       return;
@@ -309,8 +313,8 @@ function createCalibratedWorldToTile(map, groundLayer) {
     const bandHeightTop = 30;
     const bandHeightBottom = 30;
 
-    // Clic sur le HUD : si un sort était sélectionné, on l'annule
-    // et on revient en mode déplacement.
+    // Clic sur le HUD : si un sort tait slectionn, on l'annule
+    // et on revient en mode dplacement.
     if (pointer.y > hudY) {
       if (activeSpell) {
         clearActiveSpell(player);
@@ -320,7 +324,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    // Pas de nouveau déplacement pendant une récolte.
+    // Pas de nouveau dplacement pendant une rcolte.
     if (
       player.isHarvestingTree ||
       player.isHarvestingHerb ||
@@ -329,14 +333,14 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    // En combat : tant que ce n'est pas au tour du joueur, aucune action (ni déplacement, ni cast).
-    // Mais la sélection/prévisualisation du sort reste possible via le HUD / touches.
+    // En combat : tant que ce n'est pas au tour du joueur, aucune action (ni dplacement, ni cast).
+    // Mais la slection/prvisualisation du sort reste possible via le HUD / touches.
     const stateForTurn = scene.combatState;
     if (stateForTurn && stateForTurn.enCours && stateForTurn.tour !== "joueur") {
       return;
     }
 
-    // En combat : pas d'action pendant un dÇ¸placement (sinon on peut dÇ¸passer PM/PA).
+    // En combat : pas d'action pendant un dcplacement (sinon on peut dcpasser PM/PA).
     if (
       scene.combatState &&
       scene.combatState.enCours &&
@@ -352,15 +356,15 @@ function createCalibratedWorldToTile(map, groundLayer) {
       player.isMoving = false;
     }
 
-    // Resynchronise la tuile courante à partir de la position actuelle
+    // Resynchronise la tuile courante a partir de la position actuelle
     updatePlayerTilePosition(player, worldToTile);
 
     // Si on clique sur un monstre, on utilise sa tuile
-    // plutôt que la tuile "derrière" détectée par le clic.
+    // plutt que la tuile "derrire" dtecte par le clic.
     let clickedMonster = null;
     if (
-      // On ignore la hitbox des monstres en combat et en préparation
-      // (les sprites débordent sur d'autres cases, ça gêne le placement / ciblage).
+      // On ignore la hitbox des monstres en combat et en prparation
+      // (les sprites dbordent sur d'autres cases, a gne le placement / ciblage).
       !(scene.combatState && scene.combatState.enCours) &&
       !(scene.prepState && scene.prepState.actif) &&
       scene.monsters &&
@@ -398,23 +402,28 @@ function createCalibratedWorldToTile(map, groundLayer) {
 
     if (!isValidTile(map, tileX, tileY)) return;
 
-    // Collision logique : si la tuile est bloquée, on vise la tuile libre la plus proche
+    // Collision logique : si la tuile est bloque, on vise la tuile libre la plus proche
+    // (sauf si un sort est actif en combat : on veut pouvoir cibler un monstre).
     if (isTileBlocked(scene, tileX, tileY)) {
-      const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
-      const nearest = findNearestReachableTile(
-        scene,
-        map,
-        player.currentTileX,
-        player.currentTileY,
-        tileX,
-        tileY,
-        allowDiagonal
-      );
-      if (!nearest) {
-        return;
+      const inCombat =
+        scene.combatState && scene.combatState.enCours;
+      if (!(inCombat && activeSpell)) {
+        const allowDiagonal = !inCombat;
+        const nearest = findNearestReachableTile(
+          scene,
+          map,
+          player.currentTileX,
+          player.currentTileY,
+          tileX,
+          tileY,
+          allowDiagonal
+        );
+        if (!nearest) {
+          return;
+        }
+        tileX = nearest.x;
+        tileY = nearest.y;
       }
-      tileX = nearest.x;
-      tileY = nearest.y;
     }
 
     const state = scene.combatState;
@@ -430,7 +439,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       const exits = scene.worldExits || {};
 
       if (clickedInRightBand && exits.right && exits.right.length > 0) {
-        // Sortie à droite : tuile de sortie la plus proche verticalement
+        // Sortie a droite : tuile de sortie la plus proche verticalement
         let best = null;
         let bestDy = Infinity;
         exits.right.forEach((tile) => {
@@ -448,7 +457,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
           scene.exitTargetTile = { x: tileX, y: tileY };
         }
       } else if (clickedInLeftBand && exits.left && exits.left.length > 0) {
-        // Sortie à gauche : tuile de sortie la plus proche verticalement
+        // Sortie a gauche : tuile de sortie la plus proche verticalement
         let best = null;
         let bestDy = Infinity;
         exits.left.forEach((tile) => {
@@ -522,13 +531,13 @@ function createCalibratedWorldToTile(map, groundLayer) {
           scene.exitTargetTile = { x: tileX, y: tileY };
         }
       } else {
-        // Clic normal : on annule une éventuelle sortie en attente.
+        // Clic normal : on annule une ventuelle sortie en attente.
         scene.exitDirection = null;
         scene.exitTargetTile = null;
       }
     }
 
-    // En phase de préparation : déplacement uniquement sur les cases autorisées
+    // En phase de prparation : dplacement uniquement sur les cases autorises
     if (scene.prepState && scene.prepState.actif) {
       const allowed = scene.prepState.allowedTiles || [];
       const isAllowed = allowed.some(
@@ -539,7 +548,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       }
     }
 
-    // Si un sort est sélectionné et qu'on est en combat,
+    // Si un sort est slectionn et qu'on est en combat,
     // on tente de lancer le sort sur cette tuile.
     if (state && state.enCours && activeSpell) {
       const mapForCast = scene.combatMap || map;
@@ -553,7 +562,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
         layerForCast
       );
 
-      // Sort lancé avec succès : pas de déplacement pour ce clic.
+      // Sort lanc avec succs : pas de dplacement pour ce clic.
       if (cast) {
         return;
       }
@@ -565,8 +574,8 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    // À partir d'ici, aucun sort n'est sélectionné : on gère le déplacement.
-    // En combat, le joueur ne peut pas se déplacer sur une tuile occupée par un monstre.
+    // C partir d'ici, aucun sort n'est slectionn : on gre le dplacement.
+    // En combat, le joueur ne peut pas se dplacer sur une tuile occupe par un monstre.
     if (state && state.enCours && scene.monsters) {
       const occupied = scene.monsters.some(
         (m) =>
@@ -582,7 +591,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
 
     if (player.currentTileX === tileX && player.currentTileY === tileY) return;
 
-    // Chemin brut : diagonales autorisées hors combat, interdites en combat
+    // Chemin brut : diagonales autorises hors combat, interdites en combat
     const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
 
     let path = findPathForPlayer(
@@ -596,15 +605,18 @@ function createCalibratedWorldToTile(map, groundLayer) {
     );
 
     if (!path || path.length === 0) {
-      // Si on n'a aucun chemin, on ne déclenche rien (ni combat, ni sortie).
+      // Si on n'a aucun chemin, on ne dclenche rien (ni combat, ni sortie).
       return;
     }
 
     let moveCost = 0;
 
-    // Si on est en combat, on laisse le module de combat décider
-    // si le déplacement est autorisé et à quel coût en PM.
+    // Si on est en combat, on laisse le module de combat dcider
+    // si le dplacement est autoris et a quel cot en PM.
     if (state && state.enCours) {
+      if (path.length > (state.pmRestants ?? 0)) {
+        return;
+      }
       const limited = limitPathForCombat(scene, player, path);
       if (!limited || !limited.path || limited.path.length === 0) {
         return;
@@ -632,9 +644,9 @@ function updatePlayerTilePosition(player, worldToTile) {
   player.currentTileY = t.y;
 }
 
-// Wrapper autour du mouvement runtime : exécute le déplacement puis,
-// une fois le chemin terminé, vérifie si un combat doit démarrer
-// et laisse world.js gérer la sortie de map via maybeHandleMapExit.
+// Wrapper autour du mouvement runtime : excute le dplacement puis,
+// une fois le chemin termin, vrifie si un combat doit dmarrer
+// et laisse world.js grer la sortie de map via maybeHandleMapExit.
 function movePlayerAlongPathWithCombat(
   scene,
   player,
@@ -657,12 +669,12 @@ function movePlayerAlongPathWithCombat(
 }
 
 // Si une cible de combat est en attente et que le joueur est sur sa case
-// (ou très proche), on déclenche la phase de préparation.
+// (ou trs proche), on dclenche la phase de prparation.
 function maybeStartPendingCombat(scene, player, map, groundLayer) {
   const target = scene.pendingCombatTarget;
   if (!target || !target.monsterId) return;
 
-  // Si le monstre connaît ses coordonnées de tuile, on compare en tuiles
+  // Si le monstre connat ses coordonnes de tuile, on compare en tuiles
   const sameTile =
     typeof target.tileX === "number" &&
     typeof target.tileY === "number" &&
@@ -687,7 +699,7 @@ function isValidTile(map, tileX, tileY) {
   return tileX >= 0 && tileX < map.width && tileY >= 0 && tileY < map.height;
 }
 
-// Cherche la tuile libre la plus proche d'une cible bloquée et accessible depuis le joueur.
+// Cherche la tuile libre la plus proche d'une cible bloque et accessible depuis le joueur.
 function findNearestReachableTile(
   scene,
   map,

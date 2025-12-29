@@ -127,6 +127,27 @@ function findNearestEnemy(scene, monster) {
   return best;
 }
 
+function findNearestEnemyExcluding(scene, monster, exclude) {
+  const alive = getAliveCombatMonsters(scene);
+  const mx = monster.tileX ?? 0;
+  const my = monster.tileY ?? 0;
+  let best = null;
+  let bestDist = Infinity;
+  for (const m of alive) {
+    if (!m || !m.stats || m === exclude) continue;
+    const hp = typeof m.stats.hp === "number" ? m.stats.hp : m.stats.hpMax ?? 0;
+    if (hp <= 0) continue;
+    const dx = Math.abs((m.tileX ?? 0) - mx);
+    const dy = Math.abs((m.tileY ?? 0) - my);
+    const d = dx + dy;
+    if (d < bestDist) {
+      bestDist = d;
+      best = m;
+    }
+  }
+  return best;
+}
+
 export function runTurn(scene, state, monster, player, map, groundLayer, onComplete) {
   const finish = () => onComplete?.();
   const pmRestants = state.pmRestants ?? 0;
@@ -174,17 +195,67 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
     return castSpellAtTile(scene, monster, spell, px, py, map, groundLayer);
   };
 
+  const refreshTargetTile = () => {
+    if (!target) return false;
+    let tx = target.currentTileX;
+    let ty = target.currentTileY;
+    if (typeof tx !== "number" || typeof ty !== "number") {
+      const t = map.worldToTileXY(
+        target.x,
+        target.y,
+        true,
+        undefined,
+        undefined,
+        groundLayer
+      );
+      if (!t) return false;
+      tx = t.x;
+      ty = t.y;
+    }
+    px = tx;
+    py = ty;
+    return true;
+  };
+
+  const moveTowardOtherEnemy = (didAttack) => {
+    if (!didAttack) {
+      finish();
+      return;
+    }
+    const remaining = state.pmRestants ?? 0;
+    if (remaining <= 0) {
+      finish();
+      return;
+    }
+    mx = monster.tileX ?? mx;
+    my = monster.tileY ?? my;
+    const other = findNearestEnemyExcluding(scene, monster, target);
+    if (!other) {
+      finish();
+      return;
+    }
+    const tx = typeof other.currentTileX === "number" ? other.currentTileX : other.tileX ?? 0;
+    const ty = typeof other.currentTileY === "number" ? other.currentTileY : other.tileY ?? 0;
+    const path =
+      findPathToReachAdjacentToTarget(scene, map, mx, my, tx, ty, 60, monster) || [];
+    const pathTiles = path.length > 0 ? path.slice(0, remaining) : [];
+    if (pathTiles.length === 0) {
+      finish();
+      return;
+    }
+    moveAlong(scene, state, monster, map, groundLayer, pathTiles, finish);
+  };
+
   const tryHitTwice = () => {
     let casted = false;
     if (tryCast(hit)) {
       casted = true;
-      px = player.currentTileX;
-      py = player.currentTileY;
+      refreshTargetTile();
     }
     if (tryCast(hit)) {
       casted = true;
     }
-    delay(scene, casted ? POST_ATTACK_DELAY_MS : 80, finish);
+    delay(scene, casted ? POST_ATTACK_DELAY_MS : 80, () => moveTowardOtherEnemy(casted));
   };
 
   const dist = Math.abs(px - mx) + Math.abs(py - my);
@@ -197,11 +268,10 @@ export function runTurn(scene, state, monster, player, map, groundLayer, onCompl
         delay(scene, 80, finish);
         return;
       }
-      px = player.currentTileX;
-      py = player.currentTileY;
+      refreshTargetTile();
       delay(scene, POST_ATTACK_DELAY_MS, () => {
-        tryCast(hit);
-        delay(scene, POST_ATTACK_DELAY_MS, finish);
+        const casted = tryCast(hit);
+        delay(scene, POST_ATTACK_DELAY_MS, () => moveTowardOtherEnemy(casted));
       });
     };
 

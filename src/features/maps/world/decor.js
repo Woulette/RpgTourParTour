@@ -117,8 +117,8 @@ export function spawnObjectLayerTrees(
       }
     }
 
-    // Les tilesets "1 PNG" (load.image) n'ont pas de frames numérotées.
-    // On ne passe la frame que si elle existe réellement sur la texture.
+    // Les tilesets "1 PNG" (load.image) n'ont pas de frames numerotees.
+    // On ne passe la frame que si elle existe reellement sur la texture.
     if (scene?.textures?.exists?.(textureKey)) {
       const tex = scene.textures.get(textureKey);
       const frameName = frame === null || frame === undefined ? null : String(frame);
@@ -133,8 +133,8 @@ export function spawnObjectLayerTrees(
         : scene.add.sprite(posX, posY, textureKey, frame);
     sprite.setOrigin(0.5, 1);
     sprite.isOverPlayer = propOverPlayer;
-    // Par défaut, les "gros décors" (maisons/taverne) ne doivent pas cacher le joueur.
-    // Si tu veux l'inverse sur un objet précis, mets `overPlayer=true` dans Tiled.
+    // Par defaut, les "gros decors" (maisons/taverne) ne doivent pas cacher le joueur.
+    // Si tu veux l'inverse sur un objet precis, mets `overPlayer=true` dans Tiled.
     sprite.isUnderPlayer = propUnderPlayer || (isDecorLayer && isLarge && !propOverPlayer);
     applyDepthRules(scene, sprite);
 
@@ -166,7 +166,7 @@ export function refreshObjectLayerDepths(scene, storeName = "staticTrees") {
   scene[storeName].forEach((sprite) => applyDepthRules(scene, sprite));
 }
 
-// Recalcule la depth du joueur et des decors/arbres qui en dÃ©pendent.
+// Recalcule la depth du joueur et des decors/arbres qui en dependent.
 export function recalcDepths(scene) {
   if (!scene) return;
   if (scene.player?.setDepth) {

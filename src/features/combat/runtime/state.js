@@ -1,4 +1,4 @@
-// Gestion de l'état et de l'ordre de tour du combat.
+﻿// Gestion de l'état et de l'ordre de tour du combat.
 
 // Crée l'état de combat à partir d'un joueur et d'un monstre.
 // L'initiative détermine qui commence : joueur ou monstre.
@@ -6,6 +6,7 @@ import { endCombat } from "./runtime.js";
 import { addChatMessage } from "../../../chat/chat.js";
 import { showFloatingTextOverEntity } from "./floatingText.js";
 import { tickCaptureAttemptAtStartOfPlayerTurn } from "../summons/capture.js";
+import { unblockTile } from "../../../collision/collisionGrid.js";
 import {
   maybeSpawnRiftWave,
   maybeSpawnRiftWaveOnClear,
@@ -61,8 +62,7 @@ export function createCombatState(player, monster) {
   };
 }
 
-// Construit l'ordre de tour (joueur + monstres du pack) en alternant
-// les camps autant que possible, basé sur l'initiative.
+// Construit l'ordre de tour (joueur + allies + monstres)\r\n// en alternant les camps avec tri d'initiative interne.
 export function buildTurnOrder(scene) {
   const state = scene.combatState;
   if (!state || !state.enCours) return;
@@ -72,9 +72,13 @@ export function buildTurnOrder(scene) {
     (scene.combatMonsters && Array.isArray(scene.combatMonsters)
       ? scene.combatMonsters
       : state.monstre
-      ? [state.monstre]
-      : []
+        ? [state.monstre]
+        : []
     ).filter((m) => !!m);
+  const allies =
+    scene.combatAllies && Array.isArray(scene.combatAllies)
+      ? scene.combatAllies.filter((s) => s && s.isCombatAlly)
+      : [];
 
   const actors = [];
   const playerActors = [];
@@ -83,11 +87,14 @@ export function buildTurnOrder(scene) {
   if (player) {
     playerActors.push({ kind: "joueur", entity: player });
   }
+  allies.forEach((ally) => {
+    playerActors.push({ kind: "monstre", entity: ally });
+  });
   monsters.forEach((m) => {
     monsterActors.push({ kind: "monstre", entity: m });
   });
 
-  const getInit = (actor) => actor.entity.stats?.initiative ?? 0;
+  const getInit = (actor) => actor.entity?.stats?.initiative ?? 0;
 
   playerActors.sort((a, b) => getInit(b) - getInit(a));
   monsterActors.sort((a, b) => getInit(b) - getInit(a));
@@ -98,7 +105,6 @@ export function buildTurnOrder(scene) {
     return;
   }
 
-  // Détermine qui joue en premier : meilleur joueur ou meilleur monstre.
   let firstSide = "joueur";
   if (playerActors.length && monsterActors.length) {
     const pInit = getInit(playerActors[0]);
@@ -170,10 +176,83 @@ export function buildTurnOrder(scene) {
   }
 }
 
+function cleanupDeadSummons(scene) {
+  if (!scene?.combatSummons || !Array.isArray(scene.combatSummons)) return;
+  const kept = [];
+  scene.combatSummons.forEach((s) => {
+    if (!s || !s.stats) return;
+    const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+    if (hp > 0) {
+      kept.push(s);
+      return;
+    }
+    if (s.blocksMovement && s._blockedTile) {
+      unblockTile(scene, s._blockedTile.x, s._blockedTile.y);
+      s._blockedTile = null;
+    }
+    if (typeof s.destroy === "function") {
+      s.destroy();
+    }
+  });
+  scene.combatSummons = kept;
+}
+
+function cleanupDeadAllies(scene) {
+  if (!scene?.combatAllies || !Array.isArray(scene.combatAllies)) return;
+  const kept = [];
+  scene.combatAllies.forEach((s) => {
+    if (!s || !s.stats) return;
+    const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
+    if (hp > 0) {
+      kept.push(s);
+      return;
+    }
+    if (s.blocksMovement && s._blockedTile) {
+      unblockTile(scene, s._blockedTile.x, s._blockedTile.y);
+      s._blockedTile = null;
+    }
+    if (typeof s.destroy === "function") {
+      s.destroy();
+    }
+  });
+  scene.combatAllies = kept;
+}
+
+// Recalcule l'ordre des tours sans perturber l'acteur en cours.
+export function rebuildTurnOrderKeepCurrent(scene) {
+  const state = scene?.combatState;
+  if (!state || !state.enCours) return;
+
+  const currentActor = state.tour === "joueur" ? state.joueur : state.monstre;
+  const currentTour = state.tour;
+  const currentPa = state.paRestants;
+  const currentPm = state.pmRestants;
+
+  buildTurnOrder(scene);
+
+  if (!state.actors || !currentActor) return;
+  const idx = state.actors.findIndex((a) => a && a.entity === currentActor);
+  if (idx < 0) return;
+
+  state.actorIndex = idx;
+  if (currentTour === "joueur") {
+    state.tour = "joueur";
+    state.monstre = null;
+  } else {
+    state.tour = "monstre";
+    state.monstre = currentActor;
+  }
+
+  if (typeof currentPa === "number") state.paRestants = currentPa;
+  if (typeof currentPm === "number") state.pmRestants = currentPm;
+}
 // Passe le tour au personnage suivant et recharge ses PA/PM.
 export function passerTour(scene) {
   const state = scene.combatState;
   if (!state || !state.enCours) return;
+
+  cleanupDeadSummons(scene);
+  cleanupDeadAllies(scene);
 
   const actors = state.actors;
   const previousTour = state.tour;
@@ -323,6 +402,12 @@ function applyShieldToDamage(entity, damage) {
   return { damage: remaining, absorbed };
 }
 
+function showShieldAbsorbText(scene, target, absorbed) {
+  if (!scene || !target) return;
+  if (typeof absorbed !== "number" || absorbed <= 0) return;
+  showFloatingTextOverEntity(scene, target, `-${absorbed}`, { color: "#4aa8ff" });
+}
+
 function applyStartOfTurnStatusEffects(scene, entity) {
   const state = scene?.combatState;
   if (!state || !state.enCours || !entity || !entity.stats) return;
@@ -361,6 +446,7 @@ function applyStartOfTurnStatusEffects(scene, entity) {
 
     const shielded = applyShieldToDamage(entity, rawDmg);
     const dmg = Math.max(0, shielded.damage);
+    showShieldAbsorbText(scene, entity, shielded.absorbed);
 
     const currentHp =
       typeof entity.stats.hp === "number"
@@ -392,6 +478,18 @@ function applyStartOfTurnStatusEffects(scene, entity) {
         },
         { player: state.joueur }
       );
+      if (shielded.absorbed > 0) {
+        addChatMessage(
+          {
+            kind: "combat",
+            channel: "global",
+            author: "Combat",
+            text: `Bouclier : ${targetName} -${shielded.absorbed} PV`,
+            element: "bouclier",
+          },
+          { player: state.joueur }
+        );
+      }
     }
 
     if (entity === state.joueur && typeof entity.updateHudHp === "function") {
@@ -412,6 +510,28 @@ function applyStartOfTurnStatusEffects(scene, entity) {
       if (entity === state.joueur) {
         state.issue = "defaite";
         endCombat(scene);
+        return;
+      }
+
+      if (entity.isSummon || entity.isCombatAlly) {
+        if (entity.isSummon && scene.combatSummons && Array.isArray(scene.combatSummons)) {
+          scene.combatSummons = scene.combatSummons.filter((s) => s && s !== entity);
+        }
+        if (entity.isCombatAlly && scene.combatAllies && Array.isArray(scene.combatAllies)) {
+          scene.combatAllies = scene.combatAllies.filter((s) => s && s !== entity);
+        }
+        if (entity.blocksMovement && entity._blockedTile) {
+          unblockTile(scene, entity._blockedTile.x, entity._blockedTile.y);
+          entity._blockedTile = null;
+        }
+        if (typeof entity.onKilled === "function") {
+          entity.onKilled(scene, state.joueur);
+        }
+        if (typeof entity.destroy === "function") {
+          entity.destroy();
+        }
+        cleanupDeadSummons(scene);
+        cleanupDeadAllies(scene);
         return;
       }
 

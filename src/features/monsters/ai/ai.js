@@ -48,16 +48,48 @@ export function runMonsterTurn(scene) {
   if (!monster || !player || !map || !groundLayer) return;
 
   const pickTargetForMonster = () => {
+    if (monster?.isCombatAlly) {
+      const enemies =
+        scene?.combatMonsters && Array.isArray(scene.combatMonsters)
+          ? scene.combatMonsters
+          : [];
+      const aliveEnemies = enemies.filter((m) => {
+        if (!m || !m.stats) return false;
+        const hp = typeof m.stats.hp === "number" ? m.stats.hp : m.stats.hpMax ?? 0;
+        return hp > 0;
+      });
+      if (aliveEnemies.length === 0) return null;
+
+      const mx = monster.tileX ?? 0;
+      const my = monster.tileY ?? 0;
+      let bestEnemy = null;
+      let bestDist = Infinity;
+      aliveEnemies.forEach((e) => {
+        const ex = e.tileX ?? 0;
+        const ey = e.tileY ?? 0;
+        const d = Math.abs(ex - mx) + Math.abs(ey - my);
+        if (d < bestDist) {
+          bestDist = d;
+          bestEnemy = e;
+        }
+      });
+      return bestEnemy;
+    }
+
     const summons =
       scene?.combatSummons && Array.isArray(scene.combatSummons)
         ? scene.combatSummons
         : [];
-    const aliveSummons = summons.filter((s) => {
+    const allies =
+      scene?.combatAllies && Array.isArray(scene.combatAllies)
+        ? scene.combatAllies
+        : [];
+    const aliveAllies = [...summons, ...allies].filter((s) => {
       if (!s || !s.stats) return false;
       const hp = typeof s.stats.hp === "number" ? s.stats.hp : s.stats.hpMax ?? 0;
       return hp > 0;
     });
-    if (aliveSummons.length === 0) return player;
+    if (aliveAllies.length === 0) return player;
 
     const mx = monster.tileX ?? 0;
     const my = monster.tileY ?? 0;
@@ -69,7 +101,7 @@ export function runMonsterTurn(scene) {
 
     let bestSummon = null;
     let bestDist = Infinity;
-    aliveSummons.forEach((s) => {
+    aliveAllies.forEach((s) => {
       const sx = s.tileX ?? 0;
       const sy = s.tileY ?? 0;
       const ds = Math.abs(sx - mx) + Math.abs(sy - my);
@@ -84,6 +116,18 @@ export function runMonsterTurn(scene) {
   };
 
   const target = pickTargetForMonster();
+  if (!target) {
+    const finishTurn = () => {
+      if (!state.enCours) return;
+
+      const newTurn = passerTour(scene);
+      if (newTurn === "monstre") {
+        runMonsterTurn(scene);
+      }
+    };
+    finishTurn();
+    return;
+  }
 
   // On passe officiellement au tour du monstre courant
   state.tour = "monstre";

@@ -1,5 +1,6 @@
 import { findMonsterAtTile } from "../monsters/runtime/index.js";
-import { findAliveSummonAtTile } from "../combat/summons/summon.js";
+import { findAliveCombatAllyAtTile, findAliveSummonAtTile } from "../combat/summons/summon.js";
+import { createCalibratedWorldToTile } from "../maps/world/util.js";
 
 export function attachCombatTileHover(scene, hudY) {
   if (!scene || !scene.input) return;
@@ -15,6 +16,7 @@ export function attachCombatTileHover(scene, hudY) {
     const active = !!(state && state.enCours);
     if (!active && !force) return;
     if (scene.__combatHudHoverLock && !force) return;
+    if (scene.__combatSpriteHoverLock && !force) return;
     if (scene.hideMonsterTooltip) scene.hideMonsterTooltip();
     if (scene.clearDamagePreview) scene.clearDamagePreview();
     if (scene.hideCombatTargetPanel) scene.hideCombatTargetPanel();
@@ -34,6 +36,9 @@ export function attachCombatTileHover(scene, hudY) {
       return;
     }
     scene.__combatTileHoverWasActive = true;
+    if (scene.__combatSpriteHoverLock) {
+      return;
+    }
     if (isPointerOverHud(pointer)) {
       if (scene.__combatHudHoverLock) return;
       clear();
@@ -42,19 +47,21 @@ export function attachCombatTileHover(scene, hudY) {
 
     const map = scene.combatMap;
     const groundLayer = scene.combatGroundLayer;
-    if (!map || !groundLayer || typeof map.worldToTileXY !== "function") {
+    if (!map || !groundLayer) {
       clear();
       return;
     }
 
-    const t = map.worldToTileXY(
-      pointer.worldX,
-      pointer.worldY,
-      true,
-      undefined,
-      undefined,
-      groundLayer
-    );
+    const cacheKey = map.key || scene.currentMapKey || "default";
+    scene._combatHoverWorldToTileCache = scene._combatHoverWorldToTileCache || {};
+    if (!scene._combatHoverWorldToTileCache[cacheKey]) {
+      scene._combatHoverWorldToTileCache[cacheKey] = createCalibratedWorldToTile(
+        map,
+        groundLayer
+      );
+    }
+    const worldToTile = scene._combatHoverWorldToTileCache[cacheKey];
+    const t = worldToTile(pointer.worldX, pointer.worldY);
     if (!t) {
       clear();
       return;
@@ -65,7 +72,8 @@ export function attachCombatTileHover(scene, hudY) {
     scene.__combatTileHoverKey = key;
 
     const monster = findMonsterAtTile(scene, t.x, t.y);
-    const summon = !monster ? findAliveSummonAtTile(scene, t.x, t.y) : null;
+    const ally = !monster ? findAliveCombatAllyAtTile(scene, t.x, t.y) : null;
+    const summon = !monster && !ally ? findAliveSummonAtTile(scene, t.x, t.y) : null;
     const player = state.joueur;
     const isPlayerTile =
       player &&
@@ -74,7 +82,7 @@ export function attachCombatTileHover(scene, hudY) {
       player.currentTileX === t.x &&
       player.currentTileY === t.y;
 
-    const entity = monster || summon || (isPlayerTile ? player : null);
+    const entity = monster || ally || summon || (isPlayerTile ? player : null);
     if (scene.__combatTileHoverEntity === entity) return;
     scene.__combatTileHoverEntity = entity;
 
@@ -83,14 +91,14 @@ export function attachCombatTileHover(scene, hudY) {
       return;
     }
 
-    if ((monster || summon) && scene.showDamagePreview) {
-      scene.showDamagePreview(monster || summon);
+    if ((monster || ally || summon) && scene.showDamagePreview) {
+      scene.showDamagePreview(monster || ally || summon);
     } else if (scene.clearDamagePreview) {
       scene.clearDamagePreview();
     }
 
-    if ((monster || summon) && scene.showMonsterTooltip) {
-      scene.showMonsterTooltip(monster || summon);
+    if ((monster || ally || summon) && scene.showMonsterTooltip) {
+      scene.showMonsterTooltip(monster || ally || summon);
     } else if (scene.hideMonsterTooltip) {
       scene.hideMonsterTooltip();
     }

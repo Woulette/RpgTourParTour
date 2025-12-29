@@ -6,7 +6,7 @@ import { closeRiftForPlayer } from "../../../../features/maps/world/rifts.js";
 import { addChatMessage } from "../../../../chat/chat.js";
 import { items } from "../../../inventory/data/itemsConfig.js";
 import { addXpToPlayer } from "../../../../entities/player.js";
-import { clearAllSummons } from "../../summons/summon.js";
+import { clearAllCombatAllies, clearAllSummons } from "../../summons/summon.js";
 import { clearActiveSpell } from "../../spells/activeSpell.js";
 import { queueMonsterRespawn } from "../../../../features/monsters/runtime/respawnState.js";
 import {
@@ -30,6 +30,7 @@ export function endCombat(scene) {
   state.enCours = false;
 
   clearAllSummons(scene);
+  clearAllCombatAllies(scene);
   cleanupCombatChallenge(scene);
 
   if (state.joueur) {

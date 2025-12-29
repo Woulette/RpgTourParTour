@@ -1,6 +1,7 @@
 import { createMonster } from "../../../entities/monster.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 import { getAliveCombatMonsters } from "../../../features/monsters/ai/aiUtils.js";
+import { rebuildTurnOrderKeepCurrent } from "../runtime/state.js";
 
 function isTileOccupied(scene, tileX, tileY) {
   const state = scene?.combatState;
@@ -75,6 +76,9 @@ function spawnRiftWave(scene, wave) {
     m.tileY = tile.y;
     m.currentTileX = tile.x;
     m.currentTileY = tile.y;
+    if (typeof m.setDepth === "function") {
+      m.setDepth(wp.y + map.tileHeight);
+    }
     m.isCombatMember = true;
     m.isCombatOnly = true;
     m.respawnEnabled = false;
@@ -93,6 +97,7 @@ function spawnRiftWave(scene, wave) {
   }
 
   wave.spawned = true;
+  rebuildTurnOrderKeepCurrent(scene);
   return spawned.length > 0;
 }
 

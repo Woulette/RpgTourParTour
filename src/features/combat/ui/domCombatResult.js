@@ -1,7 +1,8 @@
-// UI de fin de combat : grande popup centrée avec le récap
+// UI de fin de combat : grande popup centre avec le recap
 // + affichage du butin (loot).
 
 import { items } from "../../inventory/data/itemsConfig.js";
+import { on as onStoreEvent } from "../../state/store.js";
 
 const CHALLENGE_BADGE_LABEL_BY_ID = {
   hp_70: "1",
@@ -10,6 +11,9 @@ const CHALLENGE_BADGE_LABEL_BY_ID = {
 };
 
 export function initDomCombatResult(scene, player) {
+  let currentPlayer = player || null;
+  const getPlayer = () => currentPlayer;
+
   const overlay = document.getElementById("combat-result-overlay");
   const titleEl = document.getElementById("combat-result-title");
   const panelEl = overlay ? overlay.querySelector(".combat-result-panel") : null;
@@ -40,8 +44,8 @@ export function initDomCombatResult(scene, player) {
     return;
   }
 
-  // Création dynamique du bloc "Butin" si besoin
-  // Bloc "Augmentations" (level up) : créé dynamiquement, affiché seulement si le joueur a gagné des niveaux.
+  // Cration dynamique du bloc "Butin" si besoin
+  // Bloc "Augmentations" (level up) : cr dynamiquement, affich seulement si le joueur a gagn des niveaux.
   let levelUpEl = document.getElementById("combat-result-levelup");
   if (!levelUpEl && panelEl && titleEl) {
     levelUpEl = document.createElement("div");
@@ -50,7 +54,7 @@ export function initDomCombatResult(scene, player) {
     panelEl.insertBefore(levelUpEl, titleEl.nextSibling);
   }
 
-  // Badge challenge (en haut à gauche du bloc "Joueur")
+  // Badge challenge (en haut a gauche du bloc "Joueur")
   let challengeEl = document.getElementById("combat-result-challenge");
   if (!challengeEl) {
     const body = overlay.querySelector(".combat-result-body");
@@ -64,7 +68,7 @@ export function initDomCombatResult(scene, player) {
           <span id="combat-result-challenge-number" class="combat-result-challenge-number">?</span>
           <span id="combat-result-challenge-mark" class="combat-result-challenge-mark">?</span>
         </div>
-        <div class="combat-result-challenge-tooltip" role="tooltip" aria-label="Détails du challenge">
+        <div class="combat-result-challenge-tooltip" role="tooltip" aria-label="Details du challenge">
           <div id="combat-result-challenge-title" class="combat-result-challenge-title">Challenge</div>
           <div id="combat-result-challenge-name" class="combat-result-challenge-name">-</div>
           <div id="combat-result-challenge-desc" class="combat-result-challenge-desc"></div>
@@ -99,7 +103,7 @@ export function initDomCombatResult(scene, player) {
     overlay.classList.add("combat-result-hidden");
   };
 
-  // Popup dédiée Level Up (au-dessus du récap combat)
+  // Popup dedie Level Up (au-dessus du recap combat)
   let levelUpOverlay = document.getElementById("levelup-overlay");
   let levelUpTitle = null;
   let levelUpPvValue = null;
@@ -119,14 +123,14 @@ export function initDomCombatResult(scene, player) {
         <div class="levelup-sub">Augmentations</div>
         <div class="levelup-items">
           <div class="levelup-item">
-            <div class="levelup-icon is-hp">❤</div>
+            <div class="levelup-icon is-hp">HP</div>
             <div class="levelup-value" id="levelup-pv">+0</div>
             <div class="levelup-label">PV max</div>
           </div>
           <div class="levelup-item">
-            <div class="levelup-icon is-carac">✦</div>
+            <div class="levelup-icon is-carac">STAT</div>
             <div class="levelup-value" id="levelup-carac">+0</div>
-            <div class="levelup-label">Caractéristiques</div>
+            <div class="levelup-label">Caracteristiques</div>
           </div>
         </div>
         <div class="levelup-actions">
@@ -208,7 +212,7 @@ export function initDomCombatResult(scene, player) {
     });
   };
 
-  // Gestionnaire appelé par le système de combat à la fin du fight.
+  // Gestionnaire appel par le systme de combat a la fin du fight.
   const showCombatResult = (result) => {
     const issue = result.issue || "inconnu";
 
@@ -217,7 +221,7 @@ export function initDomCombatResult(scene, player) {
       issue === "victoire"
         ? "Victoire"
         : issue === "defaite"
-        ? "Défaite"
+        ? "Defaite"
         : "Fin du combat";
     titleEl.classList.remove("victoire", "defaite");
     if (issue === "victoire") titleEl.classList.add("victoire");
@@ -241,7 +245,7 @@ export function initDomCombatResult(scene, player) {
     // Loot
     renderLoot(result.loot);
 
-    // Challenge badge : 1/2/3 + ✓ vert / ✕ rouge selon succès/échec.
+    // Challenge badge : 1/2/3 + OK vert / OK rouge selon succs/chec.
     if (challengeEl) {
       const challenge = result.challenge || null;
       const badgeNumEl = document.getElementById("combat-result-challenge-number");
@@ -261,7 +265,7 @@ export function initDomCombatResult(scene, player) {
         const status = challenge.status || "active";
         if (markEl) {
           markEl.textContent =
-            status === "success" ? "✓" : status === "failed" ? "✕" : "•";
+            status === "success" ? "OK" : status === "failed" ? "KO" : ".";
         }
         challengeEl.dataset.status = status;
 
@@ -271,14 +275,14 @@ export function initDomCombatResult(scene, player) {
           const xpBonus = challenge.rewards?.xpBonusPct ?? 0;
           const dropBonus = challenge.rewards?.dropBonusPct ?? 0;
           const fmt = (p) => `+${Math.round((p || 0) * 100)}%`;
-          rewardsEl.textContent = `Bonus si réussi : XP ${fmt(xpBonus)} • Drop ${fmt(dropBonus)}`;
+          rewardsEl.textContent = `Bonus si reussi : XP ${fmt(xpBonus)} - Drop ${fmt(dropBonus)}`;
         }
         if (statusEl) {
           statusEl.textContent =
             status === "success"
-              ? "Réussi"
+              ? "Reussi"
               : status === "failed"
-                ? "Échoué"
+                ? "echoue"
                 : "En cours";
         }
       }
@@ -293,14 +297,14 @@ export function initDomCombatResult(scene, player) {
         const newLevel = result.playerLevel ?? 1;
         levelUpEl.innerHTML = `<span class="combat-result-levelup-badge">Niveau ${newLevel}</span>`;
 
-        // Le popup de niveau est géré globalement via l'event store "player:levelup".
+        // Le popup de niveau est gr globalement via l'event store "player:levelup".
       } else {
         levelUpEl.classList.add("combat-result-levelup-hidden");
         levelUpEl.innerHTML = "";
       }
     }
 
-    // Chat : affiche le drop en fin de combat (TOTAL + Général)
+    // Chat : affiche le drop en fin de combat (TOTAL + General)
     // Chat : le recap (XP/or/butin) est gere cote `src/features/combat/runtime/runtime.js`.
 
     // Texte du bouton en fonction de l'issue
@@ -312,19 +316,24 @@ export function initDomCombatResult(scene, player) {
 
   buttonEl.addEventListener("click", () => {
     const issue = overlay.dataset.issue || "inconnu";
+    const playerRef = getPlayer();
 
-    // Gestion d'un respawn très simple en cas de défaite
-    if (issue === "defaite" && player && player.stats) {
-      const hpMax = player.stats.hpMax ?? player.stats.hp ?? 0;
-      player.stats.hp = hpMax;
-      if (typeof player.updateHudHp === "function") {
-        player.updateHudHp(hpMax, hpMax);
+    // Respawn simple en cas de defaite
+    if (issue === "defaite" && playerRef && playerRef.stats) {
+      const hpMax = playerRef.stats.hpMax ?? playerRef.stats.hp ?? 0;
+      playerRef.stats.hp = hpMax;
+      if (typeof playerRef.updateHudHp === "function") {
+        playerRef.updateHudHp(hpMax, hpMax);
       }
-      // Téléportation éventuelle du joueur à un point sûr :
-      // pour l'instant, on le laisse où il est.
+      // Teleportation eventuelle du joueur vers un point sur :
+      // pour l'instant, on le laisse ou il est.
     }
 
     hide();
+  });
+
+  onStoreEvent("player:changed", (nextPlayer) => {
+    currentPlayer = nextPlayer || null;
   });
 
   // On expose la fonction sur la scene pour que l'infra combat puisse l'utiliser.

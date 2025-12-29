@@ -1,4 +1,4 @@
-// Phase de préparation : placement joueur / monstres et highlights.
+// Phase de preparation : placement joueur / monstres et highlights.
 
 import { COMBAT_PATTERNS } from "../../../combatPatterns.js";
 import { COMBAT_START_POSITIONS } from "../../../config/combatStartPositions.js";
@@ -10,8 +10,8 @@ import { cleanupCombatChallenge, initPrepChallenge } from "../../challenges/runt
 import { getQuestDef, getQuestState, getCurrentQuestStage } from "../../quests/index.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 
-// Calcule une liste de tuiles à partir d'une origine et d'une liste d'offsets.
-// Utilisé pour les cases joueurs et ennemies.
+// Calcule une liste de tuiles e partir d'une origine et d'une liste d'offsets.
+// Utilise pour les cases joueurs et ennemies.
 function computePlacementTiles(map, originX, originY, offsets) {
   const tiles = [];
 
@@ -90,9 +90,9 @@ function orientPlayerTowardMonsters(scene, player, combatMonsters, map, groundLa
   }
 }
 
-// Lance la phase de préparation (placement) avant le combat.
+// Lance la phase de preparation (placement) avant le combat.
 export function startPrep(scene, player, monster, map, groundLayer, options = {}) {
-  // Nettoie un ancien indicateur de challenge (si on relance une préparation).
+  // Nettoie un ancien indicateur de challenge (si on relance une preparation).
   cleanupCombatChallenge(scene);
 
   if (
@@ -100,14 +100,14 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     typeof monster.tileX !== "number" ||
     typeof monster.tileY !== "number"
   ) {
-    // Pas de coordonnées de tuile fiables pour le monstre :
-    // on démarre directement le combat.
+    // Pas de coordonnees de tuile fiables pour le monstre :
+    // on demarre directement le combat.
     startCombat(scene, player, monster);
     return;
   }
 
-  // Snapshot "monde" du monstre cliqué avant tout déplacement de préparation,
-  // afin de pouvoir restaurer ses PV/position en cas de défaite.
+  // Snapshot "monde" du monstre clique avant tout deplacement de preparation,
+  // afin de pouvoir restaurer ses PV/position en cas de defaite.
   if (!monster._worldSnapshotBeforeCombat) {
     const stats = monster.stats || {};
     monster._worldSnapshotBeforeCombat = {
@@ -146,16 +146,16 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     };
   }
 
-  // Si une préparation est déjà active, on ne recrée pas tout.
+  // Si une preparation est deje active, on ne recree pas tout.
   if (scene.prepState && scene.prepState.actif) {
     return;
   }
 
-  // On mémorise la carte / layer de combat pour l'IA monstre, les sorts, etc.
+  // On memorise la carte / layer de combat pour l'IA monstre, les sorts, etc.
   scene.combatMap = map;
   scene.combatGroundLayer = groundLayer;
 
-  // Pendant la prÃ©paration, on fige les dÃ©placements automatiques des monstres (roaming).
+  // Pendant la preparation, on fige les deplacements automatiques des monstres (roaming).
   // Sinon leurs timers peuvent les faire bouger pendant le placement.
   if (Array.isArray(scene.monsters) && map && groundLayer) {
     scene.monsters.forEach((m) => {
@@ -182,7 +182,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     });
   }
 
-  // Petit fondu noir à l'entrée en préparation (au clic sur le monstre)
+  // Petit fondu noir e l'entree en preparation (au clic sur le monstre)
   const cam = scene.cameras && scene.cameras.main;
   if (cam && cam.fadeOut && cam.fadeIn) {
     cam.once("camerafadeoutcomplete", () => {
@@ -197,7 +197,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
   const pattern = COMBAT_PATTERNS[desiredPatternId] || COMBAT_PATTERNS.close_melee;
   const patternId = pattern === COMBAT_PATTERNS[desiredPatternId] ? desiredPatternId : "close_melee";
 
-  // Origines par défaut : autour du monstre cliqué (comportement actuel)
+  // Origines par defaut : autour du monstre clique (comportement actuel)
   let playerOriginX = monster.tileX;
   let playerOriginY = monster.tileY;
   let enemyOriginX = monster.tileX;
@@ -210,7 +210,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     if (typeof options.enemyOrigin.y === "number") enemyOriginY = options.enemyOrigin.y;
   }
 
-  // Si des ancres sont définies pour cette map + ce paterne,
+  // Si des ancres sont definies pour cette map + ce paterne,
   // on en choisit une au hasard.
   const mapKey =
     scene.currentMapKey || (scene.currentMapDef && scene.currentMapDef.key);
@@ -236,7 +236,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     }
   }
 
-  // Cases joueurs / ennemies calculées à partir de l'origine choisie
+  // Cases joueurs / ennemies calculees e partir de l'origine choisie
   let allowedTiles = computePlacementTiles(
     map,
     playerOriginX,
@@ -253,7 +253,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
 
   // Si, pour une raison quelconque (ancres hors carte, paterne absent),
   // on se retrouve sans cases valides, on retombe sur le comportement
-  // "autour du monstre cliqué".
+  // "autour du monstre clique".
   if (!allowedTiles.length || !enemyTiles.length) {
     const fallbackPattern = COMBAT_PATTERNS.close_melee;
     allowedTiles = computePlacementTiles(
@@ -270,7 +270,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     );
   }
 
-  // Prépare la liste des monstres impliqués dans ce combat.
+  // Prepare la liste des monstres impliques dans ce combat.
   const baseGroupSize =
     typeof monster.groupSize === "number" && monster.groupSize > 0
       ? monster.groupSize
@@ -282,7 +282,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
 
   const combatMonsters = [];
 
-  // Au moins un monstre : on place le "pack leader" (le monstre cliqué).
+  // Au moins un monstre : on place le "pack leader" (le monstre clique).
   const firstTile =
     enemyTiles.length > 0
       ? enemyTiles[0]
@@ -310,7 +310,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
 
   combatMonsters.push(monster);
 
-  // Monstres supplémentaires du pack (corbeau x2/x3/x4, etc.)
+  // Monstres supplementaires du pack (corbeau x2/x3/x4, etc.)
   for (let i = 1; i < maxEnemies; i += 1) {
     const tile = enemyTiles[i] || firstTile;
 
@@ -369,7 +369,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     combatMonsters.push(extra);
   }
 
-  // Sauvegarde la liste des monstres engagés dans ce combat.
+  // Sauvegarde la liste des monstres engages dans ce combat.
   scene.combatMonsters = combatMonsters;
 
   // Nettoyage visuel de base (previews, tooltips)
@@ -380,7 +380,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     scene.hideMonsterTooltip();
   }
 
-  // Cache les monstres du monde qui ne participent pas à ce combat.
+  // Cache les monstres du monde qui ne participent pas e ce combat.
   const allMonsters = scene.monsters || [];
   const combatSet = new Set(combatMonsters);
   scene.hiddenWorldMonsters = [];
@@ -396,12 +396,12 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     scene.hiddenWorldMonsters.push(m);
   });
 
-  // Placement automatique du joueur sur une case bleue aléatoire dès la préparation.
+  // Placement automatique du joueur sur une case bleue aleatoire des la preparation.
   if (allowedTiles.length > 0) {
     const currentX = player.currentTileX;
     const currentY = player.currentTileY;
 
-    // On évite de reprendre exactement la tuile actuelle si possible.
+    // On evite de reprendre exactement la tuile actuelle si possible.
     let playerCandidates = allowedTiles.filter(
       (t) =>
         (t.x !== currentX || t.y !== currentY) && !isTileBlocked(scene, t.x, t.y)
@@ -517,7 +517,7 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     highlights,
   };
 
-  // Alliés de faille visibles dès la préparation.
+  // Allies de faille visibles des la preparation.
   let spawnedAllies = false;
   const mapDef = scene.currentMapDef || null;
   if (player && mapDef?.riftEncounter) {
@@ -526,8 +526,8 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     const stage = getCurrentQuestStage(qDef, qState);
     if (qState?.state === "in_progress" && stage?.id === "close_rifts") {
       const hasAlly = (id) =>
-        scene.combatSummons &&
-        scene.combatSummons.some((s) => s && s.isCombatAlly && s.monsterId === id);
+        scene.combatAllies &&
+        scene.combatAllies.some((s) => s && s.isCombatAlly && s.monsterId === id);
       const pickPrepTile = () => {
         const px = player.currentTileX;
         const py = player.currentTileY;
@@ -562,18 +562,18 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
 
   scene.prepState.spawnedAllies = spawnedAllies;
 
-  // Challenge : tirage dès la préparation pour que le joueur puisse se placer en conséquence.
+  // Challenge : tirage des la preparation pour que le joueur puisse se placer en consequence.
   initPrepChallenge(scene, scene.prepState, player);
 
   document.body.classList.add("combat-prep");
 
-  // Rafraîchit l'UI (y compris le badge challenge) dès l'entrée en préparation.
+  // Rafraechit l'UI (y compris le badge challenge) des l'entree en preparation.
   if (scene && typeof scene.updateCombatUi === "function") {
     scene.updateCombatUi();
   }
 }
 
-// Termine la phase de préparation et démarre réellement le combat.
+// Termine la phase de preparation et demarre reellement le combat.
 export function startCombatFromPrep(scene) {
   const prep = scene.prepState;
   if (!prep || !prep.actif) {

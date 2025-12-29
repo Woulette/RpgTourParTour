@@ -9,8 +9,8 @@ export default {
     frameCount: 4,
   },
   render: {
-    originX: 0.6,
-    originY: 0.85,
+    originX: 0.5,
+    originY: 0.90,
     offsetY: 0,
   },
   baseLevel: 13,

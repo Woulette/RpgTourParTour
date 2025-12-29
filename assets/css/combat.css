@@ -170,6 +170,10 @@ body.combat-active.combat-target-panel-visible #hud-spell-container {
   background: rgba(60, 140, 255, 0.95);
 }
 
+.combat-target-summon .combat-target-hp-fill {
+  background: rgba(70, 220, 160, 0.95);
+}
+
 .combat-target-enemy .combat-target-hp-fill {
   background: rgba(220, 60, 60, 0.95);
 }
@@ -297,6 +301,10 @@ body.combat-active #combat-turn-order {
 
 .combat-turn-actor.is-summon .combat-turn-hp-fill {
   background: rgba(70, 220, 160, 0.95);
+}
+
+.combat-turn-actor.is-ally .combat-turn-hp-fill {
+  background: rgba(60, 140, 255, 0.95);
 }
 
 .combat-turn-avatar {

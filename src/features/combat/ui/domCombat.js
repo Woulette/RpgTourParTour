@@ -242,6 +242,13 @@ export function initDomCombat(scene) {
       if (state?.summonActing) renderActiveIndex = insertAt;
     }
 
+    if (state?.summonActing && state.monstre) {
+      const idx = renderActors.findIndex((a) => a && a.entity === state.monstre);
+      if (idx >= 0) {
+        renderActiveIndex = idx;
+      }
+    }
+
     renderActors.forEach((actor, idx) => {
       const el = document.createElement("div");
       el.setAttribute("role", "listitem");
@@ -251,6 +258,7 @@ export function initDomCombat(scene) {
       if (!isActorAlive(actor)) el.className += " is-dead";
       if (actor.kind === "joueur") el.className += " is-player";
       else if (actor.kind === "invocation") el.className += " is-summon";
+      else if (actor.entity && actor.entity.isCombatAlly) el.className += " is-ally";
       else el.className += " is-monster";
 
       el.title = getActorName(actor);
@@ -438,9 +446,10 @@ export function initDomCombat(scene) {
       return;
     }
 
+    const isSummonTarget = target?.isSummon === true && !target?.isCombatAlly;
     const isPlayerTarget =
       target === state.joueur ||
-      target?.isSummon === true ||
+      target?.isCombatAlly === true ||
       (target && !target.monsterId && target.texture?.key === "player");
 
     const name =
@@ -504,7 +513,8 @@ export function initDomCombat(scene) {
 
     if (targetPanelEl) {
       targetPanelEl.classList.toggle("combat-target-ally", isPlayerTarget);
-      targetPanelEl.classList.toggle("combat-target-enemy", !isPlayerTarget);
+      targetPanelEl.classList.toggle("combat-target-summon", isSummonTarget);
+      targetPanelEl.classList.toggle("combat-target-enemy", !isPlayerTarget && !isSummonTarget);
     }
 
     document.body.classList.add("combat-target-panel-visible");

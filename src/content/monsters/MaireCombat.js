@@ -1,11 +1,16 @@
 export default {
   id: "maire_combat",
   label: "Maire",
-  textureKey: "npc_maire_albinos",
-  spritePath: "assets/npc/MaireAlbinossouth-west.png",
+  textureKey: "npc_maire_albinos_combat",
+  spritePath: "assets/npc/MaireAlbinos/rotations/south-west.png",
+  animation: {
+    directions: ["north-east", "north-west", "south-east", "south-west"],
+  },
+  useDiagonalFacing: true,
   render: {
-    originX: 0.5,
-    originY: 1,
+    originX: 0.4,
+    originY: 1.15,
+    offsetX: 0,
     offsetY: 0,
   },
   statsOverrides: {

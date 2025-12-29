@@ -292,7 +292,7 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
   };
 
   // Rendre le monstre cliquable pour entrer en combat
-  monster.setInteractive({ useHandCursor: true });
+  monster.setInteractive({ useHandCursor: true, pixelPerfect: true, alphaTolerance: 1 });
 
   const getCombatWorldToTile = () => {
     const map = scene.combatMap || scene.map;
@@ -335,8 +335,24 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
         worldToTile && pointer
           ? worldToTile(pointer.worldX, pointer.worldY)
           : null;
-      if (!t || t.x !== monster.tileX || t.y !== monster.tileY) {
-        return;
+      const tx =
+        typeof monster.currentTileX === "number"
+          ? monster.currentTileX
+          : typeof monster.tileX === "number"
+            ? monster.tileX
+            : null;
+      const ty =
+        typeof monster.currentTileY === "number"
+          ? monster.currentTileY
+          : typeof monster.tileY === "number"
+            ? monster.tileY
+            : null;
+      if (!t || t.x !== tx || t.y !== ty) {
+        // Pixel-perfect hover est assez precis pour autoriser le survol
+        // meme si le sprite depasse de sa tuile en isometrique.
+        if (!(monster.input && monster.input.pixelPerfect)) {
+          return;
+        }
       }
     }
     // Effet de lumière directement sur le sprite :
@@ -370,6 +386,10 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
       monster.hoverHighlight = overlay;
     }
 
+    if (scene.combatState && scene.combatState.enCours) {
+      scene.__combatSpriteHoverLock = true;
+      scene.__combatSpriteHoverEntity = monster;
+    }
     if (scene.showDamagePreview) {
       scene.showDamagePreview(monster);
     }
@@ -389,7 +409,19 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     const worldToTile = getCombatWorldToTile();
     const t =
       worldToTile && pointer ? worldToTile(pointer.worldX, pointer.worldY) : null;
-    if (t && t.x === monster.tileX && t.y === monster.tileY) {
+    const tx =
+      typeof monster.currentTileX === "number"
+        ? monster.currentTileX
+        : typeof monster.tileX === "number"
+          ? monster.tileX
+          : null;
+    const ty =
+      typeof monster.currentTileY === "number"
+        ? monster.currentTileY
+        : typeof monster.tileY === "number"
+          ? monster.tileY
+          : null;
+    if (t && t.x === tx && t.y === ty) {
       monster.emit("pointerover", pointer);
       return;
     }
@@ -399,6 +431,10 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
 
   monster.on("pointerout", () => {
     // En combat, la hitbox peut couvrir plusieurs cases : on force l'effacement.
+    if (scene.combatState && scene.combatState.enCours) {
+      scene.__combatSpriteHoverLock = false;
+      scene.__combatSpriteHoverEntity = null;
+    }
     clearHoverUi();
     if (scene.combatState && scene.combatState.enCours) return;
     // Retire le doublon lumineux s'il existe
