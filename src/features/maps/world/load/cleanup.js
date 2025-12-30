@@ -5,10 +5,23 @@ export function cleanupSceneForMapLoad(scene) {
 
   // Reset any pending combat target when changing maps.
   scene.pendingCombatTarget = null;
+  if (scene.hideMonsterTooltip) {
+    scene.hideMonsterTooltip();
+  }
+  if (scene.clearDamagePreview) {
+    scene.clearDamagePreview();
+  }
+  if (scene.hideCombatTargetPanel) {
+    scene.hideCombatTargetPanel();
+  }
+  scene.__combatSpriteHoverLock = false;
+  scene.__combatSpriteHoverEntity = null;
 
   if (Array.isArray(scene.workstations)) {
     scene.workstations.forEach((w) => {
       if (w?.hoverHighlight?.destroy) w.hoverHighlight.destroy();
+      if (w?.sprite?.hoverHighlight?.destroy) w.sprite.hoverHighlight.destroy();
+      if (w?.sprite) w.sprite.hoverHighlight = null;
       if (w?.sprite?.destroy) w.sprite.destroy();
     });
   }
@@ -29,6 +42,8 @@ export function cleanupSceneForMapLoad(scene) {
     scene.npcs.forEach((npc) => {
       if (npc?.hoverHighlight?.destroy) npc.hoverHighlight.destroy();
       npc.hoverHighlight = null;
+      if (npc?.questMarker?.destroy) npc.questMarker.destroy();
+      npc.questMarker = null;
       if (npc?.sprite?.destroy) npc.sprite.destroy();
     });
     scene.npcs = [];

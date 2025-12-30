@@ -69,25 +69,43 @@ function isTileOccupiedByCombatEntity(scene, tileX, tileY) {
   }
 
   const monsters = getAliveCombatMonsters(scene);
-  const occupiedByMonster = monsters.some(
-    (m) =>
-      m &&
-      typeof m.tileX === "number" &&
-      typeof m.tileY === "number" &&
-      m.tileX === tileX &&
-      m.tileY === tileY
-  );
+  const occupiedByMonster = monsters.some((m) => {
+    if (!m) return false;
+    const mx =
+      typeof m.currentTileX === "number"
+        ? m.currentTileX
+        : typeof m.tileX === "number"
+        ? m.tileX
+        : null;
+    const my =
+      typeof m.currentTileY === "number"
+        ? m.currentTileY
+        : typeof m.tileY === "number"
+        ? m.tileY
+        : null;
+    return mx === tileX && my === tileY;
+  });
   if (occupiedByMonster) return true;
 
   const summons = getAliveCombatSummons(scene);
   if (
     summons.some(
-      (s) =>
-        s &&
-        typeof s.tileX === "number" &&
-        typeof s.tileY === "number" &&
-        s.tileX === tileX &&
-        s.tileY === tileY
+      (s) => {
+        if (!s) return false;
+        const sx =
+          typeof s.currentTileX === "number"
+            ? s.currentTileX
+            : typeof s.tileX === "number"
+            ? s.tileX
+            : null;
+        const sy =
+          typeof s.currentTileY === "number"
+            ? s.currentTileY
+            : typeof s.tileY === "number"
+            ? s.tileY
+            : null;
+        return sx === tileX && sy === tileY;
+      }
     )
   ) {
     return true;
@@ -95,12 +113,22 @@ function isTileOccupiedByCombatEntity(scene, tileX, tileY) {
 
   const allies = getAliveCombatAllies(scene);
   return allies.some(
-    (s) =>
-      s &&
-      typeof s.tileX === "number" &&
-      typeof s.tileY === "number" &&
-      s.tileX === tileX &&
-      s.tileY === tileY
+    (s) => {
+      if (!s) return false;
+      const sx =
+        typeof s.currentTileX === "number"
+          ? s.currentTileX
+          : typeof s.tileX === "number"
+          ? s.tileX
+          : null;
+      const sy =
+        typeof s.currentTileY === "number"
+          ? s.currentTileY
+          : typeof s.tileY === "number"
+          ? s.tileY
+          : null;
+      return sx === tileX && sy === tileY;
+    }
   );
 }
 
@@ -128,20 +156,37 @@ export function hasLineOfSight(scene, fromX, fromY, toX, toY) {
   let x = fromX;
   let y = fromY;
 
+  const isBlocking = (tx, ty) => {
+    if (tx === toX && ty === toY) return false;
+    if (isTileBlocked(scene, tx, ty)) return true;
+    if (isTileOccupiedByCombatEntity(scene, tx, ty)) return true;
+    return false;
+  };
+
   while (!(x === toX && y === toY)) {
     const e2 = 2 * err;
+    let nx = x;
+    let ny = y;
     if (e2 > -dy) {
       err -= dy;
-      x += sx;
+      nx = x + sx;
     }
     if (e2 < dx) {
       err += dx;
-      y += sy;
+      ny = y + sy;
     }
 
+    if (nx !== x && ny !== y) {
+      const blockA = isBlocking(x + sx, y);
+      const blockB = isBlocking(x, y + sy);
+      if (blockA || blockB) return false;
+    }
+
+    x = nx;
+    y = ny;
+
     if (x === toX && y === toY) break;
-    if (isTileBlocked(scene, x, y)) return false;
-    if (isTileOccupiedByCombatEntity(scene, x, y)) return false;
+    if (isBlocking(x, y)) return false;
   }
 
   return true;

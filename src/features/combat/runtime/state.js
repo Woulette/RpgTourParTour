@@ -1,4 +1,4 @@
-﻿// Gestion de l'état et de l'ordre de tour du combat.
+﻿﻿// Gestion de l'état et de l'ordre de tour du combat.
 
 // Crée l'état de combat à partir d'un joueur et d'un monstre.
 // L'initiative détermine qui commence : joueur ou monstre.
@@ -575,5 +575,3 @@ function applyStartOfTurnStatusEffects(scene, entity) {
 
   entity.statusEffects = keep;
 }
-
-

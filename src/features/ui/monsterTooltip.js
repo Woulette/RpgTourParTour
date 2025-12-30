@@ -10,6 +10,8 @@ export function attachMonsterTooltip(scene) {
   scene.monsterTooltipText = null;
   scene.monsterTooltipDamageText = null;
   scene.monsterTooltipBg = null;
+  scene.monsterTooltipTarget = null;
+  scene.monsterTooltipMode = null;
 
   const getBounds = (entity) => {
     if (!entity) return null;
@@ -25,11 +27,71 @@ export function attachMonsterTooltip(scene) {
     return { left: x, right: x, top: y, bottom: y, centerX: x, centerY: y };
   };
 
+  scene.updateMonsterTooltipPosition = () => {
+    const target = scene.monsterTooltipTarget;
+    if (!target || !scene.monsterTooltipBg || !scene.monsterTooltipText) return;
+
+    const bounds = getBounds(target);
+    const bubbleCenterX = bounds?.centerX ?? target.x;
+
+    if (scene.monsterTooltipMode === "combat") {
+      const header = scene.monsterTooltipText;
+      const dmg = scene.monsterTooltipDamageText;
+      const paddingX = 10;
+      const paddingY = 6;
+      const gapY = dmg ? 2 : 0;
+      const contentW = Math.max(header.width, dmg ? dmg.width : 0);
+      const contentH = header.height + (dmg ? gapY + dmg.height : 0);
+      const bgWidth = contentW + paddingX * 2;
+      const bgHeight = contentH + paddingY * 2;
+      const margin = 10;
+      const centerY = (bounds?.top ?? target.y) - bgHeight / 2 - margin;
+      const bgX = bubbleCenterX - bgWidth / 2;
+      const bgY = centerY - bgHeight / 2;
+
+      scene.monsterTooltipBg.clear();
+      scene.monsterTooltipBg.fillStyle(0x000000, 0.78);
+      scene.monsterTooltipBg.lineStyle(1, 0xffffff, 0.18);
+      const radius = 8;
+      scene.monsterTooltipBg.fillRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+      scene.monsterTooltipBg.strokeRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+
+      const headerY = bgY + paddingY + header.height / 2;
+      header.setPosition(bubbleCenterX, headerY);
+      if (dmg) {
+        const dmgY = headerY + header.height / 2 + gapY + dmg.height / 2;
+        dmg.setPosition(bubbleCenterX, dmgY);
+      }
+      return;
+    }
+
+    const tooltipText = scene.monsterTooltipText;
+    const lineCount = String(tooltipText.text || "").split("\n").length;
+    const bubbleCenterY = target.y - 40 - lineCount * 8;
+    const paddingX = 8;
+    const paddingY = 4;
+    const bgWidth = tooltipText.width + paddingX * 2;
+    const bgHeight = tooltipText.height + paddingY * 2;
+    const margin = 10;
+    const centerY = (bounds?.top ?? bubbleCenterY) - bgHeight / 2 - margin;
+    tooltipText.setPosition(bubbleCenterX, centerY);
+
+    const bgX = bubbleCenterX - bgWidth / 2;
+    const bgY = centerY - bgHeight / 2;
+    scene.monsterTooltipBg.clear();
+    scene.monsterTooltipBg.fillStyle(0x000000, 0.7);
+    scene.monsterTooltipBg.lineStyle(1, 0xffffff, 0.9);
+    const radius = 6;
+    scene.monsterTooltipBg.fillRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+    scene.monsterTooltipBg.strokeRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+  };
+
   scene.showMonsterTooltip = (monster) => {
     if (!monster) {
       if (scene.hideMonsterTooltip) scene.hideMonsterTooltip();
       return;
     }
+    scene.monsterTooltipTarget = monster;
 
     const baseName =
       monster.displayName || monster.label || monster.monsterId || "Monstre";
@@ -38,6 +100,7 @@ export function attachMonsterTooltip(scene) {
 
     // En combat : affichage harmonieux (nom + niv + PV + prévisu dégâts en un seul bloc).
     if (scene.combatState && scene.combatState.enCours) {
+      scene.monsterTooltipMode = "combat";
       const stats = monster.stats || {};
       const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
       const hpMax = typeof stats.hpMax === "number" ? stats.hpMax : hp;
@@ -129,8 +192,10 @@ export function attachMonsterTooltip(scene) {
       scene.monsterTooltipBg = bg;
       scene.monsterTooltipText = header;
       scene.monsterTooltipDamageText = dmg;
+      scene.updateMonsterTooltipPosition();
       return;
     }
+    scene.monsterTooltipMode = "world";
 
     const baseDef = monsters[monster.monsterId] || null;
     const groupSize =
@@ -230,6 +295,7 @@ export function attachMonsterTooltip(scene) {
 
     scene.monsterTooltipBg = bg;
     scene.monsterTooltipText = tooltipText;
+    scene.updateMonsterTooltipPosition();
   };
 
   scene.hideMonsterTooltip = () => {
@@ -245,6 +311,8 @@ export function attachMonsterTooltip(scene) {
       scene.monsterTooltipBg.destroy();
       scene.monsterTooltipBg = null;
     }
+    scene.monsterTooltipTarget = null;
+    scene.monsterTooltipMode = null;
   };
 }
 

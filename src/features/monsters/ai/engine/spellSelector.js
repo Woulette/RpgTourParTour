@@ -20,7 +20,7 @@ function countAlliesInRadius(scene, center, radius) {
   return count;
 }
 
-function getSpellForMonster(monster, spellId) {
+export function getSpellForMonster(monster, spellId) {
   if (!monster || !spellId) return null;
   const list = monsterSpells[monster.monsterId] || {};
   return list[spellId] || null;
