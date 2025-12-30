@@ -4,6 +4,7 @@ import {
   stopMonsterMoveAnimation,
 } from "../runtime/animations.js";
 import { blockTile, isTileBlocked, unblockTile } from "../../../collision/collisionGrid.js";
+import { applyTaclePenalty } from "../../combat/runtime/tacle.js";
 
 export function delay(scene, ms, fn) {
   const duration = Math.max(0, ms | 0);
@@ -30,6 +31,18 @@ export function moveMonsterAlongPath(
   onDone
 ) {
   const raw = Array.isArray(path) ? path.slice() : [];
+  if (scene?.combatState?.enCours && monster) {
+    applyTaclePenalty(scene, monster);
+    const pmRestants = scene.combatState.pmRestants ?? 0;
+    if (raw.length > pmRestants) {
+      raw.splice(pmRestants);
+    }
+    if (raw.length === 0) {
+      stopMonsterMoveAnimation(monster);
+      if (typeof onDone === "function") onDone();
+      return;
+    }
+  }
   const queue = [];
   let prevX = monster.tileX;
   let prevY = monster.tileY;

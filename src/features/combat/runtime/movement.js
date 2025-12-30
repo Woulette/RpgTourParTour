@@ -1,3 +1,5 @@
+import { getTaclePenaltyPreview } from "./tacle.js";
+
 // Logique de déplacement en combat et preview du chemin.
 
 // Limite un chemin en fonction des règles de combat (tour, PM restants).
@@ -79,11 +81,20 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
 
   const halfW = map.tileWidth / 2;
   const halfH = map.tileHeight / 2;
+  const allowedColor = 0x00ff55;
+  const blockedColor = 0xff4444;
+  const allowedFill = 0.25;
+  const blockedFill = 0.18;
 
-  preview.lineStyle(1, 0x00ff55, 1);
-  preview.fillStyle(0x00ff55, 0.25);
+  let blockedFromIndex = null;
+  if (state && state.enCours && state.tour === "joueur" && state.joueur) {
+    const { pmLoss } = getTaclePenaltyPreview(scene, state.joueur);
+    const effectivePm = Math.max(0, (state.pmRestants ?? 0) - pmLoss);
+    blockedFromIndex = effectivePm;
+  }
 
-  for (const step of path) {
+  for (let i = 0; i < path.length; i += 1) {
+    const step = path[i];
     const wp = map.tileToWorldXY(
       step.x,
       step.y,
@@ -101,6 +112,11 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
       new Phaser.Math.Vector2(cx - halfW, cy),
     ];
 
+    const isBlocked = typeof blockedFromIndex === "number" && i >= blockedFromIndex;
+    const color = isBlocked ? blockedColor : allowedColor;
+    const fill = isBlocked ? blockedFill : allowedFill;
+    preview.lineStyle(1, color, 1);
+    preview.fillStyle(color, fill);
     preview.fillPoints(points, true);
     preview.strokePoints(points, true);
   }

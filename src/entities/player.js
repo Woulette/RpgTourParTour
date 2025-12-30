@@ -1,6 +1,6 @@
 import { createCharacter } from "./character.js";
 import { classes } from "../config/classes.js";
-import { createStats, applyBonuses } from "../core/stats.js";
+import { createStats, applyBonuses, applyDerivedAgilityStats } from "../core/stats.js";
 import { createLevelState, ajouterXp } from "../core/level.js";
 import { XP_CONFIG } from "../config/xp.js";
 import { createPlayerInventory } from "../features/inventory/runtime/inventoryContainers.js";
@@ -16,7 +16,9 @@ export function createPlayer(scene, x, y, classId) {
   const classDef = classes[classId] || classes.archer;
 
   const baseStats = createStats();
-  const stats = applyBonuses(baseStats, classDef.statBonuses || []);
+  const stats = applyDerivedAgilityStats(
+    applyBonuses(baseStats, classDef.statBonuses || [])
+  );
   const initBonus = stats.initiative ?? 0;
   const derivedInit =
     (stats.force ?? 0) +

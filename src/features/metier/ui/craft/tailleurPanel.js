@@ -33,6 +33,10 @@ function labelForStatKey(key) {
     case "pm":
     case "pmPlus":
       return "PM";
+    case "tacle":
+      return "Tacle";
+    case "fuite":
+      return "Fuite";
     default:
       return key;
   }

@@ -4,6 +4,7 @@ import {
   limitPathForCombat,
   updateCombatPreview,
 } from "../features/combat/runtime/movement.js";
+import { applyTaclePenalty } from "../features/combat/runtime/tacle.js";
 import {
   tryCastActiveSpellAtTile,
   getActiveSpell,
@@ -655,6 +656,17 @@ function movePlayerAlongPathWithCombat(
   path,
   moveCost
 ) {
+  if (scene?.combatState?.enCours) {
+    applyTaclePenalty(scene, player);
+    const pmRestants = scene.combatState.pmRestants ?? 0;
+    if (path.length > pmRestants) {
+      path = path.slice(0, pmRestants);
+      moveCost = path.length;
+    }
+    if (moveCost <= 0) {
+      return;
+    }
+  }
   movePlayerAlongPath(
     scene,
     player,

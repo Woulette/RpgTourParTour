@@ -1,5 +1,5 @@
 import { getItemDef, addItem, removeItem } from "./inventoryCore.js";
-import { applyBonuses } from "../../../core/stats.js";
+import { applyBonuses, applyDerivedAgilityStats } from "../../../core/stats.js";
 import { equipmentSets } from "../data/sets.js";
 import { emit as emitStoreEvent } from "../../../state/store.js";
 
@@ -86,7 +86,7 @@ export function recomputePlayerStatsWithEquipment(player) {
     }
   }
 
-  const newStats = applyBonuses(base, bonuses);
+  const newStats = applyDerivedAgilityStats(applyBonuses(base, bonuses));
 
   // Initiative : +1 par point de Force/Intelligence/Agilité/Chance (stats finales).
   // On conserve les bonus directs d'initiative (sets/objets) en les ajoutant au calcul.

@@ -1,7 +1,7 @@
 import { monsters } from "../../../content/monsters/index.js";
 import { createCharacter } from "../../../entities/character.js";
 import { createMonster } from "../../../entities/monster.js";
-import { createStats } from "../../../core/stats.js";
+import { createStats, applyDerivedAgilityStats } from "../../../core/stats.js";
 import { blockTile, isTileBlocked, unblockTile } from "../../../collision/collisionGrid.js";
 import { getAliveCombatMonsters } from "../../../features/monsters/ai/aiUtils.js";
 import { createCalibratedWorldToTile } from "../../../features/maps/world/util.js";
@@ -270,6 +270,7 @@ export function spawnSummonFromCaptured(
 
   const capturedLevel = getCapturedMonsterLevel(owner, def);
   applySummonScaling(stats, owner, capturedLevel);
+  applyDerivedAgilityStats(stats);
 
   const summon = createCharacter(scene, sx, sy, {
     textureKey: def.textureKey,
@@ -525,6 +526,7 @@ export function spawnCombatAlly(
   const hpMax = stats.hpMax ?? stats.hp ?? 1;
   stats.hpMax = hpMax;
   stats.hp = hpMax;
+  applyDerivedAgilityStats(stats);
 
   const ally = createCharacter(scene, sx, sy, {
     textureKey: def.textureKey,

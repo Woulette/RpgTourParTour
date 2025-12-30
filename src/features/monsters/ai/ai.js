@@ -13,6 +13,8 @@ import { runTurn as runSkelboneTurn } from "../../combat/ai/skelbone.js";
 import { runTurn as runSenboneTurn } from "../../combat/ai/senbone.js";
 import { runTurn as runMaireCombatTurn } from "../../combat/ai/maire_combat.js";
 import { runTurn as runOmbreTitanTurn } from "../../combat/ai/ombre_titan.js";
+import { runGenericAi } from "./engine/genericAi.js";
+import { getAiProfile } from "./profiles/index.js";
 
 const AI_HANDLERS = {
   corbeau: runCorbeauTurn,
@@ -46,6 +48,8 @@ export function runMonsterTurn(scene) {
   const groundLayer = scene.combatGroundLayer;
 
   if (!monster || !player || !map || !groundLayer) return;
+
+  const profile = getAiProfile(monster);
 
   const pickTargetForMonster = () => {
     if (monster?.isCombatAlly) {
@@ -116,7 +120,7 @@ export function runMonsterTurn(scene) {
   };
 
   const target = pickTargetForMonster();
-  if (!target) {
+  if (!target && !profile) {
     const finishTurn = () => {
       if (!state.enCours) return;
 
@@ -150,7 +154,9 @@ export function runMonsterTurn(scene) {
     }
   };
 
-  if (handler) {
+  if (profile) {
+    runGenericAi(scene, state, monster, player, map, groundLayer, profile, finishTurn);
+  } else if (handler) {
     handler(scene, state, monster, target, map, groundLayer, finishTurn);
   } else {
     finishTurn();
@@ -158,6 +164,11 @@ export function runMonsterTurn(scene) {
 }
 
 export function runMonsterAi(scene, state, monster, target, map, groundLayer, onComplete) {
+  const profile = getAiProfile(monster);
+  if (profile) {
+    runGenericAi(scene, state, monster, state?.joueur, map, groundLayer, profile, onComplete);
+    return;
+  }
   const handler = AI_HANDLERS[monster?.monsterId];
   if (!handler) {
     onComplete?.();

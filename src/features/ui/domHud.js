@@ -208,6 +208,8 @@ function mettreAJourStatsPanel(player) {
   // PA / PM
   setText("stat-pa", stats.pa ?? 0);
   setText("stat-pm", stats.pm ?? 0);
+  setText("stat-tacle", stats.tacle ?? 0);
+  setText("stat-fuite", stats.fuite ?? 0);
 
   // Autres stats d'affichage
   setText("stat-sagesse", stats.sagesse ?? 0);

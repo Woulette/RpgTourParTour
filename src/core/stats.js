@@ -7,6 +7,8 @@ export const baseStats = {
   intelligence: 0,
   agilite: 2220,
   chance: 0,
+  tacle: 0,
+  fuite: 0,
   // Puissance : bonus générique de dégâts (équivaut à +1 sur force/intel/agi/chance
   // uniquement pour le calcul des dégâts, sans donner les effets secondaires).
   puissance: 0,
@@ -28,7 +30,24 @@ export const baseStats = {
 
 // Crée un objet stats en partant du modèle, avec éventuellement des overrides
 export function createStats(overrides = {}) {
-  return { ...baseStats, ...overrides };
+  const stats = { ...baseStats, ...overrides };
+  return applyDerivedAgilityStats(stats);
+}
+
+// Applique les stats derivees depuis l'agilite (tacle/fuite).
+export function applyDerivedAgilityStats(stats) {
+  if (!stats) return stats;
+  const agi = typeof stats.agilite === "number" ? stats.agilite : 0;
+  const baseTacle =
+    typeof stats.baseTacle === "number" ? stats.baseTacle : stats.tacle ?? 0;
+  const baseFuite =
+    typeof stats.baseFuite === "number" ? stats.baseFuite : stats.fuite ?? 0;
+
+  stats.baseTacle = baseTacle;
+  stats.baseFuite = baseFuite;
+  stats.tacle = baseTacle + Math.floor(agi / 10);
+  stats.fuite = baseFuite + Math.floor(agi / 10);
+  return stats;
 }
 
 // Applique une liste de bonus (équipement, buffs, etc.) sur des stats de base

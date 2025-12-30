@@ -27,6 +27,10 @@ export function labelForStatKey(key) {
     case "pmPlus":
     case "pm":
       return "PM";
+    case "tacle":
+      return "Tacle";
+    case "fuite":
+      return "Fuite";
     default:
       return key;
   }
@@ -59,6 +63,8 @@ export function decorateBonusHtml(text) {
     { label: "PV", cls: "inventory-bonus-stat-hp" },
     { label: "PA", cls: "inventory-bonus-stat-pa" },
     { label: "PM", cls: "inventory-bonus-stat-pm" },
+    { label: "Tacle", cls: "inventory-bonus-stat-generic" },
+    { label: "Fuite", cls: "inventory-bonus-stat-generic" },
   ];
 
   patterns.forEach(({ label, cls }) => {
