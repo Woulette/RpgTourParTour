@@ -9,6 +9,7 @@ import {
 } from "../../../quests/index.js";
 import { initCombatChallenge } from "../../../challenges/runtime/index.js";
 import { snapshotMonsterForWorld } from "./snapshots.js";
+import { setHarvestablesVisible } from "../../../maps/world/harvestables.js";
 
 function maybeSpawnRiftAllies(scene, player) {
   const riftQuestId = "keeper_north_explosion_1";
@@ -79,6 +80,7 @@ export function startCombat(scene, player, monster) {
 
   scene.combatState = createCombatState(player, monster);
   scene.combatState.worldMonsterSnapshot = snapshotMonsterForWorld(scene, monster);
+  setHarvestablesVisible(scene, false);
 
   const keepPrepSummons = scene.prepAllies === true;
   const existingSummons =

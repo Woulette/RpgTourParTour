@@ -1,0 +1,63 @@
+/* Poubelle : panneau simple (2 colonnes) calé sur le style craft. */
+
+.craft-panel.trash .craft-panel-inner {
+  width: 720px;
+  max-width: 92vw;
+  max-height: 74vh;
+}
+
+.craft-panel.trash .trash-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  min-height: 0;
+}
+
+.craft-panel.trash .trash-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.craft-panel.trash .trash-column-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e7edf7;
+}
+
+.craft-panel.trash .trash-grid {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(10 * 52px + 9 * 4px);
+}
+
+.craft-panel.trash .craft-inventory-grid {
+  grid-template-columns: repeat(5, 52px);
+  grid-auto-rows: 52px;
+  gap: 4px;
+  justify-content: center;
+}
+
+.craft-panel.trash .craft-inventory-slot {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+}
+
+.craft-panel.trash .trash-slot {
+  cursor: pointer;
+}
+
+.craft-panel.trash .trash-slot.disabled {
+  cursor: default;
+}
+
+.craft-panel.trash .trash-hint {
+  font-size: 12px;
+  color: #c9d1d9;
+  opacity: 0.75;
+  margin-top: 2px;
+}

@@ -1,5 +1,5 @@
 import { blockTile } from "../../../collision/collisionGrid.js";
-import { isCraftPanelOpen } from "../../ui/uiBlock.js";
+import { isUiBlockingOpen } from "../../ui/uiBlock.js";
 import { questGiverNpcs } from "../catalog/questGivers.js";
 import { startNpcInteraction } from "./interaction.js";
 import {
@@ -120,7 +120,7 @@ function spawnNpcInstance(scene, map, groundLayer, def) {
     if (event && event.stopPropagation) {
       event.stopPropagation();
     }
-    if (isCraftPanelOpen()) return;
+    if (isUiBlockingOpen()) return;
     if (!scene.player) return;
     startNpcInteraction(scene, scene.player, npcInstance);
   });

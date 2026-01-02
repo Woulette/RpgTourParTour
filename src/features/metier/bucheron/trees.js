@@ -2,7 +2,7 @@ import { harvestTree } from "./harvest.js";
 import { blockTile, isTileBlocked } from "../../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../../entities/movement/runtime.js";
-import { isCraftPanelOpen } from "../../ui/uiBlock.js";
+import { isUiBlockingOpen } from "../../ui/uiBlock.js";
 
 const TREE_TEXTURE_KEY = "tree_chene";
 const TREE_STUMP_TEXTURE_KEY = "tree_chene_stump";
@@ -222,7 +222,7 @@ export function spawnTestTrees(scene, map, player, mapDef) {
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
-      if (isCraftPanelOpen()) {
+      if (isUiBlockingOpen()) {
         return;
       }
 

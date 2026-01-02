@@ -4,6 +4,7 @@ import { createStats, applyBonuses, applyDerivedAgilityStats } from "../core/sta
 import { createLevelState, ajouterXp } from "../core/level.js";
 import { XP_CONFIG } from "../config/xp.js";
 import { createPlayerInventory } from "../features/inventory/runtime/inventoryContainers.js";
+import { createTrashContainer } from "../features/inventory/runtime/trashCore.js";
 import {
   createEmptyEquipment,
   recomputePlayerStatsWithEquipment,
@@ -81,6 +82,7 @@ export function createPlayer(scene, x, y, classId) {
   // etat de niveau / XP
   player.levelState = createLevelState();
   player.inventory = createPlayerInventory();
+  player.trash = createTrashContainer(player.inventory?.size);
   // monnaie du joueur
   player.gold = 0;
 

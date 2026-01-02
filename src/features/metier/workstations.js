@@ -4,11 +4,12 @@ import { openCordonnierCraftPanel } from "./ui/craft/cordonnierPanel.js";
 import { openAlchimisteCraftPanel } from "./ui/craft/alchimistePanel.js";
 import { openBucheronCraftPanel } from "./ui/craft/bucheronPanel.js";
 import { openBricoleurCraftPanel } from "./ui/craft/bricoleurPanel.js";
+import { openTrashPanel } from "../inventory/ui/trashPanel.js";
 import { createCalibratedWorldToTile } from "../../features/maps/world/util.js";
 import { blockTile, isTileBlocked } from "../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../entities/movement/runtime.js";
-import { isCraftPanelOpen } from "../ui/uiBlock.js";
+import { isUiBlockingOpen } from "../ui/uiBlock.js";
 
 function isPlayerHarvestingAny(player) {
   return (
@@ -147,7 +148,7 @@ export function setupWorkstations(scene, map, groundLayer, mapDef) {
 
       const player = scene.player;
       if (!player) return;
-      if (isCraftPanelOpen()) return;
+      if (isUiBlockingOpen()) return;
       if (isPlayerHarvestingAny(player)) return;
 
       // Stoppe un déplacement en cours pour éviter les jitters quand on change de cible
@@ -176,6 +177,9 @@ export function setupWorkstations(scene, map, groundLayer, mapDef) {
         }
         if (ws.id === "bricoleur") {
           openBricoleurCraftPanel(scene, scene?.player);
+        }
+        if (ws.id === "poubelle") {
+          openTrashPanel(scene, scene?.player);
         }
       };
 

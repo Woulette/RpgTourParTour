@@ -3,7 +3,7 @@ import { isTileBlocked } from "../../collision/collisionGrid.js";
 import { startNpcInteraction } from "../npc/runtime/interaction.js";
 import { createCalibratedWorldToTile } from "../../features/maps/world/util.js";
 import { getNpcMarker } from "../quests/index.js";
-import { isCraftPanelOpen } from "../ui/uiBlock.js";
+import { isUiBlockingOpen } from "../ui/uiBlock.js";
 
 function refreshQuestMarkerForNpc(scene, player, npcInstance) {
   if (!scene || !npcInstance) return;
@@ -206,7 +206,7 @@ export function ensureAluineeksDungeonEntranceNpc(scene) {
 
   sprite.on("pointerdown", (pointer, localX, localY, event) => {
     if (event?.stopPropagation) event.stopPropagation();
-    if (isCraftPanelOpen()) return;
+    if (isUiBlockingOpen()) return;
     if (!scene.player) return;
     startNpcInteraction(scene, scene.player, npcInstance);
   });

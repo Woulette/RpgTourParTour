@@ -9,6 +9,7 @@ import { spawnCombatAlly } from "../summons/summon.js";
 import { cleanupCombatChallenge, initPrepChallenge } from "../../challenges/runtime/index.js";
 import { getQuestDef, getQuestState, getCurrentQuestStage } from "../../quests/index.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
+import { setHarvestablesVisible } from "../../maps/world/harvestables.js";
 
 // Calcule une liste de tuiles e partir d'une origine et d'une liste d'offsets.
 // Utilise pour les cases joueurs et ennemies.
@@ -150,6 +151,8 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
   if (scene.prepState && scene.prepState.actif) {
     return;
   }
+
+  setHarvestablesVisible(scene, false);
 
   // On memorise la carte / layer de combat pour l'IA monstre, les sorts, etc.
   scene.combatMap = map;

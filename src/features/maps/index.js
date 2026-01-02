@@ -170,6 +170,14 @@ export const maps = {
       { tileX: 23, tileY: 23 },
       { tileX: 19, tileY: 8 },
     ],
+    workstations: [
+      {
+        id: "poubelle",
+        tileX: 16,
+        tileY: 19,
+        textureKey: "Poubelle",
+      },
+    ],
   },
   MapAndemiaNouvelleVersion2: {
     key: "MapAndemiaNouvelleVersion2",

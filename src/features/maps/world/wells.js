@@ -2,7 +2,7 @@ import { addItem } from "../../inventory/runtime/inventoryCore.js";
 import { blockTile, isTileBlocked } from "../../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../../entities/movement/runtime.js";
-import { isCraftPanelOpen } from "../../ui/uiBlock.js";
+import { isUiBlockingOpen } from "../../ui/uiBlock.js";
 
 const WELL_TEXTURE_KEY = "puits";
 const COOLDOWN_MS = 60000;
@@ -197,7 +197,7 @@ export function spawnTestWells(scene, map, player, mapDef) {
 
     sprite.on("pointerdown", (pointer, lx, ly, event) => {
       if (event?.stopPropagation) event.stopPropagation();
-      if (isCraftPanelOpen()) return;
+      if (isUiBlockingOpen()) return;
       if (scene.combatState && scene.combatState.enCours) return;
       if (scene.prepState && scene.prepState.actif) return;
       if (node.cooldownUntil > Date.now()) return;

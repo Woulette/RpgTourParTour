@@ -1,5 +1,6 @@
 import { loadSaveFile, writeSaveFile } from "./storage.js";
 import { createPlayerInventory } from "../features/inventory/runtime/inventoryContainers.js";
+import { createTrashContainer } from "../features/inventory/runtime/trashCore.js";
 import { createEmptyEquipment } from "../features/inventory/runtime/equipmentCore.js";
 import { normalizeLevelState } from "../core/level.js";
 import { ensureAllMetiers } from "../features/metier/ensureAllMetiers.js";
@@ -119,6 +120,7 @@ export function buildSnapshotFromPlayer(player) {
     levelState: cloneJson(player.levelState || null),
     baseStats: cloneJson(player.baseStats || null),
     inventory: cloneJson(player.inventory || null),
+    trash: cloneJson(player.trash || null),
     equipment: cloneJson(player.equipment || null),
     quests: cloneJson(player.quests || null),
     achievements: cloneJson(player.achievements || null),
@@ -167,6 +169,12 @@ export function applySnapshotToPlayer(player, snapshot) {
       eq[k] = snapshot.equipment[k] || null;
     });
     player.equipment = eq;
+  }
+
+  if (snapshot.trash && typeof snapshot.trash === "object") {
+    player.trash = cloneJson(snapshot.trash);
+  } else {
+    player.trash = createTrashContainer(player.inventory?.size);
   }
 
   if (snapshot.quests && typeof snapshot.quests === "object") {

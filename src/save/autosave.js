@@ -56,6 +56,7 @@ export function initAutosave() {
     "player:updated",
     "player:levelup",
     "inventory:updated",
+    "trash:updated",
     "equipment:updated",
     "quest:updated",
     "achievements:updated",
