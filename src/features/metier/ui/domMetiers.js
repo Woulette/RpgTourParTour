@@ -425,6 +425,16 @@ export function initDomMetiers(player) {
             case "pm":
             case "pmPlus":
               return "inventory-bonus-stat-pm";
+            case "dommage":
+              return "inventory-bonus-stat-generic";
+            case "dommageFeu":
+              return "inventory-bonus-stat-feu";
+            case "dommageEau":
+              return "inventory-bonus-stat-eau";
+            case "dommageAir":
+              return "inventory-bonus-stat-air";
+            case "dommageTerre":
+              return "inventory-bonus-stat-terre";
             default:
               return "inventory-bonus-stat-generic";
           }

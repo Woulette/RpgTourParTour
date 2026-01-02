@@ -37,6 +37,16 @@ function labelForStatKey(key) {
       return "Tacle";
     case "fuite":
       return "Fuite";
+    case "dommage":
+      return "Dommage";
+    case "dommageFeu":
+      return "Dommage Feu";
+    case "dommageEau":
+      return "Dommage Eau";
+    case "dommageAir":
+      return "Dommage Air";
+    case "dommageTerre":
+      return "Dommage Terre";
     default:
       return key;
   }
@@ -73,6 +83,16 @@ function formatStatsBonus(bonus) {
         case "pm":
         case "pmPlus":
           return "inventory-bonus-stat-pm";
+        case "dommage":
+          return "inventory-bonus-stat-generic";
+        case "dommageFeu":
+          return "inventory-bonus-stat-feu";
+        case "dommageEau":
+          return "inventory-bonus-stat-eau";
+        case "dommageAir":
+          return "inventory-bonus-stat-air";
+        case "dommageTerre":
+          return "inventory-bonus-stat-terre";
         default:
           return "inventory-bonus-stat-generic";
       }

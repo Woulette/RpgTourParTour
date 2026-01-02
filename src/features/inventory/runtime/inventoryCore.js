@@ -54,6 +54,23 @@ function countEmptySlots(container) {
   return empty;
 }
 
+// Move filled slots to the front, preserving order.
+export function compactInventory(container) {
+  if (!container || !Array.isArray(container.slots)) return;
+  let write = 0;
+  for (let read = 0; read < container.size; read += 1) {
+    const slot = container.slots[read];
+    if (!slot) continue;
+    if (write !== read) {
+      container.slots[write] = slot;
+    }
+    write += 1;
+  }
+  for (let i = write; i < container.size; i += 1) {
+    container.slots[i] = null;
+  }
+}
+
 function maybeAutoGrow(container) {
   const cfg = container?.autoGrow;
   if (!cfg || cfg.enabled !== true) return;

@@ -354,7 +354,11 @@ export function incrementCraftProgress(player, itemId, qty = 1) {
     if (objective.type === "craft_set") {
       const def = itemDefs?.[itemId];
       const setId = objective.setId;
-      if (!def || !setId || def.setId !== setId) return;
+      if (!def || !setId) return;
+      const defSetId = def.setId || "";
+      const matchesSet =
+        defSetId === setId || defSetId.startsWith(`${setId}_`);
+      if (!matchesSet) return;
 
       state.progress = state.progress || {};
 
