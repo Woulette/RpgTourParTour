@@ -2,6 +2,7 @@ import { harvestHerb } from "./harvest.js";
 import { blockTile, isTileBlocked } from "../../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../../entities/movement/runtime.js";
+import { isCraftPanelOpen } from "../../ui/uiBlock.js";
 
 const HERB_TEXTURE_KEY = "herb_ortie";
 const HERB_STUMP_TEXTURE_KEY = "herb_ortie_stump";
@@ -205,6 +206,9 @@ export function spawnTestHerbs(scene, map, player, mapDef) {
     herbSprite.on("pointerdown", (pointer, localX, localY, event) => {
       if (event && event.stopPropagation) {
         event.stopPropagation();
+      }
+      if (isCraftPanelOpen()) {
+        return;
       }
 
       if (scene.combatState && scene.combatState.enCours) {

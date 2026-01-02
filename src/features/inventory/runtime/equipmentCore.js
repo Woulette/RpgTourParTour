@@ -1,4 +1,4 @@
-import { getItemDef, addItem, removeItem } from "./inventoryCore.js";
+import { getItemDef, addItem, addItemToLastSlot, removeItem } from "./inventoryCore.js";
 import { applyBonuses, applyDerivedAgilityStats } from "../../../core/stats.js";
 import { equipmentSets } from "../data/sets.js";
 import { emit as emitStoreEvent } from "../../../state/store.js";
@@ -145,10 +145,10 @@ export function equipFromInventory(player, inventory, inventorySlotIndex) {
 
   // Si quelque chose était déjà équipé ici, on essaie de le remettre dans l'inventaire
   if (currentEquip && currentEquip.itemId) {
-    const rest = addItem(inventory, currentEquip.itemId, 1);
+    const rest = addItemToLastSlot(inventory, currentEquip.itemId, 1);
     if (rest > 0) {
       // pas de place, on annule l'équipement pour éviter de perdre l'objet
-      addItem(inventory, slot.itemId, 1);
+      addItemToLastSlot(inventory, slot.itemId, 1);
       return false;
     }
   }
@@ -167,7 +167,7 @@ export function unequipToInventory(player, inventory, equipSlot) {
   const currentEquip = player.equipment[equipSlot];
   if (!currentEquip || !currentEquip.itemId) return false;
 
-  const rest = addItem(inventory, currentEquip.itemId, 1);
+  const rest = addItemToLastSlot(inventory, currentEquip.itemId, 1);
   if (rest > 0) {
     // pas de place : on ne fait rien
     return false;

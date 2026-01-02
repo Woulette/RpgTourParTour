@@ -2,6 +2,7 @@ import { addItem } from "../../inventory/runtime/inventoryCore.js";
 import { blockTile, isTileBlocked } from "../../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../../entities/movement/runtime.js";
+import { isCraftPanelOpen } from "../../ui/uiBlock.js";
 
 const WELL_TEXTURE_KEY = "puits";
 const COOLDOWN_MS = 60000;
@@ -152,7 +153,10 @@ export function spawnTestWells(scene, map, player, mapDef) {
 
     const interact = () => {
       const now = Date.now();
-      if (node.cooldownUntil > now || node.isHarvesting) return;
+      if (node.cooldownUntil > now || node.isHarvesting) {
+        cancelPendingWellHarvest(player, node);
+        return;
+      }
       node.isHarvesting = true;
       player.isHarvestingWell = true;
       player.currentWellHarvestNode = node;
@@ -193,8 +197,10 @@ export function spawnTestWells(scene, map, player, mapDef) {
 
     sprite.on("pointerdown", (pointer, lx, ly, event) => {
       if (event?.stopPropagation) event.stopPropagation();
+      if (isCraftPanelOpen()) return;
       if (scene.combatState && scene.combatState.enCours) return;
       if (scene.prepState && scene.prepState.actif) return;
+      if (node.cooldownUntil > Date.now()) return;
       if (node.isHarvesting || isPlayerHarvestingAny(player)) return;
       const combatOverlay = document.getElementById("combat-result-overlay");
       if (combatOverlay && !combatOverlay.classList.contains("combat-result-hidden")) {

@@ -397,6 +397,22 @@ body.hud-inventory-open #hud-inventory-panel {
   color: #ff9ce6;
 }
 
+.inventory-bonus-stat-feu {
+  color: #d84b4b;
+}
+
+.inventory-bonus-stat-eau {
+  color: #3e86d4;
+}
+
+.inventory-bonus-stat-air {
+  color: #3ea37a;
+}
+
+.inventory-bonus-stat-terre {
+  color: #8c5a2a;
+}
+
 .inventory-bonus-stat-generic {
   color: #e0e0e0;
 }

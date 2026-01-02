@@ -4,6 +4,7 @@ import { getQuestDef, getQuestState, getCurrentQuestStage } from "../../quests/i
 import { on as onStoreEvent } from "../../../state/store.js";
 import { loadMapLikeMain } from "./load.js";
 import { maps } from "../index.js";
+import { isCraftPanelOpen } from "../../ui/uiBlock.js";
 
 function isPortalOpen(player, portalDef) {
   if (!player || !portalDef?.questId) return false;
@@ -145,6 +146,7 @@ export function spawnStoryPortals(scene, map, player, mapDef) {
 
     sprite.on("pointerdown", (pointer, lx, ly, event) => {
       if (event?.stopPropagation) event.stopPropagation();
+      if (isCraftPanelOpen()) return;
       handlePortalClick(scene, player, node);
     });
 

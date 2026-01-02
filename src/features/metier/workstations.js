@@ -8,6 +8,15 @@ import { createCalibratedWorldToTile } from "../../features/maps/world/util.js";
 import { blockTile, isTileBlocked } from "../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../entities/movement/runtime.js";
+import { isCraftPanelOpen } from "../ui/uiBlock.js";
+
+function isPlayerHarvestingAny(player) {
+  return (
+    player?.isHarvestingTree ||
+    player?.isHarvestingHerb ||
+    player?.isHarvestingWell
+  );
+}
 
 function destroyExistingWorkstations(scene) {
   if (Array.isArray(scene.workstations)) {
@@ -138,6 +147,8 @@ export function setupWorkstations(scene, map, groundLayer, mapDef) {
 
       const player = scene.player;
       if (!player) return;
+      if (isCraftPanelOpen()) return;
+      if (isPlayerHarvestingAny(player)) return;
 
       // Stoppe un déplacement en cours pour éviter les jitters quand on change de cible
       if (player.currentMoveTween) {

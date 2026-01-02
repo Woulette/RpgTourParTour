@@ -2,6 +2,7 @@ import { harvestTree } from "./harvest.js";
 import { blockTile, isTileBlocked } from "../../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../../entities/movement/runtime.js";
+import { isCraftPanelOpen } from "../../ui/uiBlock.js";
 
 const TREE_TEXTURE_KEY = "tree_chene";
 const TREE_STUMP_TEXTURE_KEY = "tree_chene_stump";
@@ -220,6 +221,9 @@ export function spawnTestTrees(scene, map, player, mapDef) {
     treeSprite.on("pointerdown", (pointer, localX, localY, event) => {
       if (event && event.stopPropagation) {
         event.stopPropagation();
+      }
+      if (isCraftPanelOpen()) {
+        return;
       }
 
       // Pas de récolte pendant un combat ou la phase de préparation

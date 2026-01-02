@@ -39,6 +39,13 @@ function findEmptySlot(container) {
   return -1;
 }
 
+function findEmptySlotReverse(container) {
+  for (let i = container.size - 1; i >= 0; i -= 1) {
+    if (!container.slots[i]) return i;
+  }
+  return -1;
+}
+
 function countEmptySlots(container) {
   let empty = 0;
   for (let i = 0; i < container.size; i += 1) {
@@ -102,6 +109,41 @@ export function addItem(container, itemId, qty) {
   }
 
   // Notification de mise à jour d'inventaire
+  emitStoreEvent("inventory:updated", { container });
+  return remaining;
+}
+
+// Ajoute une quantitÇ¸ d'un objet en privilÇ¸giant les slots vides en fin d'inventaire.
+// Retourne la quantitÇ¸ restante non ajoutÇ¸e (0 si tout est entrÇ¸).
+export function addItemToLastSlot(container, itemId, qty) {
+  let remaining = qty;
+  const def = getItemDef(itemId);
+  if (!def || qty <= 0) return remaining;
+
+  maybeAutoGrow(container);
+
+  const maxStack = def.maxStack ?? 9999;
+
+  while (remaining > 0) {
+    let slotIndex = findStackSlot(container, itemId);
+
+    if (slotIndex === -1) {
+      slotIndex = findEmptySlotReverse(container);
+      if (slotIndex === -1) {
+        maybeAutoGrow(container);
+        slotIndex = findEmptySlotReverse(container);
+        if (slotIndex === -1) break;
+      }
+      container.slots[slotIndex] = { itemId, qty: 0 };
+    }
+
+    const slot = container.slots[slotIndex];
+    const space = maxStack - slot.qty;
+    const addNow = Math.min(space, remaining);
+    slot.qty += addNow;
+    remaining -= addNow;
+  }
+
   emitStoreEvent("inventory:updated", { container });
   return remaining;
 }

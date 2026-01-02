@@ -8,6 +8,7 @@ import {
 } from "../../quests/index.js";
 import { openRiftModal } from "../../ui/domRifts.js";
 import { maps } from "../index.js";
+import { isCraftPanelOpen } from "../../ui/uiBlock.js";
 
 const QUEST_ID = "keeper_north_explosion_1";
 
@@ -158,6 +159,7 @@ export function spawnRifts(scene, map, player, mapDef, options = {}) {
 
     sprite.on("pointerdown", (pointer, lx, ly, event) => {
       if (event?.stopPropagation) event.stopPropagation();
+      if (isCraftPanelOpen()) return;
       if (scene.combatState?.enCours || scene.prepState?.actif) return;
 
       const mapKey = node.targetMapKey;

@@ -89,6 +89,24 @@ function ensurePanelElements() {
               <div class="craft-xp-bar-label" id="alchimiste-xp-label">XP 0 / 100</div>
             </div>
           </div>
+          <div class="craft-recipe-filters">
+            <input
+              type="number"
+              min="1"
+              class="craft-filter-level"
+              id="alchimiste-filter-level"
+              placeholder="Niv. max"
+            />
+            <input
+              type="text"
+              class="craft-filter-search"
+              id="alchimiste-filter-search"
+              placeholder="Rechercher..."
+            />
+            <select class="craft-filter-type" id="alchimiste-filter-type">
+              <option value="all">Tout</option>
+            </select>
+          </div>
           <ul class="craft-recipes" id="alchimiste-recipes"></ul>
         </section>
         <section class="craft-center craft-center-alchimiste">
@@ -377,7 +395,46 @@ function renderResult(player) {
   }
 }
 
-function renderRecipes(recipes, player, selectedIdRef) {
+function getRecipeFilters() {
+  const levelInput = panelEl.querySelector("#alchimiste-filter-level");
+  const searchInput = panelEl.querySelector("#alchimiste-filter-search");
+  const typeSelect = panelEl.querySelector("#alchimiste-filter-type");
+  const levelValue = levelInput ? parseInt(levelInput.value, 10) : NaN;
+  return {
+    levelMax: Number.isFinite(levelValue) ? levelValue : null,
+    search: (searchInput?.value || "").trim().toLowerCase(),
+    type: typeSelect?.value || "all",
+  };
+}
+
+function getFilteredRecipes(recipes) {
+  const filters = getRecipeFilters();
+  const safeRecipes = Array.isArray(recipes) ? recipes : [];
+  const sortedRecipes = safeRecipes.slice().sort((a, b) => {
+    const aLevel = typeof a?.level === "number" ? a.level : 0;
+    const bLevel = typeof b?.level === "number" ? b.level : 0;
+    if (aLevel !== bLevel) return bLevel - aLevel;
+    const aLabel = (a?.label || "").toLowerCase();
+    const bLabel = (b?.label || "").toLowerCase();
+    return aLabel.localeCompare(bLabel);
+  });
+
+  return sortedRecipes.filter((recipe) => {
+    if (filters.levelMax !== null && recipe.level > filters.levelMax) {
+      return false;
+    }
+    if (filters.type !== "all" && recipe.category !== filters.type) {
+      return false;
+    }
+    if (filters.search) {
+      const label = (recipe.label || "").toLowerCase();
+      if (!label.includes(filters.search)) return false;
+    }
+    return true;
+  });
+}
+
+function renderRecipes(recipes, player, selectedIdRef, filteredRecipes) {
   const list = panelEl.querySelector("#alchimiste-recipes");
   if (!list) return null;
   list.innerHTML = "";
@@ -394,15 +451,17 @@ function renderRecipes(recipes, player, selectedIdRef) {
     return count >= qty;
   };
 
-  const safeRecipes = Array.isArray(recipes) ? recipes : [];
+  if (!filteredRecipes || filteredRecipes.length === 0) {
+    return null;
+  }
   let currentSelected =
-    selectedIdRef?.value || (safeRecipes[0] && safeRecipes[0].id);
+    selectedIdRef?.value || (filteredRecipes[0] && filteredRecipes[0].id);
+  if (!filteredRecipes.find((recipe) => recipe.id === currentSelected)) {
+    currentSelected = filteredRecipes[0].id;
+    if (selectedIdRef) selectedIdRef.value = currentSelected;
+  }
 
-  safeRecipes.forEach((recipe) => {
-    if (state?.level < recipe.level) {
-      return;
-    }
-
+  filteredRecipes.forEach((recipe) => {
     const li = document.createElement("li");
     li.className = "craft-recipe";
     li.dataset.recipeId = recipe.id;
@@ -429,6 +488,10 @@ function renderRecipes(recipes, player, selectedIdRef) {
 
     const lvl = document.createElement("span");
     lvl.className = "craft-tag";
+    const locked = state?.level < recipe.level;
+    if (locked) {
+      lvl.classList.add("locked");
+    }
     lvl.textContent = `Niv. ${recipe.level}`;
 
     header.appendChild(titleWrap);
@@ -474,7 +537,7 @@ function renderRecipes(recipes, player, selectedIdRef) {
       currentSelected = recipe.id;
       selectedIdRef.value = recipe.id;
       activeRecipePreview = recipe;
-      renderRecipes(recipes, player, selectedIdRef);
+      renderRecipes(recipes, player, selectedIdRef, filteredRecipes);
       renderSlots(recipe, player);
       updateCraftButton(recipe, player);
       renderResult(player);
@@ -488,7 +551,11 @@ function renderRecipes(recipes, player, selectedIdRef) {
 
 function updateCraftButton(recipe, player) {
   const btn = panelEl.querySelector("#alchimiste-craft-btn");
-  if (!btn || !recipe) return;
+  if (!btn) return;
+  if (!recipe) {
+    btn.disabled = true;
+    return;
+  }
   const inventory = player?.inventory;
   const state = ensureAlchimisteState(player);
   const hasItem = (id, qty) => {
@@ -510,13 +577,26 @@ export function openAlchimisteCraftPanel(scene, player) {
   ensurePanelElements();
   if (!panelEl) return;
   const selectedRefs = {
-    craft: { value: alchimieRecipes[0]?.id },
-    fusion: { value: alchimieFusionRecipes[0]?.id },
+    craft: { value: null },
+    fusion: { value: null },
   };
 
   const getListForMode = (mode) =>
     mode === "fusion" ? alchimieFusionRecipes : alchimieRecipes;
   const getSelectedRef = (mode) => selectedRefs[mode] || selectedRefs.craft;
+  const refreshRecipes = (mode) => {
+    const list = getListForMode(mode);
+    const selectedRef = getSelectedRef(mode);
+    const filteredRecipes = getFilteredRecipes(list);
+    const selected = renderRecipes(list, player, selectedRef, filteredRecipes);
+    const recipe =
+      filteredRecipes.find((r) => r.id === selectedRef.value) ||
+      filteredRecipes.find((r) => r.id === selected);
+    activeRecipePreview = recipe || null;
+    renderSlots(recipe, player);
+    updateCraftButton(recipe, player);
+    renderResult(player);
+  };
 
   const syncModeUI = (mode) => {
     activeMode = mode;
@@ -525,22 +605,29 @@ export function openAlchimisteCraftPanel(scene, player) {
       btn.classList.toggle("active", btn.dataset.mode === mode);
     });
 
-    const list = getListForMode(mode);
-    const selectedRef = getSelectedRef(mode);
-    const selected = renderRecipes(list, player, selectedRef);
-    const recipe =
-      list.find((r) => r.id === selectedRef.value) ||
-      list.find((r) => r.id === selected) ||
-      list[0];
-    activeRecipePreview = recipe || null;
-    renderSlots(recipe, player);
+    refreshRecipes(mode);
     renderInventory(player);
-    updateCraftButton(recipe, player);
-    renderResult(player);
   };
 
-  syncModeUI("craft");
   renderXpHeader(player);
+
+  const levelInput = panelEl.querySelector("#alchimiste-filter-level");
+  const searchInput = panelEl.querySelector("#alchimiste-filter-search");
+  const typeSelect = panelEl.querySelector("#alchimiste-filter-type");
+  if (levelInput) {
+    const state = ensureAlchimisteState(player);
+    const defaultLevel = state?.level ?? 1;
+    levelInput.value = String(defaultLevel);
+    levelInput.oninput = () => refreshRecipes(activeMode);
+  }
+  if (searchInput) {
+    searchInput.oninput = () => refreshRecipes(activeMode);
+  }
+  if (typeSelect) {
+    typeSelect.onchange = () => refreshRecipes(activeMode);
+  }
+
+  syncModeUI("craft");
 
   const filters = panelEl.querySelectorAll(
     ".craft-inventory-filters button[data-filter]"
@@ -568,9 +655,14 @@ export function openAlchimisteCraftPanel(scene, player) {
     btn.onclick = () => {
       const list = getListForMode(activeMode);
       const selectedRef = getSelectedRef(activeMode);
+      const filteredRecipes = getFilteredRecipes(list);
       const activeRecipe =
-        list.find((r) => r.id === selectedRef.value) || list[0];
-      if (!activeRecipe) return;
+        filteredRecipes.find((r) => r.id === selectedRef.value) ||
+        filteredRecipes[0];
+      if (!activeRecipe) {
+        updateCraftButton(null, player);
+        return;
+      }
       if (btn.disabled) return;
       const inv = player?.inventory;
       const countItem = (id) =>
@@ -600,11 +692,7 @@ export function openAlchimisteCraftPanel(scene, player) {
         qty: activeRecipe.output.qty,
       });
       renderInventory(player);
-      renderRecipes(list, player, selectedRef);
-      renderSlots(activeRecipe, player);
-      activeRecipePreview = activeRecipe;
-      renderResult(player);
-      updateCraftButton(activeRecipe, player);
+      refreshRecipes(activeMode);
     };
   }
 

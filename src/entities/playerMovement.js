@@ -17,6 +17,7 @@ import { findPathForPlayer } from "./movement/pathfinding.js";
 import { movePlayerAlongPath } from "./movement/runtime.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { on as onStoreEvent } from "../state/store.js";
+import { isCraftPanelOpen } from "../features/ui/uiBlock.js";
 
 /**
  * Cre une fonction worldToTile "calibre" qui compense
@@ -305,6 +306,9 @@ function createCalibratedWorldToTile(map, groundLayer) {
   // --- Clic pour dplacer ou lancer un sort ---
   scene.input.on("pointerdown", (pointer) => {
     if (window.__uiPointerBlock) {
+      return;
+    }
+    if (isCraftPanelOpen()) {
       return;
     }
 

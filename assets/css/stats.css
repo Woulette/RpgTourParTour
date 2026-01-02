@@ -260,6 +260,8 @@ body.hud-stats-open #hud-stats-panel {
 .stat-badge-air { background: #3ea37a; }
 .stat-badge-neutre { background: #9aa3b2; }
 .stat-badge-puissance { background: #d3a84a; }
+.stat-badge-vitalite { background: #e56fa1; }
+.stat-badge-sagesse { background: #8b6ad6; }
 
 .stat-controls {
   margin-left: auto;

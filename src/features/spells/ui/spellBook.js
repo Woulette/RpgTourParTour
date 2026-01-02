@@ -406,7 +406,12 @@ function setupSpellDetail(
       scrollSlots.forEach((s) => s.classList.remove("active"));
       slot.classList.add("active");
       const tier = parseInt(slot.dataset.tier, 10) || 1;
-      if (!getEquippedTier()) {
+      applyEquippedDamageDisplay();
+      if (getEquippedTier() === tier) {
+        if (damagePreviewEl) {
+          damagePreviewEl.textContent = "";
+        }
+      } else {
         updatePreview(tier);
       }
       renderParchmentPreview(tier);

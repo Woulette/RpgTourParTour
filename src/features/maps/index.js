@@ -170,18 +170,6 @@ export const maps = {
       { tileX: 23, tileY: 23 },
       { tileX: 19, tileY: 8 },
     ],
-    workstations: [
-      {
-        id: "alchimiste",
-        tileX: 10,
-        tileY: 17,
-        offsetX: -4,
-        textureKey: "TableDeAlchimiste",
-      },
-    ],
-    // Optionnel : borne manuelle des bandes de sortie (coordonnées monde).
-    // Laisse null pour l’auto, ou mets { minX, minY, maxX, maxY } si tu veux régler à la main.
-    exitBounds: null,
   },
   MapAndemiaNouvelleVersion2: {
     key: "MapAndemiaNouvelleVersion2",
@@ -614,6 +602,16 @@ export const maps = {
     monsterSpawns: [],
     treePositions: [],
     exitBounds: null,
+
+    workstations: [
+      {
+        id: "alchimiste",
+        tileX: 12,
+        tileY: 19,
+        offsetX: -4,
+        textureKey: "TableDeAlchimiste",
+      },
+    ],
   },
   MapAndemiaNouvelleVersion8: {
     key: "MapAndemiaNouvelleVersion8",

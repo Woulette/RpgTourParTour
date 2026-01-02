@@ -2,6 +2,10 @@ import { getItemDef, removeItem } from "../runtime/inventoryCore.js";
 import { equipFromInventory, unequipToInventory } from "../runtime/equipmentCore.js";
 import { applyConsumableEffect } from "./consumables.js";
 
+function isCombatLocked(player) {
+  return !!player?.scene?.combatState?.enCours;
+}
+
 export function renderEquipmentSlots(player, equipSlots) {
   if (!equipSlots || equipSlots.length === 0) return;
   const equipment = player.equipment || {};
@@ -87,6 +91,7 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
   slot.addEventListener("dblclick", () => {
     const player = typeof getPlayer === "function" ? getPlayer() : null;
     if (!player) return;
+    if (isCombatLocked(player)) return;
     const idxAttr = slot.dataset.realIndex;
     const idx = idxAttr ? parseInt(idxAttr, 10) : NaN;
     const liveSlotData = Number.isNaN(idx) ? null : player.inventory?.slots?.[idx];
@@ -187,12 +192,13 @@ export function bindEquipmentSlotEvents(
       helpers.showItemDetailsById(player, entry.itemId, helpers.dom);
     });
 
-    slotEl.addEventListener("dblclick", () => {
-      const player = typeof getPlayer === "function" ? getPlayer() : null;
-      if (!player) return;
-      if (!equipSlot) return;
-      const ok = unequipToInventory(player, player.inventory, equipSlot);
-      if (ok) {
+  slotEl.addEventListener("dblclick", () => {
+    const player = typeof getPlayer === "function" ? getPlayer() : null;
+    if (!player) return;
+    if (isCombatLocked(player)) return;
+    if (!equipSlot) return;
+    const ok = unequipToInventory(player, player.inventory, equipSlot);
+    if (ok) {
         renderInventory();
       }
     });
