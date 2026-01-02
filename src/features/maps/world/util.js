@@ -47,36 +47,51 @@ export function getNeighbor(mapDef, direction) {
 // Conversion monde->tuiles "calibrÈe" pour l'isomÈtrique.
 // DupliquÈe depuis playerMovement pour rester locale au module de monde.
 export function createCalibratedWorldToTile(map, groundLayer) {
-  const testTileX = 0;
-  const testTileY = 0;
-
-  const worldPos = map.tileToWorldXY(
-    testTileX,
-    testTileY,
-    undefined,
-    undefined,
-    groundLayer
-  );
-  const centerX = worldPos.x + map.tileWidth / 2;
-  const centerY = worldPos.y + map.tileHeight / 2;
-
-  const tF = groundLayer.worldToTileXY(centerX, centerY, false);
-
-  let offsetX = 0;
-  let offsetY = 0;
-  if (tF) {
-    offsetX = tF.x - testTileX - 0.5;
-    offsetY = tF.y - testTileY - 0.5;
-  }
-
   return function worldToTile(worldX, worldY) {
     const raw = groundLayer.worldToTileXY(worldX, worldY, false);
     if (!raw) return null;
 
-    return {
-      x: Math.floor(raw.x - offsetX),
-      y: Math.floor(raw.y - offsetY),
-    };
+    const fx = Math.floor(raw.x);
+    const fy = Math.floor(raw.y);
+    const cx = Math.ceil(raw.x);
+    const cy = Math.ceil(raw.y);
+
+    const candidates = [
+      { x: fx, y: fy },
+      { x: fx, y: cy },
+      { x: cx, y: fy },
+      { x: cx, y: cy },
+    ];
+
+    const width = map.width;
+    const height = map.height;
+    const halfW = map.tileWidth / 2;
+    const halfH = map.tileHeight / 2;
+
+    let best = null;
+    let bestDist = Infinity;
+
+    for (const c of candidates) {
+      if (c.x < 0 || c.y < 0 || c.x >= width || c.y >= height) continue;
+      const wp = map.tileToWorldXY(
+        c.x,
+        c.y,
+        undefined,
+        undefined,
+        groundLayer
+      );
+      const centerX = wp.x + halfW;
+      const centerY = wp.y + halfH;
+      const dx = worldX - centerX;
+      const dy = worldY - centerY;
+      const dist2 = dx * dx + dy * dy;
+      if (dist2 < bestDist) {
+        bestDist = dist2;
+        best = c;
+      }
+    }
+
+    return best;
   };
 }
 

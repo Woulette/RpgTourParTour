@@ -147,46 +147,52 @@ export function hasLineOfSight(scene, fromX, fromY, toX, toY) {
 
   if (fromX === toX && fromY === toY) return true;
 
-  const dx = Math.abs(toX - fromX);
-  const dy = Math.abs(toY - fromY);
-  const sx = fromX < toX ? 1 : -1;
-  const sy = fromY < toY ? 1 : -1;
-  let err = dx - dy;
+  const startX = fromX + 0.5;
+  const startY = fromY + 0.5;
+  const endX = toX + 0.5;
+  const endY = toY + 0.5;
+  const dirX = endX - startX;
+  const dirY = endY - startY;
+  const stepX = dirX === 0 ? 0 : dirX > 0 ? 1 : -1;
+  const stepY = dirY === 0 ? 0 : dirY > 0 ? 1 : -1;
+  const tDeltaX = stepX === 0 ? Infinity : Math.abs(1 / dirX);
+  const tDeltaY = stepY === 0 ? Infinity : Math.abs(1 / dirY);
 
   let x = fromX;
   let y = fromY;
+  const nextBoundaryX = stepX > 0 ? Math.floor(startX) + 1 : Math.floor(startX);
+  const nextBoundaryY = stepY > 0 ? Math.floor(startY) + 1 : Math.floor(startY);
+  let tMaxX =
+    stepX === 0 ? Infinity : Math.abs((nextBoundaryX - startX) / dirX);
+  let tMaxY =
+    stepY === 0 ? Infinity : Math.abs((nextBoundaryY - startY) / dirY);
 
   const isBlocking = (tx, ty) => {
+    if (tx === fromX && ty === fromY) return false;
     if (tx === toX && ty === toY) return false;
-    if (isTileBlocked(scene, tx, ty)) return true;
-    if (isTileOccupiedByCombatEntity(scene, tx, ty)) return true;
+    if (isTileBlocked(scene, tx, ty)) return "tile";
+    if (isTileOccupiedByCombatEntity(scene, tx, ty)) return "entity";
     return false;
   };
 
   while (!(x === toX && y === toY)) {
-    const e2 = 2 * err;
-    let nx = x;
-    let ny = y;
-    if (e2 > -dy) {
-      err -= dy;
-      nx = x + sx;
+    if (tMaxX < tMaxY) {
+      x += stepX;
+      tMaxX += tDeltaX;
+    } else if (tMaxY < tMaxX) {
+      y += stepY;
+      tMaxY += tDeltaY;
+    } else {
+      x += stepX;
+      y += stepY;
+      tMaxX += tDeltaX;
+      tMaxY += tDeltaY;
     }
-    if (e2 < dx) {
-      err += dx;
-      ny = y + sy;
-    }
-
-    if (nx !== x && ny !== y) {
-      const blockA = isBlocking(x + sx, y);
-      const blockB = isBlocking(x, y + sy);
-      if (blockA || blockB) return false;
-    }
-
-    x = nx;
-    y = ny;
 
     if (x === toX && y === toY) break;
-    if (isBlocking(x, y)) return false;
+
+    const blockHere = isBlocking(x, y);
+    if (blockHere) return false;
   }
 
   return true;

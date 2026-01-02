@@ -26,7 +26,9 @@ export default {
     initiative: 8,
   },
   spells: ["taille_libarene", "griffure_libarene"],
-  loot: [],
+  loot: [
+    { itemId: "fourrure_liburion", min: 1, max: 1, dropRate: 0.3 },
+  ],
   xpReward: 360,
   goldRewardMin: 16,
   goldRewardMax: 36,

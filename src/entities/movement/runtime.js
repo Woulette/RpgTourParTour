@@ -5,6 +5,7 @@ import { maybeHandleMapExit, maybeHandlePortal } from "../../features/maps/world
 import { maybeHandleDungeonExit } from "../../features/dungeons/runtime.js";
 import { isTileBlocked } from "../../collision/collisionGrid.js";
 import { recalcDepths } from "../../features/maps/world/decor.js";
+import { createCalibratedWorldToTile } from "../../features/maps/world/util.js";
 
 // Détermine le nom de direction d'animation à partir d'un vecteur.
 function getDirectionName(dx, dy) {
@@ -57,10 +58,11 @@ export function movePlayerToTile(
     typeof player.currentTileX !== "number" ||
     typeof player.currentTileY !== "number"
   ) {
-    const raw = groundLayer.worldToTileXY(player.x, player.y, false);
-    if (!raw) return;
-    player.currentTileX = Math.floor(raw.x);
-    player.currentTileY = Math.floor(raw.y);
+    const worldToTile = createCalibratedWorldToTile(map, groundLayer);
+    const t = worldToTile(player.x, player.y);
+    if (!t) return;
+    player.currentTileX = t.x;
+    player.currentTileY = t.y;
   }
 
   const path = calculatePath(

@@ -419,8 +419,8 @@ export const maps = {
         riftPositions: [
           {
             id: "north_rift_f_1",
-            tileX: 12,
-            tileY: 19,
+            tileX: 14,
+            tileY: 21,
             textureKey: "rift_dim_1",
             closedTextureKey: "rift_dim_1_closed",
           rank: "F",
@@ -432,8 +432,8 @@ export const maps = {
         },
           {
             id: "north_rift_f_2",
-            tileX: 19,
-            tileY: 12,
+            tileX: 22,
+            tileY: 13,
             textureKey: "rift_dim_2",
             closedTextureKey: "rift_dim_2_closed",
           rank: "F",
@@ -447,8 +447,8 @@ export const maps = {
       storyPortals: [
         {
           id: "dimension_portal_north",
-          tileX: 13,
-          tileY: 13,
+          tileX: 16,
+          tileY: 15,
           closedTextureKey: "portal_dim_closed",
           openTextureKey: "portal_dim_open",
           questId: "keeper_north_explosion_1",
