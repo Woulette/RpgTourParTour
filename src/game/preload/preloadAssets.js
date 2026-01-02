@@ -115,19 +115,19 @@ export function preloadAssets(scene) {
   scene.load.image("puits", "assets/tileset/Puits.png");
   scene.load.image(
     "rift_dim_1",
-    "assets/Sprite/portaildimentionelle/FailledimentionelleOuvert1.png"
+    "assets/Sprite/PortailDimentionelle/FailledimentionelleOuvert1.png"
   );
   scene.load.image(
     "rift_dim_2",
-    "assets/Sprite/portaildimentionelle/FailledimentionelleOuvert2.png"
+    "assets/Sprite/PortailDimentionelle/FailledimentionelleOuvert2.png"
   );
   scene.load.image(
     "rift_dim_1_closed",
-    "assets/Sprite/portaildimentionelle/FailledimentionelleFermer1.png"
+    "assets/Sprite/PortailDimentionelle/FailledimentionelleFermer1.png"
   );
   scene.load.image(
     "rift_dim_2_closed",
-    "assets/Sprite/portaildimentionelle/FailledimentionelleFermer2.png"
+    "assets/Sprite/PortailDimentionelle/FailledimentionelleFermer2.png"
   );
   scene.load.image(
     "portal_dim_closed",
