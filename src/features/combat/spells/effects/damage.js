@@ -4,6 +4,7 @@ import { endCombat } from "../../runtime/runtime.js";
 import { showFloatingTextOverEntity } from "../../runtime/floatingText.js";
 import { applyShieldToDamage, addShieldAbsorbChat, showShieldAbsorbText } from "../cast/castBuffs.js";
 import { computeDamageForSpell } from "../cast/castEryon.js";
+import { playMonsterDeathAnimation } from "../../../monsters/runtime/animations.js";
 
 function resolveDamageSpell(spell, effect) {
   if (!spell || !effect) return spell;
@@ -48,7 +49,7 @@ function removeDeadEntity(scene, target) {
   }
 }
 
-function checkCombatVictory(scene) {
+function checkCombatVictory(scene, delayMs = 0) {
   if (!scene?.combatState) return;
   let remaining = 0;
   if (scene.combatMonsters && Array.isArray(scene.combatMonsters)) {
@@ -62,6 +63,12 @@ function checkCombatVictory(scene) {
   }
   if (remaining <= 0) {
     scene.combatState.issue = "victoire";
+    if (delayMs > 0 && scene?.time?.delayedCall) {
+      if (scene.combatState.victoryScheduled) return;
+      scene.combatState.victoryScheduled = true;
+      scene.time.delayedCall(delayMs, () => endCombat(scene));
+      return;
+    }
     endCombat(scene);
   }
 }
@@ -69,6 +76,13 @@ function checkCombatVictory(scene) {
 export function applyDamageEffect(ctx, effect) {
   const { scene, caster, spell, target, state } = ctx;
   if (!scene || !caster || !spell || !target || !target.stats) return false;
+
+  if (
+    target === caster &&
+    (spell.id === "recharge_flux" || spell.id === "stabilisation_flux")
+  ) {
+    return true;
+  }
 
   const damageSpell = resolveDamageSpell(spell, effect);
   const fixedDamage = typeof effect?.fixedDamage === "number" ? effect.fixedDamage : null;
@@ -112,7 +126,16 @@ export function applyDamageEffect(ctx, effect) {
   }
 
   if (finalDamage > 0) {
-    showFloatingTextOverEntity(scene, target, `-${finalDamage}`, { color: "#ff4444" });
+    const delayMs = ctx.impactDelayMs ?? 0;
+    if (delayMs > 0 && scene?.time?.delayedCall) {
+      scene.time.delayedCall(delayMs, () => {
+        showFloatingTextOverEntity(scene, target, `-${finalDamage}`, {
+          color: "#ff4444",
+        });
+      });
+    } else {
+      showFloatingTextOverEntity(scene, target, `-${finalDamage}`, { color: "#ff4444" });
+    }
   }
 
   if (newHp > 0) return true;
@@ -125,20 +148,52 @@ export function applyDamageEffect(ctx, effect) {
     return true;
   }
 
-  if (typeof target.onKilled === "function") {
-    target.onKilled(scene, caster);
-  }
-  if (target.blocksMovement && target._blockedTile) {
-    const prev = target._blockedTile;
-    if (typeof prev.x === "number" && typeof prev.y === "number") {
-      unblockTile(scene, prev.x, prev.y);
+  const impactDelayMs = ctx.impactDelayMs ?? 0;
+  const endCombatDelayMs = ctx.isPlayerCaster ? 350 : 0;
+  const finalizeDeath = () => {
+    if (target._deathHandled) return;
+    target._deathHandled = true;
+    if (typeof target.onKilled === "function") {
+      target.onKilled(scene, caster);
     }
-    target._blockedTile = null;
+    if (target.blocksMovement && target._blockedTile) {
+      const prev = target._blockedTile;
+      if (typeof prev.x === "number" && typeof prev.y === "number") {
+        unblockTile(scene, prev.x, prev.y);
+      }
+      target._blockedTile = null;
+    }
+    if (typeof target.destroy === "function") {
+      target.destroy();
+    }
+    removeDeadEntity(scene, target);
+    checkCombatVictory(scene, endCombatDelayMs);
+  };
+
+  const shouldPlayDeathAnim =
+    target && !target.isSummon && !target.isCombatAlly && target !== state?.joueur;
+
+  if ((impactDelayMs > 0 || shouldPlayDeathAnim) && scene?.time?.delayedCall) {
+    if (!target._deathScheduled) {
+      target._deathScheduled = true;
+      const startDeathSequence = () => {
+        const deathAnimDelayMs = shouldPlayDeathAnim
+          ? playMonsterDeathAnimation(scene, target)
+          : 0;
+        if (deathAnimDelayMs > 0) {
+          scene.time.delayedCall(deathAnimDelayMs, finalizeDeath);
+        } else {
+          finalizeDeath();
+        }
+      };
+      if (impactDelayMs > 0) {
+        scene.time.delayedCall(impactDelayMs, startDeathSequence);
+      } else {
+        startDeathSequence();
+      }
+    }
+    return true;
   }
-  if (typeof target.destroy === "function") {
-    target.destroy();
-  }
-  removeDeadEntity(scene, target);
-  checkCombatVictory(scene);
+  finalizeDeath();
   return true;
 }

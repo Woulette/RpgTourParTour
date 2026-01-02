@@ -460,32 +460,17 @@ export const maps = {
       ],
         exitBounds: null,
       },
-    MaptestePourvoir: {
-      key: "MaptestePourvoir",
+    MapAndemiaNouvelleVersion11: {
+      key: "MapAndemiaNouvelleVersion11",
       // A droite de MapAndemiaNouvelleVersion10 (-2,-3).
       worldPos: { x: -1, y: -3 },
-      jsonPath: "assets/maps/MaptestePourvoir.json",
+      jsonPath: "assets/maps/MapAndemiaNouvelleVersion11.json",
       tilesets: [...tilesetNew],
       groundLayerName: "Calque de Tuiles 1",
       debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
       cameraOffsets: { x: 0, y: 43 },
       spawnDefaults: true,
-      monsterSpawns: [
-        {
-          groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
-          groupSizeMin: 1,
-          groupSizeMax: 3,
-          forceMixedGroup: true,
-          offsetFromCenter: { x: -4, y: 2 },
-        },
-        {
-          groupPool: ["corbeau", "gravorbeau", "flamorbeau", "ondoreau"],
-          groupSizeMin: 1,
-          groupSizeMax: 3,
-          forceMixedGroup: true,
-          offsetFromCenter: { x: 5, y: -3 },
-        },
-      ],
+      monsterSpawns: [],
       treePositions: [],
       exitBounds: null,
     },

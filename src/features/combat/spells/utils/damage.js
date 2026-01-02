@@ -53,6 +53,48 @@ function getElementStat(caster, spell) {
   }
 }
 
+function getFlatDamageBonus(caster, spell) {
+  if (!caster || !caster.stats || !spell) return 0;
+  const stats = caster.stats;
+  const element = spell.element;
+  const all = stats.dommage ?? 0;
+
+  switch (element) {
+    case "force":
+    case "terre":
+      return all + (stats.dommageTerre ?? 0);
+    case "intelligence":
+    case "feu":
+      return all + (stats.dommageFeu ?? 0);
+    case "agilite":
+    case "air":
+      return all + (stats.dommageAir ?? 0);
+    case "chance":
+    case "eau":
+      return all + (stats.dommageEau ?? 0);
+    default:
+      return all;
+  }
+}
+
+export function getSpellDamageComponents(caster, spell, baseDamageOverride = null) {
+  if (!caster || !spell) return { scaled: 0, flat: 0 };
+  const dmgMin = spell.damageMin ?? 0;
+  const dmgMax = spell.damageMax ?? dmgMin;
+  const baseDamage =
+    typeof baseDamageOverride === "number"
+      ? baseDamageOverride
+      : Phaser.Math.Between(dmgMin, dmgMax);
+
+  const elemStat = getElementStat(caster, spell);
+  const bonusPercent = elemStat * 0.02;
+  const multiplier = 1 + bonusPercent;
+  const parchmentMult = getSpellParchmentMultiplier(caster, spell);
+  const scaled = Math.round(baseDamage * multiplier * parchmentMult);
+  const flat = getFlatDamageBonus(caster, spell);
+  return { scaled, flat };
+}
+
 // Calcule les dégâts finaux d'un sort pour un lanceur donné,
 // en appliquant un bonus de 2% par point de stat élémentaire.
 function getSpellParchmentMultiplier(caster, spell) {
@@ -76,17 +118,8 @@ function getSurchargeInstableMultiplierForPreview(caster, spell) {
 }
 
 export function computeSpellDamage(caster, spell) {
-  const dmgMin = spell.damageMin ?? 0;
-  const dmgMax = spell.damageMax ?? dmgMin;
-  const baseDamage = Phaser.Math.Between(dmgMin, dmgMax);
-
-  const elemStat = getElementStat(caster, spell);
-  const bonusPercent = elemStat * 0.02; // 2% par point
-  const multiplier = 1 + bonusPercent;
-
-  const parchmentMult = getSpellParchmentMultiplier(caster, spell);
-  const finalDamage = Math.round(baseDamage * multiplier * parchmentMult);
-  return Math.max(0, finalDamage);
+  const { scaled, flat } = getSpellDamageComponents(caster, spell);
+  return Math.max(0, scaled + flat);
 }
 
 // Retourne la fourchette de dégâts (min, max) pour un sort
@@ -110,9 +143,12 @@ export function getSpellDamageRange(caster, spell) {
   const extraMult = getSurchargeInstableMultiplierForPreview(caster, spell);
   const scaledMin = Math.round(finalMin * extraMult);
   const scaledMax = Math.round(finalMax * extraMult);
+  const flatBonus = getFlatDamageBonus(caster, spell);
+  const withFlatMin = scaledMin + flatBonus;
+  const withFlatMax = scaledMax + flatBonus;
 
   return {
-    min: Math.max(0, scaledMin),
-    max: Math.max(0, scaledMax),
+    min: Math.max(0, withFlatMin),
+    max: Math.max(0, withFlatMax),
   };
 }

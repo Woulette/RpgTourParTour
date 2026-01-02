@@ -1,6 +1,6 @@
 import { addChatMessage } from "../../../../chat/chat.js";
 import { showFloatingTextOverEntity } from "../../runtime/floatingText.js";
-import { computeSpellDamage } from "../utils/damage.js";
+import { computeSpellDamage, getSpellDamageComponents } from "../utils/damage.js";
 import {
   applyEryonElementAfterCast,
   convertEryonChargesToPuissance,
@@ -56,7 +56,7 @@ export function computeDamageForSpell(caster, spell) {
 
   if (spell.id === "surcharge_instable" && isEryonCaster(caster)) {
     const before = getEryonChargeState(caster);
-    const base = computeSpellDamage(caster, spell);
+    const { scaled, flat } = getSpellDamageComponents(caster, spell);
 
     let consumed = 0;
     if (before.element === "feu" && before.charges > 0) {
@@ -64,7 +64,7 @@ export function computeDamageForSpell(caster, spell) {
     }
 
     const mult = 1 + 0.1 * (consumed || 0);
-    return { damage: Math.round(base * mult), consumedCharges: consumed };
+    return { damage: Math.round(scaled * mult) + flat, consumedCharges: consumed };
   }
 
   return { damage: computeSpellDamage(caster, spell), consumedCharges: 0 };

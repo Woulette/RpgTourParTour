@@ -72,14 +72,19 @@ export function initDomHud(player) {
   initStatControls(getActivePlayer);
 
   // Initialisation PA / PM / PV dans le HUD bas
+  const refreshHudStats = (targetPlayer) => {
+    if (!targetPlayer?.stats) return;
+    if (apValueEl) apValueEl.textContent = targetPlayer.stats.pa ?? 0;
+    if (mpValueEl) mpValueEl.textContent = targetPlayer.stats.pm ?? 0;
+    if (hpValueEl) {
+      const hp = targetPlayer.stats.hp ?? targetPlayer.stats.hpMax ?? 0;
+      const hpMax = targetPlayer.stats.hpMax ?? hp;
+      hpValueEl.textContent = `${hp}/${hpMax}`;
+    }
+  };
+
   const current = getActivePlayer();
-  if (apValueEl && mpValueEl && hpValueEl && current?.stats) {
-    apValueEl.textContent = current.stats.pa ?? 0;
-    mpValueEl.textContent = current.stats.pm ?? 0;
-    const hp = current.stats.hp ?? current.stats.hpMax ?? 0;
-    const hpMax = current.stats.hpMax ?? hp;
-    hpValueEl.textContent = `${hp}/${hpMax}`;
-  }
+  refreshHudStats(current);
 
   // Utilitaire pour mettre a jour PA/PM depuis le jeu
   const attachHudHelpers = (targetPlayer) => {
@@ -102,6 +107,16 @@ export function initDomHud(player) {
     const active = getActivePlayer();
     if (!active) return;
     attachHudHelpers(active);
+    refreshHudStats(active);
+    if (document.body.classList.contains("hud-stats-open")) {
+      mettreAJourStatsPanel(active);
+    }
+  });
+
+  onStoreEvent("equipment:updated", () => {
+    const active = getActivePlayer();
+    if (!active) return;
+    refreshHudStats(active);
     if (document.body.classList.contains("hud-stats-open")) {
       mettreAJourStatsPanel(active);
     }
@@ -215,7 +230,11 @@ function mettreAJourStatsPanel(player) {
   setText("stat-sagesse", stats.sagesse ?? 0);
   setText("stat-vitalite", stats.vitalite ?? 0);
   setText("stat-puissance", stats.puissance ?? 0);
-  setText("stat-dmg-fixe", stats.dommageFixe ?? 0);
+  setText("stat-dmg", stats.dommage ?? 0);
+  setText("stat-dmg-feu", stats.dommageFeu ?? 0);
+  setText("stat-dmg-eau", stats.dommageEau ?? 0);
+  setText("stat-dmg-air", stats.dommageAir ?? 0);
+  setText("stat-dmg-terre", stats.dommageTerre ?? 0);
   setText("stat-crit", stats.critique ?? 0);
   setText("stat-resist", stats.resistance ?? 0);
 

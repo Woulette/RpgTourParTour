@@ -148,6 +148,7 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
 
   const animPrefix = def.animation?.prefix || def.id || def.textureKey;
   monster.animPrefix = animPrefix;
+  monster.useDiagonalFacing = def.useDiagonalFacing === true;
 
   const defaultDir = (() => {
     const marker = "/rotations/";

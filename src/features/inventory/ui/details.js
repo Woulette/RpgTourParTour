@@ -1,6 +1,6 @@
 import { getItemDef } from "../runtime/inventoryCore.js";
 import { equipmentSets } from "../data/sets.js";
-import { formatBonusObject, decorateBonusHtml, buildSetSummaryLine } from "./formatting.js";
+import { formatBonusObject, decorateBonusHtml } from "./formatting.js";
 
 export function initInventoryDetails(dom) {
   const { bonusEl } = dom;
@@ -137,7 +137,8 @@ export function initInventoryDetails(dom) {
 
     if (!domRef || !domRef.descEl) return;
 
-    const bonusLines = [];
+    const objectLines = [];
+    const setLines = [];
     const descLines = [];
 
     if (def && typeof def.description === "string") {
@@ -156,17 +157,17 @@ export function initInventoryDetails(dom) {
       effectParts.push(`+${effect.pmPlus} PM`);
     }
     if (effectParts.length > 0) {
-      bonusLines.push(`Effets : ${effectParts.join(", ")}`);
+      objectLines.push(`Effets : ${effectParts.join(", ")}`);
     }
 
     if (def && typeof def.bonusInfo === "string" && def.bonusInfo.trim()) {
-      bonusLines.push(def.bonusInfo.trim());
+      objectLines.push(def.bonusInfo.trim());
     }
 
     if (def && def.category === "equipement" && def.statsBonus) {
       const bonusTxt = formatBonusObject(def.statsBonus);
       if (bonusTxt) {
-        bonusLines.push(`Bonus objet : ${bonusTxt}`);
+        objectLines.push(`Bonus objet : ${bonusTxt}`);
       }
 
       if (def.setId && player.equipment) {
@@ -180,43 +181,37 @@ export function initInventoryDetails(dom) {
             }
           }
 
-          const activeLines = [];
-          for (const [thStr, bonus] of Object.entries(setDef.thresholds)) {
-            const threshold = parseInt(thStr, 10);
-            if (Number.isNaN(threshold)) continue;
-            if (count >= threshold) {
-              const txt = formatBonusObject(bonus);
-              if (txt) {
-                activeLines.push(`${threshold} pieces : ${txt}`);
-              }
-            }
-          }
+          const entries = Object.entries(setDef.thresholds)
+            .map(([thStr, bonus]) => ({
+              threshold: parseInt(thStr, 10),
+              bonus,
+            }))
+            .filter((entry) => !Number.isNaN(entry.threshold))
+            .sort((a, b) => a.threshold - b.threshold);
 
-          if (activeLines.length > 0) {
-            bonusLines.push(`Panoplie (${count} equipes) : ${activeLines.join(" | ")}`);
-          }
+          entries.forEach(({ threshold, bonus }) => {
+            const txt = formatBonusObject(bonus);
+            if (!txt) return;
+            const active = count >= threshold;
+            setLines.push(
+              `${threshold} pieces : ${txt}${active ? "" : " (inactif)"}`
+            );
+          });
         }
       }
     }
 
     if (bonusTextEl) {
-      const setSummaryLine = buildSetSummaryLine(player, def);
-
-      const objectLines = bonusLines.filter((line) => !line.startsWith("Panoplie"));
-      const setLines = bonusLines
-        .filter((line) => line.startsWith("Panoplie"))
-        .map((line) => {
-          const match = line.match(/Panoplie\s*\((\d+)/);
-          const count = match ? Number(match[1]) || 0 : 0;
-          if (!count) return "";
-          return `Panoplie : ${count} piece${count > 1 ? "s" : ""} equipee${count > 1 ? "s" : ""}`;
-        })
-        .filter(Boolean);
-
       lastObjectBonusText = decorateBonusHtml(objectLines.join(" | "));
-      const rawSetText = setSummaryLine || setLines.join(" | ");
-      const cleanedSetText = rawSetText.replace(/^Panoplie\s*:\s*/i, "");
-      lastSetBonusText = decorateBonusHtml(cleanedSetText);
+      if (setLines.length > 0) {
+        const rawSetText = setLines.join(" | ");
+        lastSetBonusText = decorateBonusHtml(rawSetText).replace(
+          /\s*\|\s*/g,
+          "<br>"
+        );
+      } else {
+        lastSetBonusText = "Aucun bonus de panoplie actif.";
+      }
       applyBonusText();
     }
 

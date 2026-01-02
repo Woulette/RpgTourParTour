@@ -4,6 +4,7 @@ export const spells = {
   // --- Animiste (slot "mage") ---
   rayon_astral: {
     id: "rayon_astral",
+    icon: "assets/icon/IconSortAnimiste/RayonAstral.png",
     label: "Rayon astral",
     paCost: 3,
     requiredLevel: 1,
@@ -54,6 +55,7 @@ export const spells = {
 
   capture_essence: {
     id: "capture_essence",
+    icon: "assets/icon/IconSortAnimiste/CaptureEssence.png",
     label: "Capture d'essence",
     paCost: 3,
     requiredLevel: 1,
@@ -72,6 +74,7 @@ export const spells = {
 
   invocation_capturee: {
     id: "invocation_capturee",
+    icon: "assets/icon/IconSortAnimiste/InvocationCapturer.png",
     label: "Invocation capturée",
     paCost: 4,
     requiredLevel: 1,
@@ -142,6 +145,7 @@ export const spells = {
   // --- Archer ---
   tir_simple: {
     id: "tir_simple",
+    icon: "assets/icon/IconSortArcher/TirSimple.png",
     label: "Tir simple",
     paCost: 3,
     requiredLevel: 1,
@@ -157,6 +161,7 @@ export const spells = {
   },
   fleche_carbonisee: {
     id: "fleche_carbonisee",
+    icon: "assets/icon/IconSortArcher/FlecheCarbonisé.png",
     label: "Flèche carbonisée",
     paCost: 4,
     requiredLevel: 1,
@@ -172,6 +177,7 @@ export const spells = {
   },
   flumigene: {
     id: "flumigene",
+    icon: "assets/icon/IconSortArcher/Flumigene.png",
     label: "Flumigène",
     paCost: 2,
     requiredLevel: 1,
@@ -190,6 +196,7 @@ export const spells = {
   // --- Eryon ---
   recharge_flux: {
     id: "recharge_flux",
+    icon: "assets/icon/IconSortEryon/RechargeDeFlux.png",
     label: "Recharge de Flux",
     paCost: 2,
     requiredLevel: 1,
@@ -207,6 +214,7 @@ export const spells = {
   },
   surcharge_instable: {
     id: "surcharge_instable",
+    icon: "assets/icon/IconSortEryon/SurchargeRunique.png",
     label: "Surcharge instable",
     paCost: 5,
     requiredLevel: 1,
@@ -226,6 +234,7 @@ export const spells = {
   },
   stabilisation_flux: {
     id: "stabilisation_flux",
+    icon: "assets/icon/IconSortEryon/StabilisationDeFlux.png",
     label: "Stabilisation de Flux",
     paCost: 2,
     requiredLevel: 1,

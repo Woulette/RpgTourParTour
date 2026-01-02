@@ -101,6 +101,8 @@ export function initSpellBar(getPlayer, bar, knownSpells) {
       if (!spell) {
         slot.classList.add("empty");
         if (nameEl) nameEl.textContent = "";
+        slot.classList.remove("has-icon");
+        slot.style.backgroundImage = "";
         slotSpellByIndex[index] = null;
         return;
       }
@@ -108,6 +110,13 @@ export function initSpellBar(getPlayer, bar, knownSpells) {
       slot.classList.remove("empty");
       if (nameEl) {
         nameEl.textContent = spell.label;
+      }
+      if (spell.icon) {
+        slot.classList.add("has-icon");
+        slot.style.backgroundImage = `url("${spell.icon}")`;
+      } else {
+        slot.classList.remove("has-icon");
+        slot.style.backgroundImage = "";
       }
       slotSpellByIndex[index] = spell;
       cooldownBadgeByIndex[index] = ensureCooldownBadge(slot);

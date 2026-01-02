@@ -124,6 +124,10 @@ export function buildSnapshotFromPlayer(player) {
     achievements: cloneJson(player.achievements || null),
     metiers: cloneJson(player.metiers || null),
     spellParchments: cloneJson(player.spellParchments || null),
+    stats: {
+      hp: Number.isFinite(player.stats?.hp) ? player.stats.hp : null,
+      hpMax: Number.isFinite(player.stats?.hpMax) ? player.stats.hpMax : null,
+    },
     savedAt: Date.now(),
   };
 }
@@ -184,5 +188,20 @@ export function applySnapshotToPlayer(player, snapshot) {
 
   if (typeof player.recomputeStatsWithEquipment === "function") {
     player.recomputeStatsWithEquipment();
+  }
+
+  if (snapshot.stats && player.stats) {
+    const hpMax = Number.isFinite(player.stats.hpMax)
+      ? player.stats.hpMax
+      : player.stats.hp ?? 0;
+    if (Number.isFinite(snapshot.stats.hp)) {
+      player.stats.hp = Math.min(snapshot.stats.hp, hpMax);
+    }
+    if (Number.isFinite(snapshot.stats.hpMax)) {
+      player.stats.hpMax = snapshot.stats.hpMax;
+      if (Number.isFinite(player.stats.hp)) {
+        player.stats.hp = Math.min(player.stats.hp, player.stats.hpMax);
+      }
+    }
   }
 }

@@ -26,6 +26,13 @@ export const baseStats = {
 
   // Dommages de poussée
   pushDamage: 0,
+
+  // Dommages plats (1 = +1 degat)
+  dommage: 0,
+  dommageFeu: 0,
+  dommageEau: 0,
+  dommageAir: 0,
+  dommageTerre: 0,
 };
 
 // Crée un objet stats en partant du modèle, avec éventuellement des overrides

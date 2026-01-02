@@ -10,7 +10,11 @@ import { canCastSpellAtTile } from "./canCast.js";
 import { computeSpellDamage } from "../utils/damage.js";
 import { clearSpellRangePreview } from "./preview.js";
 import { getCasterOriginTile } from "../utils/util.js";
-import { playSpellAnimation } from "../cast/castAnimations.js";
+import {
+  playSpellAnimation,
+  playEryonPrecastAnimation,
+  getSpellAnimationDuration,
+} from "../cast/castAnimations.js";
 import { registerDefaultEffects } from "../effects/index.js";
 import { executeSpellEffectsAtTile } from "../effects/execute.js";
 import {
@@ -24,6 +28,10 @@ import { applyCasterFacing, getEntityTile } from "../cast/castPosition.js";
 import { tryPullEntity, tryPushEntity } from "../cast/castMovement.js";
 import { applyEryonAfterCast } from "../cast/castEryon.js";
 import { canApplyCapture } from "../../summons/capture.js";
+import {
+  playMonsterSpellAnimation,
+  getMonsterSpellAnimationDuration,
+} from "../../../monsters/runtime/animations.js";
 import {
   getAliveSummon,
   findSummonSpawnTile,
@@ -148,6 +156,12 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
     caster.spellCooldowns[spell.id] = cdTurns;
   }
 
+  if (isPlayerCaster) {
+    const nowMs = scene?.time?.now ?? Date.now();
+    const castDelayMs = spell.castDelayMs ?? 500;
+    state.castLockUntil = Math.max(state.castLockUntil ?? 0, nowMs + castDelayMs);
+  }
+
   const worldPos = map.tileToWorldXY(tileX, tileY, undefined, undefined, groundLayer);
   const cx = worldPos.x + map.tileWidth / 2;
   const cy = worldPos.y + map.tileHeight / 2;
@@ -162,10 +176,49 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
     groundLayer
   );
 
+  let monsterAttackDelayMs = 0;
+  if (!isPlayerCaster && !isAllyCaster && caster?.monsterId) {
+    monsterAttackDelayMs = playMonsterSpellAnimation(scene, caster, spell?.id);
+  }
+
   // FX animation (si dispo)
   const fromX = caster?.x ?? cx;
   const fromY = (caster?.y ?? cy) - 10;
-  playSpellAnimation(scene, spell?.id, fromX, fromY, cx, cy);
+  const isEryonCaster = caster?.classId === "eryon";
+  let spellFxDelayMs = 0;
+  if (isEryonCaster) {
+    const precastMs = playEryonPrecastAnimation(scene, caster, fromX, fromY, cy);
+    const delayMs = Math.max(0, precastMs - 120);
+    spellFxDelayMs = delayMs;
+    if (scene.time && typeof scene.time.delayedCall === "function") {
+      scene.time.delayedCall(delayMs, () => {
+        playSpellAnimation(scene, spell?.id, fromX, fromY, cx, cy);
+      });
+    } else {
+      playSpellAnimation(scene, spell?.id, fromX, fromY, cx, cy);
+    }
+  } else {
+    playSpellAnimation(scene, spell?.id, fromX, fromY, cx, cy);
+  }
+  const spellAnimDurationMs = getSpellAnimationDuration(
+    scene,
+    spell?.id,
+    fromX,
+    fromY,
+    cx,
+    cy
+  );
+  const monsterAnimDurationMs = getMonsterSpellAnimationDuration(
+    scene,
+    caster,
+    spell?.id
+  );
+  const impactDelayMs = Math.max(
+    0,
+    spellFxDelayMs + spellAnimDurationMs,
+    monsterAttackDelayMs,
+    monsterAnimDurationMs
+  );
 
   const size = Math.min(map.tileWidth, map.tileHeight);
   const fx = scene.add.rectangle(cx, cy, size, size, 0xffdd55, 0.6);
@@ -202,7 +255,8 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
       tileX,
       tileY,
       map,
-      groundLayer
+      groundLayer,
+      { impactDelayMs }
     );
     clearActiveSpell(caster);
     clearSpellRangePreview(scene);
@@ -388,6 +442,86 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groundLayer) {
   const spell = getActiveSpell(player);
   if (!spell) return false;
+  const state = scene?.combatState;
+  if (state && player === state.joueur) {
+    const nowMs = scene?.time?.now ?? Date.now();
+    const lockUntil = state.castLockUntil ?? 0;
+    if (nowMs < lockUntil) {
+      state.pendingCasts = Array.isArray(state.pendingCasts)
+        ? state.pendingCasts
+        : [];
+      state.pendingCasts.push({
+        caster: player,
+        spell,
+        tileX,
+        tileY,
+        map,
+        groundLayer,
+      });
+      while (state.pendingCasts.length > 2) {
+        state.pendingCasts.shift();
+      }
+
+      const processPending = () => {
+        const nextNow = scene?.time?.now ?? Date.now();
+        const nextLock = state.castLockUntil ?? 0;
+        if (nextNow < nextLock) {
+          if (scene?.time?.delayedCall) {
+            state.pendingCastTimer = scene.time.delayedCall(
+              Math.max(0, nextLock - nextNow),
+              processPending
+            );
+          } else {
+            setTimeout(processPending, Math.max(0, nextLock - nextNow));
+          }
+          return;
+        }
+
+        const pending = Array.isArray(state.pendingCasts)
+          ? state.pendingCasts.shift()
+          : null;
+        if (!pending) {
+          state.pendingCastTimer = null;
+          return;
+        }
+
+        castSpellAtTile(
+          scene,
+          pending.caster,
+          pending.spell,
+          pending.tileX,
+          pending.tileY,
+          pending.map,
+          pending.groundLayer
+        );
+
+        state.pendingCastTimer = null;
+        if (Array.isArray(state.pendingCasts) && state.pendingCasts.length > 0) {
+          const waitMs = Math.max(
+            0,
+            (state.castLockUntil ?? 0) - (scene?.time?.now ?? Date.now())
+          );
+          if (scene?.time?.delayedCall) {
+            state.pendingCastTimer = scene.time.delayedCall(waitMs, processPending);
+          } else {
+            setTimeout(processPending, waitMs);
+          }
+        }
+      };
+
+      if (!state.pendingCastTimer) {
+        if (scene?.time?.delayedCall) {
+          state.pendingCastTimer = scene.time.delayedCall(
+            Math.max(0, lockUntil - nowMs),
+            processPending
+          );
+        } else {
+          setTimeout(processPending, Math.max(0, lockUntil - nowMs));
+        }
+      }
+      return false;
+    }
+  }
   return castSpellAtTile(scene, player, spell, tileX, tileY, map, groundLayer);
 }
 

@@ -1,17 +1,101 @@
-/* Surcouche Cordonnier (même accent que bijoutier/tailleur). */
+/* Cordonnier - style aligne sur l'alchimiste avec palette cuivre. */
+
+.craft-panel.cordonnier .craft-panel-inner {
+  background: radial-gradient(circle at 15% 5%, rgba(170, 95, 60, 0.22), transparent 55%),
+    linear-gradient(180deg, #1c1411, #120d0b 70%);
+  border-color: rgba(200, 125, 95, 0.45);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+
+.craft-panel.cordonnier .craft-panel-header h3 {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.craft-panel.cordonnier .craft-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.craft-panel.cordonnier .craft-body {
+  display: grid;
+  grid-template-columns: 32% 34% 34%;
+  gap: 10px;
+  min-height: 0;
+}
+
+.craft-panel.cordonnier .craft-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.craft-panel.cordonnier .craft-center {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.craft-panel.cordonnier .craft-xp-bar {
+  background: rgba(20, 15, 12, 0.9);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(190, 120, 90, 0.35);
+}
+
+.craft-panel.cordonnier .craft-xp-bar-fill {
+  background: linear-gradient(90deg, #c46a2b, #7a3c17);
+}
+
+.craft-panel.cordonnier .craft-xp-bar-label {
+  font-size: 11px;
+}
+
+.craft-panel.cordonnier .craft-slot {
+  height: 70px;
+  border-radius: 12px;
+  background: rgba(72, 60, 52, 0.7);
+  border: 1px dashed rgba(190, 120, 90, 0.4);
+}
+
+.craft-panel.cordonnier .craft-slot.filled {
+  border-style: solid;
+  border-color: rgba(210, 140, 110, 0.75);
+}
+
 .craft-panel.cordonnier .craft-btn {
-  background: linear-gradient(90deg, #1f7bc1, #145a8f);
+  background: linear-gradient(90deg, #b7652a, #7a3c17);
 }
 
 .craft-panel.cordonnier .craft-result {
-  background: linear-gradient(135deg, rgba(31, 123, 193, 0.15), rgba(20, 90, 143, 0.32));
-  border-color: #1f7bc1;
+  border-color: rgba(210, 140, 110, 0.55);
+  background: linear-gradient(135deg, rgba(183, 101, 42, 0.2), rgba(183, 101, 42, 0.35));
 }
 
 .craft-panel.cordonnier .craft-recipe {
-  border-color: #2a3b4d;
+  background: rgba(40, 30, 24, 0.9);
+  border-color: rgba(120, 80, 60, 0.6);
 }
 
-.craft-panel.cordonnier .craft-req .req-item {
-  border-color: #2a3b4d;
+.craft-panel.cordonnier .craft-recipe.active {
+  border-color: #e2a06a;
+  box-shadow: 0 0 0 2px rgba(226, 160, 106, 0.28), 0 10px 24px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(180deg, rgba(160, 90, 50, 0.4), rgba(90, 50, 30, 0.35));
+}
+
+.craft-panel.cordonnier .craft-inventory-slot {
+  background: rgba(120, 95, 80, 0.45);
+  border-color: rgba(210, 170, 140, 0.6);
+}
+
+.craft-panel.cordonnier .craft-tag {
+  background: rgba(50, 38, 30, 0.75);
+  color: #f2d6c1;
+}
+
+.craft-panel.cordonnier .craft-tag.locked {
+  background: rgba(65, 25, 25, 0.7);
+  color: #f4c2c2;
 }

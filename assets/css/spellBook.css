@@ -348,9 +348,38 @@ body.hud-spells-open #hud-spells-panel {
 
 .spellbook-item-main {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.25rem;
+  align-items: center;
+  gap: 0.8rem;
   font-size: 0.98em;
+}
+
+.spellbook-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.spellbook-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.spellbook-icon {
+  width: 48px;
+  height: 48px;
+  margin-right: 0.5rem;
+  border-radius: 6px;
+  background: rgba(10, 18, 16, 0.6);
+  border: 1px solid rgba(120, 160, 140, 0.35);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
 }
 
 .spellbook-name {
@@ -366,15 +395,17 @@ body.hud-spells-open #hud-spells-panel {
 .spellbook-item-details {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.55rem;
   font-size: 0.85em;
   color: var(--spell-muted);
+  margin-top: 0.2rem;
 }
 
 .spellbook-item-effects {
-  margin-top: 0.3rem;
-  font-size: 0.82em;
   color: #d8e9df;
+  margin-top: 0.2rem;
+  text-align: center;
 }
 
 .spellbook-element {

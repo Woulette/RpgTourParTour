@@ -16,7 +16,7 @@ export default {
     hp: 125,
     pa: 7,
     pm: 4,
-    agilite: 55,
+    agilite: 20,
     initiative: 50,
   },
   spells: ["maintendu"],

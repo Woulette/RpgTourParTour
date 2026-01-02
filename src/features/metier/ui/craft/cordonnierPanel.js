@@ -103,15 +103,36 @@ function ensurePanelElements() {
         <h3>Table de Cordonnier</h3>
         <button type="button" class="craft-panel-close" aria-label="Fermer">✕</button>
       </header>
-      <div class="craft-xp-row">
-        <div class="craft-xp-bar">
-          <div class="craft-xp-bar-fill" id="cordonnier-xp-fill"></div>
-          <div class="craft-xp-bar-label" id="cordonnier-xp-label">XP 0 / 100</div>
-        </div>
-        <div class="craft-xp-level">Niv. <span id="cordonnier-xp-level">1</span></div>
-      </div>
+      
       <div class="craft-body">
         <section class="craft-left">
+          <div class="craft-xp-row">
+            <div class="craft-xp-bar">
+              <div class="craft-xp-bar-fill" id="cordonnier-xp-fill"></div>
+              <div class="craft-xp-bar-label" id="cordonnier-xp-label">XP 0 / 100</div>
+            </div>
+            <div class="craft-xp-level">Niv. <span id="cordonnier-xp-level">1</span></div>
+          </div>
+          <div class="craft-recipe-filters">
+            <input
+              type="number"
+              min="1"
+              class="craft-filter-level"
+              id="cordonnier-filter-level"
+              placeholder="Niv. max"
+            />
+            <input
+              type="text"
+              class="craft-filter-search"
+              id="cordonnier-filter-search"
+              placeholder="Rechercher..."
+            />
+            <select class="craft-filter-type" id="cordonnier-filter-type">
+              <option value="all">Tout</option>
+              <option value="bottes">Bottes</option>
+              <option value="ceinture">Ceinture</option>
+            </select>
+          </div>
           <ul class="craft-recipes" id="cordonnier-recipes"></ul>
         </section>
         <section class="craft-center">
@@ -404,7 +425,45 @@ function renderResult(player) {
   resultEl.appendChild(text);
 }
 
-function renderRecipes(player, selectedIdRef) {
+function getRecipeFilters() {
+  const levelInput = panelEl.querySelector("#cordonnier-filter-level");
+  const searchInput = panelEl.querySelector("#cordonnier-filter-search");
+  const typeSelect = panelEl.querySelector("#cordonnier-filter-type");
+  const levelValue = levelInput ? parseInt(levelInput.value, 10) : NaN;
+  return {
+    levelMax: Number.isFinite(levelValue) ? levelValue : null,
+    search: (searchInput?.value || "").trim().toLowerCase(),
+    type: typeSelect?.value || "all",
+  };
+}
+
+function getFilteredRecipes() {
+  const filters = getRecipeFilters();
+  const sortedRecipes = cordonnierRecipes.slice().sort((a, b) => {
+    const aLevel = typeof a?.level === "number" ? a.level : 0;
+    const bLevel = typeof b?.level === "number" ? b.level : 0;
+    if (aLevel !== bLevel) return bLevel - aLevel;
+    const aLabel = (a?.label || "").toLowerCase();
+    const bLabel = (b?.label || "").toLowerCase();
+    return aLabel.localeCompare(bLabel);
+  });
+
+  return sortedRecipes.filter((recipe) => {
+    if (filters.levelMax !== null && recipe.level > filters.levelMax) {
+      return false;
+    }
+    if (filters.type !== "all" && recipe.category !== filters.type) {
+      return false;
+    }
+    if (filters.search) {
+      const label = (recipe.label || "").toLowerCase();
+      if (!label.includes(filters.search)) return false;
+    }
+    return true;
+  });
+}
+
+function renderRecipes(player, selectedIdRef, filteredRecipes) {
   const list = panelEl.querySelector("#cordonnier-recipes");
   if (!list) return;
   list.innerHTML = "";
@@ -421,9 +480,17 @@ function renderRecipes(player, selectedIdRef) {
     return count >= qty;
   };
 
-  let currentSelected = selectedIdRef?.value || (cordonnierRecipes[0] && cordonnierRecipes[0].id);
+  if (!filteredRecipes || filteredRecipes.length === 0) {
+    return null;
+  }
+  let currentSelected =
+    selectedIdRef?.value || (filteredRecipes[0] && filteredRecipes[0].id);
+  if (!filteredRecipes.find((recipe) => recipe.id === currentSelected)) {
+    currentSelected = filteredRecipes[0].id;
+    if (selectedIdRef) selectedIdRef.value = currentSelected;
+  }
 
-  cordonnierRecipes.forEach((recipe) => {
+  filteredRecipes.forEach((recipe) => {
     const li = document.createElement("li");
     li.className = "craft-recipe";
     li.dataset.recipeId = recipe.id;
@@ -498,7 +565,7 @@ function renderRecipes(player, selectedIdRef) {
       currentSelected = recipe.id;
       selectedIdRef.value = recipe.id;
       activeRecipePreview = recipe;
-      renderRecipes(player, selectedIdRef);
+      renderRecipes(player, selectedIdRef, filteredRecipes);
       renderSlots(recipe, player);
       updateCraftButton(recipe, player);
       renderResult(player);
@@ -512,7 +579,11 @@ function renderRecipes(player, selectedIdRef) {
 
 function updateCraftButton(recipe, player) {
   const btn = panelEl.querySelector("#cordonnier-craft-btn");
-  if (!btn || !recipe) return;
+  if (!btn) return;
+  if (!recipe) {
+    btn.disabled = true;
+    return;
+  }
   const inventory = player?.inventory;
   const state = ensureCordonnierState(player);
   const hasItem = (id, qty) => {
@@ -546,19 +617,28 @@ function renderXpHeader(player) {
 export function openCordonnierCraftPanel(scene, player) {
   ensurePanelElements();
   if (!panelEl) return;
-  const selectedRef = { value: cordonnierRecipes[0]?.id };
-  const selected = renderRecipes(player, selectedRef);
-  const getActiveRecipe = () =>
-    cordonnierRecipes.find((r) => r.id === selectedRef.value) ||
-    cordonnierRecipes.find((r) => r.id === selected) ||
-    cordonnierRecipes[0];
-  const recipe = getActiveRecipe();
-  activeRecipePreview = recipe || null;
+  const selectedRef = { value: null };
+  const refreshRecipes = () => {
+    const filteredRecipes = getFilteredRecipes();
+    const selected = renderRecipes(player, selectedRef, filteredRecipes);
+    const recipe =
+      filteredRecipes.find((r) => r.id === selectedRef.value) ||
+      filteredRecipes.find((r) => r.id === selected);
+    activeRecipePreview = recipe || null;
+    renderSlots(recipe, player);
+    updateCraftButton(recipe, player);
+    renderResult(player);
+  };
+  const getActiveRecipe = () => {
+    const filteredRecipes = getFilteredRecipes();
+    return (
+      filteredRecipes.find((r) => r.id === selectedRef.value) ||
+      filteredRecipes[0]
+    );
+  };
+
   renderXpHeader(player);
-  renderSlots(recipe, player);
   renderInventory(player);
-  updateCraftButton(recipe, player);
-  renderResult(player);
 
   const filters = panelEl.querySelectorAll(
     ".craft-inventory-filters button[data-filter]"
@@ -572,11 +652,35 @@ export function openCordonnierCraftPanel(scene, player) {
     };
   });
 
+  const levelInput = panelEl.querySelector("#cordonnier-filter-level");
+  const searchInput = panelEl.querySelector("#cordonnier-filter-search");
+  const typeSelect = panelEl.querySelector("#cordonnier-filter-type");
+  if (levelInput) {
+    const state = ensureCordonnierState(player);
+    const defaultLevel = state?.level ?? 1;
+    levelInput.value = String(defaultLevel);
+  }
+  if (levelInput) {
+    levelInput.oninput = () => refreshRecipes();
+  }
+  if (searchInput) {
+    searchInput.oninput = () => refreshRecipes();
+  }
+  if (typeSelect) {
+    typeSelect.onchange = () => refreshRecipes();
+  }
+
+  refreshRecipes();
+
   const btn = panelEl.querySelector("#cordonnier-craft-btn");
   if (btn) {
     btn.onclick = () => {
       const activeRecipe = getActiveRecipe();
-      if (!activeRecipe || btn.disabled) return;
+      if (!activeRecipe) {
+        updateCraftButton(null, player);
+        return;
+      }
+      if (btn.disabled) return;
       const inv = player?.inventory;
       const countItem = (id) =>
         inv?.slots?.reduce(
@@ -605,11 +709,7 @@ export function openCordonnierCraftPanel(scene, player) {
         qty: activeRecipe.output.qty,
       });
       renderInventory(player);
-      renderRecipes(player, selectedRef);
-      renderSlots(activeRecipe, player);
-      activeRecipePreview = activeRecipe;
-      renderResult(player);
-      updateCraftButton(activeRecipe, player);
+      refreshRecipes();
     };
   }
 

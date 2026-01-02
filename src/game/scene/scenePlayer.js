@@ -8,6 +8,7 @@ import { setupSpellAnimations } from "../../features/spells/runtime/animations.j
 import { recalcDepths } from "../../features/maps/world.js";
 import { applySnapshotToPlayer } from "../../save/index.js";
 import { defaultClassId } from "../../config/classes.js";
+import { startOutOfCombatRegen } from "../../core/regen.js";
 
 export function setupPlayerForScene(scene, options) {
   const { startX, startY, startTileX, startTileY, snapshot, selected } = options;
@@ -44,5 +45,6 @@ export function setupPlayerForScene(scene, options) {
   }
 
   scene.player = player;
+  startOutOfCombatRegen(scene, player);
   return player;
 }

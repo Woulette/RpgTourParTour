@@ -73,6 +73,33 @@ function loadMonsterIdleRotations(scene, m) {
   });
 }
 
+function loadMonsterExtraAnimationFrames(scene, m) {
+  if (!scene || !m?.extraAnimations) return;
+  const extras = m.extraAnimations || {};
+  const prefix = m.animation?.prefix || m.id || m.textureKey;
+  Object.entries(extras).forEach(([key, def]) => {
+    if (!def || !def.basePath) return;
+    const directions =
+      Array.isArray(def.directions) && def.directions.length > 0
+        ? def.directions
+        : DEFAULT_MONSTER_ANIM_DIRECTIONS;
+    const frameCount =
+      typeof def.frameCount === "number" && def.frameCount > 0
+        ? Math.round(def.frameCount)
+        : 1;
+
+    directions.forEach((dir) => {
+      for (let i = 0; i < frameCount; i += 1) {
+        const index = i.toString().padStart(3, "0");
+        scene.load.image(
+          `${prefix}_${key}_${dir}_${i}`,
+          `${def.basePath}/${dir}/frame_${index}.png`
+        );
+      }
+    });
+  });
+}
+
 function resolveMonsterDefaultDir(def) {
   const marker = "/rotations/";
   if (def?.spritePath && def.spritePath.includes(marker)) {
@@ -108,6 +135,7 @@ export function preloadMonsters(scene) {
     scene.load.image(m.textureKey, m.spritePath);
     loadMonsterAnimationFrames(scene, m);
     loadMonsterIdleRotations(scene, m);
+    loadMonsterExtraAnimationFrames(scene, m);
   });
 }
 
@@ -125,6 +153,42 @@ export function setupMonsterAnimations(scene) {
         ? Math.round(anim.frameCount)
         : 4;
     setupCharacterAnimations(scene, prefix, { directions, frameCount });
+
+    const extras = m?.extraAnimations || {};
+    Object.entries(extras).forEach(([key, def]) => {
+      if (!def || !def.basePath) return;
+      const extraDirections =
+        Array.isArray(def.directions) && def.directions.length > 0
+          ? def.directions
+          : directions;
+      const extraFrameCount =
+        typeof def.frameCount === "number" && def.frameCount > 0
+          ? Math.round(def.frameCount)
+          : 1;
+      const animKeyBase = `${prefix}_${key}`;
+      const frameRate =
+        typeof def.frameRate === "number" && def.frameRate > 0
+          ? def.frameRate
+          : 10;
+      const repeat = typeof def.repeat === "number" ? def.repeat : 0;
+
+      extraDirections.forEach((dir) => {
+        const animKey = `${animKeyBase}_${dir}`;
+        if (scene.anims && scene.anims.exists && scene.anims.exists(animKey)) {
+          return;
+        }
+        const frames = [];
+        for (let i = 0; i < extraFrameCount; i += 1) {
+          frames.push({ key: `${animKeyBase}_${dir}_${i}` });
+        }
+        scene.anims.create({
+          key: animKey,
+          frames,
+          frameRate,
+          repeat,
+        });
+      });
+    });
   });
 }
 

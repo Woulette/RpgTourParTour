@@ -4,7 +4,7 @@ export default {
     label: "Maintendu",
     paCost: 4,
     rangeMin: 1,
-    rangeMax: 3,
+    rangeMax: 2,
     lineOfSight: true,
     zone: "cell",
     element: "air",
@@ -14,6 +14,6 @@ export default {
       { type: "damage", element: "air", min: 10, max: 14 },
     ],
     maxCastsPerTurn: 1,
-    description: "Attaque a moyenne portee.",
+    description: "Attaque a courte portee.",
   },
 };

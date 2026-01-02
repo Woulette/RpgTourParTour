@@ -8,6 +8,27 @@ export default {
     basePath: "assets/monsters/Gumgob/animations/running-4-frames",
     frameCount: 4,
   },
+  useDiagonalFacing: true,
+  extraAnimations: {
+    attack: {
+      basePath: "assets/monsters/Gumgob/animations/lead-jab",
+      directions: ["north-east", "north-west", "south-east", "south-west"],
+      frameCount: 3,
+      frameRate: 12,
+      repeat: 0,
+    },
+    death: {
+      basePath: "assets/monsters/Gumgob/animations/falling-back-death",
+      directions: ["south-east"],
+      frameCount: 7,
+      frameRate: 10,
+      repeat: 0,
+    },
+  },
+  spellAnimations: {
+    coup_de_massue: "attack",
+  },
+  deathAnimation: "death",
   render: {
     originX: 0.5,
     originY: 1.12,

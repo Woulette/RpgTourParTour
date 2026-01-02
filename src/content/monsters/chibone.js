@@ -15,7 +15,7 @@ export default {
     hpMax: 100,
     hp: 100,
     pa: 6,
-    pm: 4,
+    pm: 3,
     force: 20,
     agilite: 15,
     initiative: 35,

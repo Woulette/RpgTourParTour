@@ -45,4 +45,20 @@ export function setupSpellAnimations(scene) {
       });
     }
   }
+
+  const fireballDirs = ["south-east", "south-west", "north-east", "north-west"];
+  fireballDirs.forEach((dir) => {
+    const key = `eryon_fireball_${dir}`;
+    if (scene.anims.exists(key)) return;
+    const frames = [];
+    for (let i = 0; i < 6; i += 1) {
+      frames.push({ key: `eryon_fireball_${dir}_${i}` });
+    }
+    scene.anims.create({
+      key,
+      frames,
+      frameRate: 12,
+      repeat: 0,
+    });
+  });
 }

@@ -17,6 +17,16 @@ export function labelForStatKey(key) {
       return "Initiative";
     case "puissance":
       return "Puissance";
+    case "dommage":
+      return "Dommage";
+    case "dommageFeu":
+      return "Dommage Feu";
+    case "dommageEau":
+      return "Dommage Eau";
+    case "dommageAir":
+      return "Dommage Air";
+    case "dommageTerre":
+      return "Dommage Terre";
     case "hpPlus":
     case "hp":
     case "hpMax":
@@ -60,6 +70,11 @@ export function decorateBonusHtml(text) {
     { label: "Vitalite", cls: "inventory-bonus-stat-vitalite" },
     { label: "Initiative", cls: "inventory-bonus-stat-init" },
     { label: "Puissance", cls: "inventory-bonus-stat-force" },
+    { label: "Dommage Feu", cls: "inventory-bonus-stat-generic" },
+    { label: "Dommage Eau", cls: "inventory-bonus-stat-generic" },
+    { label: "Dommage Air", cls: "inventory-bonus-stat-generic" },
+    { label: "Dommage Terre", cls: "inventory-bonus-stat-generic" },
+    { label: "Dommage", cls: "inventory-bonus-stat-generic" },
     { label: "PV", cls: "inventory-bonus-stat-hp" },
     { label: "PA", cls: "inventory-bonus-stat-pa" },
     { label: "PM", cls: "inventory-bonus-stat-pm" },
@@ -68,7 +83,10 @@ export function decorateBonusHtml(text) {
   ];
 
   patterns.forEach(({ label, cls }) => {
-    const re = new RegExp(`([+\\-]\\d+\\s${label})`, "g");
+    const re =
+      label === "Dommage"
+        ? new RegExp(`([+\\-]\\d+\\s${label})(?!\\s(Feu|Eau|Air|Terre))`, "g")
+        : new RegExp(`([+\\-]\\d+\\s${label})`, "g");
     html = html.replace(
       re,
       `<span class="inventory-bonus-stat ${cls}">$1</span>`

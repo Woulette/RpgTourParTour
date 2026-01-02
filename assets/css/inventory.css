@@ -354,6 +354,7 @@ body.hud-inventory-open #hud-inventory-panel {
   border-radius: 4px;
   font-size: 16px;
   line-height: 0.0;
+  white-space: nowrap;
 }
 
 /* Laisse un léger espace entre "Bonus objet :" et la première stat uniquement */

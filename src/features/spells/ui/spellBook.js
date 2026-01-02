@@ -468,20 +468,22 @@ function renderSpellsForTier({
 
     li.innerHTML = `
       <div class="spellbook-item-main">
-        <span class="spellbook-name">${spell.label}</span>
-        <span class="spellbook-level">Niv. ${requiredLevel}</span>
+        <span class="spellbook-icon" style="${
+          spell.icon ? `background-image: url('${spell.icon}');` : ""
+        }"></span>
+        <div class="spellbook-content">
+          <div class="spellbook-title">
+            <span class="spellbook-name">${spell.label}</span>
+            <span class="spellbook-level">Niv. ${requiredLevel}</span>
+          </div>
+          <div class="spellbook-item-details">
+            <span>PA : ${paCost}</span>
+            <span>Degats : ${dmgMin} - ${dmgMax}</span>
+            <span class="spellbook-element spellbook-element-${elementClass}">${elementLabel}</span>
+            <span>Portee : ${rangeMin}-${rangeMax}</span>
+          </div>
+        </div>
       </div>
-      <div class="spellbook-item-details">
-        <span>PA : ${paCost}</span>
-        <span>Degats : ${dmgMin} - ${dmgMax}</span>
-        <span class="spellbook-element spellbook-element-${elementClass}">${elementLabel}</span>
-        <span>Portee : ${rangeMin}-${rangeMax}</span>
-      </div>
-      ${
-        effectsText
-          ? `<div class="spellbook-item-effects"><span>${effectsText}</span></div>`
-          : ""
-      }
     `;
 
     li.addEventListener("click", () => {

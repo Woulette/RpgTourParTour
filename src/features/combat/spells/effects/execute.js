@@ -35,7 +35,8 @@ export function executeSpellEffectsAtTile(
   tileX,
   tileY,
   map,
-  groundLayer
+  groundLayer,
+  options = {}
 ) {
   if (!scene || !caster || !spell || !Array.isArray(spell.effects)) return false;
 
@@ -53,6 +54,8 @@ export function executeSpellEffectsAtTile(
     target,
     isPlayerCaster: state?.joueur === caster,
     isAllyCaster: caster?.isCombatAlly === true,
+    impactDelayMs:
+      typeof options?.impactDelayMs === "number" ? options.impactDelayMs : 0,
   };
 
   let didAnything = false;

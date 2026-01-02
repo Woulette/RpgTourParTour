@@ -527,6 +527,13 @@ export function initDomMetiers(player) {
       const matchCat = craftCategory === "all" || r.category === craftCategory;
       const label = (r.label || "").toLowerCase();
       return matchCat && (!search || label.includes(search));
+    }).sort((a, b) => {
+      const aLevel = typeof a?.level === "number" ? a.level : 0;
+      const bLevel = typeof b?.level === "number" ? b.level : 0;
+      if (aLevel !== bLevel) return bLevel - aLevel;
+      const aLabel = (a?.label || "").toLowerCase();
+      const bLabel = (b?.label || "").toLowerCase();
+      return aLabel.localeCompare(bLabel);
     });
 
     craftListEl.innerHTML = "";

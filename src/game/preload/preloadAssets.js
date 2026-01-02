@@ -13,6 +13,7 @@ const ANIM_DIRS = [
   "west",
   "south-west",
 ];
+const DIAGONAL_DIRS = ["south-east", "south-west", "north-east", "north-west"];
 
 function loadRunFrames(scene, prefix, basePath) {
   ANIM_DIRS.forEach((dir) => {
@@ -26,6 +27,18 @@ function loadRunFrames(scene, prefix, basePath) {
 function loadIdleRotations(scene, prefix, basePath) {
   ANIM_DIRS.forEach((dir) => {
     scene.load.image(`${prefix}_idle_${dir}`, `${basePath}/${dir}.png`);
+  });
+}
+
+function loadDirectionalFrames(scene, prefix, basePath, directions, frameCount) {
+  directions.forEach((dir) => {
+    for (let i = 0; i < frameCount; i += 1) {
+      const index = i.toString().padStart(3, "0");
+      scene.load.image(
+        `${prefix}_${dir}_${i}`,
+        `${basePath}/${dir}/frame_${index}.png`
+      );
+    }
   });
 }
 
@@ -76,6 +89,13 @@ export function preloadAssets(scene) {
     scene,
     "eryon",
     "assets/animations/animations-Eryon/animations/running-6-frames"
+  );
+  loadDirectionalFrames(
+    scene,
+    "eryon_fireball",
+    "assets/animations/animations-Eryon/fireball",
+    DIAGONAL_DIRS,
+    6
   );
 
   scene.load.image("tree_chene", "assets/metier/Bucheron/Ressources/Chene.png");

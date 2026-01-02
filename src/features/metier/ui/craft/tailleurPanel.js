@@ -105,15 +105,36 @@ function ensurePanelElements() {
         <h3>Table de Tailleur</h3>
         <button type="button" class="craft-panel-close" aria-label="Fermer">✕</button>
       </header>
-      <div class="craft-xp-row">
-        <div class="craft-xp-bar">
-          <div class="craft-xp-bar-fill" id="tailleur-xp-fill"></div>
-          <div class="craft-xp-bar-label" id="tailleur-xp-label">XP 0 / 100</div>
-        </div>
-        <div class="craft-xp-level">Niv. <span id="tailleur-xp-level">1</span></div>
-      </div>
+      
       <div class="craft-body">
         <section class="craft-left">
+          <div class="craft-xp-row">
+            <div class="craft-xp-bar">
+              <div class="craft-xp-bar-fill" id="tailleur-xp-fill"></div>
+              <div class="craft-xp-bar-label" id="tailleur-xp-label">XP 0 / 100</div>
+            </div>
+            <div class="craft-xp-level">Niv. <span id="tailleur-xp-level">1</span></div>
+          </div>
+          <div class="craft-recipe-filters">
+            <input
+              type="number"
+              min="1"
+              class="craft-filter-level"
+              id="tailleur-filter-level"
+              placeholder="Niv. max"
+            />
+            <input
+              type="text"
+              class="craft-filter-search"
+              id="tailleur-filter-search"
+              placeholder="Rechercher..."
+            />
+            <select class="craft-filter-type" id="tailleur-filter-type">
+              <option value="all">Tout</option>
+              <option value="cape">Cape</option>
+              <option value="coiffe">Coiffe</option>
+            </select>
+          </div>
           <ul class="craft-recipes" id="tailleur-recipes"></ul>
         </section>
         <section class="craft-center">
@@ -468,7 +489,45 @@ function renderResult(player) {
   resultEl.appendChild(text);
 }
 
-function renderRecipes(player, selectedIdRef) {
+function getRecipeFilters() {
+  const levelInput = panelEl.querySelector("#tailleur-filter-level");
+  const searchInput = panelEl.querySelector("#tailleur-filter-search");
+  const typeSelect = panelEl.querySelector("#tailleur-filter-type");
+  const levelValue = levelInput ? parseInt(levelInput.value, 10) : NaN;
+  return {
+    levelMax: Number.isFinite(levelValue) ? levelValue : null,
+    search: (searchInput?.value || "").trim().toLowerCase(),
+    type: typeSelect?.value || "all",
+  };
+}
+
+function getFilteredRecipes() {
+  const filters = getRecipeFilters();
+  const sortedRecipes = tailleurRecipes.slice().sort((a, b) => {
+    const aLevel = typeof a?.level === "number" ? a.level : 0;
+    const bLevel = typeof b?.level === "number" ? b.level : 0;
+    if (aLevel !== bLevel) return bLevel - aLevel;
+    const aLabel = (a?.label || "").toLowerCase();
+    const bLabel = (b?.label || "").toLowerCase();
+    return aLabel.localeCompare(bLabel);
+  });
+
+  return sortedRecipes.filter((recipe) => {
+    if (filters.levelMax !== null && recipe.level > filters.levelMax) {
+      return false;
+    }
+    if (filters.type !== "all" && recipe.category !== filters.type) {
+      return false;
+    }
+    if (filters.search) {
+      const label = (recipe.label || "").toLowerCase();
+      if (!label.includes(filters.search)) return false;
+    }
+    return true;
+  });
+}
+
+function renderRecipes(player, selectedIdRef, filteredRecipes) {
   const list = panelEl.querySelector("#tailleur-recipes");
   if (!list) return;
   list.innerHTML = "";
@@ -485,9 +544,17 @@ function renderRecipes(player, selectedIdRef) {
     return count >= qty;
   };
 
-  let currentSelected = selectedIdRef?.value || (tailleurRecipes[0] && tailleurRecipes[0].id);
+  if (!filteredRecipes || filteredRecipes.length === 0) {
+    return null;
+  }
+  let currentSelected =
+    selectedIdRef?.value || (filteredRecipes[0] && filteredRecipes[0].id);
+  if (!filteredRecipes.find((recipe) => recipe.id === currentSelected)) {
+    currentSelected = filteredRecipes[0].id;
+    if (selectedIdRef) selectedIdRef.value = currentSelected;
+  }
 
-  tailleurRecipes.forEach((recipe) => {
+  filteredRecipes.forEach((recipe) => {
     const li = document.createElement("li");
     li.className = "craft-recipe";
     li.dataset.recipeId = recipe.id;
@@ -567,7 +634,7 @@ function renderRecipes(player, selectedIdRef) {
       currentSelected = recipe.id;
       selectedIdRef.value = recipe.id;
       activeRecipePreview = recipe;
-      renderRecipes(player, selectedIdRef);
+      renderRecipes(player, selectedIdRef, filteredRecipes);
       renderSlots(recipe, player);
       updateCraftButton(recipe, player);
       renderResult(player);
@@ -581,7 +648,11 @@ function renderRecipes(player, selectedIdRef) {
 
 function updateCraftButton(recipe, player) {
   const btn = panelEl.querySelector("#tailleur-craft-btn");
-  if (!btn || !recipe) return;
+  if (!btn) return;
+  if (!recipe) {
+    btn.disabled = true;
+    return;
+  }
   const inventory = player?.inventory;
   const state = ensureTailleurState(player);
   const hasItem = (id, qty) => {
@@ -602,19 +673,28 @@ function updateCraftButton(recipe, player) {
 export function openTailleurCraftPanel(scene, player) {
   ensurePanelElements();
   if (!panelEl) return;
-  const selectedRef = { value: tailleurRecipes[0]?.id };
-  const selected = renderRecipes(player, selectedRef);
-  const getActiveRecipe = () =>
-    tailleurRecipes.find((r) => r.id === selectedRef.value) ||
-    tailleurRecipes.find((r) => r.id === selected) ||
-    tailleurRecipes[0];
-  const recipe = getActiveRecipe();
-  activeRecipePreview = recipe || null;
+  const selectedRef = { value: null };
+  const refreshRecipes = () => {
+    const filteredRecipes = getFilteredRecipes();
+    const selected = renderRecipes(player, selectedRef, filteredRecipes);
+    const recipe =
+      filteredRecipes.find((r) => r.id === selectedRef.value) ||
+      filteredRecipes.find((r) => r.id === selected);
+    activeRecipePreview = recipe || null;
+    renderSlots(recipe, player);
+    updateCraftButton(recipe, player);
+    renderResult(player);
+  };
+  const getActiveRecipe = () => {
+    const filteredRecipes = getFilteredRecipes();
+    return (
+      filteredRecipes.find((r) => r.id === selectedRef.value) ||
+      filteredRecipes[0]
+    );
+  };
+
   renderXpHeader(player);
-  renderSlots(recipe, player);
   renderInventory(player);
-  updateCraftButton(recipe, player);
-  renderResult(player);
 
   const filters = panelEl.querySelectorAll(
     ".craft-inventory-filters button[data-filter]"
@@ -628,11 +708,34 @@ export function openTailleurCraftPanel(scene, player) {
     };
   });
 
+  const levelInput = panelEl.querySelector("#tailleur-filter-level");
+  const searchInput = panelEl.querySelector("#tailleur-filter-search");
+  const typeSelect = panelEl.querySelector("#tailleur-filter-type");
+  if (levelInput) {
+    const state = ensureTailleurState(player);
+    const defaultLevel = state?.level ?? 1;
+    levelInput.value = String(defaultLevel);
+  }
+  if (levelInput) {
+    levelInput.oninput = () => refreshRecipes();
+  }
+  if (searchInput) {
+    searchInput.oninput = () => refreshRecipes();
+  }
+  if (typeSelect) {
+    typeSelect.onchange = () => refreshRecipes();
+  }
+
+  refreshRecipes();
+
   const btn = panelEl.querySelector("#tailleur-craft-btn");
   if (btn) {
     btn.onclick = () => {
       const activeRecipe = getActiveRecipe();
-      if (!activeRecipe) return;
+      if (!activeRecipe) {
+        updateCraftButton(null, player);
+        return;
+      }
       if (btn.disabled) return;
       const inv = player?.inventory;
       const countItem = (id) =>
@@ -663,11 +766,7 @@ export function openTailleurCraftPanel(scene, player) {
       });
       // refresh UI
       renderInventory(player);
-      renderRecipes(player, selectedRef);
-      renderSlots(activeRecipe, player);
-      activeRecipePreview = activeRecipe;
-      renderResult(player);
-      updateCraftButton(activeRecipe, player);
+      refreshRecipes();
     };
   }
 
