@@ -310,11 +310,13 @@ export function initCharacterMenus({ onStartGame }) {
     lanClient = createLanClient({
       url,
       onEvent: (msg) => {
-        const handler = getNetEventHandler();
-        if (handler) handler(msg);
         if (msg?.t === "EvWelcome") {
           setNetPlayerId(msg.playerId);
           setNetClient(lanClient);
+        }
+        const handler = getNetEventHandler();
+        if (handler) handler(msg);
+        if (msg?.t === "EvWelcome") {
           setLanButtonLabel("LAN: OK");
         } else if (msg?.t === "EvRefuse") {
           setLanButtonLabel("LAN: KO");

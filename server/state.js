@@ -18,6 +18,8 @@ function createPlayer(id) {
     hp: 100,
     pa: 6,
     pm: 3,
+    lastMoveSeq: 0,
+    mapId: null,
   };
 }
 

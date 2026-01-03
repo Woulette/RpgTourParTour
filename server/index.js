@@ -71,6 +71,7 @@ function handleHello(ws, msg) {
 
   const playerId = nextPlayerId++;
   const player = createPlayer(playerId);
+  player.mapId = state.mapId;
   state.players[playerId] = player;
   clients.set(ws, { id: playerId, lastCmdId: 0, ready: true });
 
@@ -101,19 +102,62 @@ function handleCmdMove(clientInfo, msg) {
 
   const player = state.players[clientInfo.id];
   if (!player) return;
+  const seq = Number.isInteger(msg.seq) ? msg.seq : 0;
+  if (seq <= (player.lastMoveSeq || 0)) return;
+  player.lastMoveSeq = seq;
+
+  let path = Array.isArray(msg.path) ? msg.path : [];
+  if (path.length > 200) {
+    path = path.slice(0, 200);
+  }
+  path = path
+    .map((step) => ({
+      x: Number.isInteger(step?.x) ? step.x : null,
+      y: Number.isInteger(step?.y) ? step.y : null,
+    }))
+    .filter((step) => step.x !== null && step.y !== null);
 
   const from = { x: player.x, y: player.y };
-  player.x = msg.toX;
-  player.y = msg.toY;
+  const last = path.length > 0 ? path[path.length - 1] : null;
+  player.x = last ? last.x : msg.toX;
+  player.y = last ? last.y : msg.toY;
 
   broadcast({
-    t: "EvMoved",
+    t: "EvMoveStart",
+    seq,
     playerId: player.id,
+    mapId: player.mapId,
     fromX: from.x,
     fromY: from.y,
     toX: player.x,
     toY: player.y,
+    path,
   });
+}
+
+function handleCmdMapChange(clientInfo, msg) {
+  if (clientInfo.id !== msg.playerId) return;
+  const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
+  if (!mapId) return;
+
+  const player = state.players[clientInfo.id];
+  if (!player) return;
+
+  player.mapId = mapId;
+
+  if (Number.isInteger(msg.tileX) && Number.isInteger(msg.tileY)) {
+    player.x = msg.tileX;
+    player.y = msg.tileY;
+  }
+
+  broadcast({
+    t: "EvPlayerMap",
+    playerId: player.id,
+    mapId: player.mapId,
+    tileX: player.x,
+    tileY: player.y,
+  });
+
 }
 
 function handleCmdEndTurn(clientInfo, msg) {
@@ -169,6 +213,9 @@ wss.on("connection", (ws) => {
     switch (msg.t) {
       case "CmdMove":
         handleCmdMove(clientInfo, msg);
+        break;
+      case "CmdMapChange":
+        handleCmdMapChange(clientInfo, msg);
         break;
       case "CmdEndTurn":
         handleCmdEndTurn(clientInfo, msg);

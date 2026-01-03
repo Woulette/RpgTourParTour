@@ -629,7 +629,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
     if (netClient && netPlayerId) {
       const now = Date.now();
       const lastAt = player.__lanLastCmdAt || 0;
-      if (now - lastAt < 80) {
+      if (now - lastAt < 150) {
         return;
       }
       const lastTarget = player.__lanLastTarget || null;
@@ -653,8 +653,12 @@ function createCalibratedWorldToTile(map, groundLayer) {
           }
         }
       }
+      player.__lanMoveSeq = (player.__lanMoveSeq || 0) + 1;
+      const safePath = path.map((step) => ({ x: step.x, y: step.y }));
       netClient.sendCmd("CmdMove", {
         playerId: netPlayerId,
+        seq: player.__lanMoveSeq,
+        path: safePath,
         toX: tileX,
         toY: tileY,
       });
