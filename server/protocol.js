@@ -1,0 +1,9 @@
+const PROTOCOL_VERSION = 1;
+const DEFAULT_GAME_DATA_VERSION = "dev";
+const MAX_PLAYERS = 2;
+
+module.exports = {
+  PROTOCOL_VERSION,
+  DEFAULT_GAME_DATA_VERSION,
+  MAX_PLAYERS,
+};

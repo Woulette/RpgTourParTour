@@ -1,0 +1,49 @@
+import { DATA_HASH, PROTOCOL_VERSION } from "./protocol.js";
+
+export function createLanClient({
+  url,
+  protocolVersion = PROTOCOL_VERSION,
+  dataHash = DATA_HASH,
+  onEvent,
+  onClose,
+} = {}) {
+  if (!url) throw new Error("LAN url is required");
+
+  const ws = new WebSocket(url);
+  let cmdId = 0;
+
+  const sendRaw = (payload) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify(payload));
+  };
+
+  const client = {
+    sendCmd(type, payload = {}) {
+      cmdId += 1;
+      sendRaw({ t: type, cmdId, ...payload });
+    },
+    close() {
+      ws.close();
+    },
+  };
+
+  ws.addEventListener("open", () => {
+    sendRaw({ t: "Hello", protocolVersion, dataHash });
+  });
+
+  ws.addEventListener("message", (event) => {
+    let msg = null;
+    try {
+      msg = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+    if (onEvent) onEvent(msg);
+  });
+
+  ws.addEventListener("close", () => {
+    if (onClose) onClose();
+  });
+
+  return client;
+}
