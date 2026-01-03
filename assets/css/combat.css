@@ -101,18 +101,27 @@ body.combat-prep #combat-turn-indicator {
   left: 50%;
   bottom: -1%;
   transform: translateX(-50%);
-
-  width: min(485px, 49vw);
-  min-height: 92px;
-  padding: 12px 14px;
-  border-radius: 0;
-  background: rgba(8, 20, 40, 0.9);
-  border: 2px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.65);
-
+  width: min(485px, 52vw);
+  min-height: 162px;
+  padding: 10px 12px 12px;
+  border-radius: 0px;
+  background: rgba(12, 18, 28, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.12s ease;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "header stats"
+    "hp hp"
+    "body body"
+    "res res";
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: center;
 }
 
 body.combat-active.combat-target-panel-visible #combat-target-panel {
@@ -126,34 +135,58 @@ body.combat-active.combat-target-panel-visible #hud-spell-container {
 }
 
 .combat-target-header {
-  color: #ffffff;
-  font-family: system-ui, sans-serif;
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -2px 0 0;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
   font-weight: 800;
-  letter-spacing: 0.03em;
-  font-size: 16px;
-  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+  font-size: 14px;
+}
+
+.combat-target-header span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.combat-target-stats-top {
+  grid-area: stats;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0;
 }
 
 .combat-target-hp {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  grid-area: hp;
+  position: relative;
+  padding-bottom: 14px;
 }
 
 .combat-target-hp-bar {
   position: relative;
-  height: 10px;
-  border-radius: 0;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
 }
 
 .combat-target-hp-fill {
   height: 100%;
   width: 0%;
-  background: rgba(220, 60, 60, 0.95);
+  background: linear-gradient(90deg, rgba(255, 120, 120, 0.98), rgba(180, 40, 40, 0.96));
 }
 
 .combat-target-shield-fill {
@@ -162,56 +195,210 @@ body.combat-active.combat-target-panel-visible #hud-spell-container {
   top: 0;
   height: 100%;
   width: 0%;
-  background: rgba(80, 170, 255, 0.85);
-  box-shadow: inset 0 0 6px rgba(80, 170, 255, 0.65);
+  background: linear-gradient(90deg, rgba(140, 210, 255, 0.9), rgba(70, 150, 255, 0.85));
+  box-shadow: inset 0 0 4px rgba(90, 170, 255, 0.55);
 }
 
 .combat-target-ally .combat-target-hp-fill {
-  background: rgba(60, 140, 255, 0.95);
+  background: linear-gradient(90deg, rgba(110, 160, 255, 0.95), rgba(30, 90, 210, 0.95));
 }
 
 .combat-target-summon .combat-target-hp-fill {
-  background: rgba(70, 220, 160, 0.95);
+  background: linear-gradient(90deg, rgba(100, 235, 185, 0.95), rgba(30, 150, 105, 0.95));
 }
 
 .combat-target-enemy .combat-target-hp-fill {
-  background: rgba(220, 60, 60, 0.95);
+  background: linear-gradient(90deg, rgba(255, 90, 90, 0.96), rgba(170, 30, 30, 0.96));
 }
 
 .combat-target-hp-text {
-  color: rgba(255, 255, 255, 0.92);
-  font-family: system-ui, sans-serif;
-  font-size: 13px;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: -2px;
+  color: rgba(226, 232, 240, 0.92);
+  font-family: "Trebuchet MS", Tahoma, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.combat-target-stats {
+.combat-target-body {
+  grid-area: body;
   display: flex;
+  align-items: flex-start;
   gap: 12px;
 }
 
+.combat-target-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: rgba(120, 30, 30, 0.25);
+  border: 1px solid rgba(255, 80, 80, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-top: -15px;
+}
+
+.combat-target-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.combat-target-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-family: "Trebuchet MS", Tahoma, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.combat-target-res {
+  grid-area: res;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  justify-content: flex-start;
+}
+
 .combat-target-stat {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 0;
-  background: rgba(15, 30, 55, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  gap: 6px;
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(12, 20, 32, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.6);
 }
 
 .combat-target-stat-label {
-  color: rgba(255, 255, 255, 0.75);
-  font-family: system-ui, sans-serif;
-  font-size: 12px;
+  color: rgba(200, 213, 232, 0.9);
+  font-family: "Trebuchet MS", Tahoma, sans-serif;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
 }
 
 .combat-target-stat-value {
   color: #ffffff;
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
-  font-weight: 800;
+  font-family: "Trebuchet MS", Tahoma, sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.combat-target-stat-pa .combat-target-stat-value {
+  color: #8fd0ff;
+}
+
+.combat-target-stat-pa {
+  background: rgba(18, 45, 78, 0.7);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.combat-target-stat-pm .combat-target-stat-value {
+  color: #7de8a6;
+}
+
+.combat-target-stat-pm {
+  background: rgba(16, 56, 40, 0.7);
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+.combat-target-stat-pm {
+  margin-right: 75px;
+}
+
+.combat-target-stat-tacle .combat-target-stat-value {
+  color: #f6c453;
+}
+
+.combat-target-stat-tacle {
+  background: rgba(64, 44, 12, 0.7);
+  border-color: rgba(250, 204, 21, 0.55);
+}
+
+.combat-target-stat-fuite .combat-target-stat-value {
+  color: #5ed7d7;
+}
+
+.combat-target-stat-fuite {
+  background: rgba(16, 52, 56, 0.7);
+  border-color: rgba(45, 212, 191, 0.55);
+}
+
+.combat-target-stat-res-terre,
+.combat-target-stat-res-terre .combat-target-stat-value,
+.combat-target-stat-res-terre .combat-target-stat-label {
+  color: #f6c453;
+}
+
+.combat-target-stat-res-feu,
+.combat-target-stat-res-feu .combat-target-stat-value,
+.combat-target-stat-res-feu .combat-target-stat-label {
+  color: #ff6b6b;
+}
+
+.combat-target-stat-res-air,
+.combat-target-stat-res-air .combat-target-stat-value,
+.combat-target-stat-res-air .combat-target-stat-label {
+  color: #7dddbb;
+}
+
+.combat-target-stat-res-eau,
+.combat-target-stat-res-eau .combat-target-stat-value,
+.combat-target-stat-res-eau .combat-target-stat-label {
+  color: #6fb7ff;
+}
+
+.combat-target-stat-res-terre {
+  background: rgba(40, 26, 8, 0.8);
+  border-color: rgba(217, 119, 6, 0.55);
+}
+
+.combat-target-stat-res-feu {
+  background: rgba(70, 20, 20, 0.7);
+  border-color: rgba(248, 113, 113, 0.55);
+}
+
+.combat-target-stat-res-air {
+  background: rgba(10, 32, 24, 0.8);
+  border-color: rgba(22, 163, 74, 0.5);
+}
+
+.combat-target-stat-res-eau {
+  background: rgba(16, 28, 64, 0.7);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+@media (max-width: 720px) {
+  #combat-target-panel {
+    width: min(92vw, 520px);
+    padding: 10px;
+  }
+
+  .combat-target-stats-top {
+    gap: 10px;
+  }
+
+  .combat-target-res {
+    gap: 12px;
+  }
 }
 
 /* Barre d'ordre des tours (style Dofus-like, visible uniquement en combat) */
@@ -252,7 +439,7 @@ body.combat-active #combat-turn-order {
   gap: 0.45rem;
   overflow-x: auto;
   overflow-y: hidden;
-  max-width: 70vw; /* grandit vers la gauche, puis scroll si trop long */
+  max-width: 66vw; /* grandit vers la gauche, puis scroll si trop long */
 }
 
 .combat-turn-actor {
@@ -344,6 +531,36 @@ body.combat-active #combat-turn-order {
   font-size: clamp(10px, 1vw, 13px);
   opacity: 0.92;
   white-space: nowrap;
+}
+
+#combat-turn-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(10, 22, 40, 0.8);
+  color: #f5f7ff;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+#combat-turn-toggle:hover {
+  background: rgba(18, 36, 60, 0.9);
+}
+
+#combat-turn-order.is-collapsed #combat-turn-order-list {
+  display: none;
+}
+
+#combat-turn-order.is-collapsed {
+  gap: 8px;
+  padding: 0.4rem 0.6rem;
 }
 
 /* --- Challenge combat --- */

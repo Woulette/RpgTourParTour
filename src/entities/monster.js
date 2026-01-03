@@ -206,6 +206,8 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
 
   // Métadonnées utiles pour le système de combat / loot
   monster.monsterId = monsterId;
+  monster.label = def.label || def.displayName || monsterId;
+  monster.displayName = monster.label;
   monster.xpReward = def.xpReward || 0;
   monster.xpRewardBase = def.xpReward || monster.xpReward || 0;
   monster.goldRewardMin = def.goldRewardMin ?? 0;

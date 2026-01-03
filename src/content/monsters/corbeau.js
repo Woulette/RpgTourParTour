@@ -1,7 +1,7 @@
 export default {
   id: "corbeau",
   familyId: "corbeau",
-  label: "Zéphorbeau",
+    label: "Zephorbeau",
   textureKey: "corbeau",
   // Nouveau sprite corbeau (spritesheet 4 frames).
   // Affiche la frame 0 par défaut (et permettra une anim plus tard).

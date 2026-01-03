@@ -17,7 +17,9 @@ export function initDomCombat(scene) {
   const endTurnBtn = document.getElementById("combat-end-turn-button");
   const readyBtn = document.getElementById("combat-ready-button");
   const turnLabel = document.getElementById("combat-turn-label");
+  const turnOrderEl = document.getElementById("combat-turn-order");
   const turnOrderListEl = document.getElementById("combat-turn-order-list");
+  const turnToggleBtn = document.getElementById("combat-turn-toggle");
   const roundValueEl = document.getElementById("combat-round-value");
   const targetPanelNameEl = document.getElementById("combat-target-name");
   const targetPanelHpTextEl = document.getElementById("combat-target-hp-text");
@@ -25,7 +27,15 @@ export function initDomCombat(scene) {
   const targetPanelShieldFillEl = document.getElementById("combat-target-shield-fill");
   const targetPanelPaEl = document.getElementById("combat-target-pa");
   const targetPanelPmEl = document.getElementById("combat-target-pm");
+  const targetPanelTacleEl = document.getElementById("combat-target-tacle");
+  const targetPanelFuiteEl = document.getElementById("combat-target-fuite");
+  const targetPanelResTerreEl = document.getElementById("combat-target-res-terre");
+  const targetPanelResFeuEl = document.getElementById("combat-target-res-feu");
+  const targetPanelResAirEl = document.getElementById("combat-target-res-air");
+  const targetPanelResEauEl = document.getElementById("combat-target-res-eau");
   const targetPanelEl = document.getElementById("combat-target-panel");
+  const targetPanelAvatarImgEl = document.getElementById("combat-target-avatar-img");
+  const targetPanelAvatarFallbackEl = document.getElementById("combat-target-avatar-fallback");
 
   if (!endTurnBtn || !turnLabel) {
     return;
@@ -33,14 +43,35 @@ export function initDomCombat(scene) {
 
   initDomCombatChallenge(scene);
 
+  let turnOrderCollapsed = false;
+
+  const syncTurnOrderToggle = () => {
+    if (!turnOrderEl || !turnToggleBtn) return;
+    turnOrderEl.classList.toggle("is-collapsed", turnOrderCollapsed);
+    turnToggleBtn.textContent = turnOrderCollapsed ? "+" : "-";
+    turnToggleBtn.setAttribute("aria-expanded", String(!turnOrderCollapsed));
+  };
+
+  if (turnToggleBtn) {
+    turnToggleBtn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      turnOrderCollapsed = !turnOrderCollapsed;
+      syncTurnOrderToggle();
+    });
+  }
+
+  syncTurnOrderToggle();
+
   const getActorName = (actor) => {
     if (!actor) return "-";
     if (actor.kind === "joueur") return "Joueur";
     if (actor.kind === "invocation") {
       const id = actor.entity?.monsterId || "";
-      return id ? `Invoc. ${id}` : "Invocation";
+      const name =
+        actor.entity?.displayName || actor.entity?.label || id || "";
+      return name ? `Invoc. ${name}` : "Invocation";
     }
-    return actor.entity?.monsterId || "Monstre";
+    return actor.entity?.displayName || actor.entity?.label || actor.entity?.monsterId || "Monstre";
   };
 
   const getActorBadge = (actor) => {
@@ -60,6 +91,44 @@ export function initDomCombat(scene) {
           ? stats.hp
           : 0;
     return { hp, hpMax };
+  };
+
+  const setTargetAvatar = (target, isPlayerTarget) => {
+    if (!targetPanelAvatarImgEl || !targetPanelAvatarFallbackEl) return;
+
+    let src = "";
+    if (isPlayerTarget) {
+      const classId = target?.classId || target?.entity?.classId || "archer";
+      const pathByClass = {
+        archer: "assets/animations/animation archer/rotations/south-east.png",
+        tank: "assets/animations/animation tank/rotations/south-east.png",
+        mage: "assets/animations/animations-Animiste/rotations/south-east.png",
+        eryon: "assets/animations/animations-Eryon/rotations/south-east.png",
+        assassin: "assets/animations/animations-Eryon/rotations/south-east.png",
+      };
+      src = pathByClass[classId] || pathByClass.archer;
+    } else if (target?.monsterId) {
+      const def = monsterDefs[target.monsterId];
+      src = def?.combatAvatarPath || def?.spritePath || "";
+    }
+
+    const label =
+      target?.displayName ||
+      target?.label ||
+      target?.monsterId ||
+      (isPlayerTarget ? "Joueur" : "");
+    const fallback = label ? label.slice(0, 2).toUpperCase() : "?";
+
+    if (src) {
+      targetPanelAvatarImgEl.src = encodeURI(src);
+      targetPanelAvatarImgEl.style.display = "block";
+      targetPanelAvatarFallbackEl.style.display = "none";
+    } else {
+      targetPanelAvatarImgEl.removeAttribute("src");
+      targetPanelAvatarImgEl.style.display = "none";
+      targetPanelAvatarFallbackEl.textContent = fallback;
+      targetPanelAvatarFallbackEl.style.display = "flex";
+    }
   };
 
   const ensureAvatarSrc = (actor, imgEl) => {
@@ -464,7 +533,28 @@ export function initDomCombat(scene) {
     const stats = target.stats || {};
     const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
     const hpMax = typeof stats.hpMax === "number" ? stats.hpMax : hp;
+    if (hp <= 0) {
+      scene.combatHoveredEntity = null;
+      if (typeof scene.hideCombatTargetPanel === "function") {
+        scene.hideCombatTargetPanel();
+      } else {
+        document.body.classList.remove("combat-target-panel-visible");
+      }
+      if (typeof scene.hideMonsterTooltip === "function") {
+        scene.hideMonsterTooltip();
+      }
+      if (typeof scene.clearDamagePreview === "function") {
+        scene.clearDamagePreview();
+      }
+      return;
+    }
     const pa = stats.pa ?? 0;
+    const tacle = stats.tacle ?? 0;
+    const fuite = stats.fuite ?? 0;
+    const resTerre = stats.resistanceFixeTerre ?? 0;
+    const resFeu = stats.resistanceFixeFeu ?? 0;
+    const resAir = stats.resistanceFixeAir ?? 0;
+    const resEau = stats.resistanceFixeEau ?? 0;
     const basePm = stats.pm ?? 0;
     const pmBonus = Array.isArray(target.statusEffects)
       ? target.statusEffects.reduce((sum, effect) => {
@@ -499,6 +589,13 @@ export function initDomCombat(scene) {
     }
     if (targetPanelPaEl) targetPanelPaEl.textContent = String(pa);
     if (targetPanelPmEl) targetPanelPmEl.textContent = String(pm);
+    if (targetPanelTacleEl) targetPanelTacleEl.textContent = String(tacle);
+    if (targetPanelFuiteEl) targetPanelFuiteEl.textContent = String(fuite);
+    if (targetPanelResTerreEl) targetPanelResTerreEl.textContent = String(resTerre);
+    if (targetPanelResFeuEl) targetPanelResFeuEl.textContent = String(resFeu);
+    if (targetPanelResAirEl) targetPanelResAirEl.textContent = String(resAir);
+    if (targetPanelResEauEl) targetPanelResEauEl.textContent = String(resEau);
+    setTargetAvatar(target, isPlayerTarget);
 
     const pct = hpMax > 0 ? Math.max(0, Math.min(1, hp / hpMax)) : 0;
     if (targetPanelHpFillEl) {

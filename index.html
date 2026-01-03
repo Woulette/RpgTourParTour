@@ -244,6 +244,24 @@
         <div class="combat-target-header">
           <span id="combat-target-name">-</span>
         </div>
+        <div class="combat-target-stats-top">
+          <div class="combat-target-stat combat-target-stat-pa">
+            <span class="combat-target-stat-label">PA</span>
+            <span id="combat-target-pa" class="combat-target-stat-value">-</span>
+          </div>
+          <div class="combat-target-stat combat-target-stat-pm">
+            <span class="combat-target-stat-label">PM</span>
+            <span id="combat-target-pm" class="combat-target-stat-value">-</span>
+          </div>
+          <div class="combat-target-stat combat-target-stat-tacle">
+            <span class="combat-target-stat-label">Tac</span>
+            <span id="combat-target-tacle" class="combat-target-stat-value">-</span>
+          </div>
+          <div class="combat-target-stat combat-target-stat-fuite">
+            <span class="combat-target-stat-label">Fui</span>
+            <span id="combat-target-fuite" class="combat-target-stat-value">-</span>
+          </div>
+        </div>
         <div class="combat-target-hp">
           <div class="combat-target-hp-bar" aria-hidden="true">
             <div id="combat-target-hp-fill" class="combat-target-hp-fill"></div>
@@ -251,14 +269,28 @@
           </div>
           <div id="combat-target-hp-text" class="combat-target-hp-text">PV : -/-</div>
         </div>
-        <div class="combat-target-stats">
-          <div class="combat-target-stat">
-            <span class="combat-target-stat-label">PA</span>
-            <span id="combat-target-pa" class="combat-target-stat-value">-</span>
+        <div class="combat-target-body">
+          <div class="combat-target-avatar" aria-hidden="true">
+            <img id="combat-target-avatar-img" class="combat-target-avatar-img" alt="" />
+            <div id="combat-target-avatar-fallback" class="combat-target-avatar-fallback">?</div>
           </div>
-          <div class="combat-target-stat">
-            <span class="combat-target-stat-label">PM</span>
-            <span id="combat-target-pm" class="combat-target-stat-value">-</span>
+        </div>
+        <div class="combat-target-res">
+          <div class="combat-target-stat combat-target-stat-res-terre">
+            <span class="combat-target-stat-label">Res</span>
+            <span id="combat-target-res-terre" class="combat-target-stat-value">-</span>
+          </div>
+          <div class="combat-target-stat combat-target-stat-res-feu">
+            <span class="combat-target-stat-label">Res</span>
+            <span id="combat-target-res-feu" class="combat-target-stat-value">-</span>
+          </div>
+          <div class="combat-target-stat combat-target-stat-res-air">
+            <span class="combat-target-stat-label">Res</span>
+            <span id="combat-target-res-air" class="combat-target-stat-value">-</span>
+          </div>
+          <div class="combat-target-stat combat-target-stat-res-eau">
+            <span class="combat-target-stat-label">Res</span>
+            <span id="combat-target-res-eau" class="combat-target-stat-value">-</span>
           </div>
         </div>
       </div>
@@ -780,6 +812,7 @@
       <div id="combat-round-indicator">
         Tour : <span id="combat-round-value">1</span>
       </div>
+      <button id="combat-turn-toggle" type="button" aria-expanded="true">+</button>
     </div>
     <div id="combat-turn-indicator">
       Tour : <span id="combat-turn-label">Joueur</span>
