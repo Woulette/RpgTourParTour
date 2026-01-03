@@ -10,6 +10,7 @@ import { initRuntime } from "../runtime/initRuntime.js";
 import { spawnWorldEntities } from "../world/spawnWorld.js";
 import { setupHudAndCameras, initDomUi } from "../ui/initUi.js";
 import { setupSceneInput } from "../input/setupInput.js";
+import { initLanRuntime } from "../../net/lanRuntime.js";
 
 export function createMainScene(scene) {
   const selected = getSelectedCharacter() || null;
@@ -68,4 +69,5 @@ export function createMainScene(scene) {
 
   setupSceneInput(scene, hudY, mapState.map, mapState.groundLayer);
   initDomUi(scene, player);
+  initLanRuntime(scene, player, mapState.map, mapState.groundLayer);
 }

@@ -172,12 +172,14 @@ export function movePlayerAlongPath(
         player.currentMoveTween = null;
         player.movePath = [];
 
-        // Applique le coût de déplacement au système de combat (PM, HUD)
-        applyMoveCost(scene, player, moveCost);
+                // Applique le coû t de déplacement au système de combat (PM, HUD)
+        if (!player.isRemote) {
+          applyMoveCost(scene, player, moveCost);
           if (moveCost > 0 && scene.combatState && scene.combatState.enCours) {
-          showFloatingTextOverEntity(scene, player, `${moveCost}`, {
-            color: "#22c55e",
-          });
+            showFloatingTextOverEntity(scene, player, `${moveCost}`, {
+              color: "#22c55e",
+            });
+          }
         }
 
         if (player.anims && player.anims.currentAnim) {
@@ -190,11 +192,13 @@ export function movePlayerAlongPath(
           }
         }
 
-        // Si une sortie de map est en attente et que le joueur est sur
+                // Si une sortie de map est en attente et que le joueur est sur
         // la tuile cible, on laisse world.js gérer la transition.
-        maybeHandleMapExit(scene);
-        maybeHandlePortal(scene);
-        maybeHandleDungeonExit(scene);
+        if (!player.isRemote) {
+          maybeHandleMapExit(scene);
+          maybeHandlePortal(scene);
+          maybeHandleDungeonExit(scene);
+        }
 
         if (typeof onCompleteAll === "function") {
           onCompleteAll();

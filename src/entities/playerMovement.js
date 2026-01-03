@@ -18,6 +18,7 @@ import { movePlayerAlongPath } from "./movement/runtime.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { on as onStoreEvent } from "../state/store.js";
 import { isUiBlockingOpen } from "../features/ui/uiBlock.js";
+import { getNetClient, getNetPlayerId } from "../app/session.js";
 
 /**
  * Cre une fonction worldToTile "calibre" qui compense
@@ -311,6 +312,8 @@ function createCalibratedWorldToTile(map, groundLayer) {
     if (isUiBlockingOpen()) {
       return;
     }
+    const netClient = getNetClient();
+    const netPlayerId = getNetPlayerId();
 
     const activeSpell = getActiveSpell(player);
     const bandWidthRight = 30;
@@ -352,13 +355,6 @@ function createCalibratedWorldToTile(map, groundLayer) {
       (player.isMoving || player.currentMoveTween)
     ) {
       return;
-    }
-
-    // Stop mouvement en cours
-    if (player.currentMoveTween) {
-      player.currentMoveTween.stop();
-      player.currentMoveTween = null;
-      player.isMoving = false;
     }
 
     // Resynchronise la tuile courante a partir de la position actuelle
@@ -630,6 +626,57 @@ function createCalibratedWorldToTile(map, groundLayer) {
       moveCost = limited.moveCost;
     }
 
+    if (netClient && netPlayerId) {
+      const now = Date.now();
+      const lastAt = player.__lanLastCmdAt || 0;
+      if (now - lastAt < 80) {
+        return;
+      }
+      const lastTarget = player.__lanLastTarget || null;
+      if (lastTarget && lastTarget.x === tileX && lastTarget.y === tileY) {
+        return;
+      }
+      player.__lanLastCmdAt = now;
+      player.__lanLastTarget = { x: tileX, y: tileY };
+      if (player.currentMoveTween) {
+        player.currentMoveTween.stop();
+        player.currentMoveTween = null;
+        player.isMoving = false;
+        if (player.anims && player.anims.currentAnim) {
+          player.anims.stop();
+          const animPrefix = player.animPrefix || "player";
+          const idleKey = `${animPrefix}_idle_${player.lastDirection || "south-east"}`;
+          if (scene.textures?.exists && scene.textures.exists(idleKey)) {
+            player.setTexture(idleKey);
+          } else {
+            player.setTexture(player.baseTextureKey || animPrefix);
+          }
+        }
+      }
+      netClient.sendCmd("CmdMove", {
+        playerId: netPlayerId,
+        toX: tileX,
+        toY: tileY,
+      });
+      return;
+    }
+
+    if (player.currentMoveTween) {
+      player.currentMoveTween.stop();
+      player.currentMoveTween = null;
+      player.isMoving = false;
+      if (player.anims && player.anims.currentAnim) {
+        player.anims.stop();
+        const animPrefix = player.animPrefix || "player";
+        const idleKey = `${animPrefix}_idle_${player.lastDirection || "south-east"}`;
+        if (scene.textures?.exists && scene.textures.exists(idleKey)) {
+          player.setTexture(idleKey);
+        } else {
+          player.setTexture(player.baseTextureKey || animPrefix);
+        }
+      }
+    }
+
     movePlayerAlongPathWithCombat(
       scene,
       player,
@@ -686,6 +733,13 @@ function movePlayerAlongPathWithCombat(
       maybeStartPendingCombat(scene, player, map, groundLayer);
     }
   );
+}
+
+// Mouvement venant du reseau : on reutilise le flux standard pour garder
+// les triggers (combat, sorties de map) identiques au solo.
+export function movePlayerAlongPathNetwork(scene, player, map, groundLayer, path) {
+  if (!path || path.length === 0) return;
+  movePlayerAlongPathWithCombat(scene, player, map, groundLayer, path, 0);
 }
 
 // Si une cible de combat est en attente et que le joueur est sur sa case

@@ -9,7 +9,11 @@ import {
 import {
   clearSelectedCharacter,
   getSelectedCharacter as getSessionSelectedCharacter,
+  getNetEventHandler,
+  setNetClient,
+  setNetPlayerId,
 } from "../../app/session.js";
+import { createLanClient } from "../../net/lanClient.js";
 
 export function initCharacterMenus({ onStartGame }) {
   const overlayEl = document.getElementById("menu-overlay");
@@ -21,6 +25,7 @@ export function initCharacterMenus({ onStartGame }) {
   const classListEl = document.getElementById("class-list");
 
   const btnGoCreate = document.getElementById("btn-go-create");
+  const btnLanConnect = document.getElementById("btn-lan-connect");
   const btnPlay = document.getElementById("btn-play");
   const btnBackSelect = document.getElementById("btn-back-select");
   const formCreate = document.getElementById("character-create-form");
@@ -35,6 +40,7 @@ export function initCharacterMenus({ onStartGame }) {
     !characterListEl ||
     !classListEl ||
     !btnGoCreate ||
+    !btnLanConnect ||
     !btnPlay ||
     !btnBackSelect ||
     !formCreate ||
@@ -89,6 +95,7 @@ export function initCharacterMenus({ onStartGame }) {
   const characters = [];
   let selectedCharacterId = null;
   let selectedClassId = null;
+  let lanClient = null;
 
   // Hydrate depuis la sauvegarde locale (persistant entre rechargements).
   try {
@@ -162,6 +169,7 @@ export function initCharacterMenus({ onStartGame }) {
 
     actions.appendChild(btnBackSelect);
     actions.appendChild(btnGoCreate);
+    actions.appendChild(btnLanConnect);
     actions.appendChild(btnPlay);
     actions.appendChild(btnCreate);
     footer.appendChild(actions);
@@ -284,6 +292,39 @@ export function initCharacterMenus({ onStartGame }) {
       carouselSlotByClassId.set(resolvedClassId, btn);
       carouselSlotByKey.set(carouselKey, btn);
       container.appendChild(btn);
+    });
+  }
+
+  function setLanButtonLabel(label) {
+    if (!btnLanConnect) return;
+    btnLanConnect.textContent = label;
+  }
+
+  function connectLan() {
+    const url = "ws://localhost:8080";
+    if (lanClient) {
+      lanClient.close();
+      lanClient = null;
+    }
+    setLanButtonLabel("LAN: ...");
+    lanClient = createLanClient({
+      url,
+      onEvent: (msg) => {
+        const handler = getNetEventHandler();
+        if (handler) handler(msg);
+        if (msg?.t === "EvWelcome") {
+          setNetPlayerId(msg.playerId);
+          setNetClient(lanClient);
+          setLanButtonLabel("LAN: OK");
+        } else if (msg?.t === "EvRefuse") {
+          setLanButtonLabel("LAN: KO");
+        }
+      },
+      onClose: () => {
+        setNetPlayerId(null);
+        setNetClient(null);
+        setLanButtonLabel("LAN");
+      },
     });
   }
 
@@ -672,6 +713,7 @@ function renderCarouselMeta() {
 
   btnGoCreate.addEventListener("click", () => showCreate());
   btnBackSelect.addEventListener("click", () => showSelect());
+  btnLanConnect.addEventListener("click", () => connectLan());
   inputName.addEventListener("input", () => syncCreateButton());
 
   let invalidNameTimeout = null;
