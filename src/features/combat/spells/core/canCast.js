@@ -5,6 +5,50 @@ import {
   hasLineOfSight,
 } from "../utils/util.js";
 import { isTileOccupiedByMonster } from "../../../../features/monsters/ai/aiUtils.js";
+import { findMonsterAtTile } from "../../../../features/monsters/runtime/index.js";
+import {
+  findAliveCombatAllyAtTile,
+  findAliveSummonAtTile,
+} from "../../summons/summon.js";
+
+let nextSpellTargetKey = 1;
+
+export function getSpellTargetKey(entity) {
+  if (!entity) return null;
+  if (!entity.__spellTargetKey) {
+    const base =
+      entity.monsterId ||
+      entity.displayName ||
+      entity.label ||
+      entity.texture?.key ||
+      "ent";
+    entity.__spellTargetKey = `${base}_${nextSpellTargetKey++}`;
+  }
+  return entity.__spellTargetKey;
+}
+
+export function resolveSpellTargetAtTile(scene, tileX, tileY) {
+  const state = scene?.combatState;
+  const player = state?.joueur || null;
+  if (player) {
+    const px =
+      typeof player.currentTileX === "number" ? player.currentTileX : player.tileX ?? null;
+    const py =
+      typeof player.currentTileY === "number" ? player.currentTileY : player.tileY ?? null;
+    if (px === tileX && py === tileY) return player;
+  }
+
+  const monster = findMonsterAtTile(scene, tileX, tileY);
+  if (monster) return monster;
+
+  const ally = findAliveCombatAllyAtTile(scene, tileX, tileY);
+  if (ally) return ally;
+
+  const summon = findAliveSummonAtTile(scene, tileX, tileY);
+  if (summon) return summon;
+
+  return null;
+}
 
 // ---------- Conditions de lancement ----------
 
@@ -61,6 +105,21 @@ export function canCastSpellAtTile(scene, caster, spell, tileX, tileY, map) {
 
   if (!isTileInRange(spell, originX, originY, tileX, tileY)) {
     return false;
+  }
+
+  const maxPerTarget = spell.maxCastsPerTargetPerTurn ?? null;
+  if (maxPerTarget) {
+    const target = resolveSpellTargetAtTile(scene, tileX, tileY);
+    if (target) {
+      const state = scene?.combatState;
+      const key = getSpellTargetKey(target);
+      if (state && key) {
+        state.castsThisTurnTargets = state.castsThisTurnTargets || {};
+        const perSpell = state.castsThisTurnTargets[spell.id] || {};
+        const used = perSpell[key] || 0;
+        if (used >= maxPerTarget) return false;
+      }
+    }
   }
 
   // Ligne de vue : à gérer plus tard.

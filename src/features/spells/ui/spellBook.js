@@ -120,6 +120,9 @@ function buildEffectsText(spell) {
   if (spell.maxCastsPerTurn) {
     effects.push(`Lancers/tour : ${spell.maxCastsPerTurn}`);
   }
+  if (spell.maxCastsPerTargetPerTurn) {
+    effects.push(`Lancers/cible/tour : ${spell.maxCastsPerTargetPerTurn}`);
+  }
   return effects.length > 0 ? effects.join(" | ") : null;
 }
 
@@ -202,6 +205,14 @@ function setupSpellDetail(
     statRows.push({
       label: "Lancers/tour",
       value: `${maxCasts}`,
+      className: "spell-detail-row-emph",
+    });
+  }
+
+  if (typeof spell.maxCastsPerTargetPerTurn === "number") {
+    statRows.push({
+      label: "Lancers/cible/tour",
+      value: `${spell.maxCastsPerTargetPerTurn}`,
       className: "spell-detail-row-emph",
     });
   }

@@ -11,6 +11,7 @@ import {
   getUiApi,
 } from "./app/session.js";
 import { getPlayer } from "./state/store.js";
+import { updateCombatAuras } from "./features/combat/runtime/auras.js";
 
 class MainScene extends Phaser.Scene {
   constructor() {
@@ -23,6 +24,10 @@ class MainScene extends Phaser.Scene {
 
   create() {
     createMainScene(this);
+  }
+
+  update() {
+    updateCombatAuras(this);
   }
 }
 

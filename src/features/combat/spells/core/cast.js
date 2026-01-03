@@ -6,7 +6,11 @@ import { flashCombatCrit, showFloatingTextOverEntity } from "../../runtime/float
 import { maybeSpawnRiftWaveOnClear } from "../../systems/waves.js";
 
 import { getActiveSpell, clearActiveSpell } from "./activeSpell.js";
-import { canCastSpellAtTile } from "./canCast.js";
+import {
+  canCastSpellAtTile,
+  resolveSpellTargetAtTile,
+  getSpellTargetKey,
+} from "./canCast.js";
 import {
   computeSpellDamageWithCrit,
   applyFixedResistanceToDamage,
@@ -249,6 +253,19 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
   state.castsThisTurn = state.castsThisTurn || {};
   const prev = state.castsThisTurn[spell.id] || 0;
   state.castsThisTurn[spell.id] = prev + 1;
+
+  const maxPerTarget = spell.maxCastsPerTargetPerTurn ?? null;
+  if (maxPerTarget) {
+    const target = resolveSpellTargetAtTile(scene, tileX, tileY);
+    const key = getSpellTargetKey(target);
+    if (key) {
+      state.castsThisTurnTargets = state.castsThisTurnTargets || {};
+      const perSpell = state.castsThisTurnTargets[spell.id] || {};
+      const used = perSpell[key] || 0;
+      perSpell[key] = used + 1;
+      state.castsThisTurnTargets[spell.id] = perSpell;
+    }
+  }
 
   if (Array.isArray(spell.effects) && spell.effects.length > 0) {
     const ok = executeSpellEffectsAtTile(

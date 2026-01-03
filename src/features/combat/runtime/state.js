@@ -60,6 +60,7 @@ export function createCombatState(player, monster) {
 
     // suivi des sorts lances par tour (joueur)
     castsThisTurn: {},
+    castsThisTurnTargets: {},
   };
 }
 
@@ -326,6 +327,7 @@ export function passerTour(scene) {
 
   // reset des compteurs de sorts a chaque changement de tour
   state.castsThisTurn = {};
+  state.castsThisTurnTargets = {};
 
   // Début de tour : tick cooldowns + effets (poison, etc.)
   const activeEntity =

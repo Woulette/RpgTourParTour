@@ -10,8 +10,6 @@ export function applyStatusEffect(ctx, effect) {
   else if (spell?.statusEffect) status = spell.statusEffect;
   if (!status || status.type !== "poison") return false;
 
-  if (target !== state.joueur) return false;
-
   const turns = typeof status.turns === "number" ? status.turns : status.turnsLeft ?? 0;
   const dmgMin =
     typeof status.damageMin === "number" ? status.damageMin : spell.damageMin ?? 0;
@@ -38,12 +36,20 @@ export function applyStatusEffect(ctx, effect) {
 
   if (state.enCours && state.joueur) {
     const spellLabel = spell?.label || spell?.id || "Sort";
+    const targetName =
+      target === state.joueur
+        ? "Vous"
+        : target.displayName || target.label || target.monsterId || "Monstre";
+    const message =
+      target === state.joueur
+        ? `${spellLabel} : vous etes empoisonne (${next.turnsLeft} tours).`
+        : `${spellLabel} : ${targetName} est empoisonne (${next.turnsLeft} tours).`;
     addChatMessage(
       {
         kind: "combat",
         channel: "global",
         author: "Combat",
-        text: `${spellLabel} : vous etes empoisonne (${next.turnsLeft} tours).`,
+        text: message,
       },
       { player: state.joueur }
     );

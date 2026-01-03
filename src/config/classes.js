@@ -3,7 +3,7 @@ export const classes = {
     label: "Archer",
     color: 0x66ccff,
     statBonuses: [],
-    spells: ["tir_simple", "fleche_carbonisee", "flumigene"],
+    spells: ["tir_simple", "fleche_carbonisee", "flumigene", "pointe_refoulante", "meche_empoisonnee"],
   },
   tank: {
     label: "Tank",

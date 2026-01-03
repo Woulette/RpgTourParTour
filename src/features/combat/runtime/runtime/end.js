@@ -23,6 +23,7 @@ import { applyLootToPlayerInventory, rollLootFromSources } from "./loot.js";
 import { restoreWorldMonsterFromSnapshot } from "./snapshots.js";
 import { joinPartsWrapped } from "./utils.js";
 import { setHarvestablesVisible } from "../../../maps/world/harvestables.js";
+import { clearCombatAuras } from "../auras.js";
 
 export function endCombat(scene) {
   if (!scene.combatState) return;
@@ -247,6 +248,7 @@ export function endCombat(scene) {
   if (scene.hideCombatTargetPanel) {
     scene.hideCombatTargetPanel();
   }
+  clearCombatAuras(scene);
 
   const allMonsters = scene.monsters || [];
   allMonsters.forEach((m) => {
