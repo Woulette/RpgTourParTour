@@ -146,7 +146,6 @@ export function preloadAssets(scene) {
     "assets/metier/Alchimiste/Ressources/SoucheOrtie.png"
   );
   scene.load.image("chene", "assets/metier/Bucheron/Ressources/Chene.png");
-  scene.load.image("boulleau_single", "assets/tileset/Boulleau.png");
 
   preloadMonsters(scene);
   preloadNpcs(scene);

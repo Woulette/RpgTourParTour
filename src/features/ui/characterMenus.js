@@ -11,6 +11,7 @@ import {
   getSelectedCharacter as getSessionSelectedCharacter,
   getNetEventHandler,
   setNetClient,
+  setNetIsHost,
   setNetPlayerId,
 } from "../../app/session.js";
 import { createLanClient } from "../../net/lanClient.js";
@@ -313,6 +314,7 @@ export function initCharacterMenus({ onStartGame }) {
         if (msg?.t === "EvWelcome") {
           setNetPlayerId(msg.playerId);
           setNetClient(lanClient);
+          setNetIsHost(!!msg.isHost);
         }
         const handler = getNetEventHandler();
         if (handler) handler(msg);
@@ -325,6 +327,7 @@ export function initCharacterMenus({ onStartGame }) {
       onClose: () => {
         setNetPlayerId(null);
         setNetClient(null);
+        setNetIsHost(false);
         setLanButtonLabel("LAN");
       },
     });

@@ -2,6 +2,9 @@ function createInitialState() {
   return {
     mapId: "MapAndemiaNouvelleVersion1",
     players: {},
+    mapMonsters: {},
+    mapMeta: {},
+    mapResources: {},
     combat: {
       inCombat: false,
       turnIndex: 0,

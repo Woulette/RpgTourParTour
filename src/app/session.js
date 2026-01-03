@@ -3,6 +3,7 @@ let uiApi = null;
 let netClient = null;
 let netPlayerId = null;
 let netEventHandler = null;
+let netIsHost = false;
 
 export function setSelectedCharacter(character) {
   selectedCharacter = character || null;
@@ -46,4 +47,12 @@ export function setNetEventHandler(handler) {
 
 export function getNetEventHandler() {
   return netEventHandler;
+}
+
+export function setNetIsHost(isHost) {
+  netIsHost = !!isHost;
+}
+
+export function getNetIsHost() {
+  return netIsHost;
 }

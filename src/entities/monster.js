@@ -7,6 +7,7 @@ import { incrementKillProgressForAll } from "../features/quests/index.js";
 import { createCalibratedWorldToTile } from "../features/maps/world/util.js";
 import { queueMonsterRespawn } from "../features/monsters/runtime/respawnState.js";
 import { tryResolveCaptureOnMonsterDeath } from "../features/combat/summons/capture.js";
+import { getNetClient, getNetPlayerId } from "../app/session.js";
 
 // On ne scale que les stats principales (pas PA/PM/initiative/PO/etc.).
 const MONSTER_SCALABLE_STAT_KEYS = new Set([
@@ -293,6 +294,23 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
     if (allowRespawn && sceneArg && !inCombat) {
       // Respawn scoppé par map : empêche les respawns sur une autre map.
       queueMonsterRespawn(sceneArg, monster, 5000);
+    }
+
+    const netClient = getNetClient();
+    const playerId = getNetPlayerId();
+    const mapId = sceneArg?.currentMapKey || sceneArg?.currentMapDef?.key || null;
+    if (
+      netClient &&
+      playerId &&
+      mapId &&
+      Number.isInteger(monster.entityId) &&
+      monster.isCombatOnly !== true
+    ) {
+      netClient.sendCmd("CmdMobDeath", {
+        playerId,
+        mapId,
+        entityId: monster.entityId,
+      });
     }
   };
 

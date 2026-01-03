@@ -9,6 +9,7 @@ import { spawnTestWells } from "../../features/maps/world/wells.js";
 import { spawnRifts } from "../../features/maps/world/rifts.js";
 import { spawnStoryPortals } from "../../features/maps/world/storyPortals.js";
 import { spawnNpcsForMap } from "../../features/npc/runtime/spawn.js";
+import { getNetClient } from "../../app/session.js";
 
 export function ensureRespawnTick(scene) {
   if (!scene || scene.respawnTick || !scene.time?.addEvent) return;
@@ -22,15 +23,22 @@ export function ensureRespawnTick(scene) {
 export function spawnWorldEntities(scene, map, groundLayer, mapDef, centerTileX, centerTileY) {
   if (!scene || !mapDef) return;
 
-  ensureRespawnTick(scene);
+  const lanActive = !!getNetClient();
+  if (!lanActive) {
+    ensureRespawnTick(scene);
+  }
 
   if (mapDef.spawnDefaults) {
-    spawnInitialMonsters(scene, map, groundLayer, centerTileX, centerTileY, mapDef);
-    processPendingRespawnsForCurrentMap(scene);
+    if (!lanActive) {
+      spawnInitialMonsters(scene, map, groundLayer, centerTileX, centerTileY, mapDef);
+      processPendingRespawnsForCurrentMap(scene);
+    }
 
-    spawnTestTrees(scene, map, scene.player, mapDef);
-    spawnTestHerbs(scene, map, scene.player, mapDef);
-    spawnTestWells(scene, map, scene.player, mapDef);
+    if (!lanActive) {
+      spawnTestTrees(scene, map, scene.player, mapDef);
+      spawnTestHerbs(scene, map, scene.player, mapDef);
+      spawnTestWells(scene, map, scene.player, mapDef);
+    }
 
     spawnRifts(scene, map, scene.player, mapDef, {
       onTeleport: ({ targetMap, targetStartTile, riftId }) => {
