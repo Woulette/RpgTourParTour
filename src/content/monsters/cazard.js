@@ -26,8 +26,8 @@ export default {
   },
   spells: ["griffure", "projectile_epineux"],
   loot: [
-    { itemId: "peau_cazard", min: 1, max: 1, dropRate: 0.3 },
-    { itemId: "queue_cazard", min: 1, max: 1, dropRate: 0.35 },
+    { itemId: "peau_cazard", min: 1, max: 1, dropRate: 0.4 },
+    { itemId: "queue_cazard", min: 1, max: 1, dropRate: 0.4 },
   ],
   xpReward: 90,
   goldRewardMin: 12,

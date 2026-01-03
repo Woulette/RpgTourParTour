@@ -5,6 +5,62 @@ function clampNonNegative(n) {
   return Math.max(0, n);
 }
 
+function clampPct(n) {
+  if (typeof n !== "number" || !Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, n));
+}
+
+function normalizePctInput(value, fallbackPct) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return clampPct(fallbackPct ?? 0);
+  }
+  if (value > 1) return clampPct(value);
+  return clampPct(value * 100);
+}
+
+
+export function getFixedResistanceForElement(target, element) {
+  const stats = target?.stats || target || {};
+
+  switch (element) {
+    case "force":
+    case "terre":
+      return clampNonNegative(stats.resistanceFixeTerre ?? 0);
+    case "intelligence":
+    case "feu":
+      return clampNonNegative(stats.resistanceFixeFeu ?? 0);
+    case "agilite":
+    case "air":
+      return clampNonNegative(stats.resistanceFixeAir ?? 0);
+    case "chance":
+    case "eau":
+      return clampNonNegative(stats.resistanceFixeEau ?? 0);
+    default:
+      return 0;
+  }
+}
+
+export function applyFixedResistanceToDamage(damage, target, element) {
+  const safeDamage = clampNonNegative(damage);
+  const resist = getFixedResistanceForElement(target, element);
+  return Math.max(0, safeDamage - resist);
+}
+
+export function getSpellCritChancePct(caster, spell) {
+  const basePct = normalizePctInput(spell?.critChanceBasePct, 5);
+  const bonusPct =
+    typeof caster?.stats?.critChancePct === "number"
+      ? caster.stats.critChancePct
+      : 0;
+  return clampPct(basePct + bonusPct);
+}
+
+export function rollSpellCrit(caster, spell) {
+  const chancePct = getSpellCritChancePct(caster, spell);
+  if (chancePct <= 0) return false;
+  return Math.random() < chancePct / 100;
+}
+
 function getBonusPuissanceFromStatusEffects(caster) {
   const effects = Array.isArray(caster?.statusEffects) ? caster.statusEffects : [];
   if (effects.length === 0) return 0;
@@ -77,7 +133,12 @@ function getFlatDamageBonus(caster, spell) {
   }
 }
 
-export function getSpellDamageComponents(caster, spell, baseDamageOverride = null) {
+export function getSpellDamageComponents(
+  caster,
+  spell,
+  baseDamageOverride = null,
+  { isCrit = false } = {}
+) {
   if (!caster || !spell) return { scaled: 0, flat: 0 };
   const dmgMin = spell.damageMin ?? 0;
   const dmgMax = spell.damageMax ?? dmgMin;
@@ -92,7 +153,8 @@ export function getSpellDamageComponents(caster, spell, baseDamageOverride = nul
   const parchmentMult = getSpellParchmentMultiplier(caster, spell);
   const scaled = Math.round(baseDamage * multiplier * parchmentMult);
   const flat = getFlatDamageBonus(caster, spell);
-  return { scaled, flat };
+  const critFlat = isCrit ? clampNonNegative(caster?.stats?.dommagesCrit ?? 0) : 0;
+  return { scaled, flat: flat + critFlat };
 }
 
 // Calcule les dégâts finaux d'un sort pour un lanceur donné,
@@ -122,6 +184,31 @@ export function computeSpellDamage(caster, spell) {
   return Math.max(0, scaled + flat);
 }
 
+export function computeSpellDamageWithCrit(
+  caster,
+  spell,
+  { forceCrit = null, baseDamageOverride = null } = {}
+) {
+  const isCrit =
+    typeof forceCrit === "boolean" ? forceCrit : rollSpellCrit(caster, spell);
+  let effectiveBaseDamage = baseDamageOverride;
+  if (typeof effectiveBaseDamage !== "number" && isCrit) {
+    const critMin = spell?.damageCritMin ?? null;
+    const critMax =
+      typeof spell?.damageCritMax === "number" ? spell.damageCritMax : critMin;
+    if (typeof critMin === "number") {
+      effectiveBaseDamage = Phaser.Math.Between(critMin, critMax ?? critMin);
+    }
+  }
+
+  const { scaled, flat } = getSpellDamageComponents(caster, spell, effectiveBaseDamage, {
+    isCrit,
+  });
+  const total = Math.max(0, scaled + flat);
+  const damage = isCrit ? Math.ceil(total) : total;
+  return { damage, isCrit };
+}
+
 // Retourne la fourchette de dégâts (min, max) pour un sort
 // en tenant compte des stats élémentaires du lanceur (sans aléatoire).
 export function getSpellDamageRange(caster, spell) {
@@ -146,6 +233,38 @@ export function getSpellDamageRange(caster, spell) {
   const flatBonus = getFlatDamageBonus(caster, spell);
   const withFlatMin = scaledMin + flatBonus;
   const withFlatMax = scaledMax + flatBonus;
+
+  return {
+    min: Math.max(0, withFlatMin),
+    max: Math.max(0, withFlatMax),
+  };
+}
+
+export function getSpellCritDamageRange(caster, spell) {
+  if (!caster || !spell) {
+    return { min: 0, max: 0 };
+  }
+
+  const dmgMin =
+    typeof spell.damageCritMin === "number" ? spell.damageCritMin : spell.damageMin ?? 0;
+  const dmgMax =
+    typeof spell.damageCritMax === "number" ? spell.damageCritMax : dmgMin;
+
+  const elemStat = getElementStat(caster, spell);
+  const bonusPercent = elemStat * 0.02; // 2% par point
+  const multiplier = 1 + bonusPercent;
+
+  const parchmentMult = getSpellParchmentMultiplier(caster, spell);
+  const finalMin = Math.round(dmgMin * multiplier * parchmentMult);
+  const finalMax = Math.round(dmgMax * multiplier * parchmentMult);
+
+  const extraMult = getSurchargeInstableMultiplierForPreview(caster, spell);
+  const scaledMin = Math.round(finalMin * extraMult);
+  const scaledMax = Math.round(finalMax * extraMult);
+  const flatBonus = getFlatDamageBonus(caster, spell);
+  const critFlat = clampNonNegative(caster?.stats?.dommagesCrit ?? 0);
+  const withFlatMin = scaledMin + flatBonus + critFlat;
+  const withFlatMax = scaledMax + flatBonus + critFlat;
 
   return {
     min: Math.max(0, withFlatMin),

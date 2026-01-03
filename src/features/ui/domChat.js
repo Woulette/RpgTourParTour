@@ -82,12 +82,7 @@ function appendTextWithColoredDamage(parent, text, element) {
   if (!parent) return;
   const raw = String(text || "");
   const el = normalizeElement(element);
-  if (!el) {
-    parent.textContent = raw;
-    return;
-  }
-
-  const regex = /-\d+\s*PV/gi;
+  const regex = /Crit\s*!|-\d+\s*PV/g;
   let lastIndex = 0;
   let match = regex.exec(raw);
 
@@ -104,10 +99,22 @@ function appendTextWithColoredDamage(parent, text, element) {
       parent.appendChild(document.createTextNode(raw.slice(lastIndex, start)));
     }
 
-    const dmg = document.createElement("span");
-    dmg.className = `hud-chat-damage hud-chat-damage-${el}`;
-    dmg.textContent = match[0];
-    parent.appendChild(dmg);
+    const token = match[0];
+    if (/^-/.test(token)) {
+      if (!el) {
+        parent.appendChild(document.createTextNode(token));
+      } else {
+        const dmg = document.createElement("span");
+        dmg.className = `hud-chat-damage hud-chat-damage-${el}`;
+        dmg.textContent = token;
+        parent.appendChild(dmg);
+      }
+    } else {
+      const crit = document.createElement("span");
+      crit.className = "hud-chat-crit";
+      crit.textContent = token;
+      parent.appendChild(crit);
+    }
 
     lastIndex = end;
     match = regex.exec(raw);
@@ -124,6 +131,9 @@ function renderMessage(container, msg, { activeChannel } = {}) {
   const line = document.createElement("div");
   line.className = `hud-chat-message hud-chat-message-${msg.kind || "system"}`;
   line.dataset.chatId = String(msg.id);
+  if (msg.isCrit) {
+    line.classList.add("hud-chat-message-crit");
+  }
 
   const time = document.createElement("span");
   time.className = "hud-chat-time";
@@ -148,6 +158,27 @@ function renderMessage(container, msg, { activeChannel } = {}) {
     content.appendChild(author);
     content.appendChild(sep);
     content.appendChild(text);
+  } else if (msg.kind === "combat-cast") {
+    const raw = String(msg.text || "");
+    const prefix = "Vous lancez ";
+    if (raw.startsWith(prefix)) {
+      let spellPart = raw.slice(prefix.length);
+      let suffix = "";
+      if (spellPart.endsWith(".")) {
+        spellPart = spellPart.slice(0, -1);
+        suffix = ".";
+      }
+      content.appendChild(document.createTextNode(prefix));
+      const spellSpan = document.createElement("span");
+      spellSpan.className = "hud-chat-spell";
+      spellSpan.textContent = spellPart;
+      content.appendChild(spellSpan);
+      if (suffix) {
+        content.appendChild(document.createTextNode(suffix));
+      }
+    } else {
+      appendTextWithColoredDamage(content, raw, msg.element);
+    }
   } else {
     appendTextWithColoredDamage(content, msg.text || "", msg.element);
   }

@@ -65,7 +65,9 @@ export function applyPatternDamageEffect(ctx, effect) {
   if (!scene || !map || !caster || !effect?.pattern) return false;
 
   const damageSpell = resolveDamageSpell(ctx.spell, effect);
-  const { damage } = computeDamageForSpell(caster, damageSpell);
+  const damageResult = computeDamageForSpell(caster, damageSpell);
+  const damage = damageResult?.damage ?? 0;
+  const forceCrit = damageResult?.isCrit === true;
 
   const tiles = getPatternTiles(effect.pattern, ctx);
   if (!tiles.length) return false;
@@ -79,7 +81,13 @@ export function applyPatternDamageEffect(ctx, effect) {
     const victim = findMonsterAtTile(scene, t.x, t.y);
     if (!victim || !victim.stats) continue;
 
-    const nextCtx = { ...ctx, target: victim, tileX: t.x, tileY: t.y };
+    const nextCtx = {
+      ...ctx,
+      target: victim,
+      tileX: t.x,
+      tileY: t.y,
+      forceCrit,
+    };
     const res = applyDamageEffect(nextCtx, { ...effect, fixedDamage: damage });
     if (nextCtx.lastDamage) {
       ctx.lastDamage = nextCtx.lastDamage;

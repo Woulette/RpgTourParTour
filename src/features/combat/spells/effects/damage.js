@@ -1,9 +1,10 @@
 import { addChatMessage } from "../../../../chat/chat.js";
 import { unblockTile } from "../../../../collision/collisionGrid.js";
 import { endCombat } from "../../runtime/runtime.js";
-import { showFloatingTextOverEntity } from "../../runtime/floatingText.js";
+import { flashCombatCrit, showFloatingTextOverEntity } from "../../runtime/floatingText.js";
 import { applyShieldToDamage, addShieldAbsorbChat, showShieldAbsorbText } from "../cast/castBuffs.js";
 import { computeDamageForSpell } from "../cast/castEryon.js";
+import { applyFixedResistanceToDamage } from "../utils/damage.js";
 import { playMonsterDeathAnimation } from "../../../monsters/runtime/animations.js";
 
 function resolveDamageSpell(spell, effect) {
@@ -86,12 +87,21 @@ export function applyDamageEffect(ctx, effect) {
 
   const damageSpell = resolveDamageSpell(spell, effect);
   const fixedDamage = typeof effect?.fixedDamage === "number" ? effect.fixedDamage : null;
-  const { damage } = fixedDamage === null ? computeDamageForSpell(caster, damageSpell) : { damage: fixedDamage };
+  const damageResult =
+    fixedDamage === null
+      ? computeDamageForSpell(caster, damageSpell, { forceCrit: ctx.forceCrit })
+      : { damage: fixedDamage, isCrit: ctx.forceCrit === true };
+  const damage = damageResult.damage ?? 0;
 
-  const shielded = applyShieldToDamage(target, damage);
+  const reducedDamage = applyFixedResistanceToDamage(
+    damage,
+    target,
+    damageSpell?.element ?? null
+  );
+  const shielded = applyShieldToDamage(target, reducedDamage);
   const finalDamage = Math.max(0, shielded.damage);
   showShieldAbsorbText(scene, target, shielded.absorbed);
-  ctx.lastDamage = { raw: damage, final: finalDamage };
+  ctx.lastDamage = { raw: damage, final: finalDamage, isCrit: damageResult.isCrit === true };
 
   const currentHp =
     typeof target.stats.hp === "number" ? target.stats.hp : target.stats.hpMax ?? 0;
@@ -108,33 +118,66 @@ export function applyDamageEffect(ctx, effect) {
   }
 
   if (state?.enCours && state.joueur) {
-    const spellLabel = spell?.label || spell?.id || "Sort";
     const targetName = getTargetName(target, isPlayerTarget);
     if (finalDamage > 0) {
+      const critLabel = damageResult.isCrit ? "Crit ! " : "";
       addChatMessage(
         {
           kind: "combat",
           channel: "global",
           author: "Combat",
-          text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
+          text: `${targetName} ${critLabel}-${finalDamage} PV`,
           element: damageSpell?.element ?? null,
+          isCrit: damageResult.isCrit === true,
         },
         { player: state.joueur }
       );
     }
+    const spellLabel = spell?.label || spell?.id || "Sort";
     addShieldAbsorbChat(scene, state, spellLabel, targetName, shielded.absorbed);
   }
 
   if (finalDamage > 0) {
+    const isCrit = damageResult.isCrit === true;
+    const floatText = `-${finalDamage}`;
+    const floatColor = isCrit ? "#ff1f2d" : "#fbbf24";
     const delayMs = ctx.impactDelayMs ?? 0;
     if (delayMs > 0 && scene?.time?.delayedCall) {
       scene.time.delayedCall(delayMs, () => {
-        showFloatingTextOverEntity(scene, target, `-${finalDamage}`, {
-          color: "#ff4444",
+        showFloatingTextOverEntity(scene, target, floatText, {
+          color: floatColor,
+          sequenceStepMs: 0,
         });
+        if (isCrit) {
+          flashCombatCrit(scene);
+          showFloatingTextOverEntity(scene, target, "!", {
+            color: floatColor,
+            fontSize: 22,
+            fontStyle: "bold",
+            strokeThickness: 4,
+            xOffset: 30,
+            yOffset: 73,
+            sequenceStepMs: 0,
+          });
+        }
       });
     } else {
-      showFloatingTextOverEntity(scene, target, `-${finalDamage}`, { color: "#ff4444" });
+      showFloatingTextOverEntity(scene, target, floatText, {
+        color: floatColor,
+        sequenceStepMs: 0,
+      });
+      if (isCrit) {
+        flashCombatCrit(scene);
+        showFloatingTextOverEntity(scene, target, "!", {
+          color: floatColor,
+          fontSize: 22,
+          fontStyle: "bold",
+          strokeThickness: 4,
+          xOffset: 30,
+          yOffset: 73,
+          sequenceStepMs: 0,
+        });
+      }
     }
   }
 

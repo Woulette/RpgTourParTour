@@ -156,6 +156,17 @@
   color: rgba(143, 208, 255, 0.98);
 }
 
+.hud-chat-spell {
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.hud-chat-crit {
+  color: #ff1f2d;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
 .hud-chat-damage {
   font-weight: 900;
 }

@@ -138,7 +138,9 @@ export function createMonster(scene, x, y, monsterId, forcedLevel = null) {
   // Stats de base communes, avec overrides du monstre.
   // Pour un monstre, on considère les overrides comme des valeurs FIXES
   // (on ne veut pas ajouter 50 HP de base + 40 HP du monstre).
-  const stats = createStats(computeScaledOverrides());
+  const stats = createStats(computeScaledOverrides(), {
+    applySecondaryStats: false,
+  });
 
   const monster = createCharacter(scene, x, y, {
     textureKey: def.textureKey,

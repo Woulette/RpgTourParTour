@@ -4,6 +4,19 @@
   inset: 0;
   /* Pointer events go through by default, except on interactive elements */
   pointer-events: none;
+  z-index: 10;
+}
+
+#ui-input-blocker {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  pointer-events: none;
+  z-index: 9;
+}
+
+body.ui-blocking-open #ui-input-blocker {
+  pointer-events: auto;
 }
 
 /* Shared style for all HUD pill buttons */

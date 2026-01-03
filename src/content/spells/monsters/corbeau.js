@@ -10,6 +10,9 @@ export default {
     element: "agilite",
     damageMin: 5,
     damageMax: 9,
+    critChanceBasePct: 5,
+    damageCritMin: 6,
+    damageCritMax: 11,
     effects: [
       { type: "damage", element: "agilite", min: 5, max: 9 },
     ],
@@ -26,6 +29,9 @@ export default {
     element: "air",
     damageMin: 5,
     damageMax: 9,
+    critChanceBasePct: 5,
+    damageCritMin: 6,
+    damageCritMax: 11,
     effects: [
       { type: "damage", element: "air", min: 5, max: 9 },
     ],

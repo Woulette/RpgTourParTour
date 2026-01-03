@@ -2,12 +2,15 @@ import { findMonsterAtTile } from "../../../../features/monsters/runtime/index.j
 import { unblockTile } from "../../../../collision/collisionGrid.js";
 import { endCombat } from "../../runtime/runtime.js";
 import { addChatMessage } from "../../../../chat/chat.js";
-import { showFloatingTextOverEntity } from "../../runtime/floatingText.js";
+import { flashCombatCrit, showFloatingTextOverEntity } from "../../runtime/floatingText.js";
 import { maybeSpawnRiftWaveOnClear } from "../../systems/waves.js";
 
 import { getActiveSpell, clearActiveSpell } from "./activeSpell.js";
 import { canCastSpellAtTile } from "./canCast.js";
-import { computeSpellDamage } from "../utils/damage.js";
+import {
+  computeSpellDamageWithCrit,
+  applyFixedResistanceToDamage,
+} from "../utils/damage.js";
 import { clearSpellRangePreview } from "./preview.js";
 import { getCasterOriginTile } from "../utils/util.js";
 import {
@@ -231,7 +234,7 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
     const spellLabel = spell?.label || spell?.id || "Sort";
     if (isPlayerCaster) {
       addChatMessage(
-        { kind: "combat", channel: "global", author: "Combat", text: `Vous lancez ${spellLabel}.` },
+        { kind: "combat-cast", channel: "global", author: "Combat", text: `Vous lancez ${spellLabel}.` },
         { player: state.joueur }
       );
     } else {
@@ -304,9 +307,17 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
 
       if (victim && victim.stats) {
         const damageOnHit = spell.damageOnHit !== false;
-        const damage = damageOnHit ? computeSpellDamage(caster, spell) : 0;
+        const damageResult = damageOnHit
+          ? computeSpellDamageWithCrit(caster, spell)
+          : { damage: 0, isCrit: false };
+        const damage = damageResult.damage ?? 0;
+        const reducedDamage = applyFixedResistanceToDamage(
+          damage,
+          victim,
+          spell?.element ?? null
+        );
 
-        const shielded = applyShieldToDamage(victim, damage);
+        const shielded = applyShieldToDamage(victim, reducedDamage);
         const finalDamage = Math.max(0, shielded.damage);
         showShieldAbsorbText(scene, victim, shielded.absorbed);
         const currentHp = typeof victim.stats.hp === "number" ? victim.stats.hp : victim.stats.hpMax ?? 0;
@@ -383,7 +394,25 @@ export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundL
         }
 
         if (damageOnHit && finalDamage > 0) {
-          showFloatingTextOverEntity(scene, victim, `-${finalDamage}`, { color: "#ff4444" });
+          const isCrit = damageResult.isCrit === true;
+          const floatText = `-${finalDamage}`;
+          const floatColor = isCrit ? "#ff1f2d" : "#fbbf24";
+          showFloatingTextOverEntity(scene, victim, floatText, {
+            color: floatColor,
+            sequenceStepMs: 0,
+          });
+          if (isCrit) {
+            flashCombatCrit(scene);
+            showFloatingTextOverEntity(scene, victim, "!", {
+              color: floatColor,
+              fontSize: 22,
+              fontStyle: "bold",
+              strokeThickness: 4,
+              xOffset: 30,
+              yOffset: 73,
+              sequenceStepMs: 0,
+            });
+          }
         }
 
         if ((spell.pushbackDistance ?? 0) > 0 && newHp > 0) {

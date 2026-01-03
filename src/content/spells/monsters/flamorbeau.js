@@ -10,6 +10,9 @@ export default {
     element: "feu",
     damageMin: 5,
     damageMax: 9,
+    critChanceBasePct: 5,
+    damageCritMin: 6,
+    damageCritMax: 11,
     effects: [
       { type: "damage", element: "feu", min: 5, max: 9 },
     ],

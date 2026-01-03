@@ -1,4 +1,9 @@
-import { getActiveSpell, getSpellDamageRange, canPreviewSpellAtTile } from "../combat/spells/index.js";
+import {
+  getActiveSpell,
+  getSpellDamageRange,
+  getSpellCritDamageRange,
+  canPreviewSpellAtTile,
+} from "../combat/spells/index.js";
 
 // Attache à la scène Phaser la logique d'affichage de la prévisualisation
 // de dégâts au survol d'un monstre.
@@ -40,13 +45,20 @@ export function attachCombatPreview(scene) {
     }
 
     const { min, max } = getSpellDamageRange(scene.player, spell);
+    const { min: critMin, max: critMax } = getSpellCritDamageRange(
+      scene.player,
+      spell
+    );
     scene.damagePreview = {
       monster,
       tileX,
       tileY,
       min,
       max,
-      text: `${min} - ${max}`,
+      critMin,
+      critMax,
+      baseText: `${min} - ${max}`,
+      critText: `${critMin} - ${critMax}`,
       spellId: spell.id,
     };
   };

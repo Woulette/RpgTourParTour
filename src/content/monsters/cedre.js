@@ -26,7 +26,7 @@ export default {
   },
   spells: ["aura_cedre", "souffle_cedre"],
   loot: [
-    { itemId: "peau_cedre", min: 1, max: 1, dropRate: 0.3 },
+    { itemId: "peau_cedre", min: 1, max: 1, dropRate: 0.4 },
   ],
   xpReward: 290,
   goldRewardMin: 28,

@@ -45,6 +45,9 @@
     element: "terre",
     damageMin: 9,
     damageMax: 11,
+    critChanceBasePct: 5,
+    damageCritMin: 11,
+    damageCritMax: 13,
     pushbackDistance: 1,
     maxCastsPerTurn: 2,
     effects: [

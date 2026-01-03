@@ -103,8 +103,18 @@ export function endCombat(scene) {
       xpGagne = Math.round(xpGagne * (1 + xpBonusPct));
     }
 
-    const dropMult = 1 + (challengeOk ? dropBonusPct : 0);
-    const lootRolls = rollLootFromSources(state.lootSources || [], dropMult, player);
+    const prospectionValue =
+      typeof player?.stats?.prospection === "number" &&
+      Number.isFinite(player.stats.prospection)
+        ? player.stats.prospection
+        : 100;
+    const prospectionMult = Math.max(0, prospectionValue) / 100;
+    const dropMult = prospectionMult * (1 + (challengeOk ? dropBonusPct : 0));
+    const lootRolls = rollLootFromSources(
+      state.lootSources || [],
+      dropMult,
+      player
+    );
     lootGagne = applyLootToPlayerInventory(player, lootRolls);
 
     if (player && typeof addXpToPlayer === "function" && xpGagne > 0) {

@@ -1,10 +1,8 @@
-// Gestion d'une petite fiche d'infos au-dessus du monstre survole.
-// Affiche : XP (estimee), niveau total du groupe, niveaux individuels.
+// Gestion d'une petite fiche d'infos au-dessus du monstre survolé.
+// Affiche : XP (estimée), niveau total du groupe, niveaux individuels.
 
-import { monsters } from "../../content/monsters/index.js";
-import { XP_CONFIG } from "../../config/xp.js";
 
-export function attachMonsterTooltip(scene) {
+function attachMonsterTooltip(scene) {
   if (!scene) return;
 
   scene.monsterTooltipText = null;
@@ -21,7 +19,6 @@ export function attachMonsterTooltip(scene) {
         return entity.getBounds();
       } catch {
         // ignore
-      }
     }
     const x = entity.x ?? 0;
     const y = entity.y ?? 0;
@@ -113,143 +110,268 @@ export function attachMonsterTooltip(scene) {
     const bounds = getBounds(monster);
     const bubbleCenterX = bounds?.centerX ?? monster.x;
 
-    // En combat : affichage harmonieux (nom + niv + PV + previsu degats en un seul bloc).
+    // En combat : affichage harmonieux (nom + niv + PV + prévisu dégâts en un seul bloc).
     if (scene.combatState && scene.combatState.enCours) {
+
       scene.monsterTooltipMode = "combat";
+
       const stats = monster.stats || {};
+
       const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
+
       const hpMax = typeof stats.hpMax === "number" ? stats.hpMax : hp;
+
       const lvl = monster.level ?? monster.stats?.niveau ?? 1;
+
       const headerText = `${baseName}  Niv. ${lvl}  HP ${hp}/${hpMax}`;
+
       const dmgText =
+
         scene.damagePreview &&
+
         scene.damagePreview.monster === monster &&
+
         typeof scene.damagePreview.baseText === "string"
+
           ? scene.damagePreview.baseText
+
           : null;
+
       const critText =
+
         scene.damagePreview &&
+
         scene.damagePreview.monster === monster &&
+
         typeof scene.damagePreview.critText === "string"
+
           ? scene.damagePreview.critText
+
           : null;
+
 
       if (scene.monsterTooltipText) {
+
         scene.monsterTooltipText.destroy();
+
         scene.monsterTooltipText = null;
+
       }
+
       if (scene.monsterTooltipDamageText) {
+
         scene.monsterTooltipDamageText.destroy();
+
         scene.monsterTooltipDamageText = null;
+
       }
+
       if (scene.monsterTooltipCritText) {
+
         scene.monsterTooltipCritText.destroy();
+
         scene.monsterTooltipCritText = null;
+
       }
+
       if (scene.monsterTooltipBg) {
+
         scene.monsterTooltipBg.destroy();
+
         scene.monsterTooltipBg = null;
+
       }
+
 
       const header = scene.add.text(bubbleCenterX, monster.y - 56, headerText, {
+
         fontFamily: "Segoe UI, Arial",
+
         fontSize: 13,
+
         fontStyle: "bold",
+
         color: "#ffffff",
+
         stroke: "#000000",
+
         strokeThickness: 3,
+
         align: "center",
+
       });
+
       header.setOrigin(0.5, 0.5);
+
       if (header.setResolution) header.setResolution(2);
 
+
       let dmg = null;
+
       if (dmgText) {
+
         dmg = scene.add.text(bubbleCenterX, monster.y - 56, dmgText, {
+
           fontFamily: "Segoe UI, Arial",
+
           fontSize: 12,
+
           fontStyle: "bold",
+
           color: "#f59e0b",
+
           stroke: "#000000",
+
           strokeThickness: 3,
+
           align: "center",
+
         });
+
         dmg.setOrigin(0.5, 0.5);
+
         if (dmg.setResolution) dmg.setResolution(2);
+
       }
 
       let crit = null;
+
       if (critText) {
+
         crit = scene.add.text(bubbleCenterX, monster.y - 56, critText, {
+
           fontFamily: "Segoe UI, Arial",
+
           fontSize: 12,
+
           fontStyle: "bold",
+
           color: "#ef4444",
+
           stroke: "#000000",
+
           strokeThickness: 3,
+
           align: "center",
+
         });
+
         crit.setOrigin(0.5, 0.5);
+
         if (crit.setResolution) crit.setResolution(2);
+
       }
+
 
       const paddingX = 10;
+
       const paddingY = 6;
+
       const gapY = dmg || crit ? 2 : 0;
+
       const gapX = dmg && crit ? 12 : 0;
+
       const dmgRowWidth =
+
         dmg && crit ? dmg.width + gapX + crit.width : dmg ? dmg.width : crit ? crit.width : 0;
+
       const contentW = Math.max(header.width, dmgRowWidth);
+
       const dmgRowHeight = Math.max(dmg ? dmg.height : 0, crit ? crit.height : 0);
+
       const contentH =
+
         header.height + (dmg || crit ? gapY + dmgRowHeight : 0);
+
       const bgWidth = contentW + paddingX * 2;
+
       const bgHeight = contentH + paddingY * 2;
 
+
       const bg = scene.add.graphics();
+
       bg.fillStyle(0x000000, 0.78);
+
       bg.lineStyle(1, 0xffffff, 0.18);
+
       const radius = 8;
 
+
       const margin = 10;
+
       const centerY = (bounds?.top ?? monster.y) - bgHeight / 2 - margin;
+
       const bgX = bubbleCenterX - bgWidth / 2;
+
       const bgY = centerY - bgHeight / 2;
+
       bg.fillRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
+
       bg.strokeRoundedRect(bgX, bgY, bgWidth, bgHeight, radius);
 
+
       const headerY = bgY + paddingY + header.height / 2;
+
       header.setPosition(bubbleCenterX, headerY);
+
       if (dmg || crit) {
+
         const rowY = headerY + header.height / 2 + gapY + dmgRowHeight / 2;
+
         if (dmg && crit) {
+
           const rowX = bubbleCenterX - dmgRowWidth / 2;
+
           dmg.setPosition(rowX + dmg.width / 2, rowY);
+
           crit.setPosition(rowX + dmg.width + gapX + crit.width / 2, rowY);
+
         } else if (dmg) {
+
           dmg.setPosition(bubbleCenterX, rowY);
+
         } else if (crit) {
+
           crit.setPosition(bubbleCenterX, rowY);
+
         }
+
       }
+
 
       if (scene.hudCamera) {
+
         scene.hudCamera.ignore(bg);
+
         scene.hudCamera.ignore(header);
+
         if (dmg) scene.hudCamera.ignore(dmg);
+
         if (crit) scene.hudCamera.ignore(crit);
+
       }
+
       bg.setDepth(200000);
+
       header.setDepth(200001);
+
       if (dmg) dmg.setDepth(200001);
+
       if (crit) crit.setDepth(200001);
 
+
       scene.monsterTooltipBg = bg;
+
       scene.monsterTooltipText = header;
+
       scene.monsterTooltipDamageText = dmg;
+
       scene.monsterTooltipCritText = crit;
+
       scene.updateMonsterTooltipPosition();
+
       return;
+
     }
     scene.monsterTooltipMode = "world";
 
@@ -268,7 +390,7 @@ export function attachMonsterTooltip(scene) {
         : Array.from({ length: groupSize }, () => monster.monsterId);
 
     const lines = [];
-    // En preparation de combat : affichage simplifie (nom + niveaux individuels).
+    // En préparation de combat : affichage simplifié (nom + niveaux individuels).
     const inPrep = scene.prepState && scene.prepState.actif;
     if (!inPrep) {
       const xpTotal = computeGroupXp(monster, scene, baseDef, levels);
@@ -293,9 +415,9 @@ export function attachMonsterTooltip(scene) {
     }
     const text = lines.join("\n");
 
-    // bubbleCenterX calcule via bounds plus haut.
+    // bubbleCenterX calculé via bounds plus haut.
     const lineCount = lines.length;
-    // Decale vers le haut en fonction de la taille pour eviter de masquer le monstre
+    // Décale vers le haut en fonction de la taille pour éviter de masquer le monstre
     const bubbleCenterY = monster.y - 40 - lineCount * 8;
 
     if (scene.monsterTooltipText) {
@@ -353,7 +475,7 @@ export function attachMonsterTooltip(scene) {
       scene.hudCamera.ignore(bg);
       scene.hudCamera.ignore(tooltipText);
     }
-    // Tres au-dessus du monde (depasse le joueur et les calques)
+    // Très au-dessus du monde (dépasse le joueur et les calques)
     bg.setDepth(200000);
     tooltipText.setDepth(200001);
 
@@ -384,7 +506,7 @@ export function attachMonsterTooltip(scene) {
   };
 }
 
-// XP totale du groupe estimee avec montee douce + penalite d'ecart + sagesse
+// XP totale du groupe estimée avec montée douce + pénalité d'écart + sagesse
 function computeGroupXp(monster, scene, baseDef, levels) {
   const baseXp =
     monster.xpRewardBase ??
@@ -428,8 +550,8 @@ function computeXpFactor(levels, playerLevel) {
     (max, lvl) => (lvl > max ? lvl : max),
     levels[0] ?? 1
   );
-  // Niveau de reference : pas de penalite si le total couvre (ou depasse un peu) le niveau du joueur,
-  // mais on tient compte d'un monstre tres HL (highest).
+  // Niveau de référence : pas de pénalité si le total couvre (ou dépasse un peu) le niveau du joueur,
+  // mais on tient compte d'un monstre très HL (highest).
   const effectiveLevel = Math.max(highest, Math.min(total, playerLevel));
   const diff = Math.abs(effectiveLevel - playerLevel);
 

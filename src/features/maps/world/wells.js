@@ -207,7 +207,7 @@ export function spawnTestWells(scene, map, player, mapDef) {
         return;
       }
 
-      player.isHarvestingWell = true;
+      cancelPendingWellHarvest(player);
       player.currentWellHarvestNode = node;
       if (player.currentMoveTween) {
         player.currentMoveTween.stop();

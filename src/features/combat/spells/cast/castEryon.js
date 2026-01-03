@@ -1,6 +1,10 @@
 import { addChatMessage } from "../../../../chat/chat.js";
 import { showFloatingTextOverEntity } from "../../runtime/floatingText.js";
-import { computeSpellDamage, getSpellDamageComponents } from "../utils/damage.js";
+import {
+  computeSpellDamageWithCrit,
+  getSpellDamageComponents,
+  rollSpellCrit,
+} from "../utils/damage.js";
 import {
   applyEryonElementAfterCast,
   convertEryonChargesToPuissance,
@@ -51,12 +55,30 @@ export function applyEryonAfterCast(scene, caster, spell, { isSelfCast = false }
   return res || null;
 }
 
-export function computeDamageForSpell(caster, spell) {
-  if (!spell || !caster) return { damage: 0, consumedCharges: 0 };
+export function computeDamageForSpell(
+  caster,
+  spell,
+  { forceCrit = null, baseDamageOverride = null } = {}
+) {
+  if (!spell || !caster) return { damage: 0, consumedCharges: 0, isCrit: false };
+
+  const isCrit =
+    typeof forceCrit === "boolean" ? forceCrit : rollSpellCrit(caster, spell);
+  let effectiveBaseDamage = baseDamageOverride;
+  if (typeof effectiveBaseDamage !== "number" && isCrit) {
+    const critMin = spell?.damageCritMin ?? null;
+    const critMax =
+      typeof spell?.damageCritMax === "number" ? spell.damageCritMax : critMin;
+    if (typeof critMin === "number") {
+      effectiveBaseDamage = Phaser.Math.Between(critMin, critMax ?? critMin);
+    }
+  }
 
   if (spell.id === "surcharge_instable" && isEryonCaster(caster)) {
     const before = getEryonChargeState(caster);
-    const { scaled, flat } = getSpellDamageComponents(caster, spell);
+    const { scaled, flat } = getSpellDamageComponents(caster, spell, effectiveBaseDamage, {
+      isCrit,
+    });
 
     let consumed = 0;
     if (before.element === "feu" && before.charges > 0) {
@@ -64,8 +86,17 @@ export function computeDamageForSpell(caster, spell) {
     }
 
     const mult = 1 + 0.1 * (consumed || 0);
-    return { damage: Math.round(scaled * mult) + flat, consumedCharges: consumed };
+    const total = Math.round(scaled * mult) + flat;
+    return {
+      damage: isCrit ? Math.ceil(total) : total,
+      consumedCharges: consumed,
+      isCrit,
+    };
   }
 
-  return { damage: computeSpellDamage(caster, spell), consumedCharges: 0 };
+  const res = computeSpellDamageWithCrit(caster, spell, {
+    forceCrit,
+    baseDamageOverride: effectiveBaseDamage,
+  });
+  return { damage: res.damage, consumedCharges: 0, isCrit: res.isCrit };
 }

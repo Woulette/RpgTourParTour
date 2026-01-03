@@ -7,6 +7,7 @@ import { addChatMessage } from "../../../chat/chat.js";
 import { showFloatingTextOverEntity } from "./floatingText.js";
 import { tickCaptureAttemptAtStartOfPlayerTurn } from "../summons/capture.js";
 import { unblockTile } from "../../../collision/collisionGrid.js";
+import { applyFixedResistanceToDamage } from "../spells/utils/damage.js";
 import {
   maybeSpawnRiftWave,
   maybeSpawnRiftWaveOnClear,
@@ -444,7 +445,12 @@ function applyStartOfTurnStatusEffects(scene, entity) {
     const rawDmg =
       min + Math.floor(Math.random() * (Math.max(0, safeMax - min) + 1));
 
-    const shielded = applyShieldToDamage(entity, rawDmg);
+    const reducedDamage = applyFixedResistanceToDamage(
+      rawDmg,
+      entity,
+      effect.element ?? null
+    );
+    const shielded = applyShieldToDamage(entity, reducedDamage);
     const dmg = Math.max(0, shielded.damage);
     showShieldAbsorbText(scene, entity, shielded.absorbed);
 

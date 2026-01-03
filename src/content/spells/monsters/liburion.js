@@ -10,6 +10,9 @@ export default {
     element: "feu",
     damageMin: 10,
     damageMax: 14,
+    critChanceBasePct: 5,
+    damageCritMin: 12,
+    damageCritMax: 17,
     castPattern: "line4",
     maxCastsPerTurn: 2,
     effects: [

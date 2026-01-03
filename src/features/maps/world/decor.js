@@ -37,9 +37,12 @@ export function spawnObjectLayerTrees(
       typeof getProp("offsetX") === "number" ? getProp("offsetX") : 0;
     const propOffsetY =
       typeof getProp("offsetY") === "number" ? getProp("offsetY") : 0;
+    const propDepthOffset =
+      typeof getProp("depthOffset") === "number" ? getProp("depthOffset") : null;
     const propOverPlayer = isTrue(getProp("overPlayer"));
     const propUnderPlayer =
       isTrue(getProp("underPlayer")) || isTrue(getProp("playerFront"));
+    const propForceYSort = isTrue(getProp("allowYSort")) || isTrue(getProp("ySort"));
     const isDecorLayer = String(layerName || "").toLowerCase().trim() === "decor";
     const isLarge =
       typeof obj.width === "number" &&
@@ -133,9 +136,18 @@ export function spawnObjectLayerTrees(
         : scene.add.sprite(posX, posY, textureKey, frame);
     sprite.setOrigin(0.5, 1);
     sprite.isOverPlayer = propOverPlayer;
+    sprite.sortOffsetY = propDepthOffset;
     // Par defaut, les "gros decors" (maisons/taverne) ne doivent pas cacher le joueur.
     // Si tu veux l'inverse sur un objet precis, mets `overPlayer=true` dans Tiled.
-    sprite.isUnderPlayer = propUnderPlayer || (isDecorLayer && isLarge && !propOverPlayer);
+    sprite.isUnderPlayer =
+      !propForceYSort && (propUnderPlayer || (isDecorLayer && isLarge && !propOverPlayer));
+    sprite.isYSort = propForceYSort;
+    sprite.sortOffsetY =
+      propDepthOffset !== null && propDepthOffset !== undefined
+        ? propDepthOffset
+        : propForceYSort && isDecorLayer && isLarge
+        ? -40
+        : 0;
     applyDepthRules(scene, sprite);
 
     if (scene.hudCamera) {
@@ -148,17 +160,22 @@ export function spawnObjectLayerTrees(
 
 function applyDepthRules(scene, sprite) {
   if (!sprite) return;
+  const sortY = sprite.y + (sprite.sortOffsetY || 0);
+  if (sprite.isYSort) {
+    sprite.setDepth(sortY);
+    return;
+  }
   if (sprite.isOverPlayer) {
     sprite.setDepth(100000);
     return;
   }
   if (sprite.isUnderPlayer) {
-    const playerDepth = scene?.player?.depth ?? sprite.y;
+    const playerDepth = scene?.player?.depth ?? sortY;
     // Force strictly below the player, even if spawned after the player
-    sprite.setDepth(Math.min(playerDepth, sprite.y) - 1);
+    sprite.setDepth(Math.min(playerDepth, sortY) - 1);
     return;
   }
-  sprite.setDepth(sprite.y);
+  sprite.setDepth(sortY);
 }
 
 export function refreshObjectLayerDepths(scene, storeName = "staticTrees") {

@@ -41,3 +41,20 @@ export function isUiBlockingOpen() {
 
   return false;
 }
+
+let uiBlockerInterval = null;
+
+export function mountUiInputBlocker() {
+  if (typeof document === "undefined" || uiBlockerInterval) return;
+  const blocker = document.getElementById("ui-input-blocker");
+  if (!blocker) return;
+
+  const update = () => {
+    const shouldBlock = isUiBlockingOpen();
+    document.body.classList.toggle("ui-blocking-open", shouldBlock);
+    blocker.setAttribute("aria-hidden", shouldBlock ? "false" : "true");
+  };
+
+  update();
+  uiBlockerInterval = window.setInterval(update, 100);
+}

@@ -26,7 +26,7 @@ export default {
   },
   spells: ["morsure", "bave_puante"],
   loot: [
-    { itemId: "peau_goush", min: 1, max: 1, dropRate: 0.3 },
+    { itemId: "peau_goush", min: 1, max: 1, dropRate: 0.4 },
   ],
   xpReward: 220,
   goldRewardMin: 18,

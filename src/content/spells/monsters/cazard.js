@@ -10,6 +10,9 @@ export default {
     element: "agilite",
     damageMin: 8,
     damageMax: 12,
+    critChanceBasePct: 5,
+    damageCritMin: 10,
+    damageCritMax: 14,
     maxCastsPerTurn: 2,
     effects: [
       { type: "damage", element: "agilite", min: 8, max: 12 },
@@ -27,6 +30,9 @@ export default {
     element: "agilite",
     damageMin: 10,
     damageMax: 14,
+    critChanceBasePct: 5,
+    damageCritMin: 12,
+    damageCritMax: 17,
     cooldownTurns: 2,
     effects: [
       { type: "damage", element: "agilite", min: 10, max: 14 },

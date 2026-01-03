@@ -143,3 +143,42 @@ export function showFloatingTextOverEntity(scene, entity, text, options = {}) {
   }
   return spawn();
 }
+
+export function flashCombatCrit(scene, options = {}) {
+  const cam = scene?.cameras?.main;
+  if (!cam || !scene?.add) return;
+
+  const now = Date.now();
+  const lastAt = typeof scene.__critFlashAt === "number" ? scene.__critFlashAt : 0;
+  const minGapMs = typeof options.minGapMs === "number" ? options.minGapMs : 120;
+  if (now - lastAt < minGapMs) return;
+  scene.__critFlashAt = now;
+
+  const duration = typeof options.duration === "number" ? options.duration : 140;
+  const alpha = typeof options.alpha === "number" ? options.alpha : 0.2;
+  const depth = typeof options.depth === "number" ? options.depth : 99999;
+  const width = scene.scale?.width ?? cam.width ?? 800;
+  const height = scene.scale?.height ?? cam.height ?? 600;
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  const overlay = scene.add.rectangle(centerX, centerY, width, height, 0x000000, alpha);
+  overlay.setOrigin(0.5, 0.5);
+  overlay.setScrollFactor(0, 0);
+  overlay.setDepth(depth);
+  if (scene.hudCamera) {
+    scene.hudCamera.ignore(overlay);
+  }
+
+  if (scene.tweens?.add) {
+    scene.tweens.add({
+      targets: overlay,
+      alpha: 0,
+      duration,
+      ease: "Quad.easeOut",
+      onComplete: () => overlay.destroy(),
+    });
+  } else {
+    scene.time?.delayedCall?.(duration, () => overlay.destroy());
+  }
+}

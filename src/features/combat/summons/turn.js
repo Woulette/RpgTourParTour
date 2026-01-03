@@ -1,6 +1,9 @@
 import { monsterSpells } from "../../../content/spells/monsters/index.js";
-import { computeSpellDamage } from "../spells/utils/damage.js";
-import { showFloatingTextOverEntity } from "../runtime/floatingText.js";
+import {
+  computeSpellDamageWithCrit,
+  applyFixedResistanceToDamage,
+} from "../spells/utils/damage.js";
+import { flashCombatCrit, showFloatingTextOverEntity } from "../runtime/floatingText.js";
 import { delay, moveMonsterAlongPath, findPathToReachAdjacentToTarget } from "../../../features/monsters/ai/aiUtils.js";
 import { getAliveCombatMonsters } from "../../../features/monsters/ai/aiUtils.js";
 import { getAliveSummons } from "./summon.js";
@@ -50,13 +53,37 @@ function applyDamageToEnemy(scene, summon, target, spell) {
   if (!scene?.combatState || !scene.combatState.enCours) return;
   if (!target?.stats) return;
 
-  const damage = Math.max(0, computeSpellDamage(summon, spell));
+  const damageResult = computeSpellDamageWithCrit(summon, spell);
+  const damage = Math.max(0, damageResult.damage ?? 0);
+  const finalDamage = applyFixedResistanceToDamage(
+    damage,
+    target,
+    spell?.element ?? null
+  );
   const currentHp = getHp(target);
-  const newHp = Math.max(0, currentHp - damage);
+  const newHp = Math.max(0, currentHp - finalDamage);
   target.stats.hp = newHp;
 
-  if (damage > 0) {
-    showFloatingTextOverEntity(scene, target, `-${damage}`, { color: "#ff4444" });
+  if (finalDamage > 0) {
+    const isCrit = damageResult.isCrit === true;
+    const floatText = `-${finalDamage}`;
+    const floatColor = isCrit ? "#ff1f2d" : "#fbbf24";
+    showFloatingTextOverEntity(scene, target, floatText, {
+      color: floatColor,
+      sequenceStepMs: 0,
+    });
+    if (isCrit) {
+      flashCombatCrit(scene);
+      showFloatingTextOverEntity(scene, target, "!", {
+        color: floatColor,
+        fontSize: 22,
+        fontStyle: "bold",
+        strokeThickness: 4,
+        xOffset: 30,
+        yOffset: 73,
+        sequenceStepMs: 0,
+      });
+    }
   }
 
   if (scene?.combatState?.joueur) {
@@ -67,7 +94,7 @@ function applyDamageToEnemy(scene, summon, target, spell) {
         kind: "combat",
         channel: "global",
         author: "Invocation",
-        text: `${spellLabel} : ${targetName} -${damage} PV`,
+        text: `${spellLabel} : ${targetName} -${finalDamage} PV`,
         element: spell?.element ?? null,
       },
       { player: scene.combatState.joueur }

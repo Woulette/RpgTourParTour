@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 8,
     damageMax: 12,
+    critChanceBasePct: 5,
+    damageCritMin: 10,
+    damageCritMax: 14,
     effects: [
       { type: "damage", element: "terre", min: 8, max: 12 },
     ],
@@ -28,6 +31,9 @@ export default {
     damageOnHit: false,
     damageMin: 0,
     damageMax: 0,
+    critChanceBasePct: 5,
+    damageCritMin: 0,
+    damageCritMax: 0,
     cooldownTurns: 3,
     effects: [
       { type: "status", useSpellStatus: true },

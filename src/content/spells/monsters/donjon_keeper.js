@@ -11,6 +11,9 @@ export default {
     damageOnHit: false,
     damageMin: 0,
     damageMax: 0,
+    critChanceBasePct: 5,
+    damageCritMin: 0,
+    damageCritMax: 0,
     effects: [
       { type: "pull", toMelee: true },
     ],
@@ -28,6 +31,9 @@ export default {
     element: "terre",
     damageMin: 12,
     damageMax: 15,
+    critChanceBasePct: 5,
+    damageCritMin: 14,
+    damageCritMax: 18,
     effects: [
       { type: "damage", element: "terre", min: 12, max: 15 },
     ],

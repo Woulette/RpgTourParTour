@@ -1,4 +1,5 @@
 import { spells } from "../../../config/spells.js";
+import { getSpellCritChancePct } from "../../combat/spells/utils/damage.js";
 import { monsters as monsterDefs } from "../../../content/monsters/index.js";
 import { removeItem } from "../../inventory/runtime/inventoryCore.js";
 import {
@@ -153,6 +154,10 @@ function setupSpellDetail(
   const requiredLevel = spell.requiredLevel ?? 1;
   const dmgMin = spell.damageMin ?? 0;
   const dmgMax = spell.damageMax ?? dmgMin;
+  const critMin =
+    typeof spell.damageCritMin === "number" ? spell.damageCritMin : dmgMin;
+  const critMax =
+    typeof spell.damageCritMax === "number" ? spell.damageCritMax : critMin;
   const rangeMin = spell.rangeMin ?? 0;
   const rangeMax = spell.rangeMax ?? rangeMin;
   const paCost = spell.paCost ?? 0;
@@ -178,10 +183,14 @@ function setupSpellDetail(
   };
 
   const rangeModLabel = spell.rangeModifiable === false ? "fixe" : "modifiable";
+  const critChancePct = Math.round(getSpellCritChancePct(player, spell));
+
   const statRows = [
     { key: "level", label: "Niveau requis", value: `${requiredLevel}` },
     { key: "pa", label: "PA", value: `${paCost}` },
     { key: "damage", label: "Degats", value: `${dmgMin} - ${dmgMax}` },
+    { key: "critDamage", label: "Degats crit", value: `${critMin} - ${critMax}` },
+    { key: "critChance", label: "Chance crit", value: `${critChancePct}%` },
     {
       key: "range",
       label: "Portee",
@@ -214,6 +223,17 @@ function setupSpellDetail(
             <strong>
               <span class="spell-detail-damage-base">${row.value}</span>
               <span class="spell-detail-damage-preview"></span>
+            </strong>
+          </div>
+        `;
+      }
+      if (row.key === "critDamage") {
+        return `
+          <div class="spell-detail-row ${row.className || ""}">
+            <span>${row.label}</span>
+            <strong>
+              <span class="spell-detail-crit-base">${row.value}</span>
+              <span class="spell-detail-crit-preview"></span>
             </strong>
           </div>
         `;
@@ -263,6 +283,9 @@ function setupSpellDetail(
   const damagePreviewEl = spellsDetailEl.querySelector(
     ".spell-detail-damage-preview"
   );
+  const critPreviewEl = spellsDetailEl.querySelector(
+    ".spell-detail-crit-preview"
+  );
   const scrollSlots = spellsDetailEl.querySelectorAll(
     ".spell-detail-scroll"
   );
@@ -281,35 +304,48 @@ function setupSpellDetail(
     const baseEl = spellsDetailEl.querySelector(
       ".spell-detail-damage-base"
     );
-    if (!baseEl || !damagePreviewEl) return;
+    const critEl = spellsDetailEl.querySelector(".spell-detail-crit-base");
+    if (!baseEl || !damagePreviewEl || !critEl || !critPreviewEl) return;
     const equippedTier = getEquippedTier();
     if (!equippedTier) {
       baseEl.textContent = `${dmgMin} - ${dmgMax}`;
+      critEl.textContent = `${critMin} - ${critMax}`;
       damagePreviewEl.textContent = "";
+      critPreviewEl.textContent = "";
       return;
     }
     const mult = 1 + 0.1 * equippedTier;
     if (dmgMax <= 0) {
       baseEl.textContent = "0 - 0";
+      critEl.textContent = "0 - 0";
       damagePreviewEl.textContent = "";
+      critPreviewEl.textContent = "";
       return;
     }
     const nextMin = Math.ceil(dmgMin * mult);
     const nextMax = Math.ceil(dmgMax * mult);
     baseEl.textContent = `${nextMin} - ${nextMax}`;
     damagePreviewEl.textContent = "";
+    const nextCritMin = Math.ceil(critMin * mult);
+    const nextCritMax = Math.ceil(critMax * mult);
+    critEl.textContent = `${nextCritMin} - ${nextCritMax}`;
+    critPreviewEl.textContent = "";
   };
 
   const updatePreview = (tier) => {
-    if (!damagePreviewEl) return;
+    if (!damagePreviewEl || !critPreviewEl) return;
     const mult = 1 + 0.1 * tier;
     if (dmgMax <= 0) {
       damagePreviewEl.textContent = " (pas de degats)";
+      critPreviewEl.textContent = " (pas de degats)";
       return;
     }
     const nextMin = Math.ceil(dmgMin * mult);
     const nextMax = Math.ceil(dmgMax * mult);
     damagePreviewEl.textContent = ` -> ${nextMin} - ${nextMax}`;
+    const nextCritMin = Math.ceil(critMin * mult);
+    const nextCritMax = Math.ceil(critMax * mult);
+    critPreviewEl.textContent = ` -> ${nextCritMin} - ${nextCritMax}`;
   };
 
   const updateSlotVisuals = () => {

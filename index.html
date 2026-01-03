@@ -94,6 +94,8 @@
     MENU
   </button>
 
+  <div id="ui-input-blocker" aria-hidden="true"></div>
+
   <div id="quest-tracker" class="quest-tracker" aria-label="Suivi des quetes">
     <button
       id="quest-tracker-toggle"
@@ -476,8 +478,13 @@
             </li>
             <li class="stat-row">
               <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Coups critiques</span>
+              <span class="label">Chance crit</span>
               <span class="value" id="stat-crit">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Dommages crit</span>
+              <span class="value" id="stat-crit-dmg">0</span>
             </li>
           </ul>
         </section>
@@ -496,9 +503,24 @@
               <span class="value" id="stat-vitalite">0</span>
             </li>
             <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Resistances</span>
-              <span class="value" id="stat-resist">0</span>
+              <span class="stat-badge stat-badge-terre" title="Terre"></span>
+              <span class="label">Resi fixe Terre</span>
+              <span class="value" id="stat-resist-fixe-terre">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-feu" title="Feu"></span>
+              <span class="label">Resi fixe Feu</span>
+              <span class="value" id="stat-resist-fixe-feu">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-air" title="Air"></span>
+              <span class="label">Resi fixe Air</span>
+              <span class="value" id="stat-resist-fixe-air">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-eau" title="Eau"></span>
+              <span class="label">Resi fixe Eau</span>
+              <span class="value" id="stat-resist-fixe-eau">0</span>
             </li>
           </ul>
         </section>
@@ -520,6 +542,21 @@
               <span class="stat-badge stat-badge-sagesse" title="Sagesse"></span>
               <span class="label">Sagesse</span>
               <span class="value" id="stat-sagesse">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Prospection</span>
+              <span class="value" id="stat-prospection">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Pods</span>
+              <span class="value" id="stat-pods">0</span>
+            </li>
+            <li class="stat-row">
+              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
+              <span class="label">Soins</span>
+              <span class="value" id="stat-soins">0</span>
             </li>
             <li class="stat-row">
               <span class="stat-badge stat-badge-neutre" title="Neutre"></span>

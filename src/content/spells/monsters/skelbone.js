@@ -10,6 +10,9 @@ export default {
     element: "air",
     damageMin: 10,
     damageMax: 14,
+    critChanceBasePct: 5,
+    damageCritMin: 12,
+    damageCritMax: 17,
     effects: [
       { type: "damage", element: "air", min: 10, max: 14 },
     ],

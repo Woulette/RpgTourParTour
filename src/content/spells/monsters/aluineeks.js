@@ -10,6 +10,9 @@ export default {
     element: "terre",
     damageMin: 12,
     damageMax: 15,
+    critChanceBasePct: 5,
+    damageCritMin: 14,
+    damageCritMax: 18,
     effects: [
       { type: "damage", element: "terre", min: 12, max: 15 },
     ],

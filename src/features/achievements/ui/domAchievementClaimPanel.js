@@ -94,11 +94,10 @@ function renderClaimList(listEl, claimAllBtn, player) {
   listEl.innerHTML = "";
 
   if (claimables.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "claim-empty";
-    empty.textContent = "Aucun succes a reclamer.";
-    listEl.appendChild(empty);
     if (claimAllBtn) claimAllBtn.disabled = true;
+    if (document.body.classList.contains("hud-claim-open")) {
+      closePanel();
+    }
     return;
   }
 

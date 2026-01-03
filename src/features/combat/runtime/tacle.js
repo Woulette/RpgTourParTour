@@ -62,6 +62,22 @@ function getAdjacentEnemies(scene, mover) {
   return targets;
 }
 
+function hasAdjacentEnemy(scene, mover) {
+  const moverTile = getEntityTile(mover);
+  if (!moverTile) return false;
+  const enemies = getAdjacentEnemies(scene, mover);
+  for (const enemy of enemies) {
+    if (!enemy || !enemy.stats) continue;
+    const hp = typeof enemy.stats.hp === "number" ? enemy.stats.hp : enemy.stats.hpMax ?? 0;
+    if (hp <= 0) continue;
+    const t = getEntityTile(enemy);
+    if (!t) continue;
+    const dist = Math.abs(t.x - moverTile.x) + Math.abs(t.y - moverTile.y);
+    if (dist === 1) return true;
+  }
+  return false;
+}
+
 function getTotalAdjacentTacle(scene, mover) {
   const moverTile = getEntityTile(mover);
   if (!moverTile) return 0;
@@ -83,8 +99,13 @@ function getTotalAdjacentTacle(scene, mover) {
   return total;
 }
 
-function computeTacleMalusPercent(tacle, fuite) {
-  if (tacle <= 0) return 0;
+function computeTacleMalusPercent(tacle, fuite, hasAdjacency = false) {
+  if (tacle <= 0) {
+    if (!hasAdjacency) return 0;
+    return fuite >= 2 ? 0 : 0.25;
+  }
+  if (fuite <= 0 && tacle <= 1) return 0.25;
+  if (fuite <= 0 && tacle <= 2) return 0.5;
   if (fuite >= tacle * 1.5) return 0;
 
   if (fuite >= tacle) {
@@ -111,12 +132,10 @@ export function getTaclePenaltyPreview(scene, mover) {
   }
 
   const tacle = getTotalAdjacentTacle(scene, mover);
-  if (tacle <= 0) {
-    return { paLoss: 0, pmLoss: 0, malusPct: 0 };
-  }
+  const hasAdjacency = hasAdjacentEnemy(scene, mover);
 
   const fuite = getDerivedFuite(mover.stats);
-  const malusPct = computeTacleMalusPercent(tacle, fuite);
+  const malusPct = computeTacleMalusPercent(tacle, fuite, hasAdjacency);
   if (malusPct <= 0) {
     return { paLoss: 0, pmLoss: 0, malusPct: 0 };
   }
@@ -134,12 +153,10 @@ export function applyTaclePenalty(scene, mover) {
   }
 
   const tacle = getTotalAdjacentTacle(scene, mover);
-  if (tacle <= 0) {
-    return { paLoss: 0, pmLoss: 0, malusPct: 0 };
-  }
+  const hasAdjacency = hasAdjacentEnemy(scene, mover);
 
   const fuite = getDerivedFuite(mover.stats);
-  const malusPct = computeTacleMalusPercent(tacle, fuite);
+  const malusPct = computeTacleMalusPercent(tacle, fuite, hasAdjacency);
   if (malusPct <= 0) {
     return { paLoss: 0, pmLoss: 0, malusPct: 0 };
   }

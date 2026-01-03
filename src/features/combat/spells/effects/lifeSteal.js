@@ -8,10 +8,10 @@ export function applyLifeStealEffect(ctx, effect) {
 
   const last = ctx.lastDamage || null;
   const amount =
-    typeof last?.raw === "number"
-      ? last.raw
-      : typeof last?.final === "number"
-        ? last.final
+    typeof last?.final === "number"
+      ? last.final
+      : typeof last?.raw === "number"
+        ? last.raw
         : 0;
   if (amount <= 0) return false;
 

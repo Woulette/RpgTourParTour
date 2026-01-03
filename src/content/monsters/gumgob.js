@@ -47,7 +47,7 @@ export default {
   },
   spells: ["coup_de_massue", "jet_de_caillou"],
   loot: [
-    { itemId: "peau_gobelin", min: 1, max: 1, dropRate: 0.3 },
+    { itemId: "peau_gobelin", min: 1, max: 1, dropRate: 0.4 },
   ],
   xpReward: 120,
   goldRewardMin: 15,

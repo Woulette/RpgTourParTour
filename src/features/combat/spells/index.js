@@ -6,6 +6,10 @@ export {
   canPreviewSpellAtTile,
   isSpellInRangeFromPosition,
 } from "./core/canCast.js";
-export { computeSpellDamage, getSpellDamageRange } from "./utils/damage.js";
+export {
+  computeSpellDamage,
+  getSpellDamageRange,
+  getSpellCritDamageRange,
+} from "./utils/damage.js";
 export { clearSpellRangePreview, updateSpellRangePreview } from "./core/preview.js";
 export { castSpellAtTile, tryCastActiveSpellAtTile } from "./core/cast.js";

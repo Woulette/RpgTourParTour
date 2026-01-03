@@ -6,6 +6,7 @@
 import { classes } from "../../config/classes.js";
 import { getXpTotalForLevel } from "../../core/level.js";
 import { getPlayer, on as onStoreEvent } from "../../state/store.js";
+import { mountUiInputBlocker } from "./uiBlock.js";
 
 let uiInputGuardMounted = false;
 
@@ -47,6 +48,7 @@ export function initDomHud(player) {
   const getActivePlayer = () => getPlayer() || hudPlayer;
 
   mountUiInputGuard();
+  mountUiInputBlocker();
 
   // Aligne les boutons HUD dans le dock (layout unifie)
   mountHudDockMenu();
@@ -182,6 +184,8 @@ function mettreAJourStatsPanel(player) {
     const el = byId(id);
     if (el) el.textContent = value;
   };
+  const toNumberOrZero = (value) =>
+    typeof value === "number" && Number.isFinite(value) ? value : 0;
 
   const classDef = classes[player.classId] || classes.archer;
   const classLabel = classDef?.label || player.classId || "-";
@@ -235,8 +239,15 @@ function mettreAJourStatsPanel(player) {
   setText("stat-dmg-eau", stats.dommageEau ?? 0);
   setText("stat-dmg-air", stats.dommageAir ?? 0);
   setText("stat-dmg-terre", stats.dommageTerre ?? 0);
-  setText("stat-crit", stats.critique ?? 0);
-  setText("stat-resist", stats.resistance ?? 0);
+  setText("stat-crit", `${toNumberOrZero(stats.critChancePct)}%`);
+  setText("stat-crit-dmg", stats.dommagesCrit ?? 0);
+  setText("stat-resist-fixe-terre", stats.resistanceFixeTerre ?? 0);
+  setText("stat-resist-fixe-feu", stats.resistanceFixeFeu ?? 0);
+  setText("stat-resist-fixe-air", stats.resistanceFixeAir ?? 0);
+  setText("stat-resist-fixe-eau", stats.resistanceFixeEau ?? 0);
+  setText("stat-prospection", stats.prospection ?? 0);
+  setText("stat-pods", stats.pods ?? 0);
+  setText("stat-soins", stats.soins ?? 0);
 
   // Points de caracteristiques a repartir
   setText("stat-points-libres", level.pointsCaracLibres ?? 0);

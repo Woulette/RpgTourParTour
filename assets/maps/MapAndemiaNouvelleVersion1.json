@@ -272,6 +272,16 @@
                          "value":0
                         }, 
                         {
+                         "name":"allowYSort",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"depthOffset",
+                         "type":"int",
+                         "value":-40
+                        }, 
+                        {
                          "name":"tileX",
                          "type":"int",
                          "value":19
