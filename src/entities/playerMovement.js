@@ -344,8 +344,16 @@ function createCalibratedWorldToTile(map, groundLayer) {
     // En combat : tant que ce n'est pas au tour du joueur, aucune action (ni dplacement, ni cast).
     // Mais la slection/prvisualisation du sort reste possible via le HUD / touches.
     const stateForTurn = scene.combatState;
-    if (stateForTurn && stateForTurn.enCours && stateForTurn.tour !== "joueur") {
-      return;
+    if (stateForTurn && stateForTurn.enCours) {
+      if (stateForTurn.tour !== "joueur") {
+        return;
+      }
+      if (
+        Number.isInteger(stateForTurn.activePlayerId) &&
+        getNetPlayerId() !== stateForTurn.activePlayerId
+      ) {
+        return;
+      }
     }
 
     // En combat : pas d'action pendant un dcplacement (sinon on peut dcpasser PM/PA).
@@ -653,15 +661,31 @@ function createCalibratedWorldToTile(map, groundLayer) {
           }
         }
       }
-      player.__lanMoveSeq = (player.__lanMoveSeq || 0) + 1;
       const safePath = path.map((step) => ({ x: step.x, y: step.y }));
-      netClient.sendCmd("CmdMove", {
-        playerId: netPlayerId,
-        seq: player.__lanMoveSeq,
-        path: safePath,
-        toX: tileX,
-        toY: tileY,
-      });
+      const inCombatMove =
+        (state && state.enCours) || (scene.prepState && scene.prepState.actif);
+      if (inCombatMove) {
+        player.__lanCombatMoveSeq = (player.__lanCombatMoveSeq || 0) + 1;
+        netClient.sendCmd("CmdMoveCombat", {
+          playerId: netPlayerId,
+          combatId: scene.__lanCombatId ?? null,
+          mapId: scene.currentMapKey || scene.currentMapDef?.key || null,
+          seq: player.__lanCombatMoveSeq,
+          path: safePath,
+          toX: tileX,
+          toY: tileY,
+          moveCost,
+        });
+      } else {
+        player.__lanMoveSeq = (player.__lanMoveSeq || 0) + 1;
+        netClient.sendCmd("CmdMove", {
+          playerId: netPlayerId,
+          seq: player.__lanMoveSeq,
+          path: safePath,
+          toX: tileX,
+          toY: tileY,
+        });
+      }
       return;
     }
 
@@ -744,6 +768,19 @@ function movePlayerAlongPathWithCombat(
 export function movePlayerAlongPathNetwork(scene, player, map, groundLayer, path) {
   if (!path || path.length === 0) return;
   movePlayerAlongPathWithCombat(scene, player, map, groundLayer, path, 0);
+}
+
+export function movePlayerAlongPathNetworkCombat(
+  scene,
+  player,
+  map,
+  groundLayer,
+  path,
+  moveCost
+) {
+  if (!path || path.length === 0) return;
+  const cost = Number.isFinite(moveCost) ? moveCost : 0;
+  movePlayerAlongPathWithCombat(scene, player, map, groundLayer, path, cost);
 }
 
 // Si une cible de combat est en attente et que le joueur est sur sa case

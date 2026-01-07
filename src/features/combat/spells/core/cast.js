@@ -46,6 +46,7 @@ import {
   findAliveSummonAtTile,
 } from "../../summons/summon.js";
 import { registerNoCastMeleeViolation } from "../../../challenges/runtime/index.js";
+import { getNetClient, getNetPlayerId } from "../../../../app/session.js";
 
 registerDefaultEffects();
 
@@ -489,6 +490,33 @@ export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groun
   const spell = getActiveSpell(player);
   if (!spell) return false;
   const state = scene?.combatState;
+  const sendLanCast = () => {
+    const netClient = getNetClient();
+    const netPlayerId = getNetPlayerId();
+    if (
+      netClient &&
+      netPlayerId &&
+      state &&
+      state.enCours &&
+      player === state.joueur &&
+      scene.__lanCombatId
+    ) {
+      if (!canCastSpellAtTile(scene, player, spell, tileX, tileY, map)) {
+        return false;
+      }
+      netClient.sendCmd("CmdCastSpell", {
+        playerId: netPlayerId,
+        combatId: scene.__lanCombatId,
+        spellId: spell.id,
+        targetX: tileX,
+        targetY: tileY,
+      });
+      clearActiveSpell(player);
+      clearSpellRangePreview(scene);
+      return true;
+    }
+    return false;
+  };
   if (state && player === state.joueur) {
     const nowMs = scene?.time?.now ?? Date.now();
     const lockUntil = state.castLockUntil ?? 0;
@@ -531,15 +559,17 @@ export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groun
           return;
         }
 
-        castSpellAtTile(
-          scene,
-          pending.caster,
-          pending.spell,
-          pending.tileX,
-          pending.tileY,
-          pending.map,
-          pending.groundLayer
-        );
+        if (!sendLanCast()) {
+          castSpellAtTile(
+            scene,
+            pending.caster,
+            pending.spell,
+            pending.tileX,
+            pending.tileY,
+            pending.map,
+            pending.groundLayer
+          );
+        }
 
         state.pendingCastTimer = null;
         if (Array.isArray(state.pendingCasts) && state.pendingCasts.length > 0) {
@@ -568,6 +598,9 @@ export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groun
       return false;
     }
   }
+
+  if (sendLanCast()) return true;
+
   return castSpellAtTile(scene, player, spell, tileX, tileY, map, groundLayer);
 }
 

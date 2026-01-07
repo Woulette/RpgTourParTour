@@ -24,12 +24,27 @@ import { restoreWorldMonsterFromSnapshot } from "./snapshots.js";
 import { joinPartsWrapped } from "./utils.js";
 import { setHarvestablesVisible } from "../../../maps/world/harvestables.js";
 import { clearCombatAuras } from "../auras.js";
+import { getNetClient, getNetPlayerId } from "../../../../app/session.js";
 
 export function endCombat(scene) {
   if (!scene.combatState) return;
 
   const state = scene.combatState;
   state.enCours = false;
+
+  const client = getNetClient();
+  const playerId = getNetPlayerId();
+  const combatId = scene.__lanCombatId;
+  if (client && playerId && Number.isInteger(combatId)) {
+    const mapId = scene.currentMapKey || scene.currentMapDef?.key || null;
+    client.sendCmd("CmdCombatEnd", {
+      playerId,
+      combatId,
+      mapId,
+    });
+  }
+  scene.__lanCombatId = null;
+  scene.__lanCombatStartSent = false;
 
   clearAllSummons(scene);
   clearAllCombatAllies(scene);

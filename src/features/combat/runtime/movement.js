@@ -1,3 +1,4 @@
+import { getNetPlayerId } from "../../../app/session.js";
 import { getTaclePenaltyPreview } from "./tacle.js";
 
 // Logique de déplacement en combat et preview du chemin.
@@ -12,6 +13,12 @@ export function limitPathForCombat(scene, player, path) {
 
   // Pour l'instant on ne gère que le tour du joueur
   if (state.tour !== "joueur") {
+    return null;
+  }
+  if (
+    Number.isInteger(state.activePlayerId) &&
+    getNetPlayerId() !== state.activePlayerId
+  ) {
     return null;
   }
 
@@ -72,6 +79,12 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
 
   const state = scene.combatState;
   if (!state || !state.enCours || state.tour !== "joueur") {
+    return;
+  }
+  if (
+    Number.isInteger(state.activePlayerId) &&
+    getNetPlayerId() !== state.activePlayerId
+  ) {
     return;
   }
 

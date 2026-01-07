@@ -10,6 +10,7 @@ import {
   findAliveCombatAllyAtTile,
   findAliveSummonAtTile,
 } from "../../summons/summon.js";
+import { getNetPlayerId } from "../../../../app/session.js";
 
 let nextSpellTargetKey = 1;
 
@@ -63,6 +64,13 @@ export function canCastSpell(scene, caster, spell) {
   const isPlayer = caster === state.joueur;
   const expectedTour = isPlayer ? "joueur" : "monstre";
   if (state.tour !== expectedTour) return false;
+  if (
+    isPlayer &&
+    Number.isInteger(state.activePlayerId) &&
+    getNetPlayerId() !== state.activePlayerId
+  ) {
+    return false;
+  }
 
   // Cooldown (joueur ou monstre)
   const cooldowns = caster.spellCooldowns || {};

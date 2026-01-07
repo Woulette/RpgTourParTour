@@ -115,6 +115,10 @@ export function preloadAssets(scene) {
   scene.load.image("puits", "assets/tileset/Puits.png");
   scene.load.image("Poubelle", "assets/Sprite/utilitaire/Poubelle.png");
   scene.load.image(
+    "combat_join",
+    "assets/Sprite/Utilitaire/PortailDeCombatEnGroupe.png"
+  );
+  scene.load.image(
     "rift_dim_1",
     "assets/Sprite/PortailDimentionelle/FailledimentionelleOuvert1.png"
   );

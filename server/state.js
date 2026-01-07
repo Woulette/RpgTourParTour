@@ -5,6 +5,7 @@ function createInitialState() {
     mapMonsters: {},
     mapMeta: {},
     mapResources: {},
+    combats: {},
     combat: {
       inCombat: false,
       turnIndex: 0,
@@ -22,7 +23,10 @@ function createPlayer(id) {
     pa: 6,
     pm: 3,
     lastMoveSeq: 0,
+    lastCombatMoveSeq: 0,
     mapId: null,
+    inCombat: false,
+    combatId: null,
   };
 }
 

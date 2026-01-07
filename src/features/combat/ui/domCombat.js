@@ -12,6 +12,7 @@ import { getActiveSpell } from "../spells/core/activeSpell.js";
 import { tryCastActiveSpellAtTile } from "../spells/core/cast.js";
 import { updateSpellRangePreview, clearSpellRangePreview } from "../spells/core/preview.js";
 import { initDomCombatChallenge } from "./domCombatChallenge.js";
+import { getNetClient, getNetPlayerId } from "../../../app/session.js";
 
 export function initDomCombat(scene) {
   const endTurnBtn = document.getElementById("combat-end-turn-button");
@@ -64,6 +65,9 @@ export function initDomCombat(scene) {
 
   const getActorName = (actor) => {
     if (!actor) return "-";
+    if (actor?.entity?.isCombatAlly) {
+      return actor.entity.displayName || actor.entity.label || "Allie";
+    }
     if (actor.kind === "joueur") return "Joueur";
     if (actor.kind === "invocation") {
       const id = actor.entity?.monsterId || "";
@@ -323,12 +327,14 @@ export function initDomCombat(scene) {
       el.setAttribute("role", "listitem");
       el.className = "combat-turn-actor";
 
-      if (idx === renderActiveIndex) el.className += " is-active";
-      if (!isActorAlive(actor)) el.className += " is-dead";
-      if (actor.kind === "joueur") el.className += " is-player";
-      else if (actor.kind === "invocation") el.className += " is-summon";
-      else if (actor.entity && actor.entity.isCombatAlly) el.className += " is-ally";
-      else el.className += " is-monster";
+    if (idx === renderActiveIndex) el.className += " is-active";
+    if (!isActorAlive(actor)) el.className += " is-dead";
+    if (actor.kind === "joueur") el.className += " is-player";
+    if (actor.kind === "invocation") el.className += " is-summon";
+    if (actor.entity && actor.entity.isCombatAlly) el.className += " is-ally";
+    if (!actor.entity?.isCombatAlly && actor.kind !== "joueur" && actor.kind !== "invocation") {
+      el.className += " is-monster";
+    }
 
       el.title = getActorName(actor);
 
@@ -659,12 +665,27 @@ export function initDomCombat(scene) {
     if (scene.combatState.tour !== "joueur") {
       return;
     }
+    if (
+      Number.isInteger(scene.combatState.activePlayerId) &&
+      getNetPlayerId() !== scene.combatState.activePlayerId
+    ) {
+      return;
+    }
 
-    // Passe au prochain acteur dans l'ordre d'initiative
+    const netClient = getNetClient();
+    const netPlayerId = getNetPlayerId();
+    if (netClient && netPlayerId && scene.__lanCombatId) {
+      netClient.sendCmd("CmdEndTurnCombat", {
+        playerId: netPlayerId,
+        combatId: scene.__lanCombatId,
+        actorType: "player",
+      });
+      return;
+    }
+
+    // Solo (ou sans LAN) : on passe le tour localement.
     const newTurn = passerTour(scene);
     if (!newTurn) return;
-
-    // Si c'est un monstre qui joue ensuite, on lance son tour.
     if (newTurn === "monstre") {
       runSummonTurn(scene, () => runMonsterTurn(scene));
     }
@@ -676,6 +697,16 @@ export function initDomCombat(scene) {
       event.stopPropagation();
 
       if (!scene.prepState || !scene.prepState.actif) {
+        return;
+      }
+
+      const netClient = getNetClient();
+      const netPlayerId = getNetPlayerId();
+      if (netClient && netPlayerId && scene.__lanCombatId) {
+        netClient.sendCmd("CmdCombatReady", {
+          playerId: netPlayerId,
+          combatId: scene.__lanCombatId,
+        });
         return;
       }
 

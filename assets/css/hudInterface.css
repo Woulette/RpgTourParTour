@@ -292,6 +292,54 @@
   background: rgba(0, 0, 0, 0.20);
 }
 
+#hud-combat-watch {
+  display: none;
+  position: relative;
+  color: #ffe9b5;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-color: rgba(255, 180, 120, 0.6);
+  background: rgba(90, 35, 25, 0.7);
+  min-width: 54px;
+  min-height: 42px;
+}
+
+#hud-combat-watch::before {
+  display: none;
+}
+
+body.hud-combat-watch-available #hud-combat-watch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.hud-combat-watch-open #hud-combat-watch {
+  border-color: rgba(255, 220, 160, 0.95);
+  box-shadow:
+    0 0 10px rgba(255, 200, 120, 0.35),
+    0 0 0 1px rgba(255, 200, 120, 0.45);
+}
+
+#hud-combat-watch .hud-combat-count {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(255, 120, 80, 0.9);
+  color: #0b0b0b;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 16px;
+  letter-spacing: 0;
+  text-align: center;
+  pointer-events: none;
+}
+
 #hud-dock #hud-spell-container {
   position: relative;
   left: auto;

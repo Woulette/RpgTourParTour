@@ -79,6 +79,9 @@ export function startCombat(scene, player, monster) {
   }
 
   scene.combatState = createCombatState(player, monster);
+  if (Number.isInteger(scene.__lanCombatId)) {
+    scene.combatState.combatId = scene.__lanCombatId;
+  }
   scene.combatState.worldMonsterSnapshot = snapshotMonsterForWorld(scene, monster);
   setHarvestablesVisible(scene, false);
 

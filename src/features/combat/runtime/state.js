@@ -86,20 +86,45 @@ export function buildTurnOrder(scene) {
   const playerActors = [];
   const monsterActors = [];
 
+  const getActorKey = (actor) => {
+    const ent = actor?.entity;
+    if (!ent) return "z:0";
+    if (actor.kind === "joueur") {
+      const id =
+        Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : 0;
+      return `p:${id}`;
+    }
+    if (ent.isCombatAlly) {
+      const id =
+        Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : 0;
+      return `a:${id}`;
+    }
+    if (Number.isInteger(ent.entityId)) return `m:${ent.entityId}`;
+    if (typeof ent.monsterId === "string") return `m:${ent.monsterId}`;
+    return "m:0";
+  };
+
   if (player) {
     playerActors.push({ kind: "joueur", entity: player });
   }
   allies.forEach((ally) => {
-    playerActors.push({ kind: "monstre", entity: ally });
+    playerActors.push({ kind: "joueur", entity: ally });
   });
   monsters.forEach((m) => {
     monsterActors.push({ kind: "monstre", entity: m });
   });
 
   const getInit = (actor) => actor.entity?.stats?.initiative ?? 0;
+  const compareActors = (a, b) => {
+    const initDiff = getInit(b) - getInit(a);
+    if (initDiff !== 0) return initDiff;
+    const keyA = getActorKey(a);
+    const keyB = getActorKey(b);
+    return keyA.localeCompare(keyB);
+  };
 
-  playerActors.sort((a, b) => getInit(b) - getInit(a));
-  monsterActors.sort((a, b) => getInit(b) - getInit(a));
+  playerActors.sort(compareActors);
+  monsterActors.sort(compareActors);
 
   if (!playerActors.length && !monsterActors.length) {
     state.actors = null;
@@ -113,7 +138,9 @@ export function buildTurnOrder(scene) {
     const mInit = getInit(monsterActors[0]);
     if (mInit > pInit) firstSide = "monstre";
     else if (mInit === pInit) {
-      firstSide = Math.random() < 0.5 ? "joueur" : "monstre";
+      const combatSeed =
+        Number.isInteger(state.combatId) ? state.combatId : 0;
+      firstSide = combatSeed % 2 === 0 ? "joueur" : "monstre";
     }
   } else if (!playerActors.length) {
     firstSide = "monstre";

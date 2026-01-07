@@ -10,6 +10,7 @@ import { cleanupCombatChallenge, initPrepChallenge } from "../../challenges/runt
 import { getQuestDef, getQuestState, getCurrentQuestStage } from "../../quests/index.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 import { setHarvestablesVisible } from "../../maps/world/harvestables.js";
+import { getNetClient, getNetPlayerId } from "../../../app/session.js";
 
 // Calcule une liste de tuiles e partir d'une origine et d'une liste d'offsets.
 // Utilise pour les cases joueurs et ennemies.
@@ -91,10 +92,37 @@ function orientPlayerTowardMonsters(scene, player, combatMonsters, map, groundLa
   }
 }
 
+function sendLanCombatStart(scene, monster) {
+  const client = getNetClient();
+  if (!client || !scene) return;
+  if (scene.__lanCombatStartSent) return;
+  const playerId = getNetPlayerId();
+  if (!playerId) return;
+  const mapId = scene.currentMapKey || scene.currentMapDef?.key || null;
+  if (!mapId) return;
+  const mobEntityIds = [];
+  if (monster && Number.isInteger(monster.entityId)) {
+    mobEntityIds.push(monster.entityId);
+  }
+  scene.__lanCombatStartSent = true;
+  client.sendCmd("CmdCombatStart", {
+    playerId,
+    mapId,
+    participantIds: [playerId],
+    mobEntityIds,
+  });
+}
+
 // Lance la phase de preparation (placement) avant le combat.
 export function startPrep(scene, player, monster, map, groundLayer, options = {}) {
   // Nettoie un ancien indicateur de challenge (si on relance une preparation).
   cleanupCombatChallenge(scene);
+
+  const netClient = getNetClient();
+  sendLanCombatStart(scene, monster);
+  if (netClient && options.allowLanLocalStart !== true) {
+    return;
+  }
 
   if (
     !monster ||
@@ -229,7 +257,12 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     Array.isArray(anchorsForMap) &&
     anchorsForMap.length > 0
   ) {
-    const idx = Math.floor(Math.random() * anchorsForMap.length);
+    const combatId =
+      typeof scene?.__lanCombatId === "number" ? scene.__lanCombatId : null;
+    const idx =
+      combatId !== null
+        ? Math.abs(combatId) % anchorsForMap.length
+        : Math.floor(Math.random() * anchorsForMap.length);
     const anchor = anchorsForMap[idx];
     if (anchor && anchor.playerOrigin && anchor.enemyOrigin) {
       playerOriginX = anchor.playerOrigin.x;
@@ -416,7 +449,12 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
       playerCandidates = allowedTiles;
     }
 
-    const idx = Math.floor(Math.random() * playerCandidates.length);
+    const combatId =
+      typeof scene?.__lanCombatId === "number" ? scene.__lanCombatId : null;
+    const idx =
+      combatId !== null
+        ? 0
+        : Math.floor(Math.random() * playerCandidates.length);
     const tile = playerCandidates[idx];
 
     player.currentTileX = tile.x;

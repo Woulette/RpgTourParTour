@@ -6,6 +6,7 @@ import { applyShieldToDamage, addShieldAbsorbChat, showShieldAbsorbText } from "
 import { computeDamageForSpell } from "../cast/castEryon.js";
 import { applyFixedResistanceToDamage } from "../utils/damage.js";
 import { playMonsterDeathAnimation } from "../../../monsters/runtime/animations.js";
+import { getNetClient, getNetIsHost, getNetPlayerId } from "../../../../app/session.js";
 
 function resolveDamageSpell(spell, effect) {
   if (!spell || !effect) return spell;
@@ -28,6 +29,24 @@ function getTargetName(target, isPlayerTarget) {
   }
   if (target?.isSummon) return "Invocation";
   return target?.displayName || target?.label || target?.monsterId || "Monstre";
+}
+
+function getEntityTile(entity) {
+  if (!entity) return null;
+  const tx =
+    typeof entity.currentTileX === "number"
+      ? entity.currentTileX
+      : typeof entity.tileX === "number"
+        ? entity.tileX
+        : null;
+  const ty =
+    typeof entity.currentTileY === "number"
+      ? entity.currentTileY
+      : typeof entity.tileY === "number"
+        ? entity.tileY
+        : null;
+  if (tx === null || ty === null) return null;
+  return { x: tx, y: ty };
 }
 
 function removeDeadEntity(scene, target) {
@@ -107,6 +126,29 @@ export function applyDamageEffect(ctx, effect) {
     typeof target.stats.hp === "number" ? target.stats.hp : target.stats.hpMax ?? 0;
   const newHp = Math.max(0, currentHp - finalDamage);
   target.stats.hp = newHp;
+
+  if (
+    finalDamage > 0 &&
+    scene?.__lanCombatId &&
+    getNetIsHost() &&
+    caster !== state?.joueur
+  ) {
+    const client = getNetClient();
+    const playerId = getNetPlayerId();
+    const tile = getEntityTile(target);
+    if (client && playerId && tile) {
+      client.sendCmd("CmdCombatDamageApplied", {
+        playerId,
+        combatId: scene.__lanCombatId,
+        casterId: caster?.entityId ?? null,
+        spellId: spell?.id ?? null,
+        targetX: tile.x,
+        targetY: tile.y,
+        damage: finalDamage,
+        source: "monster",
+      });
+    }
+  }
 
   const isPlayerTarget = target === state?.joueur;
   if (isPlayerTarget && typeof target.updateHudHp === "function") {
