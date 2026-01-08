@@ -20,6 +20,7 @@ function createPlayer(id) {
     x: 0,
     y: 0,
     hp: 100,
+    hpMax: 100,
     pa: 6,
     pm: 3,
     lastMoveSeq: 0,

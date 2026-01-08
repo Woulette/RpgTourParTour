@@ -2,13 +2,19 @@ import { getNetPlayerId } from "../../../app/session.js";
 import { castSpellAtTile } from "../../../features/combat/spells/index.js";
 import { spells } from "../../../config/spells.js";
 
-export function createCombatSpellHandlers(ctx) {
+export function createCombatSpellHandlers(ctx, helpers) {
   const { scene, player } = ctx;
+  const {
+    shouldApplyCombatEvent,
+    findCombatMonsterByEntityId,
+    findCombatMonsterByIndex,
+  } = helpers;
 
   const handleCombatSpellCast = (msg) => {
     if (!msg || !player) return;
+    if (!shouldApplyCombatEvent(msg.combatId, msg.eventId, msg.combatSeq)) return;
     const localId = getNetPlayerId();
-    if (!localId || msg.casterId !== localId) return;
+    const casterKind = msg.casterKind === "monster" ? "monster" : "player";
     const state = scene.combatState;
     if (!state || !state.enCours) return;
     if (Number.isInteger(msg.combatId) && scene.__lanCombatId) {
@@ -34,9 +40,28 @@ export function createCombatSpellHandlers(ctx) {
         }
       : spell;
 
+    let caster = null;
+    if (casterKind === "monster") {
+      caster = Number.isInteger(msg.casterId)
+        ? findCombatMonsterByEntityId(msg.casterId)
+        : Number.isInteger(msg.casterIndex)
+          ? findCombatMonsterByIndex(msg.casterIndex)
+          : null;
+    } else if (Number.isInteger(msg.casterId)) {
+      if (localId && msg.casterId === localId) {
+        caster = state.joueur;
+      } else if (Array.isArray(scene.combatAllies)) {
+        caster =
+          scene.combatAllies.find(
+            (ally) => ally?.isPlayerAlly && Number(ally.netId) === msg.casterId
+          ) || null;
+      }
+    }
+    if (!caster) return;
+
     castSpellAtTile(
       scene,
-      state.joueur,
+      caster,
       spellForCast,
       tileX,
       tileY,

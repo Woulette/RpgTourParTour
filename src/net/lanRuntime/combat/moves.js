@@ -7,10 +7,22 @@ export function createCombatMoveHandlers(ctx, helpers) {
     findCombatMonsterByEntityId,
     findCombatMonsterByIndex,
     moveCombatMonsterAlongPathNetwork,
+    shouldApplyCombatEvent,
   } = helpers;
+  const debugLog = (...args) => {
+    if (
+      typeof window === "undefined" ||
+      (window.LAN_COMBAT_DEBUG !== true && window.LAN_COMBAT_DEBUG !== "1")
+    ) {
+      return;
+    }
+    // eslint-disable-next-line no-console
+    console.log("[LAN][Combat]", ...args);
+  };
 
   const handleCombatMoveStart = (msg) => {
     if (!msg || !player) return;
+    if (!shouldApplyCombatEvent(msg.combatId, msg.eventId, msg.combatSeq)) return;
     const localId = getNetPlayerId();
     if (!localId || !Number.isInteger(msg.playerId)) return;
     const isLocal = msg.playerId === localId;
@@ -71,13 +83,26 @@ export function createCombatMoveHandlers(ctx, helpers) {
 
   const handleCombatMonsterMoveStart = (msg) => {
     if (!msg) return;
+    if (!shouldApplyCombatEvent(msg.combatId, msg.eventId, msg.combatSeq)) return;
     if (Number.isInteger(msg.combatId) && scene.__lanCombatId) {
-      if (msg.combatId !== scene.__lanCombatId) return;
+      if (msg.combatId !== scene.__lanCombatId) {
+        debugLog("EvCombatMonsterMoveStart drop: combatId mismatch", {
+          msgCombatId: msg.combatId,
+          localCombatId: scene.__lanCombatId,
+        });
+        return;
+      }
     }
     const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
     if (mapId) {
       const currentMap = getCurrentMapKey();
-      if (currentMap && mapId !== currentMap) return;
+      if (currentMap && mapId !== currentMap) {
+        debugLog("EvCombatMonsterMoveStart drop: map mismatch", {
+          msgMapId: mapId,
+          currentMap,
+        });
+        return;
+      }
     }
 
     const entityId = Number.isInteger(msg.entityId) ? msg.entityId : null;
@@ -88,12 +113,28 @@ export function createCombatMoveHandlers(ctx, helpers) {
         ? findCombatMonsterByIndex(combatIndex)
         : null;
     const target = monster || monsterFallback;
-    if (!target) return;
-    if (!monster) return;
+    if (!target) {
+      debugLog("EvCombatMonsterMoveStart drop: no target", {
+        combatId: msg.combatId ?? null,
+        entityId,
+        combatIndex,
+        mapId: msg.mapId ?? null,
+        monsters: Array.isArray(scene.combatMonsters) ? scene.combatMonsters.length : null,
+      });
+      return;
+    }
 
     if (Number.isInteger(msg.seq)) {
       const lastSeq = target.__lanCombatLastMoveSeq || 0;
-      if (msg.seq <= lastSeq) return;
+      if (msg.seq <= lastSeq) {
+        debugLog("EvCombatMonsterMoveStart drop: seq", {
+          entityId,
+          combatIndex,
+          msgSeq: msg.seq,
+          lastSeq,
+        });
+        return;
+      }
       target.__lanCombatLastMoveSeq = msg.seq;
     }
 
@@ -104,7 +145,13 @@ export function createCombatMoveHandlers(ctx, helpers) {
         y: Number.isInteger(step?.y) ? step.y : null,
       }))
       .filter((step) => step.x !== null && step.y !== null);
-    if (steps.length === 0) return;
+    if (steps.length === 0) {
+      debugLog("EvCombatMonsterMoveStart drop: empty path", {
+        entityId,
+        combatIndex,
+      });
+      return;
+    }
 
     const first = steps[0];
     if (
@@ -116,8 +163,22 @@ export function createCombatMoveHandlers(ctx, helpers) {
     ) {
       steps = steps.slice(1);
     }
-    if (steps.length === 0) return;
+    if (steps.length === 0) {
+      debugLog("EvCombatMonsterMoveStart drop: trimmed path empty", {
+        entityId,
+        combatIndex,
+      });
+      return;
+    }
 
+    debugLog("EvCombatMonsterMoveStart apply", {
+      combatId: msg.combatId ?? null,
+      entityId,
+      combatIndex,
+      steps: steps.length,
+      targetId: target.entityId ?? null,
+      targetIndex: target.combatIndex ?? null,
+    });
     moveCombatMonsterAlongPathNetwork(target, steps);
   };
 

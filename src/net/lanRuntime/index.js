@@ -33,6 +33,43 @@ export function initLanRuntime(scene, player, map, groundLayer) {
   const getCurrentGroundLayer = () => scene?.groundLayer || null;
   const isSceneReady = () =>
     !!(scene && scene.sys && !scene.sys.isDestroyed && scene.add && scene.physics);
+  const netDebugLog = (...args) => {
+    if (
+      typeof window === "undefined" ||
+      (window.LAN_COMBAT_DEBUG !== true && window.LAN_COMBAT_DEBUG !== "1")
+    ) {
+      return;
+    }
+    // eslint-disable-next-line no-console
+    console.log("[LAN][Net]", ...args);
+  };
+  let lastEventId = 0;
+  let pendingAckEventId = 0;
+  let ackTimer = null;
+  const combatEventTypes = new Set([
+    "EvCombatCreated",
+    "EvCombatUpdated",
+    "EvCombatJoinReady",
+    "EvCombatState",
+    "EvCombatMoveStart",
+    "EvCombatMonsterMoveStart",
+    "EvCombatTurnStarted",
+    "EvCombatTurnEnded",
+    "EvCombatEnded",
+    "EvSpellCast",
+    "EvDamageApplied",
+  ]);
+  const combatSeqState = new Map();
+
+  const scheduleAck = () => {
+    if (ackTimer) return;
+    ackTimer = setTimeout(() => {
+      ackTimer = null;
+      const client = getNetClient();
+      if (!client || pendingAckEventId <= 0) return;
+      client.sendCmd("CmdAck", { lastEventId: pendingAckEventId });
+    }, 200);
+  };
 
   const ui = createCombatUiHandlers({
     scene,
@@ -139,8 +176,137 @@ export function initLanRuntime(scene, player, map, groundLayer) {
 
   initialSync();
 
+  const applyCombatEvent = (msg) => {
+    if (msg.t === "EvCombatMoveStart") {
+      combat.handleCombatMoveStart(msg);
+      combat.requestCombatStateFlush();
+      return;
+    }
+
+    if (msg.t === "EvCombatMonsterMoveStart") {
+      combat.handleCombatMonsterMoveStart(msg);
+      combat.requestCombatStateFlush();
+      return;
+    }
+
+    if (msg.t === "EvCombatState") {
+      combat.applyCombatState(msg);
+      return;
+    }
+
+    if (msg.t === "EvSpellCast") {
+      combat.handleCombatSpellCast(msg);
+      combat.requestCombatStateFlush();
+      return;
+    }
+
+    if (msg.t === "EvDamageApplied") {
+      combat.handleCombatDamageApplied(msg);
+      combat.requestCombatStateFlush();
+      return;
+    }
+
+    if (msg.t === "EvCombatTurnStarted") {
+      combat.applyCombatTurnStarted(msg);
+      combat.requestCombatStateFlush();
+      return;
+    }
+
+    if (msg.t === "EvCombatTurnEnded") {
+      combat.applyCombatTurnEnded(msg);
+      combat.requestCombatStateFlush();
+      return;
+    }
+
+    if (msg.t === "EvCombatUpdated") {
+      combat.applyCombatUpdated(msg);
+      combat.requestCombatStateFlush();
+      return;
+    }
+
+    if (msg.t === "EvCombatJoinReady") {
+      combat.handleCombatJoinReady(msg);
+      combat.requestCombatStateFlush();
+      return;
+    }
+
+    if (msg.t === "EvCombatCreated") {
+      combat.applyCombatCreated(msg);
+      return;
+    }
+
+    if (msg.t === "EvCombatEnded") {
+      combat.applyCombatEnded(msg);
+      if (Number.isInteger(msg.combatId)) {
+        combatSeqState.delete(msg.combatId);
+      }
+    }
+  };
+
+  const handleCombatSequencedEvent = (msg) => {
+    const combatId = Number.isInteger(msg.combatId) ? msg.combatId : null;
+    if (combatId === null || !Number.isInteger(msg.combatSeq)) {
+      applyCombatEvent(msg);
+      return;
+    }
+    const state = combatSeqState.get(combatId) || {
+      expected: null,
+      pending: new Map(),
+      replayRequested: false,
+    };
+    if (state.expected === null) {
+      state.expected = msg.combatSeq;
+    }
+    if (msg.combatSeq < state.expected) {
+      combatSeqState.set(combatId, state);
+      return;
+    }
+    if (msg.combatSeq > state.expected) {
+      if (state.pending.size < 200) {
+        state.pending.set(msg.combatSeq, msg);
+      }
+      if (!state.replayRequested) {
+        const client = getNetClient();
+        if (client) {
+          client.sendCmd("CmdCombatReplay", { combatId, fromSeq: state.expected });
+          state.replayRequested = true;
+        }
+      }
+      combatSeqState.set(combatId, state);
+      return;
+    }
+
+    let nextMsg = msg;
+    while (nextMsg) {
+      applyCombatEvent(nextMsg);
+      state.pending.delete(state.expected);
+      state.expected += 1;
+      nextMsg = state.pending.get(state.expected) || null;
+    }
+    if (state.replayRequested && state.pending.size === 0) {
+      state.replayRequested = false;
+    }
+    combatSeqState.set(combatId, state);
+  };
+
   setNetEventHandler((msg) => {
     if (!msg || !player) return;
+    if (Number.isInteger(msg.eventId)) {
+      if (msg.eventId === lastEventId + 1) {
+        lastEventId = msg.eventId;
+        pendingAckEventId = lastEventId;
+        scheduleAck();
+      }
+    }
+    if (msg.t === "EvCombatMonsterMoveStart") {
+      netDebugLog("recv EvCombatMonsterMoveStart", {
+        combatId: msg.combatId ?? null,
+        entityId: msg.entityId ?? null,
+        combatIndex: msg.combatIndex ?? null,
+        steps: Array.isArray(msg.path) ? msg.path.length : null,
+        mapId: msg.mapId ?? null,
+      });
+    }
 
     if (msg.t === "EvMoveStart" || msg.t === "EvMoved") {
       players.handleMoveEvent(msg);
@@ -276,7 +442,7 @@ export function initLanRuntime(scene, player, map, groundLayer) {
 
     if (msg.t === "EvEnsureMapInit") {
       const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
-      if (!mapId || !getNetIsHost()) return;
+      if (!mapId) return;
       const currentMap = getCurrentMapKey();
       if (currentMap !== mapId) return;
       mobs.sendMapMonstersSnapshot();
@@ -284,60 +450,11 @@ export function initLanRuntime(scene, player, map, groundLayer) {
       return;
     }
 
-    if (msg.t === "EvCombatMoveStart") {
-      combat.handleCombatMoveStart(msg);
+    if (combatEventTypes.has(msg.t)) {
+      handleCombatSequencedEvent(msg);
       return;
     }
 
-    if (msg.t === "EvCombatMonsterMoveStart") {
-      combat.handleCombatMonsterMoveStart(msg);
-      return;
-    }
-
-    if (msg.t === "EvCombatState") {
-      combat.applyCombatState(msg);
-      return;
-    }
-
-    if (msg.t === "EvSpellCast") {
-      combat.handleCombatSpellCast(msg);
-      return;
-    }
-
-    if (msg.t === "EvDamageApplied") {
-      combat.handleCombatDamageApplied(msg);
-      return;
-    }
-
-    if (msg.t === "EvCombatTurnStarted") {
-      combat.applyCombatTurnStarted(msg);
-      return;
-    }
-
-    if (msg.t === "EvCombatTurnEnded") {
-      combat.applyCombatTurnEnded(msg);
-      return;
-    }
-
-    if (msg.t === "EvCombatUpdated") {
-      combat.applyCombatUpdated(msg);
-      return;
-    }
-
-    if (msg.t === "EvCombatJoinReady") {
-      combat.handleCombatJoinReady(msg);
-      return;
-    }
-
-    if (msg.t === "EvCombatCreated") {
-      combat.applyCombatCreated(msg);
-      return;
-    }
-
-    if (msg.t === "EvCombatEnded") {
-      combat.applyCombatEnded(msg);
-      return;
-    }
   });
 
   onStoreEvent("map:changed", (payload) => {

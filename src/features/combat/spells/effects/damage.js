@@ -49,6 +49,31 @@ function getEntityTile(entity) {
   return { x: tx, y: ty };
 }
 
+function buildDamageTargetPayload(scene, target) {
+  if (!target) return {};
+  if (target === scene?.combatState?.joueur || target?.isPlayerAlly) {
+    const id = Number.isInteger(target.netId)
+      ? target.netId
+      : Number.isInteger(target.id)
+        ? target.id
+        : null;
+    if (Number.isInteger(id)) {
+      return { targetKind: "player", targetId: id };
+    }
+    return {};
+  }
+  if (Number.isInteger(target.entityId)) {
+    return { targetKind: "monster", targetId: target.entityId };
+  }
+  if (Number.isInteger(target.combatIndex)) {
+    return { targetKind: "monster", targetIndex: target.combatIndex };
+  }
+  if (Number.isInteger(target.id)) {
+    return { targetKind: "summon", targetId: target.id };
+  }
+  return {};
+}
+
 function removeDeadEntity(scene, target) {
   if (!scene || !target) return;
   if (target.isSummon) {
@@ -147,6 +172,42 @@ export function applyDamageEffect(ctx, effect) {
         damage: finalDamage,
         source: "monster",
       });
+    }
+  }
+
+  if (
+    finalDamage > 0 &&
+    scene?.__lanCombatId &&
+    caster === state?.joueur
+  ) {
+    const client = getNetClient();
+    const playerId = getNetPlayerId();
+    if (client && playerId) {
+      const tile = getEntityTile(target);
+      if (tile) {
+        caster.__lanDamageSeq = (caster.__lanDamageSeq || 0) + 1;
+        scene.__lanLastDamageSeq = caster.__lanDamageSeq;
+        const payload = {
+          playerId,
+          combatId: scene.__lanCombatId,
+          casterId: playerId,
+          spellId: spell?.id ?? null,
+          targetX: tile.x,
+          targetY: tile.y,
+          damage: finalDamage,
+          source: "player",
+          clientSeq: caster.__lanDamageSeq,
+          ...buildDamageTargetPayload(scene, target),
+        };
+        client.sendCmd("CmdCombatDamageApplied", payload);
+        if (
+          typeof window !== "undefined" &&
+          (window.LAN_COMBAT_DEBUG === true || window.LAN_COMBAT_DEBUG === "1")
+        ) {
+          // eslint-disable-next-line no-console
+          console.log("[LAN][Combat]", "CmdCombatDamageApplied send", payload);
+        }
+      }
     }
   }
 

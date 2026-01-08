@@ -490,7 +490,51 @@ export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groun
   const spell = getActiveSpell(player);
   if (!spell) return false;
   const state = scene?.combatState;
-  const sendLanCast = () => {
+  const debugEnabled =
+    typeof window !== "undefined" &&
+    (window.LAN_COMBAT_DEBUG === true || window.LAN_COMBAT_DEBUG === "1");
+  const debugLog = (...args) => {
+    if (!debugEnabled) return;
+    // eslint-disable-next-line no-console
+    console.log("[LAN][Combat]", ...args);
+  };
+  const resolveTargetPayload = (pending) => {
+    if (!pending) return {};
+    const target = resolveSpellTargetAtTile(scene, pending.tileX, pending.tileY);
+    if (!target) return {};
+    if (target === state?.joueur || target?.isPlayerAlly) {
+      const id = Number.isInteger(target.netId)
+        ? target.netId
+        : Number.isInteger(target.id)
+          ? target.id
+          : null;
+      if (Number.isInteger(id)) {
+        return { targetKind: "player", targetId: id };
+      }
+      return {};
+    }
+    const combatIndex = Number.isInteger(target.combatIndex)
+      ? target.combatIndex
+      : -1;
+    const payload = {};
+    if (Number.isInteger(target.entityId)) {
+      payload.targetKind = "monster";
+      payload.targetId = target.entityId;
+    }
+    if (scene?.__lanCombatStateSeen && combatIndex >= 0) {
+      payload.targetKind = "monster";
+      payload.targetIndex = combatIndex;
+    }
+    if (payload.targetKind) {
+      return payload;
+    }
+    if (Number.isInteger(target.id)) {
+      return { targetKind: "summon", targetId: target.id };
+    }
+    return {};
+  };
+  const sendLanCastFor = (pending) => {
+    if (!pending) return false;
     const netClient = getNetClient();
     const netPlayerId = getNetPlayerId();
     if (
@@ -501,15 +545,31 @@ export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groun
       player === state.joueur &&
       scene.__lanCombatId
     ) {
-      if (!canCastSpellAtTile(scene, player, spell, tileX, tileY, map)) {
+      if (
+        !canCastSpellAtTile(
+          scene,
+          player,
+          pending.spell,
+          pending.tileX,
+          pending.tileY,
+          pending.map
+        )
+      ) {
         return false;
       }
       netClient.sendCmd("CmdCastSpell", {
         playerId: netPlayerId,
         combatId: scene.__lanCombatId,
-        spellId: spell.id,
-        targetX: tileX,
-        targetY: tileY,
+        spellId: pending.spell.id,
+        targetX: pending.tileX,
+        targetY: pending.tileY,
+        ...resolveTargetPayload(pending),
+      });
+      debugLog("CmdCastSpell send", {
+        combatId: scene.__lanCombatId,
+        spellId: pending.spell.id,
+        targetX: pending.tileX,
+        targetY: pending.tileY,
       });
       clearActiveSpell(player);
       clearSpellRangePreview(scene);
@@ -559,7 +619,7 @@ export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groun
           return;
         }
 
-        if (!sendLanCast()) {
+        if (!sendLanCastFor(pending)) {
           castSpellAtTile(
             scene,
             pending.caster,
@@ -599,7 +659,18 @@ export function tryCastActiveSpellAtTile(scene, player, tileX, tileY, map, groun
     }
   }
 
-  if (sendLanCast()) return true;
+  if (
+    sendLanCastFor({
+      caster: player,
+      spell,
+      tileX,
+      tileY,
+      map,
+      groundLayer,
+    })
+  ) {
+    return true;
+  }
 
   return castSpellAtTile(scene, player, spell, tileX, tileY, map, groundLayer);
 }

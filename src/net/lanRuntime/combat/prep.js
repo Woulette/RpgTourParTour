@@ -44,12 +44,21 @@ export function createCombatPrepHandlers(ctx, helpers) {
       const entityId = Number.isInteger(entry?.entityId) ? entry.entityId : null;
       if (!entityId) return;
       if (existingEntityIds.has(entityId)) return;
-      const monsterId = entry.monsterId || "__unknown";
-      const bucket = byMonsterId.get(monsterId) || [];
-      const target =
-        bucket.length > 0 ? bucket.shift() : unassigned.shift() || null;
+      const combatIndex = Number.isInteger(entry?.combatIndex) ? entry.combatIndex : null;
+      let target = null;
+      if (combatIndex !== null && scene.combatMonsters[combatIndex]) {
+        target = scene.combatMonsters[combatIndex];
+      }
+      if (!target) {
+        const monsterId = entry.monsterId || "__unknown";
+        const bucket = byMonsterId.get(monsterId) || [];
+        target = bucket.length > 0 ? bucket.shift() : unassigned.shift() || null;
+      }
       if (!target) return;
       target.entityId = entityId;
+      if (combatIndex !== null) {
+        target.combatIndex = combatIndex;
+      }
       existingEntityIds.add(entityId);
       if (typeof entry.spawnMapKey === "string") {
         target.spawnMapKey = entry.spawnMapKey;
@@ -60,7 +69,20 @@ export function createCombatPrepHandlers(ctx, helpers) {
 
   const syncCombatPlayerAllies = (entry) => {
     if (!entry || !Number.isInteger(entry.combatId)) return;
-    if (!isSceneReady()) return;
+    if (!isSceneReady()) {
+      if (!scene.__lanPrepSyncPending) {
+        scene.__lanPrepSyncPending = true;
+        if (scene.time && typeof scene.time.delayedCall === "function") {
+          scene.time.delayedCall(50, () => {
+            scene.__lanPrepSyncPending = false;
+            syncCombatPlayerAllies(entry);
+          });
+        } else {
+          scene.__lanPrepSyncPending = false;
+        }
+      }
+      return;
+    }
     const localId = getNetPlayerId();
     if (!localId) return;
     const participantIds = Array.isArray(entry.participantIds)
@@ -102,14 +124,12 @@ export function createCombatPrepHandlers(ctx, helpers) {
     const allowedTiles = scene.prepState?.allowedTiles || [];
 
     const placementMap = new Map();
-    if (
-      scene.prepState &&
-      scene.prepState.actif &&
-      !scene.prepState.__lanPlacementDone
-    ) {
+    if (scene.prepState && scene.prepState.actif) {
       const ordered = participantIds
         .map((id) => Number(id))
-        .filter((id) => Number.isInteger(id));
+        .filter((id) => Number.isInteger(id))
+        .sort((a, b) => a - b);
+      const placementKey = ordered.join(",");
       ordered.forEach((id, idx) => {
         const tile = allowedTiles[idx] || null;
         if (tile && Number.isInteger(tile.x) && Number.isInteger(tile.y)) {
@@ -117,26 +137,27 @@ export function createCombatPrepHandlers(ctx, helpers) {
         }
       });
 
-      const localTile = placementMap.get(localId) || null;
-      if (localTile && mapForSpawn && layerForSpawn) {
-        const wp = mapForSpawn.tileToWorldXY(
-          localTile.x,
-          localTile.y,
-          undefined,
-          undefined,
-          layerForSpawn
-        );
-        if (wp) {
-          player.x = wp.x + mapForSpawn.tileWidth / 2;
-          player.y = wp.y + mapForSpawn.tileHeight / 2;
-          player.currentTileX = localTile.x;
-          player.currentTileY = localTile.y;
-          if (player.setDepth) player.setDepth(player.y);
-          updateBlockedTile(player, localTile.x, localTile.y);
+      if (scene.prepState.__lanPlacementKey !== placementKey) {
+        scene.prepState.__lanPlacementKey = placementKey;
+        const localTile = placementMap.get(localId) || null;
+        if (localTile && mapForSpawn && layerForSpawn) {
+          const wp = mapForSpawn.tileToWorldXY(
+            localTile.x,
+            localTile.y,
+            undefined,
+            undefined,
+            layerForSpawn
+          );
+          if (wp) {
+            player.x = wp.x + mapForSpawn.tileWidth / 2;
+            player.y = wp.y + mapForSpawn.tileHeight / 2;
+            player.currentTileX = localTile.x;
+            player.currentTileY = localTile.y;
+            if (player.setDepth) player.setDepth(player.y);
+            updateBlockedTile(player, localTile.x, localTile.y);
+          }
         }
       }
-
-      scene.prepState.__lanPlacementDone = true;
     }
 
     const takenTiles = new Set();

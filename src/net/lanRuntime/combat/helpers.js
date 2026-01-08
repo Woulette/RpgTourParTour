@@ -14,6 +14,8 @@ export function createCombatHelpers(ctx) {
     getCurrentMapObj,
     getCurrentGroundLayer,
     findWorldMonsterByEntityId,
+    remotePlayersData,
+    activeCombats,
   } = ctx;
 
   const buildCombatLeaderFromEntry = (entry) => {
@@ -57,6 +59,9 @@ export function createCombatHelpers(ctx) {
     monster.y += offY;
 
     monster.entityId = Number.isInteger(entry.entityId) ? entry.entityId : null;
+    if (Number.isInteger(entry.combatIndex)) {
+      monster.combatIndex = entry.combatIndex;
+    }
     monster.tileX = tileX;
     monster.tileY = tileY;
     monster.groupId = Number.isInteger(entry.groupId) ? entry.groupId : null;
@@ -167,15 +172,52 @@ export function createCombatHelpers(ctx) {
 
     const localId = getNetPlayerId();
     const allies = Array.isArray(scene.combatAllies) ? scene.combatAllies : [];
+    const placeholderCache =
+      scene.__lanCombatPlaceholders || (scene.__lanCombatPlaceholders = new Map());
     const players = participantIds
       .map((id) => {
         if (localId && id === localId) return scene.combatState?.joueur || player;
-        return allies.find((ally) => ally?.isPlayerAlly && Number(ally.netId) === id) || null;
+        const ally =
+          allies.find((entry) => entry?.isPlayerAlly && Number(entry.netId) === id) || null;
+        if (ally) return ally;
+        const cached = placeholderCache.get(id) || null;
+        if (cached) return cached;
+        const remote = remotePlayersData?.get(id) || {};
+        const hp = Number.isFinite(remote.combatHp)
+          ? remote.combatHp
+          : Number.isFinite(remote.hp)
+            ? remote.hp
+            : Number.isFinite(remote.combatHpMax)
+              ? remote.combatHpMax
+              : 1;
+        const hpMax = Number.isFinite(remote.combatHpMax)
+          ? remote.combatHpMax
+          : Number.isFinite(remote.hpMax)
+            ? remote.hpMax
+            : Number.isFinite(remote.combatHp)
+              ? remote.combatHp
+              : 1;
+        const placeholder = {
+          isCombatAlly: true,
+          isPlayerAlly: true,
+          isRemote: true,
+          netId: id,
+          id,
+          classId: remote.classId || "archer",
+          displayName: remote.displayName || `Joueur ${id}`,
+          stats: { hp, hpMax },
+        };
+        placeholderCache.set(id, placeholder);
+        return placeholder;
       })
       .filter((p) => p);
 
     const monsters = Array.isArray(scene.combatMonsters)
-      ? scene.combatMonsters.slice()
+      ? scene.combatMonsters.filter((m) => {
+          const hp =
+            typeof m?.stats?.hp === "number" ? m.stats.hp : m?.stats?.hpMax ?? 0;
+          return hp > 0;
+        })
       : [];
     monsters.sort((a, b) => {
       const ia = a?.stats?.initiative ?? 0;
@@ -318,6 +360,118 @@ export function createCombatHelpers(ctx) {
     return -1;
   };
 
+  const shouldApplyCombatEvent = (combatId, eventId, combatSeq) => {
+    if (Number.isInteger(combatSeq) && Number.isInteger(combatId)) {
+      const entry = activeCombats.get(combatId) || { combatId };
+      const lastSeq = Number.isInteger(entry.lastCombatSeq) ? entry.lastCombatSeq : 0;
+      if (combatSeq <= lastSeq) return false;
+      entry.lastCombatSeq = combatSeq;
+      activeCombats.set(combatId, entry);
+      return true;
+    }
+    if (!Number.isInteger(eventId)) return true;
+    if (!Number.isInteger(combatId)) return true;
+    const entry = activeCombats.get(combatId) || { combatId };
+    const lastEventId = Number.isInteger(entry.lastEventId) ? entry.lastEventId : 0;
+    if (eventId <= lastEventId) return false;
+    entry.lastEventId = eventId;
+    activeCombats.set(combatId, entry);
+    return true;
+  };
+
+  const computeCombatChecksum = () => {
+    const state = scene.combatState;
+    if (!state || !state.enCours) return 0;
+    const parts = [];
+    const turnValue = state.tour === "monstre" ? 2 : 1;
+    parts.push(
+      turnValue,
+      Number.isFinite(state.round) ? Math.round(state.round) : 0,
+      Number.isInteger(state.activePlayerId) ? state.activePlayerId : 0,
+      Number.isInteger(state.monstre?.entityId) ? state.monstre.entityId : 0,
+      Number.isInteger(state.monstre?.combatIndex) ? state.monstre.combatIndex : -1,
+      Number.isInteger(state.actorIndex) ? state.actorIndex : -1
+    );
+
+    const players = [];
+    const localId = getNetPlayerId();
+    const localTile = getEntityTile(state.joueur);
+    if (localId && localTile && state.joueur?.stats) {
+      players.push({
+        playerId: localId,
+        tileX: localTile.x,
+        tileY: localTile.y,
+        hp: state.joueur.stats.hp ?? state.joueur.stats.hpMax ?? 0,
+        hpMax: state.joueur.stats.hpMax ?? state.joueur.stats.hp ?? 0,
+      });
+    }
+    if (Array.isArray(scene.combatAllies)) {
+      scene.combatAllies.forEach((ally) => {
+        if (!ally || !Number.isInteger(ally.netId) || !ally.stats) return;
+        const tile = getEntityTile(ally);
+        if (!tile) return;
+        players.push({
+          playerId: ally.netId,
+          tileX: tile.x,
+          tileY: tile.y,
+          hp: ally.stats.hp ?? ally.stats.hpMax ?? 0,
+          hpMax: ally.stats.hpMax ?? ally.stats.hp ?? 0,
+        });
+      });
+    }
+    players.sort((a, b) => a.playerId - b.playerId);
+    players.forEach((p) => {
+      parts.push(
+        Number.isInteger(p.playerId) ? p.playerId : 0,
+        Number.isInteger(p.tileX) ? p.tileX : -1,
+        Number.isInteger(p.tileY) ? p.tileY : -1,
+        Number.isFinite(p.hp) ? Math.round(p.hp) : 0,
+        Number.isFinite(p.hpMax) ? Math.round(p.hpMax) : 0
+      );
+    });
+
+    parts.push(999999);
+
+    const monsters = Array.isArray(scene.combatMonsters) ? scene.combatMonsters : [];
+    const monsterEntries = monsters
+      .map((m) => {
+        if (!m || !m.stats) return null;
+        const tile = getEntityTile(m);
+        if (!tile) return null;
+        const key = Number.isInteger(m.entityId)
+          ? m.entityId
+          : Number.isInteger(m.combatIndex)
+            ? 1000000 + m.combatIndex
+            : 0;
+        return {
+          key,
+          tileX: tile.x,
+          tileY: tile.y,
+          hp: m.stats.hp ?? m.stats.hpMax ?? 0,
+          hpMax: m.stats.hpMax ?? m.stats.hp ?? 0,
+        };
+      })
+      .filter(Boolean);
+    monsterEntries.sort((a, b) => a.key - b.key);
+    monsterEntries.forEach((m) => {
+      parts.push(
+        Number.isInteger(m.key) ? m.key : 0,
+        Number.isInteger(m.tileX) ? m.tileX : -1,
+        Number.isInteger(m.tileY) ? m.tileY : -1,
+        Number.isFinite(m.hp) ? Math.round(m.hp) : 0,
+        Number.isFinite(m.hpMax) ? Math.round(m.hpMax) : 0
+      );
+    });
+
+    const data = parts.join("|");
+    let hash = 2166136261;
+    for (let i = 0; i < data.length; i += 1) {
+      hash ^= data.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  };
+
   return {
     buildCombatLeaderFromEntry,
     getEntityTile,
@@ -328,5 +482,7 @@ export function createCombatHelpers(ctx) {
     moveCombatMonsterAlongPathNetwork,
     findActorIndexByPlayerId,
     findNextActorIndexByKind,
+    shouldApplyCombatEvent,
+    computeCombatChecksum,
   };
 }

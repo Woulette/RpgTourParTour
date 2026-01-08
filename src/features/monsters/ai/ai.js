@@ -42,7 +42,13 @@ const AI_HANDLERS = {
 export function runMonsterTurn(scene) {
   const state = scene.combatState;
   if (!state || !state.enCours) return;
-  if (getNetClient() && scene.__lanCombatId && !getNetIsHost()) return;
+  if (getNetClient() && scene.__lanCombatId) {
+    const localId = getNetPlayerId();
+    const driverId = Number.isInteger(scene.__lanCombatAiDriverId)
+      ? scene.__lanCombatAiDriverId
+      : null;
+    if (driverId ? localId !== driverId : !getNetIsHost()) return;
+  }
 
   const monster = state.monstre;
   const player = state.joueur;

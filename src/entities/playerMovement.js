@@ -291,18 +291,14 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    const limited = limitPathForCombat(scene, player, path);
-    if (!limited || !limited.path || limited.path.length === 0) {
-      updateCombatPreview(scene, map, groundLayer, null);
-      return;
-    }
-    if (limited.path.length !== path.length) {
-      updateCombatPreview(scene, map, groundLayer, null);
-      return;
-    }
+      const limited = limitPathForCombat(scene, player, path);
+      if (!limited || !limited.path || limited.path.length === 0) {
+        updateCombatPreview(scene, map, groundLayer, null);
+        return;
+      }
 
-    updateCombatPreview(scene, map, groundLayer, limited.path);
-  });
+      updateCombatPreview(scene, map, groundLayer, path);
+    });
 
   // --- Clic pour dplacer ou lancer un sort ---
   scene.input.on("pointerdown", (pointer) => {
@@ -622,24 +618,51 @@ function createCalibratedWorldToTile(map, groundLayer) {
 
     // Si on est en combat, on laisse le module de combat dcider
     // si le dplacement est autoris et a quel cot en PM.
-    if (state && state.enCours) {
-      if (path.length > (state.pmRestants ?? 0)) {
-        return;
+      if (state && state.enCours) {
+        if (path.length > (state.pmRestants ?? 0)) {
+          return;
+        }
+        const limited = limitPathForCombat(scene, player, path);
+        if (!limited || !limited.path || limited.path.length === 0) {
+          return;
+        }
+        path = limited.path;
+        moveCost = limited.moveCost;
+        const lastStep = path[path.length - 1];
+        if (lastStep && Number.isInteger(lastStep.x) && Number.isInteger(lastStep.y)) {
+          tileX = lastStep.x;
+          tileY = lastStep.y;
+        }
       }
-      const limited = limitPathForCombat(scene, player, path);
-      if (!limited || !limited.path || limited.path.length === 0) {
-        return;
-      }
-      path = limited.path;
-      moveCost = limited.moveCost;
-    }
 
-    if (netClient && netPlayerId) {
-      const now = Date.now();
-      const lastAt = player.__lanLastCmdAt || 0;
-      if (now - lastAt < 150) {
+      if (scene.prepState && scene.prepState.actif && netClient && netPlayerId) {
+        netClient.sendCmd("CmdCombatPlacement", {
+          playerId: netPlayerId,
+          combatId: scene.__lanCombatId ?? null,
+          mapId: scene.currentMapKey || scene.currentMapDef?.key || null,
+          tileX,
+          tileY,
+        });
+        movePlayerAlongPathWithCombat(
+          scene,
+          player,
+          map,
+          groundLayer,
+          path,
+          0
+        );
         return;
       }
+
+      if (netClient && netPlayerId) {
+        if (state && state.enCours && state.joueur === player) {
+          applyTaclePenalty(scene, player);
+        }
+        const now = Date.now();
+        const lastAt = player.__lanLastCmdAt || 0;
+        if (now - lastAt < 150) {
+          return;
+        }
       const lastTarget = player.__lanLastTarget || null;
       if (lastTarget && lastTarget.x === tileX && lastTarget.y === tileY) {
         return;
@@ -780,7 +803,7 @@ export function movePlayerAlongPathNetworkCombat(
 ) {
   if (!path || path.length === 0) return;
   const cost = Number.isFinite(moveCost) ? moveCost : 0;
-  movePlayerAlongPathWithCombat(scene, player, map, groundLayer, path, cost);
+  movePlayerAlongPath(scene, player, map, groundLayer, path, cost);
 }
 
 // Si une cible de combat est en attente et que le joueur est sur sa case

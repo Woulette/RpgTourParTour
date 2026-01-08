@@ -322,6 +322,64 @@ export function initDomCombat(scene) {
       }
     }
 
+    if (scene.__lanCombatId && Array.isArray(renderActors) && renderActors.length) {
+      let idx = -1;
+      if (Number.isInteger(state.activePlayerId)) {
+        idx = renderActors.findIndex((a) => {
+          if (!a || a.kind !== "joueur") return false;
+          const ent = a.entity;
+          const id =
+            Number.isInteger(ent?.netId) ? ent.netId : Number.isInteger(ent?.id) ? ent.id : null;
+          return id === state.activePlayerId;
+        });
+      } else if (Number.isInteger(state.activeMonsterId)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "monstre" && a.entity?.entityId === state.activeMonsterId
+        );
+      } else if (Number.isInteger(state.activeMonsterIndex)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "monstre" && a.entity?.combatIndex === state.activeMonsterIndex
+        );
+      }
+      if (idx >= 0) {
+        renderActiveIndex = idx;
+      }
+    }
+
+    const seenKeys = new Set();
+    const dedupedActors = [];
+    renderActors.forEach((actor, actorIdx) => {
+      if (!actor || !actor.entity) return;
+      const ent = actor.entity;
+      let key = null;
+      if (actor.kind === "joueur") {
+        const id =
+          Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : null;
+        key = id !== null ? `p:${id}` : null;
+      } else if (actor.kind === "invocation") {
+        const id = Number.isInteger(ent.id) ? ent.id : null;
+        key = id !== null ? `s:${id}` : null;
+      } else {
+        const id = Number.isInteger(ent.entityId) ? ent.entityId : null;
+        const idx = Number.isInteger(ent.combatIndex) ? ent.combatIndex : null;
+        const fallback = ent.monsterId || "m";
+        if (id !== null) key = `m:${id}`;
+        else if (idx !== null) key = `m:i:${idx}`;
+        else key = `m:${fallback}`;
+      }
+      if (!key) {
+        key = `u:${actorIdx}`;
+      }
+      if (seenKeys.has(key)) return;
+      seenKeys.add(key);
+      dedupedActors.push(actor);
+    });
+
+    renderActors = dedupedActors;
+    if (renderActiveIndex >= renderActors.length) {
+      renderActiveIndex = Math.max(0, renderActors.length - 1);
+    }
+
     renderActors.forEach((actor, idx) => {
       const el = document.createElement("div");
       el.setAttribute("role", "listitem");
@@ -500,7 +558,29 @@ export function initDomCombat(scene) {
 
     const actors = state.actors;
     if (actors && actors.length) {
-      const idx = typeof state.actorIndex === "number" ? state.actorIndex : 0;
+      let idx = typeof state.actorIndex === "number" ? state.actorIndex : 0;
+      if (scene.__lanCombatId) {
+        if (Number.isInteger(state.activePlayerId)) {
+          const found = actors.findIndex((a) => {
+            if (!a || a.kind !== "joueur") return false;
+            const ent = a.entity;
+            const id =
+              Number.isInteger(ent?.netId) ? ent.netId : Number.isInteger(ent?.id) ? ent.id : null;
+            return id === state.activePlayerId;
+          });
+          if (found >= 0) idx = found;
+        } else if (Number.isInteger(state.activeMonsterId)) {
+          const found = actors.findIndex(
+            (a) => a?.kind === "monstre" && a.entity?.entityId === state.activeMonsterId
+          );
+          if (found >= 0) idx = found;
+        } else if (Number.isInteger(state.activeMonsterIndex)) {
+          const found = actors.findIndex(
+            (a) => a?.kind === "monstre" && a.entity?.combatIndex === state.activeMonsterIndex
+          );
+          if (found >= 0) idx = found;
+        }
+      }
       turnLabel.textContent = getActorName(actors[idx]);
     } else {
       turnLabel.textContent = state.tour === "joueur" ? "Joueur" : "Monstre";

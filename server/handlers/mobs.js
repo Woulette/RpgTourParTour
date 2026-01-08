@@ -95,6 +95,7 @@ function createMobHandlers(ctx) {
         monsterId: entry.monsterId,
         tileX: Number.isInteger(entry.tileX) ? entry.tileX : null,
         tileY: Number.isInteger(entry.tileY) ? entry.tileY : null,
+        combatIndex: Number.isInteger(entry.combatIndex) ? entry.combatIndex : null,
         groupId: Number.isInteger(entry.groupId) ? entry.groupId : null,
         groupSize: Number.isInteger(entry.groupSize) ? entry.groupSize : null,
         groupMonsterIds: Array.isArray(entry.groupMonsterIds)
@@ -156,9 +157,10 @@ function createMobHandlers(ctx) {
 
   function handleCmdMapMonsters(ws, clientInfo, msg) {
     if (clientInfo.id !== msg.playerId) return;
-    if (clientInfo.id !== getHostId()) return;
+    const player = state.players[clientInfo.id];
     const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
     if (!mapId) return;
+    if (!player || player.mapId !== mapId) return;
 
     if (
       Number.isInteger(msg.mapWidth) &&

@@ -18,7 +18,17 @@ const CHALLENGE_BADGE_LABEL_BY_ID = {
   no_cast_melee: "3",
 };
 
-const STORAGE_KEY = "andemia:ui:combatChallengePos";
+const STORAGE_KEY = (() => {
+  if (typeof window === "undefined") return "andemia:ui:combatChallengePos";
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    const profile = params.get("profile");
+    if (!profile) return "andemia:ui:combatChallengePos";
+    return `andemia:ui:combatChallengePos:profile:${profile}`;
+  } catch {
+    return "andemia:ui:combatChallengePos";
+  }
+})();
 
 function readSavedPos() {
   try {

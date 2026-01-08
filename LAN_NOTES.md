@@ -15,6 +15,15 @@ Regles d'or (monde partage):
 - Sync reseau = intention (tuile/path/event), pas de x/y en continu.
 - 1 action active max par entite (le dernier ordre remplace l'ancien).
 
+Regles d'or (combat LAN):
+- Serveur autoritaire sur l'etat combat (positions + HP + tour).
+- Les clients ne simulent pas l'IA ni les degats en LAN.
+- Chaque action critique => snapshot serveur (EvCombatState).
+- Un cast en attente doit passer par le serveur (pas d'application locale).
+- Un combat doit avoir un combatId + mapId coherents (ignore sinon).
+- L'IA combat est pilotee par un seul driver (aiDriverId) et c'est lui qui emet
+  les CmdCombatMonsterMoveStart (jamais conditionne par "host").
+
 Init map (LAN):
 - ensureMapInitialized(mapId) = point central d'init (hook unique).
 - Stub temporaire : l'host doit etre sur la map pour fournir le snapshot.

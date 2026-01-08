@@ -1,9 +1,10 @@
-import { getNetClient, getNetIsHost, getNetPlayerId } from "../../../app/session.js";
+import { getNetPlayerId } from "../../../app/session.js";
 import { createMonster } from "../../../entities/monster.js";
+import { unblockTile } from "../../../collision/collisionGrid.js";
 
 export function createCombatSyncHandlers(ctx, helpers) {
-  const { scene, player, getCurrentMapKey } = ctx;
-  const { getEntityTile } = helpers;
+  const { scene, player, getCurrentMapKey, activeCombats, remotePlayersData } = ctx;
+  const { getEntityTile, shouldApplyCombatEvent, buildLanActorsOrder } = helpers;
 
   const buildEntityWorldPosition = (entity, tileX, tileY) => {
     const mapForMove = scene.combatMap || scene.map;
@@ -19,6 +20,7 @@ export function createCombatSyncHandlers(ctx, helpers) {
     if (!wp) return null;
     const isPlayerEntity =
       entity === scene.combatState?.joueur ||
+      entity === player ||
       entity?.isPlayerAlly === true ||
       entity?.isCombatAlly === true;
     const offX = typeof entity?.renderOffsetX === "number" ? entity.renderOffsetX : 0;
@@ -93,21 +95,12 @@ export function createCombatSyncHandlers(ctx, helpers) {
     };
   };
 
-  const sendCombatState = () => {
-    if (!getNetIsHost()) return;
-    const client = getNetClient();
-    const playerId = getNetPlayerId();
-    if (!client || !playerId) return;
-    const payload = buildCombatStatePayload();
-    if (!payload) return;
-    client.sendCmd("CmdCombatState", {
-      playerId,
-      ...payload,
-    });
-  };
+  const sendCombatState = () => {};
 
   const applyCombatState = (msg) => {
     if (!msg) return;
+    if (!shouldApplyCombatEvent(msg.combatId, msg.eventId, msg.combatSeq)) return;
+    scene.__lanCombatStateSeen = true;
     if (Number.isInteger(msg.combatId) && scene.__lanCombatId) {
       if (msg.combatId !== scene.__lanCombatId) return;
     }
@@ -117,18 +110,29 @@ export function createCombatSyncHandlers(ctx, helpers) {
       if (currentMap && mapId !== currentMap) return;
     }
     const state = scene.combatState;
-    if (!state || !state.enCours) return;
+    const inCombat = state?.enCours === true;
+    const inPrep = scene.prepState?.actif === true;
+    if (!inCombat && !inPrep) return;
+    const localPlayer = state?.joueur || player;
 
     if (Array.isArray(msg.players)) {
       msg.players.forEach((p) => {
         if (!Number.isInteger(p?.playerId)) return;
+        if (remotePlayersData) {
+          const prev = remotePlayersData.get(p.playerId) || { id: p.playerId };
+          remotePlayersData.set(p.playerId, {
+            ...prev,
+            combatHp: Number.isFinite(p.hp) ? p.hp : prev.combatHp,
+            combatHpMax: Number.isFinite(p.hpMax) ? p.hpMax : prev.combatHpMax,
+          });
+        }
         const tileX = Number.isInteger(p.tileX) ? p.tileX : null;
         const tileY = Number.isInteger(p.tileY) ? p.tileY : null;
         if (tileX === null || tileY === null) return;
         let target = null;
         const localId = getNetPlayerId();
         if (localId && p.playerId === localId) {
-          target = state.joueur;
+          target = localPlayer;
         } else if (Array.isArray(scene.combatAllies)) {
           target =
             scene.combatAllies.find(
@@ -136,14 +140,21 @@ export function createCombatSyncHandlers(ctx, helpers) {
             ) || null;
         }
         if (!target) return;
-        const pos = buildEntityWorldPosition(target, tileX, tileY);
-        if (!pos) return;
-        target.x = pos.x;
-        target.y = pos.y;
-        target.currentTileX = tileX;
-        target.currentTileY = tileY;
-        if (typeof target.setDepth === "function") {
-          target.setDepth(target.y);
+        const isMoving =
+          target.isMoving === true ||
+          !!target.currentMoveTween ||
+          !!target.__lanCombatMoveTween ||
+          !!target.__lanMoveTween;
+        if (!isMoving || msg.resync === true || scene.prepState?.actif) {
+          const pos = buildEntityWorldPosition(target, tileX, tileY);
+          if (!pos) return;
+          target.x = pos.x;
+          target.y = pos.y;
+          target.currentTileX = tileX;
+          target.currentTileY = tileY;
+          if (typeof target.setDepth === "function") {
+            target.setDepth(target.y);
+          }
         }
         if (target.stats) {
           target.stats.hp = Number.isFinite(p.hp) ? p.hp : target.stats.hp;
@@ -201,6 +212,7 @@ export function createCombatSyncHandlers(ctx, helpers) {
           created.currentTileX = tileX;
           created.currentTileY = tileY;
           created.entityId = Number.isInteger(m.entityId) ? m.entityId : null;
+          created.combatIndex = Number.isInteger(combatIndex) ? combatIndex : null;
           created.isCombatMember = true;
           created.isCombatOnly = true;
           if (created.stats) {
@@ -217,20 +229,48 @@ export function createCombatSyncHandlers(ctx, helpers) {
           target = created;
         }
         if (!target) return;
-        const pos = buildEntityWorldPosition(target, tileX, tileY);
-        if (!pos) return;
-        target.x = pos.x;
-        target.y = pos.y;
-        target.tileX = tileX;
-        target.tileY = tileY;
-        target.currentTileX = tileX;
-        target.currentTileY = tileY;
-        if (typeof target.setDepth === "function") {
-          target.setDepth(target.y);
+        if (Number.isInteger(combatIndex)) {
+          target.combatIndex = combatIndex;
+        }
+        const isMoving =
+          target.isMoving === true ||
+          !!target.currentMoveTween ||
+          !!target.__lanCombatMoveTween ||
+          !!target.__lanMoveTween;
+        if (!isMoving || msg.resync === true || scene.prepState?.actif) {
+          const pos = buildEntityWorldPosition(target, tileX, tileY);
+          if (!pos) return;
+          target.x = pos.x;
+          target.y = pos.y;
+          target.tileX = tileX;
+          target.tileY = tileY;
+          target.currentTileX = tileX;
+          target.currentTileY = tileY;
+          if (typeof target.setDepth === "function") {
+            target.setDepth(target.y);
+          }
+          target.__lanCombatPlaced = true;
         }
         if (target.stats) {
           target.stats.hp = Number.isFinite(m.hp) ? m.hp : target.stats.hp;
           target.stats.hpMax = Number.isFinite(m.hpMax) ? m.hpMax : target.stats.hpMax;
+        }
+        if (target.stats && typeof target.stats.hp === "number" && target.stats.hp <= 0) {
+          target._deathHandled = true;
+          if (target.blocksMovement && target._blockedTile) {
+            unblockTile(scene, target._blockedTile.x, target._blockedTile.y);
+            target._blockedTile = null;
+          }
+          if (typeof target.destroy === "function") {
+            target.destroy();
+          }
+          if (Array.isArray(scene.combatMonsters)) {
+            scene.combatMonsters = scene.combatMonsters.filter((mInner) => mInner && mInner !== target);
+          }
+          if (Array.isArray(scene.monsters)) {
+            scene.monsters = scene.monsters.filter((mInner) => mInner && mInner !== target);
+          }
+          return;
         }
         if (Number.isInteger(m?.entityId) && !Number.isInteger(target.entityId)) {
           target.entityId = m.entityId;
@@ -249,6 +289,10 @@ export function createCombatSyncHandlers(ctx, helpers) {
           if (monster.isCombatOnly && typeof monster.destroy === "function") {
             monster.destroy();
           }
+          if (monster.blocksMovement && monster._blockedTile) {
+            unblockTile(scene, monster._blockedTile.x, monster._blockedTile.y);
+            monster._blockedTile = null;
+          }
           if (Array.isArray(scene.monsters)) {
             scene.monsters = scene.monsters.filter((m) => m && m !== monster);
           }
@@ -259,20 +303,51 @@ export function createCombatSyncHandlers(ctx, helpers) {
       scene.combatMonsters = nextMonsters;
     }
 
+    if (state?.enCours && Number.isInteger(msg.combatId)) {
+      const entry = activeCombats?.get(msg.combatId) || null;
+      const lanActors = entry ? buildLanActorsOrder(entry) : null;
+      if (lanActors) {
+        state.actors = lanActors;
+        if (Number.isInteger(state.activePlayerId)) {
+          const idx = lanActors.findIndex((a) => {
+            if (!a || a.kind !== "joueur") return false;
+            const ent = a.entity;
+            const id =
+              Number.isInteger(ent?.netId) ? ent.netId : Number.isInteger(ent?.id) ? ent.id : null;
+            return id === state.activePlayerId;
+          });
+          if (idx >= 0) {
+            state.actorIndex = idx;
+          }
+        } else if (
+          Number.isInteger(state.activeMonsterId) ||
+          Number.isInteger(state.activeMonsterIndex)
+        ) {
+          const idx = lanActors.findIndex((a) => {
+            if (!a || a.kind !== "monstre") return false;
+            const ent = a.entity;
+            if (Number.isInteger(state.activeMonsterId) && Number.isInteger(ent?.entityId)) {
+              return ent.entityId === state.activeMonsterId;
+            }
+            if (Number.isInteger(state.activeMonsterIndex) && Number.isInteger(ent?.combatIndex)) {
+              return ent.combatIndex === state.activeMonsterIndex;
+            }
+            return false;
+          });
+          if (idx >= 0) {
+            state.actorIndex = idx;
+          }
+        }
+      }
+    }
+
     if (typeof scene.updateCombatUi === "function") {
       scene.updateCombatUi();
     }
   };
 
   const startCombatSync = () => {
-    if (!getNetIsHost()) return;
-    if (scene.__lanCombatSyncTimer) return;
-    if (!scene.time?.addEvent) return;
-    scene.__lanCombatSyncTimer = scene.time.addEvent({
-      delay: 500,
-      loop: true,
-      callback: () => sendCombatState(),
-    });
+    // Server authoritative: no client-side snapshot sync.
   };
 
   const stopCombatSync = () => {
@@ -280,6 +355,18 @@ export function createCombatSyncHandlers(ctx, helpers) {
       scene.__lanCombatSyncTimer.remove(false);
     }
     scene.__lanCombatSyncTimer = null;
+    if (scene.__lanCombatStatePendingTimer?.remove) {
+      scene.__lanCombatStatePendingTimer.remove(false);
+    } else if (scene.__lanCombatStatePendingTimer) {
+      clearTimeout(scene.__lanCombatStatePendingTimer);
+    }
+    scene.__lanCombatStatePendingTimer = null;
+    scene.__lanCombatStatePending = false;
+    scene.__lanCombatStateSeen = false;
+  };
+
+  const requestCombatStateFlush = () => {
+    // Server authoritative: no client-side snapshot flush.
   };
 
   return {
@@ -287,5 +374,6 @@ export function createCombatSyncHandlers(ctx, helpers) {
     applyCombatState,
     startCombatSync,
     stopCombatSync,
+    requestCombatStateFlush,
   };
 }

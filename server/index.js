@@ -31,32 +31,134 @@ const MOB_RESPAWN_DELAY_MS = 5000;
 const monsterRespawnTimers = new Map();
 const resourceRespawnTimers = new Map();
 const mapInitRequests = new Map();
+const DEBUG_COMBAT = process.env.LAN_COMBAT_DEBUG === "1";
+const debugCombatLog = (...args) => {
+  if (!DEBUG_COMBAT) return;
+  // eslint-disable-next-line no-console
+  console.log("[LAN][Combat]", ...args);
+};
 
 const clients = new Map(); // ws -> { id, lastCmdId, ready }
+const eventHistory = [];
+const MAX_EVENT_HISTORY = 0;
+const combatEventHistory = new Map(); // combatId -> events
+const MAX_COMBAT_EVENT_HISTORY = 200;
+const COMBAT_EVENT_TYPES = new Set([
+  "EvCombatCreated",
+  "EvCombatUpdated",
+  "EvCombatJoinReady",
+  "EvCombatState",
+  "EvCombatMoveStart",
+  "EvCombatMonsterMoveStart",
+  "EvCombatTurnStarted",
+  "EvCombatTurnEnded",
+  "EvCombatEnded",
+  "EvSpellCast",
+  "EvDamageApplied",
+]);
 
-let spellDefs = null;
-let spellDefsFailed = false;
-const spellDefsPromise = import(
-  pathToFileURL(path.resolve(__dirname, "../src/config/spells.js")).href
-)
+  let spellDefs = null;
+  let spellDefsFailed = false;
+  let monsterSpellDefs = null;
+  let monsterSpellDefsFailed = false;
+  const spellDefsPromise = import(
+    pathToFileURL(path.resolve(__dirname, "../src/config/spells.js")).href
+  )
   .then((mod) => {
     spellDefs = mod?.spells || null;
   })
-  .catch((err) => {
-    spellDefsFailed = true;
-    // eslint-disable-next-line no-console
-    console.warn("[LAN] Failed to load spells config:", err?.message || err);
-  });
+    .catch((err) => {
+      spellDefsFailed = true;
+      // eslint-disable-next-line no-console
+      console.warn("[LAN] Failed to load spells config:", err?.message || err);
+    });
+
+  const monsterSpellDefsPromise = import(
+    pathToFileURL(path.resolve(__dirname, "../src/content/spells/monsters/index.js")).href
+  )
+    .then((mod) => {
+      monsterSpellDefs = mod?.monsterSpells || null;
+    })
+    .catch((err) => {
+      monsterSpellDefsFailed = true;
+      // eslint-disable-next-line no-console
+      console.warn("[LAN] Failed to load monster spells:", err?.message || err);
+    });
+
+  let monsterDefs = null;
+  let monsterDefsFailed = false;
+  const monsterDefsPromise = import(
+    pathToFileURL(path.resolve(__dirname, "../src/content/monsters/index.js")).href
+  )
+    .then((mod) => {
+      monsterDefs = mod?.monsters || null;
+    })
+    .catch((err) => {
+      monsterDefsFailed = true;
+      // eslint-disable-next-line no-console
+      console.warn("[LAN] Failed to load monsters config:", err?.message || err);
+    });
+
+  let combatPatterns = null;
+  let combatPatternsFailed = false;
+  const combatPatternsPromise = import(
+    pathToFileURL(path.resolve(__dirname, "../src/combatPatterns.js")).href
+  )
+    .then((mod) => {
+      combatPatterns = mod?.COMBAT_PATTERNS || null;
+    })
+    .catch((err) => {
+      combatPatternsFailed = true;
+      // eslint-disable-next-line no-console
+      console.warn("[LAN] Failed to load combat patterns:", err?.message || err);
+    });
+
+  let combatStartPositions = null;
+  let combatStartPositionsFailed = false;
+  const combatStartPositionsPromise = import(
+    pathToFileURL(path.resolve(__dirname, "../src/config/combatStartPositions.js")).href
+  )
+    .then((mod) => {
+      combatStartPositions = mod?.COMBAT_START_POSITIONS || null;
+    })
+    .catch((err) => {
+      combatStartPositionsFailed = true;
+      // eslint-disable-next-line no-console
+      console.warn("[LAN] Failed to load combat start positions:", err?.message || err);
+    });
 
 function send(ws, payload) {
   if (ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify(payload));
 }
 
-function getSpellDef(spellId) {
-  if (!spellId || !spellDefs) return null;
-  return spellDefs[spellId] || null;
-}
+  function getSpellDef(spellId) {
+    if (!spellId) return null;
+    const base = spellDefs && spellDefs[spellId] ? spellDefs[spellId] : null;
+    if (base) return base;
+    if (!monsterSpellDefs) return null;
+    for (const list of Object.values(monsterSpellDefs)) {
+      if (!list) continue;
+      const entry = list[spellId];
+      if (entry) return entry;
+    }
+    return null;
+  }
+
+  function getMonsterDef(monsterId) {
+    if (!monsterId || !monsterDefs) return null;
+    return monsterDefs[monsterId] || null;
+  }
+
+  function getCombatPattern(patternId) {
+    if (!combatPatterns) return null;
+    return combatPatterns[patternId] || null;
+  }
+
+  function getCombatStartPositions(mapId) {
+    if (!combatStartPositions || !mapId) return null;
+    return combatStartPositions[mapId] || null;
+  }
 
 function isSimpleDamageSpell(spell) {
   if (!spell) return false;
@@ -82,6 +184,52 @@ function broadcast(payload) {
   if (!event.eventId) {
     event.eventId = nextEventId++;
   }
+  if (
+    COMBAT_EVENT_TYPES.has(event.t) &&
+    Number.isInteger(event.combatId) &&
+    !Number.isInteger(event.combatSeq)
+  ) {
+    const combat = state.combats[event.combatId];
+    if (combat) {
+      combat.combatSeq = Number.isInteger(combat.combatSeq) ? combat.combatSeq + 1 : 1;
+      event.combatSeq = combat.combatSeq;
+    }
+  }
+  if (!COMBAT_EVENT_TYPES.has(event.t) && MAX_EVENT_HISTORY > 0) {
+    eventHistory.push(event);
+    if (eventHistory.length > MAX_EVENT_HISTORY) {
+      eventHistory.shift();
+    }
+  }
+  if (COMBAT_EVENT_TYPES.has(event.t) && Number.isInteger(event.combatId)) {
+    const list = combatEventHistory.get(event.combatId) || [];
+    list.push(event);
+    if (list.length > MAX_COMBAT_EVENT_HISTORY) {
+      list.shift();
+    }
+    combatEventHistory.set(event.combatId, list);
+  }
+  if (event.t === "EvCombatEnded" && Number.isInteger(event.combatId)) {
+    combatEventHistory.delete(event.combatId);
+  }
+  if (DEBUG_COMBAT && (event.t === "EvDamageApplied" || event.t === "EvSpellCast")) {
+    // eslint-disable-next-line no-console
+    console.log("[LAN][Combat]", "broadcast", {
+      t: event.t,
+      eventId: event.eventId,
+      combatId: event.combatId ?? null,
+      casterId: event.casterId ?? null,
+      spellId: event.spellId ?? null,
+      targetX: event.targetX ?? null,
+      targetY: event.targetY ?? null,
+      targetKind: event.targetKind ?? null,
+      targetId: event.targetId ?? null,
+      targetIndex: event.targetIndex ?? null,
+      damage: event.damage ?? null,
+      source: event.source ?? null,
+      authoritative: event.authoritative ?? null,
+    });
+  }
   for (const ws of clients.keys()) {
     send(ws, event);
   }
@@ -95,18 +243,27 @@ function getHostSocket() {
   return null;
 }
 
-function ensureMapInitialized(mapId) {
-  if (!mapId) return false;
-  if (state.mapMonsters[mapId] && state.mapResources[mapId]) return true;
-  const hostSocket = getHostSocket();
-  if (!hostSocket) return false;
-  const now = Date.now();
-  const last = mapInitRequests.get(mapId) || 0;
-  if (now - last < 1500) return false;
-  mapInitRequests.set(mapId, now);
-  send(hostSocket, { t: "EvEnsureMapInit", mapId });
-  return false;
-}
+  function findClientOnMap(mapId) {
+    for (const [ws, info] of clients.entries()) {
+      if (!info || !Number.isInteger(info.id)) continue;
+      const player = state.players[info.id];
+      if (player && player.mapId === mapId) return ws;
+    }
+    return null;
+  }
+
+  function ensureMapInitialized(mapId) {
+    if (!mapId) return false;
+    if (state.mapMonsters[mapId] && state.mapResources[mapId]) return true;
+    const targetSocket = findClientOnMap(mapId) || getHostSocket();
+    if (!targetSocket) return false;
+    const now = Date.now();
+    const last = mapInitRequests.get(mapId) || 0;
+    if (now - last < 1500) return false;
+    mapInitRequests.set(mapId, now);
+    send(targetSocket, { t: "EvEnsureMapInit", mapId });
+    return false;
+  }
 
 function snapshotForClient() {
   return {
@@ -130,6 +287,42 @@ function isCmdDuplicate(clientInfo, cmdId) {
   if (!Number.isInteger(cmdId)) return true;
   if (cmdId <= clientInfo.lastCmdId) return true;
   clientInfo.lastCmdId = cmdId;
+  return false;
+}
+
+const RATE_LIMITS = {
+  CmdMove: { limit: 12, windowMs: 1000 },
+  CmdMoveCombat: { limit: 6, windowMs: 1000 },
+  CmdCastSpell: { limit: 4, windowMs: 1000 },
+  CmdEndTurnCombat: { limit: 1, windowMs: 1000 },
+  CmdCombatStart: { limit: 2, windowMs: 2000 },
+  CmdJoinCombat: { limit: 2, windowMs: 2000 },
+  CmdCombatReady: { limit: 2, windowMs: 2000 },
+  CmdCombatPlacement: { limit: 6, windowMs: 1000 },
+  CmdMapChange: { limit: 4, windowMs: 1000 },
+  CmdMapMonsters: { limit: 2, windowMs: 2000 },
+  CmdMapResources: { limit: 2, windowMs: 2000 },
+  CmdRequestMapMonsters: { limit: 4, windowMs: 2000 },
+  CmdRequestMapResources: { limit: 4, windowMs: 2000 },
+  CmdResourceHarvest: { limit: 4, windowMs: 1000 },
+};
+
+function isCmdRateLimited(clientInfo, cmdType) {
+  const rule = RATE_LIMITS[cmdType];
+  if (!rule) return false;
+  const now = Date.now();
+  if (!clientInfo.rateLimits) clientInfo.rateLimits = {};
+  const entry = clientInfo.rateLimits[cmdType] || { count: 0, windowStart: now };
+  if (now - entry.windowStart >= rule.windowMs) {
+    entry.count = 0;
+    entry.windowStart = now;
+  }
+  if (entry.count >= rule.limit) {
+    clientInfo.rateLimits[cmdType] = entry;
+    return true;
+  }
+  entry.count += 1;
+  clientInfo.rateLimits[cmdType] = entry;
   return false;
 }
 
@@ -180,20 +373,23 @@ const resourceHandlers = createResourceHandlers({
   resourceRespawnTimers,
 });
 
-const combatHandlers = createCombatHandlers({
-  state,
-  broadcast,
-  send,
-  getNextCombatId,
-  getNextEventId,
-  getHostId,
-  sanitizePlayerPath,
-  serializeMonsterEntries: mobHandlers.serializeMonsterEntries,
-  monsterMoveTimers,
-  getSpellDef,
-  isSimpleDamageSpell,
-  rollSpellDamage,
-});
+  const combatHandlers = createCombatHandlers({
+    state,
+    broadcast,
+    send,
+    getNextCombatId,
+    getNextEventId,
+    getHostId,
+    sanitizePlayerPath,
+    serializeMonsterEntries: mobHandlers.serializeMonsterEntries,
+    monsterMoveTimers,
+    getSpellDef,
+    isSimpleDamageSpell,
+    rollSpellDamage,
+    getMonsterDef,
+    getCombatPattern,
+    getCombatStartPositions,
+  });
 
 const playerHandlers = createPlayerHandlers({
   state,
@@ -231,15 +427,54 @@ wss.on("connection", (ws) => {
     }
 
     if (msg?.t?.startsWith("Cmd")) {
-      if (isCmdDuplicate(clientInfo, msg.cmdId)) return;
+      if (isCmdDuplicate(clientInfo, msg.cmdId)) {
+        debugCombatLog("Cmd drop: duplicate", {
+          t: msg.t,
+          cmdId: msg.cmdId,
+          playerId: clientInfo.id,
+        });
+        return;
+      }
+      if (isCmdRateLimited(clientInfo, msg.t)) {
+        debugCombatLog("Cmd drop: rate limited", {
+          t: msg.t,
+          cmdId: msg.cmdId ?? null,
+          playerId: clientInfo.id,
+        });
+        return;
+      }
     }
 
     switch (msg.t) {
+      case "CmdAck": {
+        const lastEventId = Number.isInteger(msg.lastEventId) ? msg.lastEventId : null;
+        if (lastEventId !== null) {
+          clientInfo.lastAckEventId = Math.max(
+            clientInfo.lastAckEventId || 0,
+            lastEventId
+          );
+        }
+        break;
+      }
+      case "CmdEventReplay":
+        break;
+      case "CmdCombatReplay": {
+        const combatId = Number.isInteger(msg.combatId) ? msg.combatId : null;
+        const fromSeq = Number.isInteger(msg.fromSeq) ? msg.fromSeq : null;
+        if (combatId !== null && fromSeq !== null) {
+          const list = combatEventHistory.get(combatId) || [];
+          list.filter((ev) => ev && ev.combatSeq >= fromSeq).forEach((ev) => send(ws, ev));
+        }
+        break;
+      }
       case "CmdMove":
         playerHandlers.handleCmdMove(clientInfo, msg);
         break;
       case "CmdMoveCombat":
         combatHandlers.handleCmdMoveCombat(clientInfo, msg);
+        break;
+      case "CmdCombatPlacement":
+        combatHandlers.handleCmdCombatPlacement(clientInfo, msg);
         break;
       case "CmdMapMonsters":
         mobHandlers.handleCmdMapMonsters(ws, clientInfo, msg);
@@ -278,6 +513,19 @@ wss.on("connection", (ws) => {
         combatHandlers.handleCmdCombatEnd(ws, clientInfo, msg);
         break;
       case "CmdCombatDamageApplied":
+        debugCombatLog("CmdCombatDamageApplied recv", {
+          cmdId: msg.cmdId ?? null,
+          playerId: clientInfo.id,
+          combatId: msg.combatId ?? null,
+          source: msg.source ?? null,
+          damage: msg.damage ?? null,
+          targetX: msg.targetX ?? null,
+          targetY: msg.targetY ?? null,
+          targetKind: msg.targetKind ?? null,
+          targetId: msg.targetId ?? null,
+          targetIndex: msg.targetIndex ?? null,
+          clientSeq: msg.clientSeq ?? null,
+        });
         combatHandlers.handleCmdCombatDamageApplied(clientInfo, msg);
         break;
       case "CmdCombatState":
@@ -289,10 +537,24 @@ wss.on("connection", (ws) => {
       case "CmdCombatMonsterMoveStart":
         combatHandlers.handleCmdCombatMonsterMoveStart(clientInfo, msg);
         break;
+      case "CmdCombatChecksum":
+        combatHandlers.handleCmdCombatChecksum(ws, clientInfo, msg);
+        break;
       case "CmdEndTurn":
         playerHandlers.handleCmdEndTurn(clientInfo, msg);
         break;
       case "CmdCastSpell":
+        debugCombatLog("CmdCastSpell recv", {
+          cmdId: msg.cmdId ?? null,
+          playerId: clientInfo.id,
+          combatId: msg.combatId ?? null,
+          spellId: msg.spellId ?? null,
+          targetX: msg.targetX ?? null,
+          targetY: msg.targetY ?? null,
+          targetKind: msg.targetKind ?? null,
+          targetId: msg.targetId ?? null,
+          targetIndex: msg.targetIndex ?? null,
+        });
         combatHandlers.handleCmdCastSpell(clientInfo, msg);
         break;
       default:

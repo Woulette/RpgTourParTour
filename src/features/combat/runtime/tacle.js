@@ -131,6 +131,13 @@ export function getTaclePenaltyPreview(scene, mover) {
     return { paLoss: 0, pmLoss: 0, malusPct: 0 };
   }
 
+  const basePa = Number.isFinite(state.paRestants)
+    ? state.paRestants
+    : mover.stats?.pa ?? 0;
+  const basePm = Number.isFinite(state.pmRestants)
+    ? state.pmRestants
+    : mover.stats?.pm ?? 0;
+
   const tacle = getTotalAdjacentTacle(scene, mover);
   const hasAdjacency = hasAdjacentEnemy(scene, mover);
 
@@ -140,8 +147,8 @@ export function getTaclePenaltyPreview(scene, mover) {
     return { paLoss: 0, pmLoss: 0, malusPct: 0 };
   }
 
-  const paLoss = computeLoss(state.paRestants ?? 0, malusPct);
-  const pmLoss = computeLoss(state.pmRestants ?? 0, malusPct);
+  const paLoss = computeLoss(basePa, malusPct);
+  const pmLoss = computeLoss(basePm, malusPct);
 
   return { paLoss, pmLoss, malusPct };
 }
@@ -152,6 +159,13 @@ export function applyTaclePenalty(scene, mover) {
     return { paLoss: 0, pmLoss: 0, malusPct: 0 };
   }
 
+  const basePa = Number.isFinite(state.paRestants)
+    ? state.paRestants
+    : mover.stats?.pa ?? 0;
+  const basePm = Number.isFinite(state.pmRestants)
+    ? state.pmRestants
+    : mover.stats?.pm ?? 0;
+
   const tacle = getTotalAdjacentTacle(scene, mover);
   const hasAdjacency = hasAdjacentEnemy(scene, mover);
 
@@ -161,11 +175,11 @@ export function applyTaclePenalty(scene, mover) {
     return { paLoss: 0, pmLoss: 0, malusPct: 0 };
   }
 
-  const paLoss = computeLoss(state.paRestants ?? 0, malusPct);
-  const pmLoss = computeLoss(state.pmRestants ?? 0, malusPct);
+  const paLoss = computeLoss(basePa, malusPct);
+  const pmLoss = computeLoss(basePm, malusPct);
 
-  state.paRestants = Math.max(0, (state.paRestants ?? 0) - paLoss);
-  state.pmRestants = Math.max(0, (state.pmRestants ?? 0) - pmLoss);
+  state.paRestants = Math.max(0, basePa - paLoss);
+  state.pmRestants = Math.max(0, basePm - pmLoss);
 
   if (state.joueur === mover && typeof mover.updateHudApMp === "function") {
     mover.updateHudApMp(state.paRestants, state.pmRestants);

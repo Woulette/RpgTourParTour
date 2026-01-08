@@ -41,7 +41,7 @@ function createPlayerHandlers(ctx) {
     const player = createPlayer(playerId);
     player.mapId = state.mapId;
     state.players[playerId] = player;
-    clients.set(ws, { id: playerId, lastCmdId: 0, ready: true });
+    clients.set(ws, { id: playerId, lastCmdId: 0, ready: true, lastAckEventId: 0 });
 
     if (!getHostId()) {
       setHostId(playerId);

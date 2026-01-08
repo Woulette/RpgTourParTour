@@ -1,8 +1,4 @@
-import {
-  getNetClient,
-  getNetIsHost,
-  getNetPlayerId,
-} from "../../app/session.js";
+import { getNetClient, getNetIsHost, getNetPlayerId } from "../../app/session.js";
 import {
   applyTreeHarvested,
   applyTreeRespawn,
@@ -139,9 +135,11 @@ export function createResourceHandlers(ctx) {
     if (!client) return;
     const playerId = getNetPlayerId();
     if (!playerId) return;
-    if (!getNetIsHost()) return;
     const currentMap = getCurrentMapKey();
     if (!currentMap) return;
+    const seeded =
+      scene.__lanMapResourcesSeeded || (scene.__lanMapResourcesSeeded = new Set());
+    if (seeded.has(currentMap)) return;
     const entries = buildResourceEntriesForMap();
 
     client.sendCmd("CmdMapResources", {
@@ -149,6 +147,7 @@ export function createResourceHandlers(ctx) {
       mapId: currentMap,
       resources: entries,
     });
+    seeded.add(currentMap);
   };
 
   const requestMapResources = () => {
@@ -156,7 +155,6 @@ export function createResourceHandlers(ctx) {
     if (!client) return;
     const playerId = getNetPlayerId();
     if (!playerId) return;
-    if (getNetIsHost()) return;
     const currentMap = getCurrentMapKey();
     if (!currentMap) return;
     client.sendCmd("CmdRequestMapResources", {

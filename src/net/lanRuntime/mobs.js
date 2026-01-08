@@ -1,8 +1,4 @@
-import {
-  getNetClient,
-  getNetIsHost,
-  getNetPlayerId,
-} from "../../app/session.js";
+import { getNetClient, getNetIsHost, getNetPlayerId } from "../../app/session.js";
 import {
   buildInitialMonsterEntries,
   planMonsterRoamPath,
@@ -185,9 +181,11 @@ export function createMobHandlers(ctx) {
     if (!client) return;
     const playerId = getNetPlayerId();
     if (!playerId) return;
-    if (!getNetIsHost()) return;
     const currentMap = getCurrentMapKey();
     if (!currentMap) return;
+    const seeded =
+      scene.__lanMapMonstersSeeded || (scene.__lanMapMonstersSeeded = new Set());
+    if (seeded.has(currentMap)) return;
     const mapDef = getCurrentMapDef();
     const currentMapObj = scene.map;
     const currentGround = scene.groundLayer;
@@ -213,6 +211,7 @@ export function createMobHandlers(ctx) {
       mapHeight: currentMapObj.height,
       monsters: entries,
     });
+    seeded.add(currentMap);
   };
 
   const requestMapMonsters = () => {
@@ -220,7 +219,6 @@ export function createMobHandlers(ctx) {
     if (!client) return;
     const playerId = getNetPlayerId();
     if (!playerId) return;
-    if (getNetIsHost()) return;
     const currentMap = getCurrentMapKey();
     if (!currentMap) return;
     client.sendCmd("CmdRequestMapMonsters", {

@@ -1,6 +1,7 @@
 import { getNetPlayerId } from "../../../app/session.js";
 import { unblockTile } from "../../../collision/collisionGrid.js";
 import { startCombatFromPrep } from "../../../features/combat/runtime/prep.js";
+import { endCombat } from "../../../core/combat.js";
 
 export function createCombatLifecycleHandlers(
   ctx,
@@ -21,12 +22,13 @@ export function createCombatLifecycleHandlers(
     refreshMapMonstersFromServer,
     removeCombatJoinMarker,
   } = ctx;
-  const { buildLanActorsOrder } = helpers;
+  const { buildLanActorsOrder, shouldApplyCombatEvent } = helpers;
   const { syncCombatPlayerAllies, startJoinCombatPrep } = prepHandlers;
   const { startCombatSync, stopCombatSync, sendCombatState } = syncHandlers;
 
   const applyCombatCreated = (entry) => {
     if (!entry || !Number.isInteger(entry.combatId)) return;
+    if (!shouldApplyCombatEvent(entry.combatId, entry.eventId, entry.combatSeq)) return;
     activeCombats.set(entry.combatId, entry);
 
     const participantIds = Array.isArray(entry.participantIds)
@@ -51,6 +53,9 @@ export function createCombatLifecycleHandlers(
     const localId = getNetPlayerId();
     if (localId && participantIds.includes(localId)) {
       scene.__lanCombatId = entry.combatId;
+      if (Number.isInteger(entry.aiDriverId)) {
+        scene.__lanCombatAiDriverId = entry.aiDriverId;
+      }
     }
 
     const currentMap = getCurrentMapKey();
@@ -68,6 +73,7 @@ export function createCombatLifecycleHandlers(
 
   const applyCombatUpdated = (entry) => {
     if (!entry || !Number.isInteger(entry.combatId)) return;
+    if (!shouldApplyCombatEvent(entry.combatId, entry.eventId, entry.combatSeq)) return;
     activeCombats.set(entry.combatId, entry);
 
     const participantIds = Array.isArray(entry.participantIds)
@@ -92,6 +98,9 @@ export function createCombatLifecycleHandlers(
     const localId = getNetPlayerId();
     if (localId && participantIds.includes(localId)) {
       scene.__lanCombatId = entry.combatId;
+      if (Number.isInteger(entry.aiDriverId)) {
+        scene.__lanCombatAiDriverId = entry.aiDriverId;
+      }
     }
 
     const currentMap = getCurrentMapKey();
@@ -132,6 +141,17 @@ export function createCombatLifecycleHandlers(
       if (Number.isInteger(entry.activePlayerId)) {
         scene.combatState.activePlayerId = entry.activePlayerId;
       }
+      if (Number.isInteger(entry.activeMonsterId)) {
+        scene.combatState.activeMonsterId = entry.activeMonsterId;
+      }
+      if (Number.isInteger(entry.activeMonsterIndex)) {
+        scene.combatState.activeMonsterIndex = entry.activeMonsterIndex;
+      }
+      if (entry.turn === "monster") {
+        scene.combatState.tour = "monstre";
+      } else if (entry.turn === "player") {
+        scene.combatState.tour = "joueur";
+      }
       if (Number.isInteger(entry.round)) {
         scene.combatState.round = entry.round;
       }
@@ -145,6 +165,30 @@ export function createCombatLifecycleHandlers(
             const id =
               Number.isInteger(ent?.netId) ? ent.netId : Number.isInteger(ent?.id) ? ent.id : null;
             return id === scene.combatState.activePlayerId;
+          });
+          if (idx >= 0) {
+            scene.combatState.actorIndex = idx;
+          }
+        } else if (
+          Number.isInteger(scene.combatState.activeMonsterId) ||
+          Number.isInteger(scene.combatState.activeMonsterIndex)
+        ) {
+          const idx = lanActors.findIndex((a) => {
+            if (!a || a.kind !== "monstre") return false;
+            const ent = a.entity;
+            if (
+              Number.isInteger(scene.combatState.activeMonsterId) &&
+              Number.isInteger(ent?.entityId)
+            ) {
+              return ent.entityId === scene.combatState.activeMonsterId;
+            }
+            if (
+              Number.isInteger(scene.combatState.activeMonsterIndex) &&
+              Number.isInteger(ent?.combatIndex)
+            ) {
+              return ent.combatIndex === scene.combatState.activeMonsterIndex;
+            }
+            return false;
           });
           if (idx >= 0) {
             scene.combatState.actorIndex = idx;
@@ -168,6 +212,13 @@ export function createCombatLifecycleHandlers(
 
   const applyCombatEnded = (entry) => {
     if (!entry || !Number.isInteger(entry.combatId)) return;
+    if (!shouldApplyCombatEvent(entry.combatId, entry.eventId, entry.combatSeq)) return;
+    const stateCombatId = scene?.combatState?.combatId ?? null;
+    const shouldEndLocal =
+      scene?.combatState?.enCours === true &&
+      (Number.isInteger(stateCombatId)
+        ? stateCombatId === entry.combatId
+        : scene.__lanCombatId === entry.combatId);
     activeCombats.delete(entry.combatId);
     removeCombatJoinMarker(entry.combatId);
 
@@ -189,11 +240,15 @@ export function createCombatLifecycleHandlers(
     const localId = getNetPlayerId();
     if (localId && scene.__lanCombatId === entry.combatId) {
       scene.__lanCombatId = null;
+      scene.__lanCombatAiDriverId = null;
       if (player?.blocksMovement && player._blockedTile) {
         unblockTile(scene, player._blockedTile.x, player._blockedTile.y);
         player._blockedTile = null;
       }
       stopCombatSync();
+    }
+    if (shouldEndLocal) {
+      endCombat(scene);
     }
 
     const currentMap = getCurrentMapKey();
@@ -207,6 +262,7 @@ export function createCombatLifecycleHandlers(
 
   const handleCombatJoinReady = (msg) => {
     if (!msg || !msg.combat) return;
+    if (!shouldApplyCombatEvent(msg.combat.combatId, msg.eventId, msg.combatSeq)) return;
     const entry = msg.combat;
     applyCombatUpdated(entry);
     const mobEntries = Array.isArray(msg.mobEntries) ? msg.mobEntries : [];

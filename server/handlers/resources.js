@@ -64,9 +64,10 @@ function createResourceHandlers(ctx) {
 
   function handleCmdMapResources(ws, clientInfo, msg) {
     if (clientInfo.id !== msg.playerId) return;
-    if (clientInfo.id !== getHostId()) return;
+    const player = state.players[clientInfo.id];
     const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
     if (!mapId) return;
+    if (!player || player.mapId !== mapId) return;
 
     if (!state.mapResources[mapId]) {
       const entries = sanitizeResourceEntries(msg.resources);

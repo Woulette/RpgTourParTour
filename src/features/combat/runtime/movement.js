@@ -26,13 +26,15 @@ export function limitPathForCombat(scene, player, path) {
     return null;
   }
 
-  if (state.pmRestants <= 0) {
+  const { pmLoss } = getTaclePenaltyPreview(scene, player);
+  const effectivePm = Math.max(0, (state.pmRestants ?? 0) - pmLoss);
+  if (effectivePm <= 0) {
     return null;
   }
 
   let limitedPath = path;
-  if (path.length > state.pmRestants) {
-    limitedPath = path.slice(0, state.pmRestants);
+  if (path.length > effectivePm) {
+    limitedPath = path.slice(0, effectivePm);
   }
 
   const moveCost = limitedPath.length;
@@ -102,7 +104,10 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
   let blockedFromIndex = null;
   if (state && state.enCours && state.tour === "joueur" && state.joueur) {
     const { pmLoss } = getTaclePenaltyPreview(scene, state.joueur);
-    const effectivePm = Math.max(0, (state.pmRestants ?? 0) - pmLoss);
+    const basePm = Number.isFinite(state.pmRestants)
+      ? state.pmRestants
+      : state.joueur?.stats?.pm ?? 0;
+    const effectivePm = Math.max(0, basePm - pmLoss);
     blockedFromIndex = effectivePm;
   }
 

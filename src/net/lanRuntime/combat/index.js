@@ -14,7 +14,7 @@ export function createCombatHandlers(ctx) {
   const lifecycle = createCombatLifecycleHandlers(ctx, helpers, prep, sync);
   const turns = createCombatTurnHandlers(ctx, helpers);
   const moves = createCombatMoveHandlers(ctx, helpers);
-  const spells = createCombatSpellHandlers(ctx);
+  const spells = createCombatSpellHandlers(ctx, helpers);
   const damage = createCombatDamageHandlers(ctx, helpers);
 
   return {

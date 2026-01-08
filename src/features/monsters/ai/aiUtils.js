@@ -111,10 +111,14 @@ export function moveMonsterAlongPath(
     return;
   }
 
-  if (scene?.__lanCombatId && monster && getNetIsHost()) {
+  if (scene?.__lanCombatId && monster) {
     const client = getNetClient();
     const playerId = getNetPlayerId();
-    if (client && playerId) {
+    const driverId = Number.isInteger(scene.__lanCombatAiDriverId)
+      ? scene.__lanCombatAiDriverId
+      : null;
+    const isDriver = driverId ? playerId === driverId : getNetIsHost();
+    if (client && playerId && isDriver) {
       const seq = (monster.__lanCombatMoveSeq || 0) + 1;
       monster.__lanCombatMoveSeq = seq;
       monster.__lanCombatLastMoveSeq = seq;
