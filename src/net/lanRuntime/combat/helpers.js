@@ -165,6 +165,9 @@ export function createCombatHelpers(ctx) {
 
   const buildLanActorsOrder = (entry) => {
     if (!entry || !scene?.combatState?.enCours) return null;
+    if (!scene.__lanCombatActorsCache) {
+      scene.__lanCombatActorsCache = new Map();
+    }
     const participantIds = Array.isArray(entry.participantIds)
       ? entry.participantIds.map((id) => Number(id)).filter((id) => Number.isInteger(id))
       : [];
@@ -174,43 +177,72 @@ export function createCombatHelpers(ctx) {
     const allies = Array.isArray(scene.combatAllies) ? scene.combatAllies : [];
     const placeholderCache =
       scene.__lanCombatPlaceholders || (scene.__lanCombatPlaceholders = new Map());
-    const players = participantIds
-      .map((id) => {
-        if (localId && id === localId) return scene.combatState?.joueur || player;
-        const ally =
-          allies.find((entry) => entry?.isPlayerAlly && Number(entry.netId) === id) || null;
-        if (ally) return ally;
-        const cached = placeholderCache.get(id) || null;
-        if (cached) return cached;
-        const remote = remotePlayersData?.get(id) || {};
-        const hp = Number.isFinite(remote.combatHp)
-          ? remote.combatHp
-          : Number.isFinite(remote.hp)
-            ? remote.hp
-            : Number.isFinite(remote.combatHpMax)
-              ? remote.combatHpMax
-              : 1;
-        const hpMax = Number.isFinite(remote.combatHpMax)
-          ? remote.combatHpMax
-          : Number.isFinite(remote.hpMax)
-            ? remote.hpMax
-            : Number.isFinite(remote.combatHp)
-              ? remote.combatHp
-              : 1;
-        const placeholder = {
-          isCombatAlly: true,
-          isPlayerAlly: true,
-          isRemote: true,
-          netId: id,
-          id,
-          classId: remote.classId || "archer",
-          displayName: remote.displayName || `Joueur ${id}`,
-          stats: { hp, hpMax },
-        };
-        placeholderCache.set(id, placeholder);
-        return placeholder;
-      })
-      .filter((p) => p);
+    const getActorKey = (actor) => {
+      const ent = actor?.entity;
+      if (!ent) return "z:0";
+      if (actor.kind === "joueur") {
+        const id =
+          Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : 0;
+        return `p:${id}`;
+      }
+      if (ent.isCombatAlly) {
+        const id =
+          Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : 0;
+        return `a:${id}`;
+      }
+      if (Number.isInteger(ent.entityId)) return `m:${ent.entityId}`;
+      if (Number.isInteger(ent.combatIndex)) return `m:i:${ent.combatIndex}`;
+      if (typeof ent.monsterId === "string") return `m:${ent.monsterId}`;
+      return "m:0";
+    };
+    const isAlive = (actor) => {
+      const stats = actor?.entity?.stats || {};
+      const hp =
+        typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
+      return hp > 0;
+    };
+    const cached = scene.__lanCombatActorsCache.get(entry.combatId) || null;
+    const resolvePlayerEntity = (id) => {
+      if (!Number.isInteger(id)) return null;
+      if (localId && id === localId) return scene.combatState?.joueur || player;
+      const ally =
+        allies.find((entry) => entry?.isPlayerAlly && Number(entry.netId) === id) || null;
+      if (ally) {
+        if (!Number.isInteger(ally.netId)) ally.netId = id;
+        if (!Number.isInteger(ally.id)) ally.id = id;
+        return ally;
+      }
+      const cachedEntity = placeholderCache.get(id) || null;
+      if (cachedEntity) return cachedEntity;
+      const remote = remotePlayersData?.get(id) || {};
+      const hp = Number.isFinite(remote.combatHp)
+        ? remote.combatHp
+        : Number.isFinite(remote.hp)
+          ? remote.hp
+          : Number.isFinite(remote.combatHpMax)
+            ? remote.combatHpMax
+            : 1;
+      const hpMax = Number.isFinite(remote.combatHpMax)
+        ? remote.combatHpMax
+        : Number.isFinite(remote.hpMax)
+          ? remote.hpMax
+          : Number.isFinite(remote.combatHp)
+            ? remote.combatHp
+            : 1;
+      const placeholder = {
+        isCombatAlly: true,
+        isPlayerAlly: true,
+        isRemote: true,
+        netId: id,
+        id,
+        classId: remote.classId || "archer",
+        displayName: remote.displayName || `Joueur ${id}`,
+        stats: { hp, hpMax },
+      };
+      placeholderCache.set(id, placeholder);
+      return placeholder;
+    };
+    const players = participantIds.map((id) => resolvePlayerEntity(id)).filter((p) => p);
 
     const monsters = Array.isArray(scene.combatMonsters)
       ? scene.combatMonsters.filter((m) => {
@@ -227,6 +259,52 @@ export function createCombatHelpers(ctx) {
       const eb = Number.isInteger(b?.entityId) ? b.entityId : 0;
       return ea - eb;
     });
+
+    if (Array.isArray(entry.actorOrder) && entry.actorOrder.length > 0) {
+      const ordered = [];
+      entry.actorOrder.forEach((actor) => {
+        if (!actor) return;
+        if (actor.kind === "joueur") {
+          const ent = resolvePlayerEntity(actor.playerId);
+          if (ent) ordered.push({ kind: "joueur", entity: ent });
+          return;
+        }
+        const ent =
+          (Number.isInteger(actor.entityId)
+            ? scene.combatMonsters?.find((m) => m && m.entityId === actor.entityId)
+            : null) ||
+          (Number.isInteger(actor.combatIndex)
+            ? scene.combatMonsters?.find((m) => m && m.combatIndex === actor.combatIndex)
+            : null) ||
+          null;
+        if (ent) ordered.push({ kind: "monstre", entity: ent });
+      });
+      if (ordered.length > 0) {
+        scene.__lanCombatActorsCache.set(entry.combatId, ordered);
+        return ordered;
+      }
+    }
+
+    if (cached && Array.isArray(cached) && cached.length > 0) {
+      const kept = cached.filter((actor) => actor && isAlive(actor));
+      const seen = new Set(kept.map((actor) => getActorKey(actor)));
+      players.forEach((ent) => {
+        const actor = { kind: "joueur", entity: ent };
+        const key = getActorKey(actor);
+        if (seen.has(key) || !isAlive(actor)) return;
+        seen.add(key);
+        kept.push(actor);
+      });
+      monsters.forEach((ent) => {
+        const actor = { kind: "monstre", entity: ent };
+        const key = getActorKey(actor);
+        if (seen.has(key) || !isAlive(actor)) return;
+        seen.add(key);
+        kept.push(actor);
+      });
+      scene.__lanCombatActorsCache.set(entry.combatId, kept);
+      return kept.length > 0 ? kept : null;
+    }
 
     const actors = [];
     let pIdx = 0;
@@ -255,7 +333,11 @@ export function createCombatHelpers(ctx) {
       }
     }
 
-    return actors.length > 0 ? actors : null;
+    const initial = actors.length > 0 ? actors : null;
+    if (initial) {
+      scene.__lanCombatActorsCache.set(entry.combatId, initial);
+    }
+    return initial;
   };
 
   const moveCombatMonsterAlongPathNetwork = (monster, steps) => {

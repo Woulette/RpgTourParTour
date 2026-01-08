@@ -7,6 +7,7 @@ function createStateHandlers(ctx, helpers) {
     getNextEventId,
     monsterMoveTimers,
     serializeMonsterEntries,
+    serializeActorOrder,
   } = ctx;
   const {
     collectCombatMobEntries,
@@ -14,6 +15,8 @@ function createStateHandlers(ctx, helpers) {
     applyCombatPlacement,
     upsertSnapshotPlayer,
     buildCombatActorOrder,
+    runMonsterAiTurn,
+    advanceCombatTurn,
   } = helpers;
 
   function serializeCombatEntry(entry) {
@@ -119,9 +122,8 @@ function createStateHandlers(ctx, helpers) {
       mobEntries: [],
       readyIds: [],
       phase: "prep",
-      turn: "player",
-      activePlayerId: participants[0],
-      activePlayerIndex: 0,
+      turn: null,
+      activePlayerId: null,
       round: 1,
       aiDriverId: participants[0],
       pmRemainingByPlayer: {},
@@ -228,6 +230,22 @@ function createStateHandlers(ctx, helpers) {
     if (!combat.participantIds.includes(clientInfo.id)) return;
     if (combat.phase !== "prep") return;
 
+    const player = state.players[clientInfo.id];
+    if (player) {
+      if (Number.isFinite(msg.initiative)) {
+        player.initiative = Math.max(0, Math.round(msg.initiative));
+      }
+      if (Number.isFinite(msg.level)) {
+        player.level = Math.max(1, Math.round(msg.level));
+      }
+      if (typeof msg.classId === "string" && msg.classId) {
+        player.classId = msg.classId;
+      }
+      if (typeof msg.displayName === "string" && msg.displayName) {
+        player.displayName = msg.displayName;
+      }
+    }
+
     combat.readyIds = Array.isArray(combat.readyIds) ? combat.readyIds : [];
     if (!combat.readyIds.includes(clientInfo.id)) {
       combat.readyIds.push(clientInfo.id);
@@ -260,26 +278,43 @@ function createStateHandlers(ctx, helpers) {
         if (!p) return;
         combat.pmRemainingByPlayer[id] = Number.isFinite(p.pm) ? p.pm : 3;
       });
-      if (!Number.isInteger(combat.activePlayerId)) {
-        const first = Array.isArray(combat.participantIds)
-          ? Number(combat.participantIds[0])
-          : null;
-        if (Number.isInteger(first)) {
-          combat.activePlayerId = first;
-          combat.activePlayerIndex = 0;
-        }
-      }
-      buildCombatActorOrder(combat);
+      const order = buildCombatActorOrder(combat);
       combat.actorIndex = 0;
+      const firstActor = Array.isArray(order) ? order[0] : null;
+      if (firstActor?.kind === "monstre") {
+        combat.turn = "monster";
+        combat.activePlayerId = null;
+        combat.activeMonsterId = Number.isInteger(firstActor.entityId)
+          ? firstActor.entityId
+          : null;
+        combat.activeMonsterIndex = Number.isInteger(firstActor.combatIndex)
+          ? firstActor.combatIndex
+          : null;
+      } else if (firstActor?.kind === "joueur") {
+        combat.turn = "player";
+        combat.activePlayerId = Number.isInteger(firstActor.playerId)
+          ? firstActor.playerId
+          : null;
+        combat.activeMonsterId = null;
+        combat.activeMonsterIndex = null;
+      }
       broadcast({
         t: "EvCombatTurnStarted",
         combatId,
-        actorType: "player",
+        actorType: combat.turn === "monster" ? "monster" : "player",
         activePlayerId: combat.activePlayerId ?? null,
         activeMonsterId: combat.activeMonsterId ?? null,
         activeMonsterIndex: combat.activeMonsterIndex ?? null,
         round: combat.round,
+        actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
       });
+      if (combat.turn === "monster" && typeof runMonsterAiTurn === "function") {
+        runMonsterAiTurn(combat, () => {
+          if (typeof advanceCombatTurn === "function") {
+            advanceCombatTurn(combat, "monster");
+          }
+        });
+      }
       if (combat.stateSnapshot) {
         broadcast({
           t: "EvCombatState",
@@ -296,6 +331,7 @@ function createStateHandlers(ctx, helpers) {
           activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
             ? combat.activeMonsterIndex
             : null,
+          actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
           players: Array.isArray(combat.stateSnapshot.players)
             ? combat.stateSnapshot.players
             : [],

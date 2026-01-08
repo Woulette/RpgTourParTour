@@ -21,6 +21,9 @@ export function createCombatTurnHandlers(ctx, helpers) {
     if (!shouldApplyCombatEvent(combatId, msg.eventId, msg.combatSeq)) return;
     const entry = activeCombats.get(combatId) || { combatId };
     entry.turn = msg.actorType === "monster" ? "monster" : "player";
+    if (Array.isArray(msg.actorOrder) && msg.actorOrder.length > 0) {
+      entry.actorOrder = msg.actorOrder;
+    }
     if (Number.isInteger(msg.round)) entry.round = msg.round;
     if (Number.isInteger(msg.activePlayerId)) {
       entry.activePlayerId = msg.activePlayerId;
@@ -32,13 +35,29 @@ export function createCombatTurnHandlers(ctx, helpers) {
     if (!state || !state.enCours) return;
 
     const lanEntry = activeCombats.get(combatId);
-    const lanActors = buildLanActorsOrder(lanEntry);
-    if (lanActors) {
-      state.actors = lanActors;
+    const shouldRebuild =
+      !Array.isArray(state.actors) ||
+      state.actors.length === 0 ||
+      (Array.isArray(msg.actorOrder) && msg.actorOrder.length > 0);
+    if (shouldRebuild) {
+      const lanActors = buildLanActorsOrder(lanEntry);
+      if (lanActors) {
+        state.actors = lanActors;
+      }
     }
 
     if (Number.isInteger(msg.activePlayerId)) {
       state.activePlayerId = msg.activePlayerId;
+      state.activeMonsterId = null;
+      state.activeMonsterIndex = null;
+    } else if (Number.isInteger(msg.activeMonsterId) || Number.isInteger(msg.activeMonsterIndex)) {
+      state.activePlayerId = null;
+      if (Number.isInteger(msg.activeMonsterId)) {
+        state.activeMonsterId = msg.activeMonsterId;
+      }
+      if (Number.isInteger(msg.activeMonsterIndex)) {
+        state.activeMonsterIndex = msg.activeMonsterIndex;
+      }
     }
     const targetTour = msg.actorType === "monster" ? "monstre" : "joueur";
     if (!Array.isArray(state.actors) || state.actors.length === 0) {

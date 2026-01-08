@@ -1,5 +1,5 @@
 function createTurnHandlers(ctx, helpers) {
-  const { state, broadcast } = ctx;
+  const { state, broadcast, serializeActorOrder } = ctx;
   const {
     ensureCombatSnapshot,
     buildCombatActorOrder,
@@ -19,7 +19,7 @@ function createTurnHandlers(ctx, helpers) {
   };
 
   const getActorOrder = (combat) => {
-    const order = Array.isArray(combat.actorOrder) ? combat.actorOrder : buildCombatActorOrder(combat);
+    const order = buildCombatActorOrder(combat);
     combat.actorOrder = order;
     return order;
   };
@@ -87,6 +87,7 @@ function createTurnHandlers(ctx, helpers) {
       activeMonsterId: actor.kind === "monstre" ? actor.entityId : null,
       activeMonsterIndex: actor.kind === "monstre" ? actor.combatIndex : null,
       round: combat.round,
+      actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
     });
   };
 
@@ -146,6 +147,7 @@ function createTurnHandlers(ctx, helpers) {
         activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
           ? combat.activeMonsterIndex
           : null,
+        actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
         players: Array.isArray(combat.stateSnapshot.players)
           ? combat.stateSnapshot.players
           : [],

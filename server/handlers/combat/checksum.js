@@ -1,5 +1,5 @@
 function createCombatChecksumHandlers(ctx, helpers) {
-  const { state, send, debugLog, getNextEventId } = ctx;
+  const { state, send, debugLog, getNextEventId, serializeActorOrder } = ctx;
   const { ensureCombatSnapshot } = helpers;
 
   const hashString = (value) => {
@@ -108,6 +108,18 @@ function createCombatChecksumHandlers(ctx, helpers) {
           eventId: typeof getNextEventId === "function" ? getNextEventId() : undefined,
           combatId,
           mapId: combat.mapId || null,
+          turn: combat.turn || null,
+          round: Number.isInteger(combat.round) ? combat.round : null,
+          activePlayerId: Number.isInteger(combat.activePlayerId)
+            ? combat.activePlayerId
+            : null,
+          activeMonsterId: Number.isInteger(combat.activeMonsterId)
+            ? combat.activeMonsterId
+            : null,
+          activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
+            ? combat.activeMonsterIndex
+            : null,
+          actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
           players: Array.isArray(combat.stateSnapshot.players)
             ? combat.stateSnapshot.players
             : [],

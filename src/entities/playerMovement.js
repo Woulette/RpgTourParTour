@@ -642,6 +642,9 @@ function createCalibratedWorldToTile(map, groundLayer) {
           mapId: scene.currentMapKey || scene.currentMapDef?.key || null,
           tileX,
           tileY,
+          classId: typeof player?.classId === "string" ? player.classId : null,
+          displayName:
+            typeof player?.displayName === "string" ? player.displayName : null,
         });
         movePlayerAlongPathWithCombat(
           scene,

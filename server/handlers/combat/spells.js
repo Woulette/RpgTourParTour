@@ -7,6 +7,7 @@ function createSpellHandlers(ctx, helpers) {
     rollSpellDamage,
     debugLog,
     finalizeCombat,
+    serializeActorOrder,
   } = ctx;
   const { applyDamageToCombatSnapshot } = helpers;
   const countLivingMonsters = (combat) => {
@@ -164,6 +165,7 @@ function createSpellHandlers(ctx, helpers) {
           activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
             ? combat.activeMonsterIndex
             : null,
+          actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
           players: Array.isArray(combat.stateSnapshot.players)
             ? combat.stateSnapshot.players
             : [],
@@ -334,6 +336,7 @@ function createSpellHandlers(ctx, helpers) {
         activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
           ? combat.activeMonsterIndex
           : null,
+        actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
         players: Array.isArray(combat.stateSnapshot.players)
           ? combat.stateSnapshot.players
           : [],

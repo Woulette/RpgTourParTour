@@ -5,6 +5,7 @@ function createSnapshotHandlers(ctx, helpers) {
     getMonsterDef,
     getCombatPattern,
     getCombatStartPositions,
+    serializeActorOrder,
   } = ctx;
   const { collectCombatMobEntries } = helpers;
 
@@ -252,6 +253,13 @@ function createSnapshotHandlers(ctx, helpers) {
         tileY: Number.isInteger(player.y) ? player.y : null,
         hp,
         hpMax,
+        classId: typeof player.classId === "string" ? player.classId : null,
+        displayName:
+          typeof player.displayName === "string"
+            ? player.displayName
+            : typeof player.name === "string"
+              ? player.name
+              : null,
       });
     });
 
@@ -291,6 +299,13 @@ function createSnapshotHandlers(ctx, helpers) {
         tileY: Number.isInteger(player.y) ? player.y : null,
         hp,
         hpMax,
+        classId: typeof player.classId === "string" ? player.classId : null,
+        displayName:
+          typeof player.displayName === "string"
+            ? player.displayName
+            : typeof player.name === "string"
+              ? player.name
+              : null,
       };
       snapshot.players.push(entry);
     } else {
@@ -298,6 +313,14 @@ function createSnapshotHandlers(ctx, helpers) {
       entry.tileY = Number.isInteger(player.y) ? player.y : entry.tileY;
       entry.hp = hp;
       entry.hpMax = hpMax;
+      if (typeof player.classId === "string" && player.classId) {
+        entry.classId = player.classId;
+      }
+      if (typeof player.displayName === "string" && player.displayName) {
+        entry.displayName = player.displayName;
+      } else if (typeof player.name === "string" && player.name) {
+        entry.displayName = player.name;
+      }
     }
     snapshot.updatedAt = Date.now();
   }
@@ -473,6 +496,7 @@ function createSnapshotHandlers(ctx, helpers) {
       activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
         ? combat.activeMonsterIndex
         : null,
+      actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
       players: snapshotPlayers,
       monsters: snapshotMonsters,
     });

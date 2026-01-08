@@ -14,23 +14,44 @@ function createCombatHandlers(ctx) {
     // eslint-disable-next-line no-console
     console.log("[LAN][Combat]", ...args);
   };
+  const serializeActorOrder = (combat) => {
+    const order = Array.isArray(combat?.actorOrder) ? combat.actorOrder : [];
+    return order
+      .map((actor) => {
+        if (!actor) return null;
+        if (actor.kind === "joueur") {
+          return {
+            kind: "joueur",
+            playerId: Number.isInteger(actor.playerId) ? actor.playerId : null,
+          };
+        }
+        return {
+          kind: "monstre",
+          entityId: Number.isInteger(actor.entityId) ? actor.entityId : null,
+          combatIndex: Number.isInteger(actor.combatIndex) ? actor.combatIndex : null,
+        };
+      })
+      .filter(Boolean);
+  };
+  const sharedCtx = { ...ctx, debugLog, serializeActorOrder };
 
   const mobHelpers = createCombatMobHelpers({ state: ctx.state });
-  const snapshot = createSnapshotHandlers({ ...ctx, debugLog }, mobHelpers);
-  const aiHandlers = createCombatAiHandlers({ ...ctx, debugLog }, snapshot);
-  const checksumHandlers = createCombatChecksumHandlers({ ...ctx, debugLog }, snapshot);
-  const stateHandlers = createStateHandlers({ ...ctx, debugLog }, {
+  const snapshot = createSnapshotHandlers(sharedCtx, mobHelpers);
+  const aiHandlers = createCombatAiHandlers(sharedCtx, snapshot);
+  const turnHandlers = createTurnHandlers(sharedCtx, {
+    ...snapshot,
+    ...aiHandlers,
+  });
+  const checksumHandlers = createCombatChecksumHandlers(sharedCtx, snapshot);
+  const stateHandlers = createStateHandlers(sharedCtx, {
     ...mobHelpers,
     ...snapshot,
     ...aiHandlers,
+    advanceCombatTurn: turnHandlers.advanceCombatTurn,
   });
-  const moveHandlers = createMoveHandlers({ ...ctx, debugLog }, snapshot);
-  const turnHandlers = createTurnHandlers({ ...ctx, debugLog }, {
-    ...snapshot,
-    ...aiHandlers,
-  });
+  const moveHandlers = createMoveHandlers(sharedCtx, snapshot);
   const spellHandlers = createSpellHandlers(
-    { ...ctx, debugLog, finalizeCombat: stateHandlers.finalizeCombat },
+    { ...sharedCtx, finalizeCombat: stateHandlers.finalizeCombat },
     snapshot
   );
 

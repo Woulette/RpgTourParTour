@@ -23,6 +23,9 @@ class MainScene extends Phaser.Scene {
   }
 
   create() {
+    if (typeof window !== "undefined") {
+      window.__scene = this;
+    }
     createMainScene(this);
   }
 
@@ -62,6 +65,9 @@ const sessionSwitch = createSessionSwitch({
   destroyGame,
   createGame: () => {
     gameInstance = new Phaser.Game(config);
+    if (typeof window !== "undefined") {
+      window.__game = gameInstance;
+    }
   },
   closeAllHudPanels,
   setSelectedCharacter,

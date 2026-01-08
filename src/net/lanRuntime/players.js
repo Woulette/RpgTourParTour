@@ -263,6 +263,7 @@ export function createPlayerHandlers(ctx) {
     remote.isRemote = true;
     remote.netId = playerId;
     remote.mapId = entry.mapId || entry.mapKey || null;
+    remote.displayName = entry.displayName || remote.displayName || "Joueur";
     placeEntityOnTile(remote, spawnX, spawnY);
     remotePlayers.set(playerId, remote);
     return remote;
@@ -286,6 +287,7 @@ export function createPlayerHandlers(ctx) {
     const x = Number.isFinite(entry.x) ? entry.x : prev.x;
     const y = Number.isFinite(entry.y) ? entry.y : prev.y;
     const classId = entry.classId || prev.classId || "archer";
+    const displayName = entry.displayName || prev.displayName || null;
     const inCombat = entry.inCombat === true ? true : prev.inCombat === true;
     const combatId = Number.isInteger(entry.combatId) ? entry.combatId : prev.combatId || null;
     remotePlayersData.set(playerId, {
@@ -294,6 +296,7 @@ export function createPlayerHandlers(ctx) {
       x,
       y,
       classId,
+      displayName,
       inCombat,
       combatId,
     });

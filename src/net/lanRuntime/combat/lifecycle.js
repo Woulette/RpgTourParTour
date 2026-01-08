@@ -219,6 +219,9 @@ export function createCombatLifecycleHandlers(
       (Number.isInteger(stateCombatId)
         ? stateCombatId === entry.combatId
         : scene.__lanCombatId === entry.combatId);
+    if (scene.__lanCombatActorsCache?.delete) {
+      scene.__lanCombatActorsCache.delete(entry.combatId);
+    }
     activeCombats.delete(entry.combatId);
     removeCombatJoinMarker(entry.combatId);
 

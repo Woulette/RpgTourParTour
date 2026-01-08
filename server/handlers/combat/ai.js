@@ -21,6 +21,16 @@ function createCombatAiHandlers(ctx, helpers) {
     };
   };
 
+  const getPlayerCombatStats = (playerId) => {
+    const player = Number.isInteger(playerId) ? state.players[playerId] : null;
+    const initiative = Number.isFinite(player?.initiative) ? player.initiative : 0;
+    const level = Number.isFinite(player?.level) ? player.level : 1;
+    return {
+      initiative,
+      level,
+    };
+  };
+
   const isAliveMonster = (entry) => {
     if (!entry) return false;
     const hp = Number.isFinite(entry.hp) ? entry.hp : Number.isFinite(entry.hpMax) ? entry.hpMax : 0;
@@ -33,39 +43,131 @@ function createCombatAiHandlers(ctx, helpers) {
     return hp > 0;
   };
 
+  const getActorTieId = (actor) => {
+    if (!actor) return 0;
+    if (actor.kind === "joueur") {
+      return Number.isInteger(actor.playerId) ? actor.playerId : 0;
+    }
+    if (Number.isInteger(actor.entityId)) return Math.abs(actor.entityId);
+    if (Number.isInteger(actor.combatIndex)) return 1000000 + actor.combatIndex;
+    return 0;
+  };
+
+  const compareByInitLevel = (a, b) => {
+    const initDiff = (b?.initiative ?? 0) - (a?.initiative ?? 0);
+    if (initDiff !== 0) return initDiff;
+    const lvlDiff = (b?.level ?? 1) - (a?.level ?? 1);
+    if (lvlDiff !== 0) return lvlDiff;
+    return getActorTieId(a) - getActorTieId(b);
+  };
+
+  const getActorKey = (actor) => {
+    if (!actor) return "z:0";
+    if (actor.kind === "joueur") {
+      const id = Number.isInteger(actor.playerId) ? actor.playerId : 0;
+      return `p:${id}`;
+    }
+    const entId = Number.isInteger(actor.entityId) ? actor.entityId : null;
+    if (entId !== null) return `m:${entId}`;
+    const idx = Number.isInteger(actor.combatIndex) ? actor.combatIndex : null;
+    if (idx !== null) return `m:i:${idx}`;
+    return "m:0";
+  };
+
   const buildCombatActorOrder = (combat) => {
     if (!combat) return [];
     const snapshot = ensureCombatSnapshot(combat);
     if (!snapshot) return [];
 
-    const participants = Array.isArray(combat.participantIds)
-      ? combat.participantIds.map((id) => Number(id)).filter((id) => Number.isInteger(id))
-      : [];
-    const players = participants.map((id) => ({ kind: "joueur", playerId: id }));
+    const alivePlayers = (Array.isArray(snapshot.players) ? snapshot.players : [])
+      .filter((p) => isAlivePlayer(p))
+      .map((p) => {
+        const stats = getPlayerCombatStats(p.playerId);
+        return {
+          kind: "joueur",
+          playerId: p.playerId,
+          initiative: stats.initiative,
+          level: stats.level,
+        };
+      });
 
-    const monsters = (Array.isArray(snapshot.monsters) ? snapshot.monsters : [])
+    const mobEntries = Array.isArray(combat.mobEntries) ? combat.mobEntries : [];
+    const mobLevelMap = new Map();
+    mobEntries.forEach((m, idx) => {
+      if (!m) return;
+      if (Number.isInteger(m.entityId)) {
+        mobLevelMap.set(`id:${m.entityId}`, m.level);
+      }
+      const cIdx = Number.isInteger(m.combatIndex) ? m.combatIndex : idx;
+      if (Number.isInteger(cIdx)) {
+        mobLevelMap.set(`idx:${cIdx}`, m.level);
+      }
+    });
+    const aliveMonsters = (Array.isArray(snapshot.monsters) ? snapshot.monsters : [])
       .filter((m) => isAliveMonster(m))
       .map((m, idx) => {
         const stats = getMonsterStats(m.monsterId);
+        const level =
+          (Number.isInteger(m.entityId)
+            ? mobLevelMap.get(`id:${m.entityId}`)
+            : null) ??
+          (Number.isInteger(m.combatIndex)
+            ? mobLevelMap.get(`idx:${m.combatIndex}`)
+            : null) ??
+          1;
         return {
           kind: "monstre",
           entityId: Number.isInteger(m.entityId) ? m.entityId : null,
           combatIndex: Number.isInteger(m.combatIndex) ? m.combatIndex : idx,
           monsterId: m.monsterId || null,
           initiative: stats.initiative,
+          level: Number.isFinite(level) ? level : 1,
         };
-      })
-      .sort((a, b) => {
-        if (b.initiative !== a.initiative) return b.initiative - a.initiative;
-        const ea = Number.isInteger(a.entityId) ? a.entityId : 0;
-        const eb = Number.isInteger(b.entityId) ? b.entityId : 0;
-        return ea - eb;
       });
+
+    const sortedPlayers = alivePlayers.slice().sort(compareByInitLevel);
+    const sortedMonsters = aliveMonsters.slice().sort(compareByInitLevel);
+
+    if (Array.isArray(combat.actorOrder) && combat.actorOrder.length > 0) {
+      const aliveKeys = new Set();
+      sortedPlayers.forEach((p) => aliveKeys.add(getActorKey(p)));
+      sortedMonsters.forEach((m) => aliveKeys.add(getActorKey(m)));
+
+      const kept = combat.actorOrder.filter((actor) => {
+        if (!actor) return false;
+        return aliveKeys.has(getActorKey(actor));
+      });
+      const seen = new Set(kept.map((actor) => getActorKey(actor)));
+
+      sortedPlayers.forEach((actor) => {
+        const key = getActorKey(actor);
+        if (seen.has(key)) return;
+        seen.add(key);
+        kept.push(actor);
+      });
+      sortedMonsters.forEach((actor) => {
+        const key = getActorKey(actor);
+        if (seen.has(key)) return;
+        seen.add(key);
+        kept.push(actor);
+      });
+
+      combat.actorOrder = kept;
+      return kept;
+    }
+
+    const players = sortedPlayers;
+    const monsters = sortedMonsters;
 
     const actors = [];
     let pIdx = 0;
     let mIdx = 0;
     let nextSide = "joueur";
+    if (players.length === 0 && monsters.length > 0) {
+      nextSide = "monstre";
+    } else if (players.length > 0 && monsters.length > 0) {
+      nextSide = compareByInitLevel(players[0], monsters[0]) <= 0 ? "joueur" : "monstre";
+    }
     while (pIdx < players.length || mIdx < monsters.length) {
       if (nextSide === "joueur" && pIdx < players.length) {
         actors.push(players[pIdx]);

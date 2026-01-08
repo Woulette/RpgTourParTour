@@ -379,6 +379,29 @@ export function initDomCombat(scene) {
     if (renderActiveIndex >= renderActors.length) {
       renderActiveIndex = Math.max(0, renderActors.length - 1);
     }
+    if (scene.__lanCombatId && Array.isArray(renderActors) && renderActors.length) {
+      let idx = -1;
+      if (Number.isInteger(state.activePlayerId)) {
+        idx = renderActors.findIndex((a) => {
+          if (!a || a.kind !== "joueur") return false;
+          const ent = a.entity;
+          const id =
+            Number.isInteger(ent?.netId) ? ent.netId : Number.isInteger(ent?.id) ? ent.id : null;
+          return id === state.activePlayerId;
+        });
+      } else if (Number.isInteger(state.activeMonsterId)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "monstre" && a.entity?.entityId === state.activeMonsterId
+        );
+      } else if (Number.isInteger(state.activeMonsterIndex)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "monstre" && a.entity?.combatIndex === state.activeMonsterIndex
+        );
+      }
+      if (idx >= 0) {
+        renderActiveIndex = idx;
+      }
+    }
 
     renderActors.forEach((actor, idx) => {
       const el = document.createElement("div");
@@ -786,6 +809,18 @@ export function initDomCombat(scene) {
         netClient.sendCmd("CmdCombatReady", {
           playerId: netPlayerId,
           combatId: scene.__lanCombatId,
+          initiative: Number.isFinite(scene.player?.stats?.initiative)
+            ? Math.round(scene.player.stats.initiative)
+            : null,
+          level: Number.isFinite(scene.player?.levelState?.niveau)
+            ? Math.round(scene.player.levelState.niveau)
+            : null,
+          classId:
+            typeof scene.player?.classId === "string" ? scene.player.classId : null,
+          displayName:
+            typeof scene.player?.displayName === "string"
+              ? scene.player.displayName
+              : null,
         });
         return;
       }

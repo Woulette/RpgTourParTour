@@ -101,6 +101,25 @@ export function createCombatPrepHandlers(ctx, helpers) {
       }
       const netId = Number(ally.netId);
       if (allyIds.includes(netId)) {
+        const remoteInfo = remotePlayersData.get(netId) || {};
+        if (
+          typeof remoteInfo.classId === "string" &&
+          remoteInfo.classId &&
+          ally.classId &&
+          ally.classId !== remoteInfo.classId
+        ) {
+          if (ally.blocksMovement && ally._blockedTile) {
+            unblockTile(scene, ally._blockedTile.x, ally._blockedTile.y);
+            ally._blockedTile = null;
+          }
+          if (ally.destroy) ally.destroy();
+          return;
+        }
+        if (!Number.isInteger(ally.netId)) ally.netId = netId;
+        if (!Number.isInteger(ally.id)) ally.id = netId;
+        if (typeof remoteInfo.displayName === "string" && remoteInfo.displayName) {
+          ally.displayName = remoteInfo.displayName;
+        }
         kept.push(ally);
         return;
       }
@@ -229,7 +248,7 @@ export function createCombatPrepHandlers(ctx, helpers) {
       ally.isCombatAlly = true;
       ally.isPlayerAlly = true;
       ally.netId = playerId;
-      ally.displayName = `Joueur ${playerId}`;
+      ally.displayName = remote.displayName || `Joueur ${playerId}`;
       ally.isRemote = true;
 
       const tile = reserved || pickTile();

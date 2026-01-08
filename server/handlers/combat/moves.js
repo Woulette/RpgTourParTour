@@ -1,5 +1,5 @@
 function createMoveHandlers(ctx, helpers) {
-  const { state, broadcast, sanitizePlayerPath, getMonsterDef } = ctx;
+  const { state, broadcast, sanitizePlayerPath, getMonsterDef, serializeActorOrder } = ctx;
   const {
     upsertSnapshotPlayer,
     upsertSnapshotMonster,
@@ -162,6 +162,12 @@ function createMoveHandlers(ctx, helpers) {
     if (clientInfo.id !== msg.playerId) return;
     const player = state.players[clientInfo.id];
     if (!player || !player.inCombat || !player.combatId) return;
+    if (typeof msg.classId === "string" && msg.classId) {
+      player.classId = msg.classId;
+    }
+    if (typeof msg.displayName === "string" && msg.displayName) {
+      player.displayName = msg.displayName;
+    }
 
     const combatId = Number.isInteger(msg.combatId) ? msg.combatId : player.combatId;
     if (combatId !== player.combatId) return;
@@ -213,6 +219,7 @@ function createMoveHandlers(ctx, helpers) {
         activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
           ? combat.activeMonsterIndex
           : null,
+        actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
         players: Array.isArray(combat.stateSnapshot.players)
           ? combat.stateSnapshot.players
           : [],
