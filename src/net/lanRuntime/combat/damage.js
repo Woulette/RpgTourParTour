@@ -8,7 +8,7 @@ import { unblockTile } from "../../../collision/collisionGrid.js";
 
 export function createCombatDamageHandlers(ctx, helpers) {
   const { scene, player } = ctx;
-  const { getEntityTile, shouldApplyCombatEvent } = helpers;
+  const { getEntityTile, shouldApplyCombatEvent, findCombatMonsterByEntityId } = helpers;
   const debugLog = (...args) => {
     if (
       typeof window === "undefined" ||
@@ -163,12 +163,23 @@ export function createCombatDamageHandlers(ctx, helpers) {
     const spell = msg.spellId ? spells[msg.spellId] : null;
     if (state?.enCours && state.joueur) {
       const targetName = getTargetName(target, target === state.joueur);
+      let text = `${targetName} -${damage} PV`;
+      if (msg.source === "monster") {
+        const caster =
+          Number.isInteger(msg.casterId) && typeof findCombatMonsterByEntityId === "function"
+            ? findCombatMonsterByEntityId(msg.casterId)
+            : null;
+        const casterName =
+          caster?.displayName || caster?.label || caster?.monsterId || "Monstre";
+        const spellLabel = spell?.label || spell?.id || "Sort";
+        text = `${casterName} lance ${spellLabel} : ${targetName} -${damage} PV`;
+      }
       addChatMessage(
         {
           kind: "combat",
           channel: "global",
           author: "Combat",
-          text: `${targetName} -${damage} PV`,
+          text,
           element: spell?.element ?? null,
           isCrit: false,
         },

@@ -52,7 +52,13 @@ export function endCombat(scene) {
 
   if (state.joueur) {
     state.joueur.statusEffects = [];
+    state.joueur.hasAliveSummon = false;
   }
+  state.summonActing = false;
+  state.activeSummonId = null;
+  state.actors = [];
+  scene.__lanCombatActorsCache = null;
+  scene.combatSummons = [];
 
   const cam = scene.cameras && scene.cameras.main;
   if (cam && cam.fadeOut && cam.fadeIn) {

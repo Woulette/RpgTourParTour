@@ -11,6 +11,8 @@ const { createCombatHandlers } = require("./handlers/combat");
 const { createMobHandlers } = require("./handlers/mobs");
 const { createResourceHandlers } = require("./handlers/resources");
 const { createPlayerHandlers } = require("./handlers/players");
+const { createCharacterStore } = require("./db/characters");
+const { buildMonsterStats } = require("./handlers/combat/monsterStats");
 
 const PORT = Number(process.env.PORT || 8080);
 const GAME_DATA_VERSION =
@@ -32,6 +34,35 @@ const monsterRespawnTimers = new Map();
 const resourceRespawnTimers = new Map();
 const mapInitRequests = new Map();
 const DEBUG_COMBAT = process.env.LAN_COMBAT_DEBUG === "1";
+const characterStore = createCharacterStore({ dataDir: path.resolve(__dirname, "data") });
+
+let statsApi = null;
+let statsApiFailed = false;
+const statsApiPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/core/stats.js")).href
+)
+  .then((mod) => {
+    statsApi = mod || null;
+  })
+  .catch((err) => {
+    statsApiFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load stats module:", err?.message || err);
+  });
+
+let classDefs = null;
+let classDefsFailed = false;
+const classDefsPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/config/classes.js")).href
+)
+  .then((mod) => {
+    classDefs = mod?.classes || null;
+  })
+  .catch((err) => {
+    classDefsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load classes config:", err?.message || err);
+  });
 const debugCombatLog = (...args) => {
   if (!DEBUG_COMBAT) return;
   // eslint-disable-next-line no-console
@@ -113,19 +144,33 @@ const COMBAT_EVENT_TYPES = new Set([
       console.warn("[LAN] Failed to load combat patterns:", err?.message || err);
     });
 
-  let combatStartPositions = null;
-  let combatStartPositionsFailed = false;
-  const combatStartPositionsPromise = import(
-    pathToFileURL(path.resolve(__dirname, "../src/config/combatStartPositions.js")).href
-  )
+let combatStartPositions = null;
+let combatStartPositionsFailed = false;
+const combatStartPositionsPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/config/combatStartPositions.js")).href
+)
     .then((mod) => {
       combatStartPositions = mod?.COMBAT_START_POSITIONS || null;
     })
     .catch((err) => {
       combatStartPositionsFailed = true;
       // eslint-disable-next-line no-console
-      console.warn("[LAN] Failed to load combat start positions:", err?.message || err);
-    });
+    console.warn("[LAN] Failed to load combat start positions:", err?.message || err);
+  });
+
+let captureRules = null;
+let captureRulesFailed = false;
+const captureRulesPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/config/captureRules.js")).href
+)
+  .then((mod) => {
+    captureRules = mod || null;
+  })
+  .catch((err) => {
+    captureRulesFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load capture rules:", err?.message || err);
+  });
 
 function send(ws, payload) {
   if (ws.readyState !== WebSocket.OPEN) return;
@@ -150,15 +195,66 @@ function send(ws, payload) {
     return monsterDefs[monsterId] || null;
   }
 
+  function isMonsterCapturable(monsterId) {
+    if (!monsterId || !captureRules || captureRulesFailed) return true;
+    const fn = captureRules.isMonsterCapturable;
+    if (typeof fn !== "function") return true;
+    return fn(monsterId);
+  }
+
   function getCombatPattern(patternId) {
     if (!combatPatterns) return null;
     return combatPatterns[patternId] || null;
   }
 
-  function getCombatStartPositions(mapId) {
-    if (!combatStartPositions || !mapId) return null;
-    return combatStartPositions[mapId] || null;
+function getCombatStartPositions(mapId) {
+  if (!combatStartPositions || !mapId) return null;
+  return combatStartPositions[mapId] || null;
+}
+
+function buildBaseStatsForClass(classId) {
+  if (!statsApi || !classDefs) return null;
+  const {
+    createStats,
+    applyBonuses,
+    applyDerivedAgilityStats,
+  } = statsApi;
+  if (!createStats || !applyBonuses || !applyDerivedAgilityStats) return null;
+  const def = classDefs[classId] || classDefs.archer || null;
+  const base = createStats();
+  const withBonuses = applyBonuses(base, def?.statBonuses || []);
+  const derived = applyDerivedAgilityStats({ ...withBonuses });
+  const initBonus = derived.initiative ?? 0;
+  derived.initiative = initBonus;
+  return derived;
+}
+
+function computeFinalStats(baseStats) {
+  if (!statsApi || !baseStats) return null;
+  const { applyDerivedAgilityStats } = statsApi;
+  if (!applyDerivedAgilityStats) return null;
+  const derived = applyDerivedAgilityStats({ ...baseStats });
+  const initBonus = derived.initiative ?? 0;
+  const derivedInit =
+    (derived.force ?? 0) +
+    (derived.intelligence ?? 0) +
+    (derived.agilite ?? 0) +
+    (derived.chance ?? 0);
+  derived.initiative = initBonus + derivedInit;
+  const baseHpMax = derived.hpMax ?? baseStats.hpMax ?? 50;
+  const vit = derived.vitalite ?? 0;
+  derived.hpMax = baseHpMax + vit;
+  if (!Number.isFinite(derived.hp)) {
+    derived.hp = derived.hpMax;
   }
+  derived.hp = Math.min(derived.hp, derived.hpMax);
+  return derived;
+}
+
+function getMonsterCombatStats(def, level) {
+  if (!def || !statsApi) return null;
+  return buildMonsterStats(def, level, statsApi);
+}
 
 function isSimpleDamageSpell(spell) {
   if (!spell) return false;
@@ -344,6 +440,8 @@ const getNextPlayerId = () => nextPlayerId++;
 const getNextMonsterEntityId = () => nextMonsterEntityId++;
 const getNextResourceEntityId = () => nextResourceEntityId++;
 const getNextCombatId = () => nextCombatId++;
+let nextSummonId = 1;
+const getNextSummonId = () => nextSummonId++;
 const getHostId = () => hostId;
 const setHostId = (id) => {
   hostId = id;
@@ -379,6 +477,7 @@ const resourceHandlers = createResourceHandlers({
     send,
     getNextCombatId,
     getNextEventId,
+    getNextSummonId,
     getHostId,
     sanitizePlayerPath,
     serializeMonsterEntries: mobHandlers.serializeMonsterEntries,
@@ -387,6 +486,8 @@ const resourceHandlers = createResourceHandlers({
     isSimpleDamageSpell,
     rollSpellDamage,
     getMonsterDef,
+    getMonsterCombatStats,
+    isMonsterCapturable,
     getCombatPattern,
     getCombatStartPositions,
   });
@@ -409,6 +510,9 @@ const playerHandlers = createPlayerHandlers({
   tryStartCombatIfNeeded,
   snapshotForClient,
   ensureMapInitialized,
+  characterStore,
+  buildBaseStatsForClass,
+  computeFinalStats,
 });
 
 wss.on("connection", (ws) => {

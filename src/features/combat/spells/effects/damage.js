@@ -121,6 +121,7 @@ function checkCombatVictory(scene, delayMs = 0) {
 export function applyDamageEffect(ctx, effect) {
   const { scene, caster, spell, target, state } = ctx;
   if (!scene || !caster || !spell || !target || !target.stats) return false;
+  const isLanCombat = !!scene.__lanCombatId;
 
   if (
     target === caster &&
@@ -152,60 +153,62 @@ export function applyDamageEffect(ctx, effect) {
   const newHp = Math.max(0, currentHp - finalDamage);
   target.stats.hp = newHp;
 
-  if (
-    finalDamage > 0 &&
-    scene?.__lanCombatId &&
-    getNetIsHost() &&
-    caster !== state?.joueur
-  ) {
-    const client = getNetClient();
-    const playerId = getNetPlayerId();
-    const tile = getEntityTile(target);
-    if (client && playerId && tile) {
-      client.sendCmd("CmdCombatDamageApplied", {
-        playerId,
-        combatId: scene.__lanCombatId,
-        casterId: caster?.entityId ?? null,
-        spellId: spell?.id ?? null,
-        targetX: tile.x,
-        targetY: tile.y,
-        damage: finalDamage,
-        source: "monster",
-      });
-    }
-  }
-
-  if (
-    finalDamage > 0 &&
-    scene?.__lanCombatId &&
-    caster === state?.joueur
-  ) {
-    const client = getNetClient();
-    const playerId = getNetPlayerId();
-    if (client && playerId) {
+  if (!isLanCombat) {
+    if (
+      finalDamage > 0 &&
+      getNetIsHost() &&
+      caster !== state?.joueur
+    ) {
+      const client = getNetClient();
+      const playerId = getNetPlayerId();
       const tile = getEntityTile(target);
-      if (tile) {
-        caster.__lanDamageSeq = (caster.__lanDamageSeq || 0) + 1;
-        scene.__lanLastDamageSeq = caster.__lanDamageSeq;
-        const payload = {
+      if (client && playerId && tile) {
+        client.sendCmd("CmdCombatDamageApplied", {
           playerId,
           combatId: scene.__lanCombatId,
-          casterId: playerId,
+          casterId: caster?.entityId ?? null,
           spellId: spell?.id ?? null,
           targetX: tile.x,
           targetY: tile.y,
           damage: finalDamage,
-          source: "player",
-          clientSeq: caster.__lanDamageSeq,
-          ...buildDamageTargetPayload(scene, target),
-        };
-        client.sendCmd("CmdCombatDamageApplied", payload);
-        if (
-          typeof window !== "undefined" &&
-          (window.LAN_COMBAT_DEBUG === true || window.LAN_COMBAT_DEBUG === "1")
-        ) {
-          // eslint-disable-next-line no-console
-          console.log("[LAN][Combat]", "CmdCombatDamageApplied send", payload);
+          source: "monster",
+        });
+      }
+    }
+  }
+
+  if (!isLanCombat) {
+    if (
+      finalDamage > 0 &&
+      caster === state?.joueur
+    ) {
+      const client = getNetClient();
+      const playerId = getNetPlayerId();
+      if (client && playerId) {
+        const tile = getEntityTile(target);
+        if (tile) {
+          caster.__lanDamageSeq = (caster.__lanDamageSeq || 0) + 1;
+          scene.__lanLastDamageSeq = caster.__lanDamageSeq;
+          const payload = {
+            playerId,
+            combatId: scene.__lanCombatId,
+            casterId: playerId,
+            spellId: spell?.id ?? null,
+            targetX: tile.x,
+            targetY: tile.y,
+            damage: finalDamage,
+            source: "player",
+            clientSeq: caster.__lanDamageSeq,
+            ...buildDamageTargetPayload(scene, target),
+          };
+          client.sendCmd("CmdCombatDamageApplied", payload);
+          if (
+            typeof window !== "undefined" &&
+            (window.LAN_COMBAT_DEBUG === true || window.LAN_COMBAT_DEBUG === "1")
+          ) {
+            // eslint-disable-next-line no-console
+            console.log("[LAN][Combat]", "CmdCombatDamageApplied send", payload);
+          }
         }
       }
     }

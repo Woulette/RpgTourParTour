@@ -5,6 +5,9 @@ function createPlayerHandlers(ctx) {
     broadcast,
     send,
     createPlayer,
+    characterStore,
+    buildBaseStatsForClass,
+    computeFinalStats,
     config,
     getNextPlayerId,
     getNextEventId,
@@ -31,14 +34,66 @@ function createPlayerHandlers(ctx) {
       return;
     }
 
+    const characterId = typeof msg.characterId === "string" ? msg.characterId : null;
+    if (!characterId || !characterStore) {
+      send(ws, { t: "EvRefuse", reason: "character_required" });
+      ws.close();
+      return;
+    }
+
     if (clients.size >= MAX_PLAYERS) {
       send(ws, { t: "EvRefuse", reason: "room_full" });
       ws.close();
       return;
     }
 
+    if (typeof buildBaseStatsForClass !== "function" || typeof computeFinalStats !== "function") {
+      send(ws, { t: "EvRefuse", reason: "server_loading" });
+      ws.close();
+      return;
+    }
+
+    const incomingName = typeof msg.characterName === "string" ? msg.characterName : null;
+    const incomingClassId = typeof msg.classId === "string" ? msg.classId : null;
+    const incomingLevel = Number.isInteger(msg.level) ? msg.level : null;
+
+    let character = characterStore.getCharacter(characterId);
+    if (!character) {
+      const baseStats = buildBaseStatsForClass(incomingClassId || "archer");
+      character = characterStore.upsertCharacter({
+        characterId,
+        name: incomingName || "Joueur",
+        classId: incomingClassId || "archer",
+        level: incomingLevel ?? 1,
+        baseStats,
+      });
+    }
+    if (!character) {
+      send(ws, { t: "EvRefuse", reason: "character_invalid" });
+      ws.close();
+      return;
+    }
+
+    const baseStats =
+      character.baseStats || buildBaseStatsForClass(character.classId || "archer");
+    const finalStats = computeFinalStats(baseStats) || {};
+
     const playerId = getNextPlayerId();
     const player = createPlayer(playerId);
+    player.characterId = character.characterId;
+    player.accountId = character.accountId || null;
+    player.classId = character.classId || "archer";
+    player.displayName = character.name || "Joueur";
+    player.level = Number.isInteger(character.level) ? character.level : 1;
+    player.baseStats = baseStats || null;
+    player.stats = finalStats || null;
+    player.hp = Number.isFinite(finalStats.hp) ? finalStats.hp : player.hp;
+    player.hpMax = Number.isFinite(finalStats.hpMax) ? finalStats.hpMax : player.hpMax;
+    player.pa = Number.isFinite(finalStats.pa) ? finalStats.pa : player.pa;
+    player.pm = Number.isFinite(finalStats.pm) ? finalStats.pm : player.pm;
+    player.initiative = Number.isFinite(finalStats.initiative)
+      ? finalStats.initiative
+      : player.initiative;
     player.mapId = state.mapId;
     state.players[playerId] = player;
     clients.set(ws, { id: playerId, lastCmdId: 0, ready: true, lastAckEventId: 0 });

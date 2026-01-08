@@ -16,7 +16,9 @@ function createStateHandlers(ctx, helpers) {
     upsertSnapshotPlayer,
     buildCombatActorOrder,
     runMonsterAiTurn,
+    runSummonAiTurn,
     advanceCombatTurn,
+    resetSpellStateForActor,
   } = helpers;
 
   function serializeCombatEntry(entry) {
@@ -44,6 +46,9 @@ function createStateHandlers(ctx, helpers) {
         : null,
       activeMonsterIndex: Number.isInteger(entry.activeMonsterIndex)
         ? entry.activeMonsterIndex
+        : null,
+      activeSummonId: Number.isInteger(entry.activeSummonId)
+        ? entry.activeSummonId
         : null,
       aiDriverId: Number.isInteger(entry.aiDriverId) ? entry.aiDriverId : null,
     };
@@ -124,6 +129,7 @@ function createStateHandlers(ctx, helpers) {
       phase: "prep",
       turn: null,
       activePlayerId: null,
+      activeSummonId: null,
       round: 1,
       aiDriverId: participants[0],
       pmRemainingByPlayer: {},
@@ -231,18 +237,12 @@ function createStateHandlers(ctx, helpers) {
     if (combat.phase !== "prep") return;
 
     const player = state.players[clientInfo.id];
-    if (player) {
-      if (Number.isFinite(msg.initiative)) {
-        player.initiative = Math.max(0, Math.round(msg.initiative));
+    if (player && player.stats) {
+      if (!Number.isFinite(player.initiative)) {
+        player.initiative = player.stats.initiative;
       }
-      if (Number.isFinite(msg.level)) {
-        player.level = Math.max(1, Math.round(msg.level));
-      }
-      if (typeof msg.classId === "string" && msg.classId) {
-        player.classId = msg.classId;
-      }
-      if (typeof msg.displayName === "string" && msg.displayName) {
-        player.displayName = msg.displayName;
+      if (!Number.isFinite(player.level)) {
+        player.level = Math.max(1, Math.round(player.level || 1));
       }
     }
 
@@ -269,6 +269,18 @@ function createStateHandlers(ctx, helpers) {
     broadcast({ t: "EvCombatUpdated", ...serializeCombatEntry(combat) });
 
     if (allReady && prevPhase !== "combat") {
+      combat.participantIds.forEach((id) => {
+        const p = state.players[id];
+        if (!p || !p.stats) return;
+        const hpMax =
+          Number.isFinite(p.stats.hpMax) ? p.stats.hpMax : Number.isFinite(p.stats.hp) ? p.stats.hp : p.hpMax;
+        if (Number.isFinite(hpMax)) {
+          p.hpMax = hpMax;
+          p.hp = hpMax;
+          p.stats.hpMax = hpMax;
+          p.stats.hp = hpMax;
+        }
+      });
       ensureCombatSnapshot(combat);
       applyCombatPlacement(combat);
       combat.stateSnapshotLocked = true;
@@ -290,6 +302,7 @@ function createStateHandlers(ctx, helpers) {
         combat.activeMonsterIndex = Number.isInteger(firstActor.combatIndex)
           ? firstActor.combatIndex
           : null;
+        combat.activeSummonId = null;
       } else if (firstActor?.kind === "joueur") {
         combat.turn = "player";
         combat.activePlayerId = Number.isInteger(firstActor.playerId)
@@ -297,14 +310,46 @@ function createStateHandlers(ctx, helpers) {
           : null;
         combat.activeMonsterId = null;
         combat.activeMonsterIndex = null;
+        combat.activeSummonId = null;
+      } else if (firstActor?.kind === "invocation") {
+        combat.turn = "summon";
+        combat.activePlayerId = null;
+        combat.activeMonsterId = null;
+        combat.activeMonsterIndex = null;
+        combat.activeSummonId = Number.isInteger(firstActor.summonId)
+          ? firstActor.summonId
+          : null;
+      }
+      if (firstActor?.kind === "joueur" && Number.isInteger(combat.activePlayerId)) {
+        combat.paRemainingByPlayer = combat.paRemainingByPlayer || {};
+        const p = state.players[combat.activePlayerId];
+        const basePa = Number.isFinite(p?.pa) ? p.pa : 6;
+        combat.paRemainingByPlayer[combat.activePlayerId] = basePa;
+      }
+      if (typeof resetSpellStateForActor === "function" && firstActor) {
+        const actorKey =
+          firstActor.kind === "joueur"
+            ? `p:${firstActor.playerId}`
+            : Number.isInteger(firstActor.entityId)
+              ? `m:${firstActor.entityId}`
+              : Number.isInteger(firstActor.combatIndex)
+                ? `m:i:${firstActor.combatIndex}`
+                : null;
+        if (actorKey) resetSpellStateForActor(combat, actorKey);
       }
       broadcast({
         t: "EvCombatTurnStarted",
         combatId,
-        actorType: combat.turn === "monster" ? "monster" : "player",
+        actorType:
+          combat.turn === "monster"
+            ? "monster"
+            : combat.turn === "summon"
+              ? "summon"
+              : "player",
         activePlayerId: combat.activePlayerId ?? null,
         activeMonsterId: combat.activeMonsterId ?? null,
         activeMonsterIndex: combat.activeMonsterIndex ?? null,
+        activeSummonId: combat.activeSummonId ?? null,
         round: combat.round,
         actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
       });
@@ -312,6 +357,13 @@ function createStateHandlers(ctx, helpers) {
         runMonsterAiTurn(combat, () => {
           if (typeof advanceCombatTurn === "function") {
             advanceCombatTurn(combat, "monster");
+          }
+        });
+      }
+      if (combat.turn === "summon" && typeof runSummonAiTurn === "function") {
+        runSummonAiTurn(combat, () => {
+          if (typeof advanceCombatTurn === "function") {
+            advanceCombatTurn(combat, "summon");
           }
         });
       }
@@ -331,6 +383,9 @@ function createStateHandlers(ctx, helpers) {
           activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
             ? combat.activeMonsterIndex
             : null,
+          activeSummonId: Number.isInteger(combat.activeSummonId)
+            ? combat.activeSummonId
+            : null,
           actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
           players: Array.isArray(combat.stateSnapshot.players)
             ? combat.stateSnapshot.players
@@ -338,12 +393,15 @@ function createStateHandlers(ctx, helpers) {
           monsters: Array.isArray(combat.stateSnapshot.monsters)
             ? combat.stateSnapshot.monsters
             : [],
+          summons: Array.isArray(combat.stateSnapshot.summons)
+            ? combat.stateSnapshot.summons
+            : [],
         });
       }
-    }
+  }
   }
 
-  function finalizeCombat(combatId) {
+  function finalizeCombat(combatId, issue = null) {
     const combat = state.combats[combatId];
     if (!combat) return null;
     const mapId = combat.mapId;
@@ -354,11 +412,46 @@ function createStateHandlers(ctx, helpers) {
 
     combat.participantIds.forEach((id) => {
       const p = state.players[id];
+      if (!p || !p.stats) return;
+      const hpMax =
+        Number.isFinite(p.stats.hpMax) ? p.stats.hpMax : Number.isFinite(p.stats.hp) ? p.stats.hp : p.hpMax;
+      if (!Number.isFinite(hpMax)) return;
+      p.hpMax = hpMax;
+      p.hp = hpMax;
+      p.stats.hpMax = hpMax;
+      p.stats.hp = hpMax;
+    });
+
+    combat.spellState = {};
+    combat.summons = [];
+    if (combat.stateSnapshot) {
+      combat.stateSnapshot.summons = [];
+    }
+    combat.activeSummonId = null;
+    combat.actorOrder = [];
+
+    if (!issue) {
+      const players = Array.isArray(combat.stateSnapshot?.players)
+        ? combat.stateSnapshot.players
+        : [];
+      const monsters = Array.isArray(combat.stateSnapshot?.monsters)
+        ? combat.stateSnapshot.monsters
+        : [];
+      const livingPlayers = players.filter((p) => (p?.hp ?? p?.hpMax ?? 0) > 0).length;
+      const livingMonsters = monsters.filter((m) => (m?.hp ?? m?.hpMax ?? 0) > 0).length;
+      if (livingMonsters <= 0) issue = "victoire";
+      else if (livingPlayers <= 0) issue = "defaite";
+      else issue = "inconnu";
+    }
+
+    combat.participantIds.forEach((id) => {
+      const p = state.players[id];
       if (!p) return;
       if (p.combatId === combatId) {
         p.inCombat = false;
         p.combatId = null;
       }
+      p.hasAliveSummon = false;
     });
 
     const list = state.mapMonsters[mapId];
@@ -383,6 +476,7 @@ function createStateHandlers(ctx, helpers) {
       mobEntityIds: Array.isArray(combat.mobEntityIds)
         ? combat.mobEntityIds.slice()
         : [],
+      issue,
       combatSeq: combat.combatSeq,
     };
 

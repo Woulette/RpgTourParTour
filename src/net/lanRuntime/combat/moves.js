@@ -107,17 +107,25 @@ export function createCombatMoveHandlers(ctx, helpers) {
 
     const entityId = Number.isInteger(msg.entityId) ? msg.entityId : null;
     const combatIndex = Number.isInteger(msg.combatIndex) ? msg.combatIndex : null;
+    const summonId = Number.isInteger(msg.summonId) ? msg.summonId : null;
     const monster = entityId ? findCombatMonsterByEntityId(entityId) : null;
     const monsterFallback =
       !monster && combatIndex !== null
         ? findCombatMonsterByIndex(combatIndex)
         : null;
-    const target = monster || monsterFallback;
+    const summon =
+      !monster && !monsterFallback && summonId !== null
+        ? Array.isArray(scene.combatSummons)
+          ? scene.combatSummons.find((s) => s && s.id === summonId) || null
+          : null
+        : null;
+    const target = monster || monsterFallback || summon;
     if (!target) {
       debugLog("EvCombatMonsterMoveStart drop: no target", {
         combatId: msg.combatId ?? null,
         entityId,
         combatIndex,
+        summonId,
         mapId: msg.mapId ?? null,
         monsters: Array.isArray(scene.combatMonsters) ? scene.combatMonsters.length : null,
       });
@@ -128,13 +136,14 @@ export function createCombatMoveHandlers(ctx, helpers) {
       const lastSeq = target.__lanCombatLastMoveSeq || 0;
       if (msg.seq <= lastSeq) {
         debugLog("EvCombatMonsterMoveStart drop: seq", {
-          entityId,
-          combatIndex,
-          msgSeq: msg.seq,
-          lastSeq,
-        });
-        return;
-      }
+        entityId,
+        combatIndex,
+        summonId,
+        msgSeq: msg.seq,
+        lastSeq,
+      });
+      return;
+    }
       target.__lanCombatLastMoveSeq = msg.seq;
     }
 
@@ -149,6 +158,7 @@ export function createCombatMoveHandlers(ctx, helpers) {
       debugLog("EvCombatMonsterMoveStart drop: empty path", {
         entityId,
         combatIndex,
+        summonId,
       });
       return;
     }
@@ -167,6 +177,7 @@ export function createCombatMoveHandlers(ctx, helpers) {
       debugLog("EvCombatMonsterMoveStart drop: trimmed path empty", {
         entityId,
         combatIndex,
+        summonId,
       });
       return;
     }
@@ -175,6 +186,7 @@ export function createCombatMoveHandlers(ctx, helpers) {
       combatId: msg.combatId ?? null,
       entityId,
       combatIndex,
+      summonId,
       steps: steps.length,
       targetId: target.entityId ?? null,
       targetIndex: target.combatIndex ?? null,

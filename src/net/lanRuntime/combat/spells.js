@@ -66,7 +66,8 @@ export function createCombatSpellHandlers(ctx, helpers) {
       tileX,
       tileY,
       mapForCast,
-      layerForCast
+      layerForCast,
+      { force: authoritative }
     );
   };
 

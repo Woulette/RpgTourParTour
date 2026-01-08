@@ -12,8 +12,10 @@ function createSnapshotHandlers(ctx, helpers) {
   function mergeCombatSnapshot(prev, incoming) {
     const prevPlayers = Array.isArray(prev?.players) ? prev.players : [];
     const prevMonsters = Array.isArray(prev?.monsters) ? prev.monsters : [];
+    const prevSummons = Array.isArray(prev?.summons) ? prev.summons : [];
     const nextPlayers = Array.isArray(incoming?.players) ? incoming.players : [];
     const nextMonsters = Array.isArray(incoming?.monsters) ? incoming.monsters : [];
+    const nextSummons = Array.isArray(incoming?.summons) ? incoming.summons : [];
 
     const playerMap = new Map();
     prevPlayers.forEach((p) => {
@@ -29,6 +31,17 @@ function createSnapshotHandlers(ctx, helpers) {
         ...p,
         hp: Number.isFinite(prevEntry.hp) ? prevEntry.hp : p.hp,
         hpMax: Number.isFinite(prevEntry.hpMax) ? prevEntry.hpMax : p.hpMax,
+        capturedMonsterId:
+          typeof prevEntry.capturedMonsterId === "string"
+            ? prevEntry.capturedMonsterId
+            : p.capturedMonsterId,
+        capturedMonsterLevel:
+          Number.isFinite(prevEntry.capturedMonsterLevel)
+            ? prevEntry.capturedMonsterLevel
+            : p.capturedMonsterLevel,
+        statusEffects: Array.isArray(prevEntry.statusEffects)
+          ? prevEntry.statusEffects
+          : p.statusEffects,
       };
     });
 
@@ -56,10 +69,41 @@ function createSnapshotHandlers(ctx, helpers) {
         ...m,
         hp: Number.isFinite(prevEntry.hp) ? prevEntry.hp : m.hp,
         hpMax: Number.isFinite(prevEntry.hpMax) ? prevEntry.hpMax : m.hpMax,
+        level: Number.isInteger(prevEntry.level) ? prevEntry.level : m.level,
+        statusEffects: Array.isArray(prevEntry.statusEffects)
+          ? prevEntry.statusEffects
+          : m.statusEffects,
       };
     });
 
-    return { players: mergedPlayers, monsters: mergedMonsters, updatedAt: prev?.updatedAt ?? null };
+    const summonMap = new Map();
+    prevSummons.forEach((s, idx) => {
+      if (!s) return;
+      const key = Number.isInteger(s.summonId) ? `id:${s.summonId}` : `pos:${idx}`;
+      summonMap.set(key, s);
+    });
+
+    const mergedSummons = nextSummons.map((s, idx) => {
+      if (!s) return s;
+      const key = Number.isInteger(s.summonId) ? `id:${s.summonId}` : `pos:${idx}`;
+      const prevEntry = summonMap.get(key) || null;
+      if (!prevEntry) return s;
+      return {
+        ...s,
+        hp: Number.isFinite(prevEntry.hp) ? prevEntry.hp : s.hp,
+        hpMax: Number.isFinite(prevEntry.hpMax) ? prevEntry.hpMax : s.hpMax,
+        statusEffects: Array.isArray(prevEntry.statusEffects)
+          ? prevEntry.statusEffects
+          : s.statusEffects,
+      };
+    });
+
+    return {
+      players: mergedPlayers,
+      monsters: mergedMonsters,
+      summons: mergedSummons,
+      updatedAt: prev?.updatedAt ?? null,
+    };
   }
 
   function computePlacementTiles(meta, originX, originY, offsets) {
@@ -260,6 +304,13 @@ function createSnapshotHandlers(ctx, helpers) {
             : typeof player.name === "string"
               ? player.name
               : null,
+        capturedMonsterId: typeof player.capturedMonsterId === "string" ? player.capturedMonsterId : null,
+        capturedMonsterLevel: Number.isFinite(player.capturedMonsterLevel)
+          ? player.capturedMonsterLevel
+          : null,
+        statusEffects: Array.isArray(player.statusEffects)
+          ? player.statusEffects.slice()
+          : [],
       });
     });
 
@@ -270,14 +321,20 @@ function createSnapshotHandlers(ctx, helpers) {
         combatIndex: Number.isInteger(entry?.combatIndex) ? entry.combatIndex : idx,
         entityId: Number.isInteger(entry?.entityId) ? entry.entityId : null,
         monsterId: typeof entry?.monsterId === "string" ? entry.monsterId : null,
+        level: Number.isInteger(entry?.level) ? entry.level : null,
         tileX: Number.isInteger(entry?.tileX) ? entry.tileX : null,
         tileY: Number.isInteger(entry?.tileY) ? entry.tileY : null,
         hp: stats.hp,
         hpMax: stats.hpMax,
+        statusEffects: [],
       };
     });
 
-    combat.stateSnapshot = { players, monsters, updatedAt: Date.now() };
+    const summons = Array.isArray(combat.summons)
+      ? combat.summons.map((s) => ({ ...s }))
+      : [];
+
+    combat.stateSnapshot = { players, monsters, summons, updatedAt: Date.now() };
     return combat.stateSnapshot;
   }
 
@@ -306,6 +363,13 @@ function createSnapshotHandlers(ctx, helpers) {
             : typeof player.name === "string"
               ? player.name
               : null,
+        capturedMonsterId: typeof player.capturedMonsterId === "string" ? player.capturedMonsterId : null,
+        capturedMonsterLevel: Number.isFinite(player.capturedMonsterLevel)
+          ? player.capturedMonsterLevel
+          : null,
+        statusEffects: Array.isArray(player.statusEffects)
+          ? player.statusEffects.slice()
+          : [],
       };
       snapshot.players.push(entry);
     } else {
@@ -320,6 +384,15 @@ function createSnapshotHandlers(ctx, helpers) {
         entry.displayName = player.displayName;
       } else if (typeof player.name === "string" && player.name) {
         entry.displayName = player.name;
+      }
+      if (typeof player.capturedMonsterId === "string") {
+        entry.capturedMonsterId = player.capturedMonsterId;
+      }
+      if (Number.isFinite(player.capturedMonsterLevel)) {
+        entry.capturedMonsterLevel = player.capturedMonsterLevel;
+      }
+      if (Array.isArray(player.statusEffects)) {
+        entry.statusEffects = player.statusEffects.slice();
       }
     }
     snapshot.updatedAt = Date.now();
@@ -360,6 +433,11 @@ function createSnapshotHandlers(ctx, helpers) {
             : typeof source?.monsterId === "string"
               ? source.monsterId
               : null,
+        level: Number.isInteger(data.level)
+          ? data.level
+          : Number.isInteger(source?.level)
+            ? source.level
+            : null,
         tileX: Number.isInteger(data.tileX)
           ? data.tileX
           : Number.isInteger(source?.tileX)
@@ -372,6 +450,9 @@ function createSnapshotHandlers(ctx, helpers) {
             : null,
         hp: stats.hp,
         hpMax: stats.hpMax,
+        statusEffects: Array.isArray(source?.statusEffects)
+          ? source.statusEffects.slice()
+          : [],
       };
       snapshot.monsters.push(entry);
     } else {
@@ -379,6 +460,41 @@ function createSnapshotHandlers(ctx, helpers) {
       if (Number.isInteger(data.tileY)) entry.tileY = data.tileY;
       if (Number.isFinite(data.hp)) entry.hp = data.hp;
       if (Number.isFinite(data.hpMax)) entry.hpMax = data.hpMax;
+      if (Number.isInteger(data.level)) entry.level = data.level;
+    }
+    snapshot.updatedAt = Date.now();
+  }
+
+  function upsertSnapshotSummon(combat, data) {
+    if (!combat || !data) return;
+    const snapshot = ensureCombatSnapshot(combat);
+    if (!snapshot) return;
+    snapshot.summons = Array.isArray(snapshot.summons) ? snapshot.summons : [];
+    const summonId = Number.isInteger(data.summonId) ? data.summonId : null;
+    let entry =
+      (summonId !== null
+        ? snapshot.summons.find((s) => s && s.summonId === summonId)
+        : null) || null;
+    if (!entry) {
+      entry = {
+        summonId,
+        ownerPlayerId: Number.isInteger(data.ownerPlayerId) ? data.ownerPlayerId : null,
+        monsterId: typeof data.monsterId === "string" ? data.monsterId : null,
+        tileX: Number.isInteger(data.tileX) ? data.tileX : null,
+        tileY: Number.isInteger(data.tileY) ? data.tileY : null,
+        hp: Number.isFinite(data.hp) ? data.hp : 0,
+        hpMax: Number.isFinite(data.hpMax) ? data.hpMax : 0,
+        level: Number.isFinite(data.level) ? data.level : 1,
+        statusEffects: Array.isArray(data.statusEffects) ? data.statusEffects.slice() : [],
+      };
+      snapshot.summons.push(entry);
+    } else {
+      if (Number.isInteger(data.tileX)) entry.tileX = data.tileX;
+      if (Number.isInteger(data.tileY)) entry.tileY = data.tileY;
+      if (Number.isFinite(data.hp)) entry.hp = data.hp;
+      if (Number.isFinite(data.hpMax)) entry.hpMax = data.hpMax;
+      if (Number.isFinite(data.level)) entry.level = data.level;
+      if (Array.isArray(data.statusEffects)) entry.statusEffects = data.statusEffects.slice();
     }
     snapshot.updatedAt = Date.now();
   }
@@ -393,6 +509,9 @@ function createSnapshotHandlers(ctx, helpers) {
     const players = Array.isArray(combat.stateSnapshot.players)
       ? combat.stateSnapshot.players
       : [];
+    const summons = Array.isArray(combat.stateSnapshot.summons)
+      ? combat.stateSnapshot.summons
+      : [];
 
     let target = null;
     if (payload.targetKind === "monster") {
@@ -405,6 +524,10 @@ function createSnapshotHandlers(ctx, helpers) {
     } else if (payload.targetKind === "player") {
       if (Number.isInteger(payload.targetId)) {
         target = players.find((p) => p && p.playerId === payload.targetId) || null;
+      }
+    } else if (payload.targetKind === "summon") {
+      if (Number.isInteger(payload.targetId)) {
+        target = summons.find((s) => s && s.summonId === payload.targetId) || null;
       }
     }
     if (!target && Number.isInteger(payload.targetX) && Number.isInteger(payload.targetY)) {
@@ -426,6 +549,17 @@ function createSnapshotHandlers(ctx, helpers) {
               Number.isInteger(p.tileY) &&
               p.tileX === payload.targetX &&
               p.tileY === payload.targetY
+          ) || null;
+      }
+      if (!target) {
+        target =
+          summons.find(
+            (s) =>
+              s &&
+              Number.isInteger(s.tileX) &&
+              Number.isInteger(s.tileY) &&
+              s.tileX === payload.targetX &&
+              s.tileY === payload.targetY
           ) || null;
       }
     }
@@ -465,10 +599,12 @@ function createSnapshotHandlers(ctx, helpers) {
 
     const players = Array.isArray(msg.players) ? msg.players : [];
     const monsters = Array.isArray(msg.monsters) ? msg.monsters : [];
+    const summons = Array.isArray(msg.summons) ? msg.summons : [];
 
     combat.stateSnapshot = mergeCombatSnapshot(combat.stateSnapshot, {
       players,
       monsters,
+      summons,
     });
     combat.stateSnapshot.updatedAt = Date.now();
 
@@ -478,6 +614,9 @@ function createSnapshotHandlers(ctx, helpers) {
     const snapshotMonsters = Array.isArray(combat.stateSnapshot?.monsters)
       ? combat.stateSnapshot.monsters
       : monsters;
+    const snapshotSummons = Array.isArray(combat.stateSnapshot?.summons)
+      ? combat.stateSnapshot.summons
+      : summons;
 
     combat.stateSnapshotLocked = true;
 
@@ -499,6 +638,7 @@ function createSnapshotHandlers(ctx, helpers) {
       actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
       players: snapshotPlayers,
       monsters: snapshotMonsters,
+      summons: snapshotSummons,
     });
   }
 
@@ -507,6 +647,7 @@ function createSnapshotHandlers(ctx, helpers) {
     ensureCombatSnapshot,
     upsertSnapshotPlayer,
     upsertSnapshotMonster,
+    upsertSnapshotSummon,
     applyDamageToCombatSnapshot,
     applyCombatPlacement,
     resolveCombatPlacement,

@@ -50,8 +50,18 @@ import { getNetClient, getNetPlayerId } from "../../../../app/session.js";
 
 registerDefaultEffects();
 
-export function castSpellAtTile(scene, caster, spell, tileX, tileY, map, groundLayer) {
-  if (!canCastSpellAtTile(scene, caster, spell, tileX, tileY, map)) {
+export function castSpellAtTile(
+  scene,
+  caster,
+  spell,
+  tileX,
+  tileY,
+  map,
+  groundLayer,
+  options = {}
+) {
+  const forceCast = options?.force === true;
+  if (!forceCast && !canCastSpellAtTile(scene, caster, spell, tileX, tileY, map)) {
     return false;
   }
 

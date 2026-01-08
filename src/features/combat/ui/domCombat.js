@@ -303,16 +303,24 @@ export function initDomCombat(scene) {
       summonActors.every((sa) => actors.some((a) => a && a.entity === sa.entity));
 
     if (summonActors.length > 0 && !alreadyListed) {
-      const playerIdx = actors.findIndex((a) => a && a.kind === "joueur");
-      const insertAt = playerIdx >= 0 ? playerIdx + 1 : 0;
-      renderActors = [
-        ...actors.slice(0, insertAt),
-        ...summonActors,
-        ...actors.slice(insertAt),
-      ];
-
-      if (insertAt <= renderActiveIndex) renderActiveIndex += summonActors.length;
-      if (state?.summonActing) renderActiveIndex = insertAt;
+      const injected = [];
+      actors.forEach((actor) => {
+        injected.push(actor);
+        if (actor?.kind !== "joueur") return;
+        summonActors
+          .filter((s) => s?.entity?.owner === actor.entity)
+          .forEach((s) => injected.push(s));
+      });
+      renderActors = injected;
+      const activeActor = actors[renderActiveIndex];
+      const mappedIndex = renderActors.findIndex((a) => a === activeActor);
+      if (mappedIndex >= 0) renderActiveIndex = mappedIndex;
+      if (state?.summonActing && Number.isInteger(state.activeSummonId)) {
+        const summonIdx = renderActors.findIndex(
+          (a) => a?.kind === "invocation" && a.entity?.id === state.activeSummonId
+        );
+        if (summonIdx >= 0) renderActiveIndex = summonIdx;
+      }
     }
 
     if (state?.summonActing && state.monstre) {
@@ -339,6 +347,10 @@ export function initDomCombat(scene) {
       } else if (Number.isInteger(state.activeMonsterIndex)) {
         idx = renderActors.findIndex(
           (a) => a?.kind === "monstre" && a.entity?.combatIndex === state.activeMonsterIndex
+        );
+      } else if (Number.isInteger(state.activeSummonId)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "invocation" && a.entity?.id === state.activeSummonId
         );
       }
       if (idx >= 0) {
@@ -600,6 +612,11 @@ export function initDomCombat(scene) {
         } else if (Number.isInteger(state.activeMonsterIndex)) {
           const found = actors.findIndex(
             (a) => a?.kind === "monstre" && a.entity?.combatIndex === state.activeMonsterIndex
+          );
+          if (found >= 0) idx = found;
+        } else if (Number.isInteger(state.activeSummonId)) {
+          const found = actors.findIndex(
+            (a) => a?.kind === "invocation" && a.entity?.id === state.activeSummonId
           );
           if (found >= 0) idx = found;
         }

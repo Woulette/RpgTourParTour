@@ -185,6 +185,10 @@ export function createCombatHelpers(ctx) {
           Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : 0;
         return `p:${id}`;
       }
+      if (actor.kind === "invocation") {
+        const id = Number.isInteger(ent.id) ? ent.id : 0;
+        return `s:${id}`;
+      }
       if (ent.isCombatAlly) {
         const id =
           Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : 0;
@@ -251,6 +255,13 @@ export function createCombatHelpers(ctx) {
           return hp > 0;
         })
       : [];
+    const summons = Array.isArray(scene.combatSummons)
+      ? scene.combatSummons.filter((s) => {
+          const hp =
+            typeof s?.stats?.hp === "number" ? s.stats.hp : s?.stats?.hpMax ?? 0;
+          return hp > 0;
+        })
+      : [];
     monsters.sort((a, b) => {
       const ia = a?.stats?.initiative ?? 0;
       const ib = b?.stats?.initiative ?? 0;
@@ -267,6 +278,13 @@ export function createCombatHelpers(ctx) {
         if (actor.kind === "joueur") {
           const ent = resolvePlayerEntity(actor.playerId);
           if (ent) ordered.push({ kind: "joueur", entity: ent });
+          return;
+        }
+        if (actor.kind === "invocation") {
+          const ent =
+            summons.find((s) => s && Number.isInteger(actor.summonId) && s.id === actor.summonId) ||
+            null;
+          if (ent) ordered.push({ kind: "invocation", entity: ent });
           return;
         }
         const ent =
@@ -302,6 +320,13 @@ export function createCombatHelpers(ctx) {
         seen.add(key);
         kept.push(actor);
       });
+      summons.forEach((ent) => {
+        const actor = { kind: "invocation", entity: ent };
+        const key = getActorKey(actor);
+        if (seen.has(key) || !isAlive(actor)) return;
+        seen.add(key);
+        kept.push(actor);
+      });
       scene.__lanCombatActorsCache.set(entry.combatId, kept);
       return kept.length > 0 ? kept : null;
     }
@@ -313,7 +338,11 @@ export function createCombatHelpers(ctx) {
 
     while (pIdx < players.length || mIdx < monsters.length) {
       if (nextSide === "joueur" && pIdx < players.length) {
-        actors.push({ kind: "joueur", entity: players[pIdx] });
+        const playerEnt = players[pIdx];
+        actors.push({ kind: "joueur", entity: playerEnt });
+        summons
+          .filter((s) => s && s.owner === playerEnt)
+          .forEach((s) => actors.push({ kind: "invocation", entity: s }));
         pIdx += 1;
         nextSide = "monstre";
         continue;
@@ -542,6 +571,35 @@ export function createCombatHelpers(ctx) {
         Number.isInteger(m.tileY) ? m.tileY : -1,
         Number.isFinite(m.hp) ? Math.round(m.hp) : 0,
         Number.isFinite(m.hpMax) ? Math.round(m.hpMax) : 0
+      );
+    });
+
+    parts.push(777777);
+
+    const summons = Array.isArray(scene.combatSummons) ? scene.combatSummons : [];
+    const summonEntries = summons
+      .map((s) => {
+        if (!s || !s.stats) return null;
+        const tile = getEntityTile(s);
+        if (!tile) return null;
+        const key = Number.isInteger(s.id) ? s.id : 0;
+        return {
+          key,
+          tileX: tile.x,
+          tileY: tile.y,
+          hp: s.stats.hp ?? s.stats.hpMax ?? 0,
+          hpMax: s.stats.hpMax ?? s.stats.hp ?? 0,
+        };
+      })
+      .filter(Boolean);
+    summonEntries.sort((a, b) => a.key - b.key);
+    summonEntries.forEach((s) => {
+      parts.push(
+        Number.isInteger(s.key) ? s.key : 0,
+        Number.isInteger(s.tileX) ? s.tileX : -1,
+        Number.isInteger(s.tileY) ? s.tileY : -1,
+        Number.isFinite(s.hp) ? Math.round(s.hp) : 0,
+        Number.isFinite(s.hpMax) ? Math.round(s.hpMax) : 0
       );
     });
 

@@ -162,12 +162,6 @@ function createMoveHandlers(ctx, helpers) {
     if (clientInfo.id !== msg.playerId) return;
     const player = state.players[clientInfo.id];
     if (!player || !player.inCombat || !player.combatId) return;
-    if (typeof msg.classId === "string" && msg.classId) {
-      player.classId = msg.classId;
-    }
-    if (typeof msg.displayName === "string" && msg.displayName) {
-      player.displayName = msg.displayName;
-    }
 
     const combatId = Number.isInteger(msg.combatId) ? msg.combatId : player.combatId;
     if (combatId !== player.combatId) return;
@@ -219,12 +213,18 @@ function createMoveHandlers(ctx, helpers) {
         activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
           ? combat.activeMonsterIndex
           : null,
+        activeSummonId: Number.isInteger(combat.activeSummonId)
+          ? combat.activeSummonId
+          : null,
         actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
         players: Array.isArray(combat.stateSnapshot.players)
           ? combat.stateSnapshot.players
           : [],
         monsters: Array.isArray(combat.stateSnapshot.monsters)
           ? combat.stateSnapshot.monsters
+          : [],
+        summons: Array.isArray(combat.stateSnapshot.summons)
+          ? combat.stateSnapshot.summons
           : [],
       });
     }

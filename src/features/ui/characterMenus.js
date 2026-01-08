@@ -308,8 +308,13 @@ export function initCharacterMenus({ onStartGame }) {
       lanClient = null;
     }
     setLanButtonLabel("LAN: ...");
+    const selected =
+      characters.find((c) => c && c.id === selectedCharacterId) ||
+      getSessionSelectedCharacter() ||
+      null;
     lanClient = createLanClient({
       url,
+      character: selected,
       onEvent: (msg) => {
         if (msg?.t === "EvWelcome") {
           setNetPlayerId(msg.playerId);

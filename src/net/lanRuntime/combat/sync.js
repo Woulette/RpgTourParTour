@@ -1,5 +1,6 @@
 import { getNetPlayerId } from "../../../app/session.js";
 import { createMonster } from "../../../entities/monster.js";
+import { spawnSummonFromCaptured } from "../../../features/combat/summons/summon.js";
 import { unblockTile } from "../../../collision/collisionGrid.js";
 
 export function createCombatSyncHandlers(ctx, helpers) {
@@ -123,8 +124,13 @@ export function createCombatSyncHandlers(ctx, helpers) {
     if (state && inCombat) {
       if (msg.turn === "monster") {
         state.tour = "monstre";
+        state.summonActing = false;
+      } else if (msg.turn === "summon") {
+        state.tour = "monstre";
+        state.summonActing = true;
       } else if (msg.turn === "player") {
         state.tour = "joueur";
+        state.summonActing = false;
       }
       if (Number.isInteger(msg.round)) {
         state.round = msg.round;
@@ -137,6 +143,9 @@ export function createCombatSyncHandlers(ctx, helpers) {
       }
       if (Number.isInteger(msg.activeMonsterIndex)) {
         state.activeMonsterIndex = msg.activeMonsterIndex;
+      }
+      if (Number.isInteger(msg.activeSummonId)) {
+        state.activeSummonId = msg.activeSummonId;
       }
     }
 
@@ -208,6 +217,15 @@ export function createCombatSyncHandlers(ctx, helpers) {
         if (typeof p.displayName === "string" && p.displayName) {
           target.displayName = p.displayName;
         }
+        if (typeof p.capturedMonsterId === "string") {
+          target.capturedMonsterId = p.capturedMonsterId;
+        }
+        if (Number.isFinite(p.capturedMonsterLevel)) {
+          target.capturedMonsterLevel = p.capturedMonsterLevel;
+        }
+        if (Array.isArray(p.statusEffects)) {
+          target.statusEffects = p.statusEffects.slice();
+        }
         if (target === state?.joueur && typeof target.updateHudHp === "function") {
           const hpMax = target.stats?.hpMax ?? target.stats?.hp ?? 0;
           target.updateHudHp(target.stats?.hp ?? 0, hpMax);
@@ -263,6 +281,9 @@ export function createCombatSyncHandlers(ctx, helpers) {
           created.combatIndex = Number.isInteger(combatIndex) ? combatIndex : null;
           created.isCombatMember = true;
           created.isCombatOnly = true;
+          if (Number.isInteger(m.level)) {
+            created.level = m.level;
+          }
           if (created.stats) {
             created.stats.hp = Number.isFinite(m.hp) ? m.hp : created.stats.hp;
             created.stats.hpMax = Number.isFinite(m.hpMax) ? m.hpMax : created.stats.hpMax;
@@ -305,6 +326,12 @@ export function createCombatSyncHandlers(ctx, helpers) {
         if (target.stats) {
           target.stats.hp = Number.isFinite(m.hp) ? m.hp : target.stats.hp;
           target.stats.hpMax = Number.isFinite(m.hpMax) ? m.hpMax : target.stats.hpMax;
+        }
+        if (Number.isInteger(m.level)) {
+          target.level = m.level;
+        }
+        if (Array.isArray(m.statusEffects)) {
+          target.statusEffects = m.statusEffects.slice();
         }
         if (target.stats && typeof target.stats.hp === "number" && target.stats.hp <= 0) {
           target._deathHandled = true;
@@ -352,6 +379,97 @@ export function createCombatSyncHandlers(ctx, helpers) {
       }
 
       scene.combatMonsters = nextMonsters;
+    }
+
+    if (Array.isArray(msg.summons)) {
+      const nextSummons = [];
+      const kept = new Set();
+      const mapForMove = scene.combatMap || scene.map;
+      const layerForMove = scene.combatGroundLayer || scene.groundLayer;
+
+      const findOwner = (ownerPlayerId) => {
+        if (!Number.isInteger(ownerPlayerId)) return null;
+        const localId = getNetPlayerId();
+        if (localId && ownerPlayerId === localId) {
+          return state?.joueur || player || null;
+        }
+        if (Array.isArray(scene.combatAllies)) {
+          return (
+            scene.combatAllies.find(
+              (ally) => ally?.isPlayerAlly && Number(ally.netId) === ownerPlayerId
+            ) || null
+          );
+        }
+        return null;
+      };
+
+      msg.summons.forEach((s) => {
+        const summonId = Number.isInteger(s?.summonId) ? s.summonId : null;
+        const tileX = Number.isInteger(s.tileX) ? s.tileX : null;
+        const tileY = Number.isInteger(s.tileY) ? s.tileY : null;
+        if (summonId === null || tileX === null || tileY === null) return;
+        let target =
+          Array.isArray(scene.combatSummons)
+            ? scene.combatSummons.find((sum) => sum && sum.id === summonId) || null
+            : null;
+        if (!target && mapForMove && layerForMove) {
+          const owner = findOwner(s.ownerPlayerId);
+          if (!owner || typeof s.monsterId !== "string") return;
+          owner.capturedMonsterId = s.monsterId;
+          if (Number.isFinite(s.level)) {
+            owner.capturedMonsterLevel = s.level;
+          }
+          const created = spawnSummonFromCaptured(scene, owner, mapForMove, layerForMove, {
+            preferTile: { x: tileX, y: tileY },
+          });
+          if (!created) return;
+          created.id = summonId;
+          created.isSummon = true;
+          created.owner = owner;
+          target = created;
+        }
+        if (!target) return;
+        const isMoving =
+          target.isMoving === true ||
+          !!target.currentMoveTween ||
+          !!target.__lanCombatMoveTween ||
+          !!target.__lanMoveTween;
+        if (!isMoving || msg.resync === true) {
+          const pos = buildEntityWorldPosition(target, tileX, tileY);
+          if (pos) {
+            target.x = pos.x;
+            target.y = pos.y;
+          }
+        }
+        if (target.stats) {
+          target.stats.hp = Number.isFinite(s.hp) ? s.hp : target.stats.hp;
+          target.stats.hpMax = Number.isFinite(s.hpMax) ? s.hpMax : target.stats.hpMax;
+        }
+        if (!isMoving || msg.resync === true) {
+          target.tileX = tileX;
+          target.tileY = tileY;
+          target.currentTileX = tileX;
+          target.currentTileY = tileY;
+          if (typeof target.setDepth === "function") {
+            target.setDepth(target.y);
+          }
+        }
+        if (Array.isArray(s.statusEffects)) {
+          target.statusEffects = s.statusEffects.slice();
+        }
+        nextSummons.push(target);
+        kept.add(target);
+      });
+
+      if (Array.isArray(scene.combatSummons)) {
+        scene.combatSummons.forEach((sum) => {
+          if (!sum || kept.has(sum)) return;
+          if (typeof sum.destroy === "function") {
+            sum.destroy();
+          }
+        });
+      }
+      scene.combatSummons = nextSummons;
     }
 
     if (state?.enCours && Number.isInteger(msg.combatId)) {

@@ -17,12 +17,16 @@ function createInitialState() {
 function createPlayer(id) {
   return {
     id,
+    characterId: null,
+    accountId: null,
     x: 0,
     y: 0,
     hp: 100,
     hpMax: 100,
     pa: 6,
     pm: 3,
+    stats: null,
+    baseStats: null,
     classId: null,
     displayName: null,
     level: null,

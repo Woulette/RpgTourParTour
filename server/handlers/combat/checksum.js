@@ -21,7 +21,7 @@ function createCombatChecksumHandlers(ctx, helpers) {
     if (!snapshot) return 0;
 
     const parts = [];
-    const turnValue = combat.turn === "monster" ? 2 : 1;
+    const turnValue = combat.turn === "monster" || combat.turn === "summon" ? 2 : 1;
     parts.push(
       turnValue,
       encodeNum(combat.round, 0),
@@ -78,6 +78,24 @@ function createCombatChecksumHandlers(ctx, helpers) {
       );
     });
 
+    parts.push(777777);
+
+    const summons = Array.isArray(snapshot.summons) ? snapshot.summons.slice() : [];
+    summons.sort((a, b) => {
+      const ia = Number.isInteger(a?.summonId) ? a.summonId : 0;
+      const ib = Number.isInteger(b?.summonId) ? b.summonId : 0;
+      return ia - ib;
+    });
+    summons.forEach((s) => {
+      parts.push(
+        encodeNum(s?.summonId, 0),
+        encodeNum(s?.tileX, -1),
+        encodeNum(s?.tileY, -1),
+        encodeNum(s?.hp, 0),
+        encodeNum(s?.hpMax, 0)
+      );
+    });
+
     return hashString(parts.join("|"));
   };
 
@@ -119,12 +137,18 @@ function createCombatChecksumHandlers(ctx, helpers) {
           activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
             ? combat.activeMonsterIndex
             : null,
+          activeSummonId: Number.isInteger(combat.activeSummonId)
+            ? combat.activeSummonId
+            : null,
           actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
           players: Array.isArray(combat.stateSnapshot.players)
             ? combat.stateSnapshot.players
             : [],
           monsters: Array.isArray(combat.stateSnapshot.monsters)
             ? combat.stateSnapshot.monsters
+            : [],
+          summons: Array.isArray(combat.stateSnapshot.summons)
+            ? combat.stateSnapshot.summons
             : [],
           resync: true,
         });

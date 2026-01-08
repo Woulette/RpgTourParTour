@@ -4,6 +4,7 @@ export function createLanClient({
   url,
   protocolVersion = PROTOCOL_VERSION,
   dataHash = DATA_HASH,
+  character = null,
   onEvent,
   onClose,
 } = {}) {
@@ -28,7 +29,15 @@ export function createLanClient({
   };
 
   ws.addEventListener("open", () => {
-    sendRaw({ t: "Hello", protocolVersion, dataHash });
+    sendRaw({
+      t: "Hello",
+      protocolVersion,
+      dataHash,
+      characterId: character?.id || null,
+      characterName: character?.name || null,
+      classId: character?.classId || null,
+      level: Number.isFinite(character?.level) ? Math.round(character.level) : null,
+    });
   });
 
   ws.addEventListener("message", (event) => {

@@ -149,11 +149,19 @@ export function createCombatLifecycleHandlers(
       }
       if (entry.turn === "monster") {
         scene.combatState.tour = "monstre";
+        scene.combatState.summonActing = false;
+      } else if (entry.turn === "summon") {
+        scene.combatState.tour = "monstre";
+        scene.combatState.summonActing = true;
       } else if (entry.turn === "player") {
         scene.combatState.tour = "joueur";
+        scene.combatState.summonActing = false;
       }
       if (Number.isInteger(entry.round)) {
         scene.combatState.round = entry.round;
+      }
+      if (Number.isInteger(entry.activeSummonId)) {
+        scene.combatState.activeSummonId = entry.activeSummonId;
       }
       const lanActors = buildLanActorsOrder(entry);
       if (lanActors) {
@@ -250,7 +258,10 @@ export function createCombatLifecycleHandlers(
       }
       stopCombatSync();
     }
-    if (shouldEndLocal) {
+    if (shouldEndLocal && scene.combatState) {
+      if (typeof entry.issue === "string" && entry.issue) {
+        scene.combatState.issue = entry.issue;
+      }
       endCombat(scene);
     }
 
