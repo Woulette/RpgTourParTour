@@ -16,9 +16,62 @@ function createPlayerHandlers(ctx) {
     tryStartCombatIfNeeded,
     snapshotForClient,
     ensureMapInitialized,
+    persistPlayerState,
+    getCombatJoinPayload,
+    ensureCombatSnapshot,
   } = ctx;
 
   const { PROTOCOL_VERSION, GAME_DATA_VERSION, MAX_PLAYERS } = config;
+
+  const sendCombatResync = (ws, player) => {
+    if (!player || !player.inCombat) return;
+    if (typeof getCombatJoinPayload !== "function") return;
+    const payload = getCombatJoinPayload(player.id);
+    if (!payload) return;
+    send(ws, {
+      t: "EvCombatJoinReady",
+      eventId: getNextEventId(),
+      ...payload,
+    });
+    send(ws, {
+      t: "EvCombatUpdated",
+      eventId: getNextEventId(),
+      ...payload.combat,
+    });
+    const combatId = payload.combat?.combatId;
+    if (!combatId) return;
+    const combat = state.combats[combatId];
+    const snapshot =
+      combat && typeof ensureCombatSnapshot === "function"
+        ? ensureCombatSnapshot(combat)
+        : combat?.stateSnapshot || null;
+    if (!combat || !snapshot) return;
+    send(ws, {
+      t: "EvCombatState",
+      eventId: getNextEventId(),
+      combatId: combat.id,
+      mapId: combat.mapId || null,
+      turn: combat.turn || null,
+      round: Number.isInteger(combat.round) ? combat.round : null,
+      activePlayerId: Number.isInteger(combat.activePlayerId)
+        ? combat.activePlayerId
+        : null,
+      activeMonsterId: Number.isInteger(combat.activeMonsterId)
+        ? combat.activeMonsterId
+        : null,
+      activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
+        ? combat.activeMonsterIndex
+        : null,
+      activeSummonId: Number.isInteger(combat.activeSummonId)
+        ? combat.activeSummonId
+        : null,
+      actorOrder: combat.actorOrder || undefined,
+      players: Array.isArray(snapshot.players) ? snapshot.players : [],
+      monsters: Array.isArray(snapshot.monsters) ? snapshot.monsters : [],
+      summons: Array.isArray(snapshot.summons) ? snapshot.summons : [],
+      resync: true,
+    });
+  };
 
   function handleHello(ws, msg) {
     const protoOk = msg.protocolVersion === PROTOCOL_VERSION;
@@ -57,6 +110,47 @@ function createPlayerHandlers(ctx) {
     const incomingClassId = typeof msg.classId === "string" ? msg.classId : null;
     const incomingLevel = Number.isInteger(msg.level) ? msg.level : null;
 
+    const existingPlayer = Object.values(state.players).find(
+      (p) => p && p.characterId === characterId
+    );
+    if (existingPlayer) {
+      const alreadyConnected = Array.from(clients.values()).some(
+        (info) => info && info.id === existingPlayer.id
+      );
+      if (alreadyConnected) {
+        send(ws, { t: "EvRefuse", reason: "character_in_use" });
+        ws.close();
+        return;
+      }
+
+      existingPlayer.connected = true;
+      clients.set(ws, {
+        id: existingPlayer.id,
+        lastCmdId: 0,
+        ready: true,
+        lastAckEventId: 0,
+      });
+
+      if (!getHostId()) {
+        setHostId(existingPlayer.id);
+      }
+
+      send(ws, {
+        t: "EvWelcome",
+        eventId: getNextEventId(),
+        playerId: existingPlayer.id,
+        hostId: getHostId(),
+        isHost: existingPlayer.id === getHostId(),
+        protocolVersion: PROTOCOL_VERSION,
+        dataHash: GAME_DATA_VERSION,
+        snapshot: snapshotForClient(),
+      });
+
+      sendCombatResync(ws, existingPlayer);
+      broadcast({ t: "EvPlayerJoined", player: existingPlayer });
+      return;
+    }
+
     let character = characterStore.getCharacter(characterId);
     if (!character) {
       const baseStats = buildBaseStatsForClass(incomingClassId || "archer");
@@ -77,9 +171,15 @@ function createPlayerHandlers(ctx) {
     const baseStats =
       character.baseStats || buildBaseStatsForClass(character.classId || "archer");
     const finalStats = computeFinalStats(baseStats) || {};
+    const computedHpMax = Number.isFinite(finalStats.hpMax) ? finalStats.hpMax : 0;
+    const savedHpMax = Number.isFinite(character.hpMax) ? character.hpMax : null;
+    const hpMax = savedHpMax !== null ? Math.max(savedHpMax, computedHpMax) : computedHpMax;
+    const savedHp = Number.isFinite(character.hp) ? character.hp : null;
+    const hp = savedHp !== null ? Math.min(savedHp, hpMax) : hpMax;
 
     const playerId = getNextPlayerId();
     const player = createPlayer(playerId);
+    player.connected = true;
     player.characterId = character.characterId;
     player.accountId = character.accountId || null;
     player.classId = character.classId || "archer";
@@ -87,19 +187,38 @@ function createPlayerHandlers(ctx) {
     player.level = Number.isInteger(character.level) ? character.level : 1;
     player.baseStats = baseStats || null;
     player.stats = finalStats || null;
-    player.hp = Number.isFinite(finalStats.hp) ? finalStats.hp : player.hp;
-    player.hpMax = Number.isFinite(finalStats.hpMax) ? finalStats.hpMax : player.hpMax;
+    player.hp = Number.isFinite(hp) ? hp : player.hp;
+    player.hpMax = Number.isFinite(hpMax) ? hpMax : player.hpMax;
+    if (player.stats) {
+      player.stats.hp = player.hp;
+      player.stats.hpMax = player.hpMax;
+    }
     player.pa = Number.isFinite(finalStats.pa) ? finalStats.pa : player.pa;
     player.pm = Number.isFinite(finalStats.pm) ? finalStats.pm : player.pm;
     player.initiative = Number.isFinite(finalStats.initiative)
       ? finalStats.initiative
       : player.initiative;
-    player.mapId = state.mapId;
+    player.capturedMonsterId =
+      typeof character.capturedMonsterId === "string" ? character.capturedMonsterId : null;
+    player.capturedMonsterLevel = Number.isFinite(character.capturedMonsterLevel)
+      ? character.capturedMonsterLevel
+      : null;
+    player.inventory = character.inventory || null;
+    player.gold = Number.isFinite(character.gold) ? character.gold : player.gold;
+    player.mapId = character.mapId || state.mapId;
+    if (Number.isFinite(character.posX) && Number.isFinite(character.posY)) {
+      player.x = character.posX;
+      player.y = character.posY;
+    }
     state.players[playerId] = player;
     clients.set(ws, { id: playerId, lastCmdId: 0, ready: true, lastAckEventId: 0 });
 
     if (!getHostId()) {
       setHostId(playerId);
+    }
+
+    if (typeof ensureMapInitialized === "function" && player.mapId) {
+      ensureMapInitialized(player.mapId);
     }
 
     tryStartCombatIfNeeded();
@@ -116,6 +235,15 @@ function createPlayerHandlers(ctx) {
     });
 
     broadcast({ t: "EvPlayerJoined", player });
+  }
+
+  function handleCmdCombatResync(clientInfo, msg) {
+    if (!clientInfo || !Number.isInteger(clientInfo.id)) return;
+    const player = state.players[clientInfo.id];
+    if (!player) return;
+    const ws = Array.from(clients.entries()).find(([, info]) => info?.id === player.id)?.[0];
+    if (!ws) return;
+    sendCombatResync(ws, player);
   }
 
   function handleCmdMove(clientInfo, msg) {
@@ -173,6 +301,9 @@ function createPlayerHandlers(ctx) {
       player.x = msg.tileX;
       player.y = msg.tileY;
     }
+    if (typeof persistPlayerState === "function") {
+      persistPlayerState(player);
+    }
 
     broadcast({
       t: "EvPlayerMap",
@@ -207,6 +338,7 @@ function createPlayerHandlers(ctx) {
     handleCmdMove,
     handleCmdMapChange,
     handleCmdEndTurn,
+    handleCmdCombatResync,
   };
 }
 

@@ -2,6 +2,7 @@ import { getNetPlayerId } from "../../../app/session.js";
 import { createMonster } from "../../../entities/monster.js";
 import { spawnSummonFromCaptured } from "../../../features/combat/summons/summon.js";
 import { unblockTile } from "../../../collision/collisionGrid.js";
+import { createCombatState } from "../../../features/combat/runtime/state.js";
 
 export function createCombatSyncHandlers(ctx, helpers) {
   const { scene, player, getCurrentMapKey, activeCombats, remotePlayersData } = ctx;
@@ -105,7 +106,14 @@ export function createCombatSyncHandlers(ctx, helpers) {
 
   const applyCombatState = (msg) => {
     if (!msg) return;
-    if (!shouldApplyCombatEvent(msg.combatId, msg.eventId, msg.combatSeq)) return;
+    const localIdForJoin = getNetPlayerId();
+    const isLocalParticipant =
+      Number.isInteger(localIdForJoin) &&
+      Array.isArray(msg.players) &&
+      msg.players.some((p) => Number(p?.playerId) === localIdForJoin);
+    if (!shouldApplyCombatEvent(msg.combatId, msg.eventId, msg.combatSeq)) {
+      if (!(msg.resync === true || isLocalParticipant)) return;
+    }
     scene.__lanCombatStateSeen = true;
     if (Number.isInteger(msg.combatId) && scene.__lanCombatId) {
       if (msg.combatId !== scene.__lanCombatId) return;
@@ -115,11 +123,93 @@ export function createCombatSyncHandlers(ctx, helpers) {
       const currentMap = getCurrentMapKey();
       if (currentMap && mapId !== currentMap) return;
     }
+    const mapReady = (() => {
+      const map = scene.combatMap || scene.map;
+      const layer = scene.combatGroundLayer || scene.groundLayer;
+      if (!map || !layer || !layer.layer) return false;
+      if (!scene.combatMap) scene.combatMap = map;
+      if (!scene.combatGroundLayer) scene.combatGroundLayer = layer;
+      return true;
+    })();
+    if (!mapReady) {
+      const retry = Number.isInteger(scene.__lanCombatStateRetry)
+        ? scene.__lanCombatStateRetry + 1
+        : 1;
+      scene.__lanCombatStateRetry = retry;
+      if (retry > 50) return;
+      if (!scene.__lanCombatStatePendingTimer) {
+        const schedule = (fn) =>
+          scene.time && typeof scene.time.delayedCall === "function"
+            ? scene.time.delayedCall(100, fn)
+            : setTimeout(fn, 100);
+        scene.__lanCombatStatePendingTimer = schedule(() => {
+          scene.__lanCombatStatePendingTimer = null;
+          applyCombatState(msg);
+        });
+      }
+      return;
+    }
+    scene.__lanCombatStateRetry = 0;
+    if (
+      !scene.combatState?.enCours &&
+      !scene.prepState?.actif &&
+      (msg.resync === true || isLocalParticipant)
+    ) {
+      scene.combatMap = scene.combatMap || scene.map;
+      scene.combatGroundLayer = scene.combatGroundLayer || scene.groundLayer;
+      const dummyMonster = { stats: {} };
+      scene.combatState = createCombatState(player, dummyMonster);
+      scene.combatState.combatId = msg.combatId;
+      if (msg.turn === "monster" || msg.turn === "summon") {
+        scene.combatState.tour = "monstre";
+        scene.combatState.summonActing = msg.turn === "summon";
+      } else if (msg.turn === "player") {
+        scene.combatState.tour = "joueur";
+        scene.combatState.summonActing = false;
+      }
+      if (Number.isInteger(msg.round)) {
+        scene.combatState.round = msg.round;
+      }
+      if (Number.isInteger(msg.activePlayerId)) {
+        scene.combatState.activePlayerId = msg.activePlayerId;
+      }
+      if (Number.isInteger(msg.activeMonsterId)) {
+        scene.combatState.activeMonsterId = msg.activeMonsterId;
+      }
+      if (Number.isInteger(msg.activeMonsterIndex)) {
+        scene.combatState.activeMonsterIndex = msg.activeMonsterIndex;
+      }
+      if (Number.isInteger(msg.activeSummonId)) {
+        scene.combatState.activeSummonId = msg.activeSummonId;
+      }
+      scene.__lanCombatId = msg.combatId;
+      scene.__lanCombatStartSent = true;
+      document.body.classList.add("combat-active");
+    }
+
     const state = scene.combatState;
     const inCombat = state?.enCours === true;
     const inPrep = scene.prepState?.actif === true;
     if (!inCombat && !inPrep) return;
     const localPlayer = state?.joueur || player;
+
+    if (isLocalParticipant && inCombat && !scene.__lanWorldMobsHidden) {
+      if (Array.isArray(scene.monsters)) {
+        scene.monsters = scene.monsters.filter((monster) => {
+          if (!monster) return false;
+          if (monster.isCombatOnly || monster.isCombatMember || monster.isSummon) {
+            return true;
+          }
+          if (monster.roamTimer?.remove) monster.roamTimer.remove(false);
+          if (monster.roamTween?.stop) monster.roamTween.stop();
+          if (monster.destroy) monster.destroy();
+          return false;
+        });
+      } else {
+        scene.monsters = [];
+      }
+      scene.__lanWorldMobsHidden = true;
+    }
 
     if (state && inCombat) {
       if (msg.turn === "monster") {
@@ -470,6 +560,31 @@ export function createCombatSyncHandlers(ctx, helpers) {
         });
       }
       scene.combatSummons = nextSummons;
+    }
+
+    if (state && state.enCours) {
+      let nextActive = null;
+      if (Number.isInteger(state.activeSummonId)) {
+        nextActive =
+          Array.isArray(scene.combatSummons)
+            ? scene.combatSummons.find((s) => s && s.id === state.activeSummonId) || null
+            : null;
+      }
+      if (!nextActive && Number.isInteger(state.activeMonsterId)) {
+        nextActive =
+          Array.isArray(scene.combatMonsters)
+            ? scene.combatMonsters.find((m) => m && m.entityId === state.activeMonsterId) || null
+            : null;
+      }
+      if (!nextActive && Number.isInteger(state.activeMonsterIndex)) {
+        nextActive =
+          Array.isArray(scene.combatMonsters)
+            ? scene.combatMonsters.find((m) => m && m.combatIndex === state.activeMonsterIndex) || null
+            : null;
+      }
+      if (nextActive) {
+        state.monstre = nextActive;
+      }
     }
 
     if (state?.enCours && Number.isInteger(msg.combatId)) {

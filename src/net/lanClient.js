@@ -27,6 +27,10 @@ export function createLanClient({
       ws.close();
     },
   };
+  client.__ws = ws;
+  if (typeof window !== "undefined") {
+    window.__lanClient = client;
+  }
 
   ws.addEventListener("open", () => {
     sendRaw({

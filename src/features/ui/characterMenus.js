@@ -9,7 +9,8 @@ import {
 import {
   clearSelectedCharacter,
   getSelectedCharacter as getSessionSelectedCharacter,
-  getNetEventHandler,
+  getNetPlayerId,
+  pushNetEvent,
   setNetClient,
   setNetIsHost,
   setNetPlayerId,
@@ -97,6 +98,9 @@ export function initCharacterMenus({ onStartGame }) {
   let selectedCharacterId = null;
   let selectedClassId = null;
   let lanClient = null;
+  let lanConnected = false;
+  let pendingStartCharacter = null;
+  let resyncTimer = null;
 
   // Hydrate depuis la sauvegarde locale (persistant entre rechargements).
   try {
@@ -316,23 +320,49 @@ export function initCharacterMenus({ onStartGame }) {
       url,
       character: selected,
       onEvent: (msg) => {
+        if (typeof window !== "undefined") {
+          window.__lanLastEvent = msg;
+          const history = Array.isArray(window.__lanEventHistory)
+            ? window.__lanEventHistory
+            : [];
+          history.push({
+            t: msg?.t,
+            eventId: msg?.eventId ?? null,
+            combatId: msg?.combatId ?? msg?.combat?.combatId ?? null,
+          });
+          if (history.length > 50) history.shift();
+          window.__lanEventHistory = history;
+        }
         if (msg?.t === "EvWelcome") {
           setNetPlayerId(msg.playerId);
           setNetClient(lanClient);
           setNetIsHost(!!msg.isHost);
+          lanConnected = true;
         }
-        const handler = getNetEventHandler();
-        if (handler) handler(msg);
+        pushNetEvent(msg);
         if (msg?.t === "EvWelcome") {
           setLanButtonLabel("LAN: OK");
+          if (pendingStartCharacter) {
+            const next = pendingStartCharacter;
+            pendingStartCharacter = null;
+            startGameWithCharacter(next, { skipLan: true });
+          }
         } else if (msg?.t === "EvRefuse") {
           setLanButtonLabel("LAN: KO");
+          lanConnected = false;
+          pendingStartCharacter = null;
         }
       },
       onClose: () => {
         setNetPlayerId(null);
         setNetClient(null);
         setNetIsHost(false);
+        lanConnected = false;
+        pendingStartCharacter = null;
+        if (typeof window !== "undefined") {
+          window.__lanLastEvent = null;
+          window.__lanClient = null;
+        }
         setLanButtonLabel("LAN");
       },
     });
@@ -756,11 +786,47 @@ function renderCarouselMeta() {
     flashInvalidName();
   });
 
-  function startGameWithCharacter(chosen) {
+  function startGameWithCharacter(chosen, options = {}) {
     if (!chosen) return;
+    if (!options.skipLan && !lanConnected) {
+      pendingStartCharacter = chosen;
+      connectLan();
+      return;
+    }
     upsertCharacterMeta(chosen);
     closeMenu();
     if (typeof onStartGame === "function") onStartGame(chosen);
+    if (lanConnected && lanClient?.sendCmd) {
+      if (resyncTimer) {
+        clearTimeout(resyncTimer);
+        resyncTimer = null;
+      }
+      let attempts = 0;
+      const maxAttempts = 20;
+      const tryResync = () => {
+        attempts += 1;
+        const playerId = getNetPlayerId();
+        const scene = typeof window !== "undefined" ? window.__scene : null;
+        const mapReady = !!(scene?.map && scene?.groundLayer?.layer);
+        if (Number.isInteger(playerId) && mapReady) {
+          lanClient.sendCmd("CmdCombatResync", {
+            playerId,
+          });
+          if (typeof window !== "undefined") {
+            window.__lanLastResyncSentAt = Date.now();
+            window.__lanLastResyncPlayerId = playerId ?? null;
+          }
+          resyncTimer = null;
+          return;
+        }
+        if (attempts < maxAttempts) {
+          resyncTimer = setTimeout(tryResync, 200);
+        } else {
+          resyncTimer = null;
+        }
+      };
+      resyncTimer = setTimeout(tryResync, 200);
+    }
   }
 
   btnPlay.addEventListener("click", () => {

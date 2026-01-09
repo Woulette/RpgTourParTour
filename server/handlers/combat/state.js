@@ -8,6 +8,7 @@ function createStateHandlers(ctx, helpers) {
     monsterMoveTimers,
     serializeMonsterEntries,
     serializeActorOrder,
+    persistPlayerState,
   } = ctx;
   const {
     collectCombatMobEntries,
@@ -274,12 +275,16 @@ function createStateHandlers(ctx, helpers) {
         if (!p || !p.stats) return;
         const hpMax =
           Number.isFinite(p.stats.hpMax) ? p.stats.hpMax : Number.isFinite(p.stats.hp) ? p.stats.hp : p.hpMax;
-        if (Number.isFinite(hpMax)) {
-          p.hpMax = hpMax;
-          p.hp = hpMax;
-          p.stats.hpMax = hpMax;
-          p.stats.hp = hpMax;
-        }
+        if (!Number.isFinite(hpMax)) return;
+        p.hpMax = hpMax;
+        const currentHp = Number.isFinite(p.hp)
+          ? p.hp
+          : Number.isFinite(p.stats.hp)
+            ? p.stats.hp
+            : hpMax;
+        p.hp = Math.min(currentHp, hpMax);
+        p.stats.hpMax = hpMax;
+        p.stats.hp = p.hp;
       });
       ensureCombatSnapshot(combat);
       applyCombatPlacement(combat);
@@ -417,9 +422,14 @@ function createStateHandlers(ctx, helpers) {
         Number.isFinite(p.stats.hpMax) ? p.stats.hpMax : Number.isFinite(p.stats.hp) ? p.stats.hp : p.hpMax;
       if (!Number.isFinite(hpMax)) return;
       p.hpMax = hpMax;
-      p.hp = hpMax;
+      const currentHp = Number.isFinite(p.hp)
+        ? p.hp
+        : Number.isFinite(p.stats.hp)
+          ? p.stats.hp
+          : hpMax;
+      p.hp = Math.min(currentHp, hpMax);
       p.stats.hpMax = hpMax;
-      p.stats.hp = hpMax;
+      p.stats.hp = p.hp;
     });
 
     combat.spellState = {};
@@ -452,6 +462,9 @@ function createStateHandlers(ctx, helpers) {
         p.combatId = null;
       }
       p.hasAliveSummon = false;
+      if (typeof persistPlayerState === "function") {
+        persistPlayerState(p);
+      }
     });
 
     const list = state.mapMonsters[mapId];

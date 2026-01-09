@@ -597,6 +597,9 @@ function createSpellResolver(ctx, helpers) {
       const p = state.players[entry.playerId];
       if (p) {
         p.hasAliveSummon = false;
+        if (typeof ctx.persistPlayerState === "function") {
+          ctx.persistPlayerState(p);
+        }
       }
     }
     if (targetKind === "monster" && entry.hp <= 0) {

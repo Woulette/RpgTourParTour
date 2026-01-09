@@ -392,6 +392,9 @@ function createTurnHandlers(ctx, helpers) {
         }
         const p = state.players[entry.playerId];
         if (p) p.hasAliveSummon = false;
+        if (p && typeof ctx.persistPlayerState === "function") {
+          ctx.persistPlayerState(p);
+        }
       }
       resolveCaptureOnMonsterDeath();
     }

@@ -9,6 +9,7 @@ import {
   setSelectedCharacter,
   setUiApi,
   getUiApi,
+  getNetClient,
 } from "./app/session.js";
 import { getPlayer } from "./state/store.js";
 import { updateCombatAuras } from "./features/combat/runtime/auras.js";
@@ -76,6 +77,10 @@ const sessionSwitch = createSessionSwitch({
   onEnterMenu: () => {
     document.body.classList.remove("game-running");
     document.body.classList.add("menu-open");
+    const client = getNetClient();
+    if (client && typeof client.close === "function") {
+      client.close();
+    }
   },
   onEnterGame: () => {
     document.body.classList.add("game-running");

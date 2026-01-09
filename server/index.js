@@ -88,6 +88,10 @@ const COMBAT_EVENT_TYPES = new Set([
   "EvDamageApplied",
 ]);
 
+const REGEN_TICK_MS = 1000;
+const REGEN_PER_TICK = 2;
+const PERSIST_TICK_MS = 10000;
+
   let spellDefs = null;
   let spellDefsFailed = false;
   let monsterSpellDefs = null;
@@ -251,6 +255,45 @@ function computeFinalStats(baseStats) {
   return derived;
 }
 
+function buildCharacterEntryFromPlayer(player) {
+  if (!player || !player.characterId) return null;
+  const stats = player.stats || {};
+  const hp = Number.isFinite(player.hp) ? player.hp : Number.isFinite(stats.hp) ? stats.hp : null;
+  const hpMax =
+    Number.isFinite(player.hpMax)
+      ? player.hpMax
+      : Number.isFinite(stats.hpMax)
+        ? stats.hpMax
+        : null;
+  return {
+    characterId: player.characterId,
+    accountId: player.accountId || null,
+    name: player.displayName || "Joueur",
+    classId: player.classId || "archer",
+    level: Number.isInteger(player.level) ? player.level : 1,
+    baseStats: player.baseStats || null,
+    mapId: player.mapId || null,
+    posX: Number.isFinite(player.x) ? player.x : null,
+    posY: Number.isFinite(player.y) ? player.y : null,
+    hp,
+    hpMax,
+    capturedMonsterId:
+      typeof player.capturedMonsterId === "string" ? player.capturedMonsterId : null,
+    capturedMonsterLevel: Number.isFinite(player.capturedMonsterLevel)
+      ? player.capturedMonsterLevel
+      : null,
+    inventory: player.inventory || null,
+    gold: Number.isFinite(player.gold) ? player.gold : null,
+  };
+}
+
+function persistPlayerState(player) {
+  if (!characterStore || !player) return;
+  const entry = buildCharacterEntryFromPlayer(player);
+  if (!entry) return;
+  characterStore.upsertCharacter(entry);
+}
+
 function getMonsterCombatStats(def, level) {
   if (!def || !statsApi) return null;
   return buildMonsterStats(def, level, statsApi);
@@ -364,7 +407,7 @@ function getHostSocket() {
 function snapshotForClient() {
   return {
     mapId: state.mapId,
-    players: Object.values(state.players),
+    players: Object.values(state.players).filter((p) => p && p.connected !== false),
     combat: state.combat,
     combats: combatHandlers.listActiveCombats(),
   };
@@ -435,6 +478,42 @@ function sanitizePlayerPath(raw, maxSteps = 32) {
   return steps;
 }
 
+function tickPlayerRegen() {
+  const now = Date.now();
+  Object.values(state.players).forEach((player) => {
+    if (!player || player.inCombat) return;
+    const stats = player.stats || {};
+    const hpMax =
+      Number.isFinite(player.hpMax)
+        ? player.hpMax
+        : Number.isFinite(stats.hpMax)
+          ? stats.hpMax
+          : null;
+    if (!Number.isFinite(hpMax) || hpMax <= 0) return;
+    const hp =
+      Number.isFinite(player.hp)
+        ? player.hp
+        : Number.isFinite(stats.hp)
+          ? stats.hp
+          : hpMax;
+    if (hp >= hpMax) return;
+    const nextHp = Math.min(hpMax, hp + REGEN_PER_TICK);
+    player.hp = nextHp;
+    if (player.stats) {
+      player.stats.hp = nextHp;
+      player.stats.hpMax = hpMax;
+    }
+    player.lastRegenAt = now;
+  });
+}
+
+function persistAllPlayers() {
+  Object.values(state.players).forEach((player) => {
+    if (!player) return;
+    persistPlayerState(player);
+  });
+}
+
 const getNextEventId = () => nextEventId++;
 const getNextPlayerId = () => nextPlayerId++;
 const getNextMonsterEntityId = () => nextMonsterEntityId++;
@@ -471,7 +550,7 @@ const resourceHandlers = createResourceHandlers({
   resourceRespawnTimers,
 });
 
-  const combatHandlers = createCombatHandlers({
+const combatHandlers = createCombatHandlers({
     state,
     broadcast,
     send,
@@ -490,7 +569,27 @@ const resourceHandlers = createResourceHandlers({
     isMonsterCapturable,
     getCombatPattern,
     getCombatStartPositions,
+    persistPlayerState,
   });
+
+function getCombatJoinPayload(playerId) {
+  if (!Number.isInteger(playerId)) return null;
+  const player = state.players[playerId];
+  if (!player || !player.inCombat) return null;
+  const combatId = Number.isInteger(player.combatId) ? player.combatId : null;
+  if (!combatId) return null;
+  const combat = state.combats[combatId];
+  if (!combat) return null;
+  const combatEntry = combatHandlers.serializeCombatEntry
+    ? combatHandlers.serializeCombatEntry(combat)
+    : null;
+  if (!combatEntry) return null;
+  const mobEntries = Array.isArray(combat.mobEntries) ? combat.mobEntries : [];
+  return {
+    combat: combatEntry,
+    mobEntries: mobHandlers.serializeMonsterEntries(mobEntries),
+  };
+}
 
 const playerHandlers = createPlayerHandlers({
   state,
@@ -513,6 +612,9 @@ const playerHandlers = createPlayerHandlers({
   characterStore,
   buildBaseStatsForClass,
   computeFinalStats,
+  persistPlayerState,
+  getCombatJoinPayload,
+  ensureCombatSnapshot: combatHandlers.ensureCombatSnapshot,
 });
 
 wss.on("connection", (ws) => {
@@ -647,6 +749,9 @@ wss.on("connection", (ws) => {
       case "CmdEndTurn":
         playerHandlers.handleCmdEndTurn(clientInfo, msg);
         break;
+      case "CmdCombatResync":
+        playerHandlers.handleCmdCombatResync(clientInfo, msg);
+        break;
       case "CmdCastSpell":
         debugCombatLog("CmdCastSpell recv", {
           cmdId: msg.cmdId ?? null,
@@ -670,11 +775,10 @@ wss.on("connection", (ws) => {
     const clientInfo = clients.get(ws);
     if (!clientInfo) return;
     const player = state.players[clientInfo.id];
-    const combatId = player && Number.isInteger(player.combatId) ? player.combatId : null;
-    if (combatId) {
-      combatHandlers.finalizeCombat(combatId);
+    if (player) {
+      player.connected = false;
+      persistPlayerState(player);
     }
-    delete state.players[clientInfo.id];
     clients.delete(ws);
     broadcast({ t: "EvPlayerLeft", playerId: clientInfo.id });
     if (clientInfo.id === hostId) {
@@ -684,10 +788,22 @@ wss.on("connection", (ws) => {
         broadcast({ t: "EvHostChanged", hostId });
       }
     }
+    if (player && Number.isInteger(player.combatId)) {
+      const combat = state.combats[player.combatId];
+      const participants = Array.isArray(combat?.participantIds)
+        ? combat.participantIds
+        : [];
+      const anyConnected = participants.some((id) => state.players[id]?.connected);
+      if (!anyConnected && combat) {
+        combatHandlers.finalizeCombat(combat.id);
+      }
+    }
   });
 });
 
 setInterval(() => mobHandlers.tickMobRoam(), MOB_ROAM_TICK_MS);
+setInterval(() => tickPlayerRegen(), REGEN_TICK_MS);
+setInterval(() => persistAllPlayers(), PERSIST_TICK_MS);
 
 // eslint-disable-next-line no-console
 console.log(`[LAN] WebSocket server on ws://localhost:${PORT}`);

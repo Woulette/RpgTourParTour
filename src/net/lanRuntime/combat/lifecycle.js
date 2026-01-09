@@ -2,6 +2,7 @@ import { getNetPlayerId } from "../../../app/session.js";
 import { unblockTile } from "../../../collision/collisionGrid.js";
 import { startCombatFromPrep } from "../../../features/combat/runtime/prep.js";
 import { endCombat } from "../../../core/combat.js";
+import { createCombatState } from "../../../features/combat/runtime/state.js";
 
 export function createCombatLifecycleHandlers(
   ctx,
@@ -25,6 +26,33 @@ export function createCombatLifecycleHandlers(
   const { buildLanActorsOrder, shouldApplyCombatEvent } = helpers;
   const { syncCombatPlayerAllies, startJoinCombatPrep } = prepHandlers;
   const { startCombatSync, stopCombatSync, sendCombatState } = syncHandlers;
+  const ensureCombatResyncState = (entry) => {
+    if (!entry || scene.combatState?.enCours || scene.prepState?.actif) return;
+    scene.combatMap = scene.combatMap || scene.map;
+    scene.combatGroundLayer = scene.combatGroundLayer || scene.groundLayer;
+    const dummyMonster = { stats: {} };
+    scene.combatState = createCombatState(player, dummyMonster);
+    scene.combatState.combatId = entry.combatId;
+    scene.combatState.tour =
+      entry.turn === "monster" || entry.turn === "summon" ? "monstre" : "joueur";
+    scene.combatState.round = Number.isInteger(entry.round) ? entry.round : 1;
+    scene.combatState.activePlayerId = Number.isInteger(entry.activePlayerId)
+      ? entry.activePlayerId
+      : null;
+    scene.combatState.activeMonsterId = Number.isInteger(entry.activeMonsterId)
+      ? entry.activeMonsterId
+      : null;
+    scene.combatState.activeMonsterIndex = Number.isInteger(entry.activeMonsterIndex)
+      ? entry.activeMonsterIndex
+      : null;
+    scene.combatState.activeSummonId = Number.isInteger(entry.activeSummonId)
+      ? entry.activeSummonId
+      : null;
+    scene.combatState.summonActing = entry.turn === "summon";
+    scene.__lanCombatId = entry.combatId;
+    scene.__lanCombatStartSent = true;
+    document.body.classList.add("combat-active");
+  };
 
   const applyCombatCreated = (entry) => {
     if (!entry || !Number.isInteger(entry.combatId)) return;
@@ -264,6 +292,7 @@ export function createCombatLifecycleHandlers(
       }
       endCombat(scene);
     }
+    scene.__lanWorldMobsHidden = false;
 
     const currentMap = getCurrentMapKey();
     if (entry.mapId && entry.mapId === currentMap) {
@@ -276,10 +305,21 @@ export function createCombatLifecycleHandlers(
 
   const handleCombatJoinReady = (msg) => {
     if (!msg || !msg.combat) return;
-    if (!shouldApplyCombatEvent(msg.combat.combatId, msg.eventId, msg.combatSeq)) return;
     const entry = msg.combat;
+    const allowResync =
+      entry.phase === "combat" && !scene.combatState?.enCours && !scene.prepState?.actif;
+    if (!shouldApplyCombatEvent(msg.combat.combatId, msg.eventId, msg.combatSeq)) {
+      if (!allowResync) return;
+    }
     applyCombatUpdated(entry);
     const mobEntries = Array.isArray(msg.mobEntries) ? msg.mobEntries : [];
+    if (entry.phase === "combat") {
+      ensureCombatResyncState(entry);
+      syncCombatPlayerAllies(entry);
+      startCombatSync();
+      sendCombatState();
+      return;
+    }
     startJoinCombatPrep(entry, mobEntries);
   };
 

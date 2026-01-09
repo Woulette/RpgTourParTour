@@ -33,6 +33,11 @@ export function initLanRuntime(scene, player, map, groundLayer) {
   const getCurrentGroundLayer = () => scene?.groundLayer || null;
   const isSceneReady = () =>
     !!(scene && scene.sys && !scene.sys.isDestroyed && scene.add && scene.physics);
+  const isMapReady = () => {
+    const currentMap = getCurrentMapObj();
+    const currentLayer = getCurrentGroundLayer();
+    return !!(currentMap && currentLayer && currentLayer.layer);
+  };
   const netDebugLog = (...args) => {
     if (
       typeof window === "undefined" ||
@@ -322,6 +327,24 @@ export function initLanRuntime(scene, player, map, groundLayer) {
       }
       const snapshot = msg.snapshot || null;
       const playersSnapshot = snapshot?.players || [];
+      if (player && Number.isInteger(msg.playerId)) {
+        const localEntry = playersSnapshot.find((p) => Number(p?.id) === msg.playerId) || null;
+        if (localEntry && player.stats) {
+          const hpMax = Number.isFinite(localEntry.hpMax)
+            ? localEntry.hpMax
+            : Number.isFinite(localEntry.hp)
+              ? localEntry.hp
+              : null;
+          if (Number.isFinite(hpMax)) {
+            const hp = Number.isFinite(localEntry.hp) ? localEntry.hp : hpMax;
+            player.stats.hpMax = hpMax;
+            player.stats.hp = Math.min(hp, hpMax);
+            if (typeof player.updateHudHp === "function") {
+              player.updateHudHp(player.stats.hp, player.stats.hpMax);
+            }
+          }
+        }
+      }
       playersSnapshot.forEach((entry) => players.upsertRemoteData(entry));
       const combats = Array.isArray(snapshot?.combats) ? snapshot.combats : [];
       combats.forEach((entry) => combat.applyCombatCreated(entry));
@@ -380,6 +403,25 @@ export function initLanRuntime(scene, player, map, groundLayer) {
     }
 
     if (msg.t === "EvMapMonsters") {
+      if (scene?.combatState?.enCours) return;
+      if (!isMapReady()) {
+        scene.__lanPendingMapMonsters = msg;
+        if (!scene.__lanPendingMapMonstersTimer) {
+          const schedule = (fn) =>
+            scene.time && typeof scene.time.delayedCall === "function"
+              ? scene.time.delayedCall(100, fn)
+              : setTimeout(fn, 100);
+          scene.__lanPendingMapMonstersTimer = schedule(() => {
+            scene.__lanPendingMapMonstersTimer = null;
+            const pending = scene.__lanPendingMapMonsters;
+            if (pending) {
+              scene.__lanPendingMapMonsters = null;
+              applyCombatEvent(pending);
+            }
+          });
+        }
+        return;
+      }
       const currentMap = getCurrentMapKey();
       if (!currentMap || msg.mapId !== currentMap) return;
       mobs.clearWorldMonsters();
@@ -392,6 +434,24 @@ export function initLanRuntime(scene, player, map, groundLayer) {
     }
 
     if (msg.t === "EvMapResources") {
+      if (!isMapReady()) {
+        scene.__lanPendingMapResources = msg;
+        if (!scene.__lanPendingMapResourcesTimer) {
+          const schedule = (fn) =>
+            scene.time && typeof scene.time.delayedCall === "function"
+              ? scene.time.delayedCall(100, fn)
+              : setTimeout(fn, 100);
+          scene.__lanPendingMapResourcesTimer = schedule(() => {
+            scene.__lanPendingMapResourcesTimer = null;
+            const pending = scene.__lanPendingMapResources;
+            if (pending) {
+              scene.__lanPendingMapResources = null;
+              applyCombatEvent(pending);
+            }
+          });
+        }
+        return;
+      }
       const currentMap = getCurrentMapKey();
       if (!currentMap || msg.mapId !== currentMap) return;
       const entries = Array.isArray(msg.resources) ? msg.resources : [];

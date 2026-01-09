@@ -83,6 +83,22 @@ export function createCombatPrepHandlers(ctx, helpers) {
       }
       return;
     }
+    const mapForSpawn = scene.combatMap || scene.map;
+    const layerForSpawn = scene.combatGroundLayer || scene.groundLayer;
+    if (!mapForSpawn || !layerForSpawn || !layerForSpawn.layer) {
+      if (!scene.__lanPrepSyncPending) {
+        scene.__lanPrepSyncPending = true;
+        if (scene.time && typeof scene.time.delayedCall === "function") {
+          scene.time.delayedCall(100, () => {
+            scene.__lanPrepSyncPending = false;
+            syncCombatPlayerAllies(entry);
+          });
+        } else {
+          scene.__lanPrepSyncPending = false;
+        }
+      }
+      return;
+    }
     const localId = getNetPlayerId();
     if (!localId) return;
     const participantIds = Array.isArray(entry.participantIds)
@@ -138,8 +154,6 @@ export function createCombatPrepHandlers(ctx, helpers) {
         .filter((id) => Number.isInteger(id))
     );
 
-    const mapForSpawn = scene.combatMap || scene.map;
-    const layerForSpawn = scene.combatGroundLayer || scene.groundLayer;
     const allowedTiles = scene.prepState?.allowedTiles || [];
 
     const placementMap = new Map();
