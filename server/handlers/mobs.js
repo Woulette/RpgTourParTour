@@ -156,49 +156,7 @@ function createMobHandlers(ctx) {
   }
 
   function handleCmdMapMonsters(ws, clientInfo, msg) {
-    if (clientInfo.id !== msg.playerId) return;
-    const player = state.players[clientInfo.id];
-    const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
-    if (!mapId) return;
-    if (!player || player.mapId !== mapId) return;
-
-    if (
-      Number.isInteger(msg.mapWidth) &&
-      Number.isInteger(msg.mapHeight) &&
-      msg.mapWidth > 0 &&
-      msg.mapHeight > 0
-    ) {
-      state.mapMeta[mapId] = { width: msg.mapWidth, height: msg.mapHeight };
-    }
-
-    if (!state.mapMonsters[mapId]) {
-      const entries = sanitizeMonsterEntries(msg.monsters);
-      entries.forEach((entry) => {
-        entry.entityId = getNextMonsterEntityId();
-        entry.spawnMapKey = mapId;
-        entry.spawnTileX = entry.tileX;
-        entry.spawnTileY = entry.tileY;
-        entry.isMoving = false;
-        entry.nextRoamAt = 0;
-        entry.moveEndAt = 0;
-        entry.inCombat = false;
-        entry.combatId = null;
-      });
-      state.mapMonsters[mapId] = entries;
-      broadcast({
-        t: "EvMapMonsters",
-        mapId,
-        monsters: serializeMonsterEntries(getVisibleMonstersForMap(mapId)),
-      });
-      return;
-    }
-
-    send(ws, {
-      t: "EvMapMonsters",
-      eventId: getNextEventId(),
-      mapId,
-      monsters: serializeMonsterEntries(getVisibleMonstersForMap(mapId)),
-    });
+    handleCmdRequestMapMonsters(ws, clientInfo, msg);
   }
 
   function handleCmdMobMoveStart(ws, clientInfo, msg) {
@@ -263,14 +221,6 @@ function createMobHandlers(ctx) {
     }
 
     const timer = setTimeout(() => {
-      const playersOnMap = Object.values(state.players).some(
-        (player) => player && player.mapId === mapId
-      );
-      if (!playersOnMap) {
-        scheduleMobRespawn(mapId, sourceEntry);
-        return;
-      }
-
       const list = state.mapMonsters[mapId];
       if (!Array.isArray(list)) return;
 
@@ -423,8 +373,8 @@ function createMobHandlers(ctx) {
     if (clientInfo.id !== msg.playerId) return;
     const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
     if (!mapId) return;
-    const list = getVisibleMonstersForMap(mapId);
-    if (!Array.isArray(list) || list.length === 0) {
+    const list = state.mapMonsters[mapId];
+    if (!Array.isArray(list)) {
       ensureMapInitialized(mapId);
       return;
     }
@@ -432,7 +382,7 @@ function createMobHandlers(ctx) {
       t: "EvMapMonsters",
       eventId: getNextEventId(),
       mapId,
-      monsters: serializeMonsterEntries(list),
+      monsters: serializeMonsterEntries(getVisibleMonstersForMap(mapId)),
     });
   }
 

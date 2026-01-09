@@ -57,12 +57,44 @@
             Créer un personnage
           </button>
           <button id="btn-lan-connect" class="menu-btn menu-btn-secondary" type="button">
-            LAN
+            Compte
           </button>
           <button id="btn-play" class="menu-btn menu-btn-primary" type="button" disabled>
             Jouer
           </button>
         </div>
+      </section>
+
+      <!-- Connexion / Inscription -->
+      <section id="menu-screen-login" class="menu-screen" aria-label="Connexion" hidden>
+        <h2 class="menu-screen-title">Connexion</h2>
+        <form id="login-form" class="login-form" autocomplete="off">
+          <label class="login-label">
+            Identifiant ou email
+            <input id="login-identifier" class="login-input" type="text" maxlength="64" placeholder="ex: joueur@mail.com" />
+          </label>
+          <label class="login-label">
+            Mot de passe
+            <input id="login-password" class="login-input" type="password" maxlength="64" placeholder="********" />
+          </label>
+          <label id="login-confirm-wrap" class="login-label" hidden>
+            Confirmer le mot de passe
+            <input id="login-password-confirm" class="login-input" type="password" maxlength="64" placeholder="********" />
+          </label>
+          <label class="login-remember">
+            <input id="login-remember" type="checkbox" checked />
+            Se souvenir de moi
+          </label>
+          <div id="login-error" class="login-error" role="status" aria-live="polite"></div>
+          <div class="login-actions">
+            <button id="btn-login-submit" class="menu-btn menu-btn-primary" type="submit">
+              Connexion
+            </button>
+            <button id="btn-login-toggle" class="menu-btn menu-btn-secondary" type="button">
+              Créer un compte
+            </button>
+          </div>
+        </form>
       </section>
 
       <!-- Création personnage -->

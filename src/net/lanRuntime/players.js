@@ -3,7 +3,7 @@ import { findPathForPlayer } from "../../entities/movement/pathfinding.js";
 import { movePlayerAlongPathNetwork } from "../../entities/playerMovement.js";
 import { recalcDepths } from "../../features/maps/world/decor.js";
 import { PLAYER_SPEED } from "../../config/constants.js";
-import { getNetPlayerId } from "../../app/session.js";
+import { getNetClient, getNetPlayerId } from "../../app/session.js";
 
 export function createPlayerHandlers(ctx) {
   const {
@@ -319,6 +319,45 @@ export function createPlayerHandlers(ctx) {
     });
   };
 
+  const requestMapPlayers = () => {
+    const client = getNetClient();
+    if (!client) return;
+    const playerId = getNetPlayerId();
+    if (!playerId) return;
+    const currentMap = getCurrentMapKey();
+    if (!currentMap) return;
+    client.sendCmd("CmdRequestMapPlayers", {
+      playerId,
+      mapId: currentMap,
+    });
+  };
+
+  const handleMapPlayers = (msg) => {
+    if (!msg) return;
+    const currentMap = getCurrentMapKey();
+    if (!currentMap || msg.mapId !== currentMap) return;
+    const list = Array.isArray(msg.players) ? msg.players : [];
+    const keep = new Set();
+    list.forEach((entry) => {
+      if (!entry || !Number.isFinite(entry.id)) return;
+      if (getNetPlayerId() === entry.id) return;
+      keep.add(Number(entry.id));
+      upsertRemoteData(entry);
+    });
+
+    remotePlayersData.forEach((data, id) => {
+      if (!data || data.mapId !== currentMap) return;
+      if (!keep.has(id)) {
+        const existing = remotePlayers.get(id) || null;
+        if (existing?.destroy) existing.destroy();
+        remotePlayers.delete(id);
+        remotePlayersData.delete(id);
+      }
+    });
+
+    refreshRemoteSprites();
+  };
+
   const handleMoveEvent = (msg) => {
     if (!msg || !player) return;
     const playerId = getNetPlayerId();
@@ -326,6 +365,10 @@ export function createPlayerHandlers(ctx) {
     const path = Array.isArray(msg.path) ? msg.path : null;
 
     if (playerId && msg.playerId === playerId) {
+      if (msg.rejected) {
+        player.__lanLastTarget = null;
+        player.__lanLastCmdAt = 0;
+      }
       stopEntityMovement(player);
       const currentTile = worldToTile(player.x, player.y);
       if (currentTile) {
@@ -439,5 +482,7 @@ export function createPlayerHandlers(ctx) {
     refreshRemoteSprites,
     handleMoveEvent,
     stopEntityMovement,
+    requestMapPlayers,
+    handleMapPlayers,
   };
 }

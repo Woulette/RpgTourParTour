@@ -1,6 +1,5 @@
 import { getNetClient, getNetIsHost, getNetPlayerId } from "../../app/session.js";
 import {
-  buildInitialMonsterEntries,
   planMonsterRoamPath,
   spawnMonstersFromEntries,
 } from "../../features/monsters/runtime/index.js";
@@ -17,7 +16,6 @@ export function createMobHandlers(ctx) {
     map,
     groundLayer,
     getCurrentMapKey,
-    getCurrentMapDef,
     getCurrentMapObj,
     getCurrentGroundLayer,
   } = ctx;
@@ -186,30 +184,9 @@ export function createMobHandlers(ctx) {
     const seeded =
       scene.__lanMapMonstersSeeded || (scene.__lanMapMonstersSeeded = new Set());
     if (seeded.has(currentMap)) return;
-    const mapDef = getCurrentMapDef();
-    const currentMapObj = scene.map;
-    const currentGround = scene.groundLayer;
-    if (!mapDef || !currentMapObj || !currentGround) return;
-
-    const centerTileX = Math.floor(currentMapObj.width / 2);
-    const centerTileY = Math.floor(currentMapObj.height / 2);
-    const entries = buildInitialMonsterEntries(
-      currentMapObj,
-      currentGround,
-      centerTileX,
-      centerTileY,
-      mapDef
-    ).map((entry) => ({
-      ...entry,
-      spawnMapKey: currentMap,
-    }));
-
-    client.sendCmd("CmdMapMonsters", {
+    client.sendCmd("CmdRequestMapMonsters", {
       playerId,
       mapId: currentMap,
-      mapWidth: currentMapObj.width,
-      mapHeight: currentMapObj.height,
-      monsters: entries,
     });
     seeded.add(currentMap);
   };
@@ -228,10 +205,6 @@ export function createMobHandlers(ctx) {
   };
 
   const refreshMapMonstersFromServer = () => {
-    if (getNetIsHost()) {
-      sendMapMonstersSnapshot();
-      return;
-    }
     requestMapMonsters();
   };
 

@@ -1,4 +1,5 @@
 const { WebSocketServer, WebSocket } = require("ws");
+const crypto = require("crypto");
 const path = require("path");
 const { pathToFileURL } = require("url");
 const {
@@ -11,8 +12,10 @@ const { createCombatHandlers } = require("./handlers/combat");
 const { createMobHandlers } = require("./handlers/mobs");
 const { createResourceHandlers } = require("./handlers/resources");
 const { createPlayerHandlers } = require("./handlers/players");
+const { createAccountStore } = require("./db/accounts");
 const { createCharacterStore } = require("./db/characters");
 const { buildMonsterStats } = require("./handlers/combat/monsterStats");
+const { initializeMapState } = require("./maps/initMapState");
 
 const PORT = Number(process.env.PORT || 8080);
 const GAME_DATA_VERSION =
@@ -35,6 +38,21 @@ const resourceRespawnTimers = new Map();
 const mapInitRequests = new Map();
 const DEBUG_COMBAT = process.env.LAN_COMBAT_DEBUG === "1";
 const characterStore = createCharacterStore({ dataDir: path.resolve(__dirname, "data") });
+const accountStore = createAccountStore({ dataDir: path.resolve(__dirname, "data") });
+const sessionTokens = new Map(); // token -> { accountId, issuedAt }
+
+function issueSessionToken(accountId) {
+  if (!accountId) return null;
+  const token = crypto.randomBytes(24).toString("hex");
+  sessionTokens.set(token, { accountId, issuedAt: Date.now() });
+  return token;
+}
+
+function getAccountIdFromSession(token) {
+  if (!token) return null;
+  const entry = sessionTokens.get(token);
+  return entry?.accountId || null;
+}
 
 let statsApi = null;
 let statsApiFailed = false;
@@ -62,6 +80,20 @@ const classDefsPromise = import(
     classDefsFailed = true;
     // eslint-disable-next-line no-console
     console.warn("[LAN] Failed to load classes config:", err?.message || err);
+  });
+
+let mapDefs = null;
+let mapDefsFailed = false;
+const mapDefsPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/features/maps/index.js")).href
+)
+  .then((mod) => {
+    mapDefs = mod?.maps || null;
+  })
+  .catch((err) => {
+    mapDefsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load map defs:", err?.message || err);
   });
 const debugCombatLog = (...args) => {
   if (!DEBUG_COMBAT) return;
@@ -216,6 +248,18 @@ function getCombatStartPositions(mapId) {
   return combatStartPositions[mapId] || null;
 }
 
+function rollMonsterLevel(monsterId) {
+  const def = getMonsterDef(monsterId);
+  if (!def) return 1;
+  const baseLevel = Number.isFinite(def.baseLevel) ? def.baseLevel : 1;
+  const levelMin = Number.isFinite(def.levelMin) ? def.levelMin : baseLevel;
+  const levelMax = Number.isFinite(def.levelMax) ? def.levelMax : Math.max(levelMin, 4);
+  const lo = Math.min(levelMin, levelMax);
+  const hi = Math.max(levelMin, levelMax);
+  if (hi <= lo) return lo;
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
+
 function buildBaseStatsForClass(classId) {
   if (!statsApi || !classDefs) return null;
   const {
@@ -318,7 +362,7 @@ function rollSpellDamage(spell) {
   return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
 
-function broadcast(payload) {
+function buildEvent(payload) {
   const event = { ...payload };
   if (!event.eventId) {
     event.eventId = nextEventId++;
@@ -369,9 +413,65 @@ function broadcast(payload) {
       authoritative: event.authoritative ?? null,
     });
   }
-  for (const ws of clients.keys()) {
-    send(ws, event);
+  return event;
+}
+
+function getSocketsForMap(mapId) {
+  if (!mapId) return [];
+  const sockets = [];
+  for (const [ws, info] of clients.entries()) {
+    if (!info || !Number.isInteger(info.id)) continue;
+    const player = state.players[info.id];
+    if (player && player.mapId === mapId && player.connected !== false) {
+      sockets.push(ws);
+    }
   }
+  return sockets;
+}
+
+function getSocketsForCombat(combatId) {
+  if (!Number.isInteger(combatId)) return [];
+  const ids = new Set();
+  const combat = state.combats[combatId];
+  const participants = Array.isArray(combat?.participantIds) ? combat.participantIds : [];
+  participants.forEach((id) => {
+    if (Number.isInteger(id)) ids.add(id);
+  });
+  Object.values(state.players).forEach((player) => {
+    if (player && player.combatId === combatId) ids.add(player.id);
+  });
+
+  const sockets = [];
+  for (const [ws, info] of clients.entries()) {
+    if (!info || !Number.isInteger(info.id)) continue;
+    if (ids.has(info.id)) sockets.push(ws);
+  }
+  return sockets;
+}
+
+function sendEventToSockets(sockets, event) {
+  if (!Array.isArray(sockets) || sockets.length === 0) return;
+  sockets.forEach((ws) => send(ws, event));
+}
+
+function broadcast(payload) {
+  const event = buildEvent(payload);
+  if (COMBAT_EVENT_TYPES.has(event.t) && Number.isInteger(event.combatId)) {
+    sendEventToSockets(getSocketsForCombat(event.combatId), event);
+    return;
+  }
+  if (event.t === "EvPlayerMap" && typeof event.fromMapId === "string") {
+    const toSockets = getSocketsForMap(event.mapId);
+    const fromSockets = getSocketsForMap(event.fromMapId);
+    const unique = new Set([...toSockets, ...fromSockets]);
+    sendEventToSockets(Array.from(unique), event);
+    return;
+  }
+  if (typeof event.mapId === "string") {
+    sendEventToSockets(getSocketsForMap(event.mapId), event);
+    return;
+  }
+  sendEventToSockets(Array.from(clients.keys()), event);
 }
 
 function getHostSocket() {
@@ -382,26 +482,94 @@ function getHostSocket() {
   return null;
 }
 
-  function findClientOnMap(mapId) {
-    for (const [ws, info] of clients.entries()) {
-      if (!info || !Number.isInteger(info.id)) continue;
-      const player = state.players[info.id];
-      if (player && player.mapId === mapId) return ws;
-    }
-    return null;
-  }
+function buildMapPlayersSnapshot(mapId) {
+  if (!mapId) return [];
+  return Object.values(state.players)
+    .filter((p) => p && p.connected !== false && p.mapId === mapId)
+    .map((p) => ({
+      id: p.id,
+      mapId: p.mapId,
+      x: Number.isFinite(p.x) ? p.x : 0,
+      y: Number.isFinite(p.y) ? p.y : 0,
+      classId: p.classId || null,
+      displayName: p.displayName || null,
+      inCombat: p.inCombat === true,
+      combatId: Number.isInteger(p.combatId) ? p.combatId : null,
+    }));
+}
+
+function sendMapSnapshotToClient(ws, mapId) {
+  if (!mapId || !ws) return;
+  ensureMapInitialized(mapId);
+  const players = buildMapPlayersSnapshot(mapId);
+  const monsters = mobHandlers.serializeMonsterEntries(
+    Array.isArray(state.mapMonsters[mapId]) ? state.mapMonsters[mapId] : []
+  );
+  const resources = resourceHandlers.serializeResourceEntries(
+    Array.isArray(state.mapResources[mapId]) ? state.mapResources[mapId] : []
+  );
+  send(ws, {
+    t: "EvMapPlayers",
+    eventId: nextEventId++,
+    mapId,
+    players,
+  });
+  send(ws, {
+    t: "EvMapMonsters",
+    eventId: nextEventId++,
+    mapId,
+    monsters,
+  });
+  send(ws, {
+    t: "EvMapResources",
+    eventId: nextEventId++,
+    mapId,
+    resources,
+  });
+}
 
   function ensureMapInitialized(mapId) {
     if (!mapId) return false;
-    if (state.mapMonsters[mapId] && state.mapResources[mapId]) return true;
-    const targetSocket = findClientOnMap(mapId) || getHostSocket();
-    if (!targetSocket) return false;
+    if (state.mapMonsters[mapId] && state.mapResources[mapId] && state.mapMeta[mapId]) {
+      return true;
+    }
     const now = Date.now();
     const last = mapInitRequests.get(mapId) || 0;
     if (now - last < 1500) return false;
     mapInitRequests.set(mapId, now);
-    send(targetSocket, { t: "EvEnsureMapInit", mapId });
-    return false;
+
+    if (!mapDefs && !mapDefsFailed) {
+      mapDefsPromise.then(() => ensureMapInitialized(mapId));
+      return false;
+    }
+    if (!mapDefs) return false;
+
+    const init = initializeMapState({
+      mapId,
+      maps: mapDefs,
+      projectRoot: path.resolve(__dirname, ".."),
+      getNextMonsterEntityId,
+      getNextResourceEntityId,
+      rollMonsterLevel,
+    });
+    if (!init) return false;
+
+    state.mapMeta[mapId] = init.meta;
+    state.mapCollisions[mapId] = init.collisions || new Set();
+    state.mapMonsters[mapId] = init.monsters;
+    state.mapResources[mapId] = init.resources;
+
+    broadcast({
+      t: "EvMapMonsters",
+      mapId,
+      monsters: mobHandlers.serializeMonsterEntries(init.monsters),
+    });
+    broadcast({
+      t: "EvMapResources",
+      mapId,
+      resources: resourceHandlers.serializeResourceEntries(init.resources),
+    });
+    return true;
   }
 
 function snapshotForClient() {
@@ -597,6 +765,7 @@ const playerHandlers = createPlayerHandlers({
   broadcast,
   send,
   createPlayer,
+  accountStore,
   config: {
     PROTOCOL_VERSION,
     GAME_DATA_VERSION,
@@ -610,12 +779,16 @@ const playerHandlers = createPlayerHandlers({
   snapshotForClient,
   ensureMapInitialized,
   characterStore,
+  issueSessionToken,
+  getAccountIdFromSession,
   buildBaseStatsForClass,
   computeFinalStats,
   persistPlayerState,
   getCombatJoinPayload,
   ensureCombatSnapshot: combatHandlers.ensureCombatSnapshot,
 });
+
+ensureMapInitialized(state.mapId);
 
 wss.on("connection", (ws) => {
   ws.on("message", (raw) => {
@@ -675,6 +848,9 @@ wss.on("connection", (ws) => {
       }
       case "CmdMove":
         playerHandlers.handleCmdMove(clientInfo, msg);
+        break;
+      case "CmdRequestMapPlayers":
+        playerHandlers.handleCmdRequestMapPlayers(ws, clientInfo, msg);
         break;
       case "CmdMoveCombat":
         combatHandlers.handleCmdMoveCombat(clientInfo, msg);
@@ -752,6 +928,14 @@ wss.on("connection", (ws) => {
       case "CmdCombatResync":
         playerHandlers.handleCmdCombatResync(clientInfo, msg);
         break;
+      case "CmdMapResync": {
+        if (clientInfo.id !== msg.playerId) break;
+        const player = state.players[clientInfo.id];
+        const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
+        if (!player || !mapId || player.mapId !== mapId) break;
+        sendMapSnapshotToClient(ws, mapId);
+        break;
+      }
       case "CmdCastSpell":
         debugCombatLog("CmdCastSpell recv", {
           cmdId: msg.cmdId ?? null,
@@ -780,7 +964,11 @@ wss.on("connection", (ws) => {
       persistPlayerState(player);
     }
     clients.delete(ws);
-    broadcast({ t: "EvPlayerLeft", playerId: clientInfo.id });
+    broadcast({
+      t: "EvPlayerLeft",
+      mapId: player?.mapId || null,
+      playerId: clientInfo.id,
+    });
     if (clientInfo.id === hostId) {
       const next = clients.values().next().value || null;
       hostId = next ? next.id : null;

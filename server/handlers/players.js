@@ -5,6 +5,7 @@ function createPlayerHandlers(ctx) {
     broadcast,
     send,
     createPlayer,
+    accountStore,
     characterStore,
     buildBaseStatsForClass,
     computeFinalStats,
@@ -19,6 +20,8 @@ function createPlayerHandlers(ctx) {
     persistPlayerState,
     getCombatJoinPayload,
     ensureCombatSnapshot,
+    issueSessionToken,
+    getAccountIdFromSession,
   } = ctx;
 
   const { PROTOCOL_VERSION, GAME_DATA_VERSION, MAX_PLAYERS } = config;
@@ -73,6 +76,83 @@ function createPlayerHandlers(ctx) {
     });
   };
 
+  function findPathOnGrid(startX, startY, endX, endY, meta, blocked, allowDiagonal, maxSteps) {
+    if (!meta) return null;
+    if (startX === endX && startY === endY) return [];
+    const width = meta.width;
+    const height = meta.height;
+    if (
+      startX < 0 ||
+      startY < 0 ||
+      endX < 0 ||
+      endY < 0 ||
+      startX >= width ||
+      startY >= height ||
+      endX >= width ||
+      endY >= height
+    ) {
+      return null;
+    }
+    if (blocked && blocked.has(`${endX},${endY}`)) return null;
+
+    const dirs4 = [
+      { dx: 1, dy: 0 },
+      { dx: -1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: 0, dy: -1 },
+    ];
+    const dirs8 = [
+      ...dirs4,
+      { dx: 1, dy: 1 },
+      { dx: 1, dy: -1 },
+      { dx: -1, dy: 1 },
+      { dx: -1, dy: -1 },
+    ];
+    const dirs = allowDiagonal ? dirs8 : dirs4;
+
+    const key = (x, y) => `${x},${y}`;
+    const visited = new Set([key(startX, startY)]);
+    const prev = new Map();
+    const queue = [{ x: startX, y: startY }];
+    let qi = 0;
+
+    while (qi < queue.length) {
+      const current = queue[qi++];
+      for (const { dx, dy } of dirs) {
+        const nx = current.x + dx;
+        const ny = current.y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const k = key(nx, ny);
+        if (visited.has(k)) continue;
+        if (blocked && blocked.has(k)) continue;
+        visited.add(k);
+        prev.set(k, current);
+        if (nx === endX && ny === endY) {
+          const path = [{ x: nx, y: ny }];
+          let back = current;
+          while (back && !(back.x === startX && back.y === startY)) {
+            path.push({ x: back.x, y: back.y });
+            back = prev.get(key(back.x, back.y));
+          }
+          path.reverse();
+          if (Number.isInteger(maxSteps) && path.length > maxSteps) {
+            return null;
+          }
+          return path;
+        }
+        if (
+          Number.isInteger(maxSteps) &&
+          Math.abs(nx - startX) + Math.abs(ny - startY) > maxSteps
+        ) {
+          continue;
+        }
+        queue.push({ x: nx, y: ny });
+      }
+    }
+
+    return null;
+  }
+
   function handleHello(ws, msg) {
     const protoOk = msg.protocolVersion === PROTOCOL_VERSION;
     const dataOk = msg.dataHash === GAME_DATA_VERSION;
@@ -85,6 +165,88 @@ function createPlayerHandlers(ctx) {
       });
       ws.close();
       return;
+    }
+
+    const sessionToken =
+      typeof msg.sessionToken === "string" ? msg.sessionToken : null;
+    const accountName =
+      typeof msg.accountName === "string" ? msg.accountName : null;
+    const accountPassword =
+      typeof msg.accountPassword === "string" ? msg.accountPassword : null;
+    const authMode =
+      msg.authMode === "register"
+        ? "register"
+        : msg.authMode === "login"
+          ? "login"
+          : "auto";
+    let accountId = null;
+
+    const hasCredentials = !!(accountName && accountPassword);
+    if (!hasCredentials && typeof getAccountIdFromSession === "function" && sessionToken) {
+      accountId = getAccountIdFromSession(sessionToken);
+    }
+
+    if (!accountId) {
+      if (!accountStore) {
+        send(ws, { t: "EvRefuse", reason: "auth_unavailable" });
+        ws.close();
+        return;
+      }
+      if (!hasCredentials) {
+        send(ws, { t: "EvRefuse", reason: "auth_required" });
+        ws.close();
+        return;
+      }
+      const existingAccount = accountStore.getAccountByName(accountName);
+      if (authMode === "register") {
+        if (existingAccount) {
+          send(ws, { t: "EvRefuse", reason: "account_exists" });
+          ws.close();
+          return;
+        }
+        const created = accountStore.createAccount({
+          name: accountName,
+          password: accountPassword,
+        });
+        if (!created) {
+          send(ws, { t: "EvRefuse", reason: "auth_failed" });
+          ws.close();
+          return;
+        }
+        accountId = created.accountId;
+      } else if (authMode === "login") {
+        if (!existingAccount) {
+          send(ws, { t: "EvRefuse", reason: "account_missing" });
+          ws.close();
+          return;
+        }
+        const ok = accountStore.verifyPassword(existingAccount, accountPassword);
+        if (!ok) {
+          send(ws, { t: "EvRefuse", reason: "auth_failed" });
+          ws.close();
+          return;
+        }
+        accountId = existingAccount.accountId;
+      } else if (existingAccount) {
+        const ok = accountStore.verifyPassword(existingAccount, accountPassword);
+        if (!ok) {
+          send(ws, { t: "EvRefuse", reason: "auth_failed" });
+          ws.close();
+          return;
+        }
+        accountId = existingAccount.accountId;
+      } else {
+        const created = accountStore.createAccount({
+          name: accountName,
+          password: accountPassword,
+        });
+        if (!created) {
+          send(ws, { t: "EvRefuse", reason: "auth_failed" });
+          ws.close();
+          return;
+        }
+        accountId = created.accountId;
+      }
     }
 
     const characterId = typeof msg.characterId === "string" ? msg.characterId : null;
@@ -114,6 +276,19 @@ function createPlayerHandlers(ctx) {
       (p) => p && p.characterId === characterId
     );
     if (existingPlayer) {
+      if (existingPlayer.accountId && existingPlayer.accountId !== accountId) {
+        send(ws, { t: "EvRefuse", reason: "character_owned" });
+        ws.close();
+        return;
+      }
+      const accountAlreadyConnected = Object.values(state.players).some(
+        (p) => p && p.accountId === accountId && p.connected !== false
+      );
+      if (accountAlreadyConnected) {
+        send(ws, { t: "EvRefuse", reason: "account_in_use" });
+        ws.close();
+        return;
+      }
       const alreadyConnected = Array.from(clients.values()).some(
         (info) => info && info.id === existingPlayer.id
       );
@@ -135,6 +310,10 @@ function createPlayerHandlers(ctx) {
         setHostId(existingPlayer.id);
       }
 
+      const nextSessionToken =
+        typeof issueSessionToken === "function"
+          ? issueSessionToken(accountId)
+          : null;
       send(ws, {
         t: "EvWelcome",
         eventId: getNextEventId(),
@@ -143,29 +322,62 @@ function createPlayerHandlers(ctx) {
         isHost: existingPlayer.id === getHostId(),
         protocolVersion: PROTOCOL_VERSION,
         dataHash: GAME_DATA_VERSION,
+        sessionToken: nextSessionToken,
         snapshot: snapshotForClient(),
       });
 
       sendCombatResync(ws, existingPlayer);
-      broadcast({ t: "EvPlayerJoined", player: existingPlayer });
+      broadcast({
+        t: "EvPlayerJoined",
+        mapId: existingPlayer.mapId || null,
+        player: existingPlayer,
+      });
+      return;
+    }
+
+    const accountAlreadyConnected = Object.values(state.players).some(
+      (p) => p && p.accountId === accountId && p.connected !== false
+    );
+    if (accountAlreadyConnected) {
+      send(ws, { t: "EvRefuse", reason: "account_in_use" });
+      ws.close();
       return;
     }
 
     let character = characterStore.getCharacter(characterId);
     if (!character) {
+      if (incomingName && typeof characterStore.getCharacterByName === "function") {
+        const taken = characterStore.getCharacterByName(incomingName);
+        if (taken && taken.characterId !== characterId) {
+          send(ws, { t: "EvRefuse", reason: "name_in_use" });
+          ws.close();
+          return;
+        }
+      }
       const baseStats = buildBaseStatsForClass(incomingClassId || "archer");
       character = characterStore.upsertCharacter({
         characterId,
+        accountId,
         name: incomingName || "Joueur",
         classId: incomingClassId || "archer",
         level: incomingLevel ?? 1,
         baseStats,
       });
+    } else if (character.accountId && character.accountId !== accountId) {
+      send(ws, { t: "EvRefuse", reason: "character_owned" });
+      ws.close();
+      return;
     }
     if (!character) {
       send(ws, { t: "EvRefuse", reason: "character_invalid" });
       ws.close();
       return;
+    }
+    if (!character.accountId && accountId && characterStore) {
+      character = characterStore.upsertCharacter({
+        ...character,
+        accountId,
+      });
     }
 
     const baseStats =
@@ -181,7 +393,7 @@ function createPlayerHandlers(ctx) {
     const player = createPlayer(playerId);
     player.connected = true;
     player.characterId = character.characterId;
-    player.accountId = character.accountId || null;
+    player.accountId = character.accountId || accountId || null;
     player.classId = character.classId || "archer";
     player.displayName = character.name || "Joueur";
     player.level = Number.isInteger(character.level) ? character.level : 1;
@@ -223,6 +435,10 @@ function createPlayerHandlers(ctx) {
 
     tryStartCombatIfNeeded();
 
+    const nextSessionToken =
+      typeof issueSessionToken === "function"
+        ? issueSessionToken(accountId)
+        : null;
     send(ws, {
       t: "EvWelcome",
       eventId: getNextEventId(),
@@ -231,10 +447,15 @@ function createPlayerHandlers(ctx) {
       isHost: playerId === getHostId(),
       protocolVersion: PROTOCOL_VERSION,
       dataHash: GAME_DATA_VERSION,
+      sessionToken: nextSessionToken,
       snapshot: snapshotForClient(),
     });
 
-    broadcast({ t: "EvPlayerJoined", player });
+    broadcast({
+      t: "EvPlayerJoined",
+      mapId: player.mapId || null,
+      player,
+    });
   }
 
   function handleCmdCombatResync(clientInfo, msg) {
@@ -256,33 +477,116 @@ function createPlayerHandlers(ctx) {
     const seq = Number.isInteger(msg.seq) ? msg.seq : 0;
     if (seq <= (player.lastMoveSeq || 0)) return;
     player.lastMoveSeq = seq;
+    player.lastMoveAt = 0;
 
-    let path = Array.isArray(msg.path) ? msg.path : [];
-    if (path.length > 200) {
-      path = path.slice(0, 200);
+    const mapId = player.mapId;
+    const meta = mapId ? state.mapMeta[mapId] : null;
+    const blocked = mapId ? state.mapCollisions?.[mapId] : null;
+    if (!meta || !Number.isInteger(meta.width) || !Number.isInteger(meta.height)) {
+      if (typeof ensureMapInitialized === "function" && mapId) {
+        ensureMapInitialized(mapId);
+      }
+      return;
     }
-    path = path
-      .map((step) => ({
-        x: Number.isInteger(step?.x) ? step.x : null,
-        y: Number.isInteger(step?.y) ? step.y : null,
-      }))
-      .filter((step) => step.x !== null && step.y !== null);
+
+    const MAX_PATH_STEPS = 200;
+    const MIN_MOVE_MS = 120;
+    const now = Date.now();
+    const cmdFromX = Number.isInteger(msg.fromX) ? msg.fromX : null;
+    const cmdFromY = Number.isInteger(msg.fromY) ? msg.fromY : null;
+    if (
+      cmdFromX !== null &&
+      cmdFromY !== null &&
+      cmdFromX >= 0 &&
+      cmdFromY >= 0 &&
+      cmdFromX < meta.width &&
+      cmdFromY < meta.height
+    ) {
+      const dx = Math.abs(cmdFromX - player.x);
+      const dy = Math.abs(cmdFromY - player.y);
+      const dist = dx + dy;
+      const MAX_DESYNC_TILES = 200;
+      if (dist > 0 && dist <= MAX_DESYNC_TILES) {
+        player.x = cmdFromX;
+        player.y = cmdFromY;
+      }
+    }
+
+    let prevX = Number.isInteger(player.x) ? player.x : null;
+    let prevY = Number.isInteger(player.y) ? player.y : null;
+    if (prevX === null || prevY === null) return;
+    let invalid = false;
+    const sendMoveCorrection = () => {
+      broadcast({
+        t: "EvMoveStart",
+        seq,
+        playerId: player.id,
+        mapId,
+        fromX: player.x,
+        fromY: player.y,
+        toX: player.x,
+        toY: player.y,
+        path: [],
+        rejected: true,
+      });
+    };
+
+    if (invalid) {
+      sendMoveCorrection();
+      return;
+    }
 
     const from = { x: player.x, y: player.y };
-    const last = path.length > 0 ? path[path.length - 1] : null;
-    player.x = last ? last.x : msg.toX;
-    player.y = last ? last.y : msg.toY;
+    const targetX = msg.toX;
+    const targetY = msg.toY;
+    if (
+      targetX < 0 ||
+      targetY < 0 ||
+      targetX >= meta.width ||
+      targetY >= meta.height
+    ) {
+      return;
+    }
+    if (blocked && blocked.has(`${targetX},${targetY}`)) {
+      sendMoveCorrection();
+      return;
+    }
+
+    const serverPath = findPathOnGrid(
+      from.x,
+      from.y,
+      targetX,
+      targetY,
+      meta,
+      blocked,
+      true,
+      MAX_PATH_STEPS
+    );
+    if (!serverPath) {
+      sendMoveCorrection();
+      return;
+    }
+
+    const lastMoveAt = Number.isFinite(player.lastMoveAt) ? player.lastMoveAt : 0;
+    if (lastMoveAt && now - lastMoveAt < MIN_MOVE_MS) {
+      sendMoveCorrection();
+      return;
+    }
+
+    player.x = targetX;
+    player.y = targetY;
+    player.lastMoveAt = now;
 
     broadcast({
       t: "EvMoveStart",
       seq,
       playerId: player.id,
-      mapId: player.mapId,
+      mapId,
       fromX: from.x,
       fromY: from.y,
       toX: player.x,
       toY: player.y,
-      path,
+      path: serverPath,
     });
   }
 
@@ -295,6 +599,7 @@ function createPlayerHandlers(ctx) {
     if (!player) return;
     if (player.inCombat) return;
 
+    const fromMapId = player.mapId;
     player.mapId = mapId;
 
     if (Number.isInteger(msg.tileX) && Number.isInteger(msg.tileY)) {
@@ -309,11 +614,38 @@ function createPlayerHandlers(ctx) {
       t: "EvPlayerMap",
       playerId: player.id,
       mapId: player.mapId,
+      fromMapId: typeof fromMapId === "string" ? fromMapId : null,
       tileX: player.x,
       tileY: player.y,
     });
 
     ensureMapInitialized(mapId);
+  }
+
+  function handleCmdRequestMapPlayers(ws, clientInfo, msg) {
+    if (clientInfo.id !== msg.playerId) return;
+    const player = state.players[clientInfo.id];
+    if (!player) return;
+    const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
+    if (!mapId || player.mapId !== mapId) return;
+    const list = Object.values(state.players)
+      .filter((p) => p && p.connected !== false && p.mapId === mapId)
+      .map((p) => ({
+        id: p.id,
+        mapId: p.mapId,
+        x: Number.isFinite(p.x) ? p.x : 0,
+        y: Number.isFinite(p.y) ? p.y : 0,
+        classId: p.classId || null,
+        displayName: p.displayName || null,
+        inCombat: p.inCombat === true,
+        combatId: Number.isInteger(p.combatId) ? p.combatId : null,
+      }));
+    send(ws, {
+      t: "EvMapPlayers",
+      eventId: getNextEventId(),
+      mapId,
+      players: list,
+    });
   }
 
   function handleCmdEndTurn(clientInfo, msg) {
@@ -339,6 +671,7 @@ function createPlayerHandlers(ctx) {
     handleCmdMapChange,
     handleCmdEndTurn,
     handleCmdCombatResync,
+    handleCmdRequestMapPlayers,
   };
 }
 

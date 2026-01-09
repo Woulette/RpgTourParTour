@@ -3,21 +3,18 @@ import {
   applyTreeHarvested,
   applyTreeRespawn,
   spawnTreesFromEntries,
-  TREE_REGROW_DURATION_MS,
   TREE_RESOURCE_KIND,
 } from "../../features/metier/bucheron/trees.js";
 import {
   applyHerbHarvested,
   applyHerbRespawn,
   spawnHerbsFromEntries,
-  HERB_REGROW_DURATION_MS,
   HERB_RESOURCE_KIND,
 } from "../../features/metier/alchimiste/plants.js";
 import {
   applyWellHarvested,
   applyWellRespawn,
   spawnWellsFromEntries,
-  WELL_COOLDOWN_MS,
   WELL_RESOURCE_KIND,
 } from "../../features/maps/world/wells.js";
 
@@ -26,7 +23,6 @@ export function createResourceHandlers(ctx) {
     scene,
     player,
     getCurrentMapKey,
-    getCurrentMapDef,
     getCurrentMapObj,
     resourceNodes,
   } = ctx;
@@ -59,59 +55,6 @@ export function createResourceHandlers(ctx) {
     return resourceNodes.get(entityId) || null;
   };
 
-  const buildResourceEntriesForMap = () => {
-    const mapDef = getCurrentMapDef();
-    if (!mapDef) return [];
-    const entries = [];
-
-    const trees = Array.isArray(mapDef.treePositions) ? mapDef.treePositions : [];
-    trees.forEach((pos) => {
-      if (typeof pos.tileX !== "number" || typeof pos.tileY !== "number") return;
-      entries.push({
-        kind: TREE_RESOURCE_KIND,
-        tileX: pos.tileX,
-        tileY: pos.tileY,
-        offsetX: typeof pos.offsetX === "number" ? pos.offsetX : 0,
-        offsetY: typeof pos.offsetY === "number" ? pos.offsetY : 0,
-        resourceId: typeof pos.resourceId === "string" ? pos.resourceId : "chene",
-        respawnMs: TREE_REGROW_DURATION_MS,
-        harvested: false,
-      });
-    });
-
-    const herbs = Array.isArray(mapDef.herbPositions) ? mapDef.herbPositions : [];
-    herbs.forEach((pos) => {
-      if (typeof pos.tileX !== "number" || typeof pos.tileY !== "number") return;
-      entries.push({
-        kind: HERB_RESOURCE_KIND,
-        tileX: pos.tileX,
-        tileY: pos.tileY,
-        offsetX: typeof pos.offsetX === "number" ? pos.offsetX : 0,
-        offsetY: typeof pos.offsetY === "number" ? pos.offsetY : 0,
-        resourceId: typeof pos.resourceId === "string" ? pos.resourceId : "ortie",
-        respawnMs: HERB_REGROW_DURATION_MS,
-        harvested: false,
-      });
-    });
-
-    const wells = Array.isArray(mapDef.wellPositions) ? mapDef.wellPositions : [];
-    wells.forEach((pos) => {
-      if (typeof pos.tileX !== "number" || typeof pos.tileY !== "number") return;
-      entries.push({
-        kind: WELL_RESOURCE_KIND,
-        tileX: pos.tileX,
-        tileY: pos.tileY,
-        offsetX: typeof pos.offsetX === "number" ? pos.offsetX : 0,
-        offsetY: typeof pos.offsetY === "number" ? pos.offsetY : 0,
-        resourceId: "eau",
-        respawnMs: WELL_COOLDOWN_MS,
-        harvested: false,
-      });
-    });
-
-    return entries;
-  };
-
   const spawnResourcesFromEntries = (entries) => {
     const currentMap = getCurrentMapObj();
     if (!currentMap || !Array.isArray(entries)) return;
@@ -140,12 +83,9 @@ export function createResourceHandlers(ctx) {
     const seeded =
       scene.__lanMapResourcesSeeded || (scene.__lanMapResourcesSeeded = new Set());
     if (seeded.has(currentMap)) return;
-    const entries = buildResourceEntriesForMap();
-
-    client.sendCmd("CmdMapResources", {
+    client.sendCmd("CmdRequestMapResources", {
       playerId,
       mapId: currentMap,
-      resources: entries,
     });
     seeded.add(currentMap);
   };

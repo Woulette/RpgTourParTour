@@ -4,6 +4,7 @@ function createInitialState() {
     players: {},
     mapMonsters: {},
     mapMeta: {},
+    mapCollisions: {},
     mapResources: {},
     combats: {},
     combat: {

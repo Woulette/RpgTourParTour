@@ -20,6 +20,7 @@ import { createLanClient } from "../../net/lanClient.js";
 export function initCharacterMenus({ onStartGame }) {
   const overlayEl = document.getElementById("menu-overlay");
   const panelEl = overlayEl ? overlayEl.querySelector(".menu-panel") : null;
+  const screenLoginEl = document.getElementById("menu-screen-login");
   const screenSelectEl = document.getElementById("menu-screen-select");
   const screenCreateEl = document.getElementById("menu-screen-create");
 
@@ -33,10 +34,20 @@ export function initCharacterMenus({ onStartGame }) {
   const formCreate = document.getElementById("character-create-form");
   const inputName = document.getElementById("character-name");
   const btnCreate = document.getElementById("btn-create");
+  const loginForm = document.getElementById("login-form");
+  const loginIdentifier = document.getElementById("login-identifier");
+  const loginPassword = document.getElementById("login-password");
+  const loginPasswordConfirm = document.getElementById("login-password-confirm");
+  const loginConfirmWrap = document.getElementById("login-confirm-wrap");
+  const loginRemember = document.getElementById("login-remember");
+  const loginError = document.getElementById("login-error");
+  const btnLoginSubmit = document.getElementById("btn-login-submit");
+  const btnLoginToggle = document.getElementById("btn-login-toggle");
 
   if (
     !overlayEl ||
     !panelEl ||
+    !screenLoginEl ||
     !screenSelectEl ||
     !screenCreateEl ||
     !characterListEl ||
@@ -47,7 +58,16 @@ export function initCharacterMenus({ onStartGame }) {
     !btnBackSelect ||
     !formCreate ||
     !inputName ||
-    !btnCreate
+    !btnCreate ||
+    !loginForm ||
+    !loginIdentifier ||
+    !loginPassword ||
+    !loginPasswordConfirm ||
+    !loginConfirmWrap ||
+    !loginRemember ||
+    !loginError ||
+    !btnLoginSubmit ||
+    !btnLoginToggle
   ) {
     return null;
   }
@@ -101,6 +121,8 @@ export function initCharacterMenus({ onStartGame }) {
   let lanConnected = false;
   let pendingStartCharacter = null;
   let resyncTimer = null;
+  let loginMode = "login";
+  let activeAccount = null;
 
   // Hydrate depuis la sauvegarde locale (persistant entre rechargements).
   try {
@@ -138,6 +160,7 @@ export function initCharacterMenus({ onStartGame }) {
 
     const left = document.createElement("div");
     left.className = "menu-left";
+    left.appendChild(screenLoginEl);
     left.appendChild(screenSelectEl);
     left.appendChild(screenCreateEl);
 
@@ -305,20 +328,123 @@ export function initCharacterMenus({ onStartGame }) {
     btnLanConnect.textContent = label;
   }
 
-  function connectLan() {
+  function loadLanAccount() {
+    if (typeof window === "undefined") return null;
+    const savedName = localStorage.getItem("lanAccountName") || "";
+    const savedPassword = localStorage.getItem("lanAccountPassword") || "";
+    const savedToken = localStorage.getItem("lanSessionToken") || "";
+    return {
+      name: savedName,
+      password: savedPassword,
+      sessionToken: savedToken || null,
+    };
+  }
+
+  function saveLanAccount(account, { remember } = {}) {
+    if (typeof window === "undefined") return;
+    if (!account || remember === false) {
+      localStorage.removeItem("lanAccountName");
+      localStorage.removeItem("lanAccountPassword");
+      localStorage.removeItem("lanSessionToken");
+      return;
+    }
+    localStorage.setItem("lanAccountName", account.name || "");
+    localStorage.setItem("lanAccountPassword", account.password || "");
+    if (account.sessionToken) {
+      localStorage.setItem("lanSessionToken", account.sessionToken);
+    }
+  }
+
+  function setLoginError(text) {
+    loginError.textContent = text || "";
+  }
+
+  function setLoginMode(nextMode) {
+    loginMode = nextMode === "register" ? "register" : "login";
+    loginConfirmWrap.hidden = loginMode !== "register";
+    btnLoginSubmit.textContent =
+      loginMode === "register" ? "Inscription" : "Connexion";
+    btnLoginToggle.textContent =
+      loginMode === "register" ? "J'ai deja un compte" : "Créer un compte";
+    const title = screenLoginEl.querySelector(".menu-screen-title");
+    if (title) {
+      title.textContent = loginMode === "register" ? "Inscription" : "Connexion";
+    }
+  }
+
+  function fillLoginForm(account) {
+    if (!account) return;
+    loginIdentifier.value = account.name || "";
+    loginPassword.value = account.password || "";
+    loginPasswordConfirm.value = "";
+  }
+
+  function showLogin() {
+    ensureLayout();
+    screenLoginEl.hidden = false;
+    screenSelectEl.hidden = true;
+    screenCreateEl.hidden = true;
+    document.body.classList.add("menu-open");
+
+    btnBackSelect.hidden = true;
+    btnCreate.hidden = true;
+    btnGoCreate.hidden = true;
+    btnPlay.hidden = true;
+    btnLanConnect.hidden = true;
+
+    setLoginError("");
+    setLoginMode(loginMode);
+    const saved = activeAccount || loadLanAccount();
+    if (saved && (saved.name || saved.password)) {
+      activeAccount = saved;
+      fillLoginForm(saved);
+      loginRemember.checked = true;
+    }
+  }
+
+  const AUTH_MESSAGES = {
+    auth_required: "Identifiant et mot de passe requis.",
+    auth_failed: "Identifiant ou mot de passe incorrect.",
+    account_exists: "Ce compte existe deja.",
+    account_missing: "Compte introuvable.",
+    account_in_use: "Ce compte est deja connecte.",
+    character_owned: "Ce personnage appartient a un autre compte.",
+    name_in_use: "Ce nom de personnage est deja pris.",
+    character_in_use: "Personnage deja connecte.",
+    character_required: "Selectionne un personnage avant de te connecter.",
+    room_full: "Serveur plein.",
+    server_loading: "Serveur en chargement, reessaie.",
+  };
+
+  function connectLan(account, { authMode } = {}) {
     const url = "ws://localhost:8080";
     if (lanClient) {
       lanClient.close();
       lanClient = null;
     }
-    setLanButtonLabel("LAN: ...");
+    setLanButtonLabel("Compte: ...");
+    if (!account || !account.name || !account.password) {
+      setLanButtonLabel("Compte");
+      return;
+    }
     const selected =
       characters.find((c) => c && c.id === selectedCharacterId) ||
       getSessionSelectedCharacter() ||
+      characters[0] ||
       null;
+    if (selected?.id && !selectedCharacterId) {
+      selectedCharacterId = selected.id;
+    }
+    if (!selected || !selected.id) {
+      setLoginError("Cree un personnage avant de te connecter.");
+      setLanButtonLabel("Compte");
+      return;
+    }
     lanClient = createLanClient({
       url,
       character: selected,
+      account,
+      authMode,
       onEvent: (msg) => {
         if (typeof window !== "undefined") {
           window.__lanLastEvent = msg;
@@ -338,19 +464,29 @@ export function initCharacterMenus({ onStartGame }) {
           setNetClient(lanClient);
           setNetIsHost(!!msg.isHost);
           lanConnected = true;
+          activeAccount = account;
+          if (msg.sessionToken && typeof window !== "undefined") {
+            account.sessionToken = msg.sessionToken;
+          }
+          saveLanAccount(account, { remember: loginRemember.checked });
+          setLoginError("");
         }
         pushNetEvent(msg);
         if (msg?.t === "EvWelcome") {
-          setLanButtonLabel("LAN: OK");
+          setLanButtonLabel("Compte: OK");
           if (pendingStartCharacter) {
             const next = pendingStartCharacter;
             pendingStartCharacter = null;
             startGameWithCharacter(next, { skipLan: true });
+            return;
           }
+          showSelect();
         } else if (msg?.t === "EvRefuse") {
-          setLanButtonLabel("LAN: KO");
+          setLanButtonLabel("Compte: KO");
           lanConnected = false;
           pendingStartCharacter = null;
+          const reason = msg?.reason || "unknown";
+          setLoginError(AUTH_MESSAGES[reason] || `Connexion refusee: ${reason}`);
         }
       },
       onClose: () => {
@@ -363,7 +499,7 @@ export function initCharacterMenus({ onStartGame }) {
           window.__lanLastEvent = null;
           window.__lanClient = null;
         }
-        setLanButtonLabel("LAN");
+        setLanButtonLabel("Compte");
       },
     });
   }
@@ -484,7 +620,12 @@ function renderCarouselMeta() {
   }
 
   const showSelect = () => {
+    if (!activeAccount?.name || !activeAccount?.password) {
+      showLogin();
+      return;
+    }
     ensureLayout();
+    screenLoginEl.hidden = true;
     screenCreateEl.hidden = true;
     screenSelectEl.hidden = false;
     document.body.classList.add("menu-open");
@@ -493,6 +634,7 @@ function renderCarouselMeta() {
     btnCreate.hidden = true;
     btnGoCreate.hidden = false;
     btnPlay.hidden = false;
+    btnLanConnect.hidden = false;
 
     renderCharacters();
 
@@ -515,12 +657,17 @@ function renderCarouselMeta() {
   };
 
   function refreshSelectAfterCharactersChanged() {
+    if (!activeAccount?.name || !activeAccount?.password) {
+      showLogin();
+      return;
+    }
     if (characters.length === 0) {
       showCreate();
       return;
     }
 
     ensureLayout();
+    screenLoginEl.hidden = true;
     screenCreateEl.hidden = true;
     screenSelectEl.hidden = false;
 
@@ -528,6 +675,7 @@ function renderCarouselMeta() {
     btnCreate.hidden = true;
     btnGoCreate.hidden = false;
     btnPlay.hidden = false;
+    btnLanConnect.hidden = false;
 
     renderCharacters();
 
@@ -548,7 +696,12 @@ function renderCarouselMeta() {
   }
 
   const showCreate = () => {
+    if (!activeAccount?.name || !activeAccount?.password) {
+      showLogin();
+      return;
+    }
     ensureLayout();
+    screenLoginEl.hidden = true;
     screenSelectEl.hidden = true;
     screenCreateEl.hidden = false;
     document.body.classList.add("menu-open");
@@ -557,6 +710,7 @@ function renderCarouselMeta() {
     btnCreate.hidden = false;
     btnGoCreate.hidden = true;
     btnPlay.hidden = true;
+    btnLanConnect.hidden = false;
 
     selectedClassId = getDefaultCreateClassId();
     inputName.value = "";
@@ -585,6 +739,10 @@ function renderCarouselMeta() {
     if (current && current.id) {
       const exists = characters.some((c) => c && c.id === current.id);
       if (exists) selectedCharacterId = current.id;
+    }
+    if (!activeAccount?.name || !activeAccount?.password) {
+      showLogin();
+      return;
     }
     if (characters.length === 0) showCreate();
     else showSelect();
@@ -753,7 +911,22 @@ function renderCarouselMeta() {
 
   btnGoCreate.addEventListener("click", () => showCreate());
   btnBackSelect.addEventListener("click", () => showSelect());
-  btnLanConnect.addEventListener("click", () => connectLan());
+  btnLanConnect.addEventListener("click", () => {
+    if (lanClient) {
+      lanClient.close();
+      lanClient = null;
+    }
+    lanConnected = false;
+    showLogin();
+  });
+  loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    submitLogin();
+  });
+  btnLoginToggle.addEventListener("click", () => {
+    setLoginMode(loginMode === "login" ? "register" : "login");
+    setLoginError("");
+  });
   inputName.addEventListener("input", () => syncCreateButton());
 
   let invalidNameTimeout = null;
@@ -778,6 +951,46 @@ function renderCarouselMeta() {
     }, 650);
   };
 
+  const readLoginPayload = () => {
+    const name = String(loginIdentifier.value || "").trim();
+    const password = String(loginPassword.value || "");
+    const confirm = String(loginPasswordConfirm.value || "");
+    if (!name || !password) {
+      setLoginError("Identifiant et mot de passe requis.");
+      return null;
+    }
+    if (loginMode === "register" && password !== confirm) {
+      setLoginError("Les mots de passe ne correspondent pas.");
+      return null;
+    }
+    const sessionToken = activeAccount?.sessionToken || loadLanAccount()?.sessionToken || null;
+    return { name, password, sessionToken };
+  };
+
+  const submitLogin = () => {
+    const payload = readLoginPayload();
+    if (!payload) return;
+    activeAccount = payload;
+    saveLanAccount(payload, { remember: loginRemember.checked });
+    setLoginError("");
+    if (characters.length === 0) {
+      showCreate();
+      return;
+    }
+    connectLan(payload, { authMode: loginMode });
+  };
+
+  const savedAccount = loadLanAccount();
+  if (savedAccount?.name && savedAccount?.password) {
+    activeAccount = savedAccount;
+    fillLoginForm(savedAccount);
+    loginRemember.checked = true;
+  } else {
+    loginRemember.checked = false;
+  }
+  setLoginMode("login");
+  setLanButtonLabel("Compte");
+
   btnCreate.addEventListener("click", (e) => {
     const rawName = String(inputName.value || "").trim();
     if (rawName.length > 0) return;
@@ -790,7 +1003,11 @@ function renderCarouselMeta() {
     if (!chosen) return;
     if (!options.skipLan && !lanConnected) {
       pendingStartCharacter = chosen;
-      connectLan();
+      if (activeAccount?.name && activeAccount?.password) {
+        connectLan(activeAccount, { authMode: "login" });
+      } else {
+        showLogin();
+      }
       return;
     }
     upsertCharacterMeta(chosen);
@@ -809,6 +1026,10 @@ function renderCarouselMeta() {
         const scene = typeof window !== "undefined" ? window.__scene : null;
         const mapReady = !!(scene?.map && scene?.groundLayer?.layer);
         if (Number.isInteger(playerId) && mapReady) {
+          lanClient.sendCmd("CmdMapResync", {
+            playerId,
+            mapId: scene.currentMapKey || scene.currentMapDef?.key || null,
+          });
           lanClient.sendCmd("CmdCombatResync", {
             playerId,
           });

@@ -707,6 +707,8 @@ function createCalibratedWorldToTile(map, groundLayer) {
         netClient.sendCmd("CmdMove", {
           playerId: netPlayerId,
           seq: player.__lanMoveSeq,
+          fromX: player.currentTileX,
+          fromY: player.currentTileY,
           path: safePath,
           toX: tileX,
           toY: tileY,

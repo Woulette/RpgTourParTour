@@ -63,29 +63,7 @@ function createResourceHandlers(ctx) {
   }
 
   function handleCmdMapResources(ws, clientInfo, msg) {
-    if (clientInfo.id !== msg.playerId) return;
-    const player = state.players[clientInfo.id];
-    const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
-    if (!mapId) return;
-    if (!player || player.mapId !== mapId) return;
-
-    if (!state.mapResources[mapId]) {
-      const entries = sanitizeResourceEntries(msg.resources);
-      entries.forEach((entry) => {
-        entry.entityId = getNextResourceEntityId();
-        entry.spawnMapKey = mapId;
-      });
-      state.mapResources[mapId] = entries;
-      broadcast({ t: "EvMapResources", mapId, resources: serializeResourceEntries(entries) });
-      return;
-    }
-
-    send(ws, {
-      t: "EvMapResources",
-      eventId: getNextEventId(),
-      mapId,
-      resources: serializeResourceEntries(state.mapResources[mapId]),
-    });
+    handleCmdRequestMapResources(ws, clientInfo, msg);
   }
 
   function scheduleResourceRespawn(mapId, entry) {
@@ -98,14 +76,6 @@ function createResourceHandlers(ctx) {
     const delayMs = Number.isInteger(entry.respawnMs) ? entry.respawnMs : 30000;
 
     const timer = setTimeout(() => {
-      const playersOnMap = Object.values(state.players).some(
-        (player) => player && player.mapId === mapId
-      );
-      if (!playersOnMap) {
-        scheduleResourceRespawn(mapId, entry);
-        return;
-      }
-
       const list = state.mapResources[mapId];
       if (!Array.isArray(list)) return;
       const target = list.find((r) => r && r.entityId === entityId);
@@ -152,7 +122,7 @@ function createResourceHandlers(ctx) {
     const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
     if (!mapId) return;
     const list = state.mapResources[mapId];
-    if (!Array.isArray(list) || list.length === 0) {
+    if (!Array.isArray(list)) {
       ensureMapInitialized(mapId);
       return;
     }

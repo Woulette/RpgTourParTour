@@ -6,6 +6,10 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+function normalizeCharacterName(name) {
+  return String(name || "").trim().toLowerCase();
+}
+
 function createCharacterStore({ dataDir } = {}) {
   const root = dataDir || path.join(__dirname, "..", "data");
   ensureDir(root);
@@ -58,6 +62,12 @@ function createCharacterStore({ dataDir } = {}) {
             captured_monster_id, captured_monster_level, inventory, gold
      FROM characters WHERE character_id = ?`
   );
+  const selectByNameStmt = db.prepare(
+    `SELECT character_id, account_id, name, class_id, level, base_stats,
+            map_id, pos_x, pos_y, hp, hp_max,
+            captured_monster_id, captured_monster_level, inventory, gold
+     FROM characters WHERE lower(name) = ?`
+  );
   const insertStmt = db.prepare(`
     INSERT INTO characters
       (character_id, account_id, name, class_id, level, base_stats,
@@ -91,6 +101,32 @@ function createCharacterStore({ dataDir } = {}) {
   const getCharacter = (characterId) => {
     if (!characterId) return null;
     const row = selectStmt.get(characterId);
+    if (!row) return null;
+    return {
+      characterId: row.character_id,
+      accountId: row.account_id || null,
+      name: row.name || "Joueur",
+      classId: row.class_id || "archer",
+      level: Number.isInteger(row.level) ? row.level : 1,
+      baseStats: row.base_stats ? JSON.parse(row.base_stats) : null,
+      mapId: row.map_id || null,
+      posX: Number.isFinite(row.pos_x) ? row.pos_x : null,
+      posY: Number.isFinite(row.pos_y) ? row.pos_y : null,
+      hp: Number.isFinite(row.hp) ? row.hp : null,
+      hpMax: Number.isFinite(row.hp_max) ? row.hp_max : null,
+      capturedMonsterId: row.captured_monster_id || null,
+      capturedMonsterLevel: Number.isFinite(row.captured_monster_level)
+        ? row.captured_monster_level
+        : null,
+      inventory: row.inventory ? JSON.parse(row.inventory) : null,
+      gold: Number.isFinite(row.gold) ? row.gold : null,
+    };
+  };
+
+  const getCharacterByName = (name) => {
+    const normalized = normalizeCharacterName(name);
+    if (!normalized) return null;
+    const row = selectByNameStmt.get(normalized);
     if (!row) return null;
     return {
       characterId: row.character_id,
@@ -148,6 +184,7 @@ function createCharacterStore({ dataDir } = {}) {
 
   return {
     getCharacter,
+    getCharacterByName,
     upsertCharacter,
     close: () => db.close(),
   };
