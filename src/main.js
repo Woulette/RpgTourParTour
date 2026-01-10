@@ -1,7 +1,7 @@
 import { BACKGROUND_COLOR, GAME_HEIGHT, GAME_WIDTH } from "./config/constants.js";
 import { preloadAssets } from "./game/preload/preloadAssets.js";
 import { createMainScene } from "./game/scene/createScene.js";
-import { initCharacterMenus } from "./features/ui/characterMenus.js";
+import { initCharacterMenus } from "./features/ui/characterMenus/index.js";
 import { closeAllHudPanels } from "./features/ui/domPanelClose.js";
 import { createSessionSwitch } from "./app/sessionSwitch.js";
 import {

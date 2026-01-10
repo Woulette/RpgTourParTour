@@ -14,6 +14,13 @@ body.menu-open .menu-overlay {
   display: block;
 }
 
+body.menu-login .menu-overlay,
+body.menu-servers .menu-overlay {
+  background:
+    radial-gradient(1200px 680px at 45% 25%, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.82)),
+    url("../menu/ServeurAndemia.png") center / cover no-repeat;
+}
+
 /* Cache l'UI de jeu quand le menu est ouvert */
 body.menu-open #hud-root,
 body.menu-open #quest-tracker,
@@ -602,4 +609,100 @@ body.game-running .ui-return-menu {
   .menu-panel.menu-v2 .character-list {
     max-height: none;
   }
+}
+
+/* Login plein ecran */
+body.menu-login .menu-panel.menu-v2 {
+  padding: clamp(24px, 4vw, 64px);
+}
+
+body.menu-login .menu-panel.menu-v2 .menu-main {
+  grid-template-columns: 1fr;
+  place-items: center;
+}
+
+body.menu-login .menu-panel.menu-v2 .menu-center,
+body.menu-login .menu-panel.menu-v2 .menu-right,
+body.menu-login .menu-panel.menu-v2 .menu-footer {
+  display: none;
+}
+
+body.menu-login .menu-panel.menu-v2 .menu-left {
+  width: min(520px, 92vw);
+  margin: 0 auto;
+}
+
+body.menu-login .menu-panel.menu-v2 .menu-screen {
+  padding: 24px;
+}
+
+/* Serveurs plein ecran */
+body.menu-servers .menu-panel.menu-v2 {
+  padding: clamp(24px, 4vw, 64px);
+}
+
+body.menu-servers .menu-panel.menu-v2 .menu-main {
+  grid-template-columns: 1fr;
+  place-items: center;
+}
+
+body.menu-servers .menu-panel.menu-v2 .menu-center,
+body.menu-servers .menu-panel.menu-v2 .menu-right,
+body.menu-servers .menu-panel.menu-v2 .menu-footer {
+  display: none;
+}
+
+body.menu-servers .menu-panel.menu-v2 .menu-left {
+  width: min(620px, 92vw);
+  margin: 0 auto;
+}
+
+.menu-panel.menu-v2 .server-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 60vh;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.menu-panel.menu-v2 .server-card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(14, 24, 42, 0.65);
+  padding: 14px 14px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 120ms ease, transform 120ms ease, background 120ms ease;
+}
+
+.menu-panel.menu-v2 .server-card:hover {
+  border-color: rgba(129, 140, 248, 0.85);
+  background: rgba(30, 64, 175, 0.22);
+  transform: translateY(-1px);
+}
+
+.menu-panel.menu-v2 .server-card.is-selected {
+  border-color: rgba(251, 191, 36, 0.95);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35);
+}
+
+.menu-panel.menu-v2 .server-name {
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.menu-panel.menu-v2 .server-meta {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.menu-panel.menu-v2 .server-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
 }
