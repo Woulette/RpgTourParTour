@@ -1,5 +1,20 @@
 import { DATA_HASH, PROTOCOL_VERSION } from "./protocol.js";
 
+let inventoryOpKey = null;
+
+function makeInventoryOpKey() {
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+export function getInventoryOpKey() {
+  return inventoryOpKey;
+}
+
 export function createLanClient({
   url,
   protocolVersion = PROTOCOL_VERSION,
@@ -14,6 +29,7 @@ export function createLanClient({
 
   const ws = new WebSocket(url);
   let cmdId = 0;
+  inventoryOpKey = makeInventoryOpKey();
 
   const sendRaw = (payload) => {
     if (ws.readyState !== WebSocket.OPEN) return;
@@ -22,6 +38,9 @@ export function createLanClient({
 
   const client = {
     sendCmd(type, payload = {}) {
+      if (type === "CmdInventoryOp") {
+        if (!payload || payload.__invKey !== inventoryOpKey) return;
+      }
       cmdId += 1;
       sendRaw({
         t: type,

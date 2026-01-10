@@ -22,8 +22,32 @@ import { startPrep } from "../../combat/runtime/prep.js";
 import { createMonster } from "../../../entities/monster.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
 import { isUiBlockingOpen } from "../../ui/uiBlock.js";
+import { getNetClient, getNetPlayerId } from "../../../app/session.js";
 
 const DUNGEON_KEY_ITEM_ID = "clef_aluineeks";
+
+function useQuestAuthority() {
+  return typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+}
+
+function sendQuestAction(action, questId, stageId, npcId, extra = null) {
+  if (!useQuestAuthority()) return;
+  const client = getNetClient();
+  const playerId = getNetPlayerId();
+  if (!client || !Number.isInteger(playerId)) return;
+  if (!questId || !action) return;
+  const payload = {
+    playerId,
+    action,
+    questId,
+    stageId: stageId || null,
+    npcId: npcId || null,
+  };
+  if (extra && typeof extra === "object") {
+    Object.assign(payload, extra);
+  }
+  client.sendCmd("CmdQuestAction", payload);
+}
 
 function logQuestDebug(...args) {
   if (typeof window === "undefined") return;
@@ -152,6 +176,7 @@ function openOfferDialog(npc, player, questDef) {
     offerDialogDef || { text: "Je te confie une mission.", choice: "J'accepte" };
 
   openDialog(npc, player, { ...baseOffer, questOffer: true }, () => {
+    sendQuestAction("accept", questDef.id, offerStage?.id, npc.id);
     acceptQuest(player, questDef.id);
   });
 }
@@ -341,6 +366,7 @@ export function startNpcDialogFlow(scene, player, npc) {
         () => {
           const result = tryTurnInStage(scene, player, quest.id, quest, state, stage);
           if (!result.ok) return;
+          sendQuestAction("turn_in", quest.id, stage?.id, npc.id);
           advanceQuestStage(player, quest.id, { scene });
 
           const nextState = getQuestState(player, quest.id, { emit: false });
@@ -376,6 +402,7 @@ export function startNpcDialogFlow(scene, player, npc) {
                 followStage
               );
               if (!turnIn.ok) return;
+              sendQuestAction("turn_in", quest.id, followStage?.id, npc.id);
               advanceQuestStage(player, quest.id, { scene });
             }
           );
@@ -419,6 +446,9 @@ export function startNpcDialogFlow(scene, player, npc) {
       openMultiNpcSequence(player, screens, () => {
         const questDef = quest;
         const remaining = questDef.stages.length - (state.stageIndex || 0);
+        sendQuestAction("advance_many", quest.id, stage?.id, npc.id, {
+          count: remaining,
+        });
         for (let i = 0; i < remaining; i += 1) {
           advanceQuestStage(player, quest.id, { scene });
         }
@@ -454,6 +484,7 @@ export function startNpcDialogFlow(scene, player, npc) {
       const base = dialogDef || { text: "Salut, tu veux aider ?", choice: "J'accepte" };
       dialogData = { ...base, questOffer: true };
       onDone = () => {
+        sendQuestAction("accept", quest.id, stage?.id, npc.id);
         acceptQuest(player, quest.id);
       };
     } else if (state.state === QUEST_STATES.IN_PROGRESS && turnInReady) {
@@ -507,6 +538,7 @@ export function startNpcDialogFlow(scene, player, npc) {
         const result = tryTurnInStage(scene, player, quest.id, quest, state, stage);
         logQuestDebug("turnIn", quest.id, stage?.id, "result", result);
         if (!result.ok) return;
+        sendQuestAction("turn_in", quest.id, stage?.id, npc.id);
         advanceQuestStage(player, quest.id, { scene });
         logQuestDebug("advanceQuestStage", quest.id, stage?.id, "after");
         if (quest.id === "andemia_intro_2" && stage?.id === "bring_corbeau_parts") {

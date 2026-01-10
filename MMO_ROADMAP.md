@@ -1,23 +1,15 @@
 # MMO Roadmap (sans host)
 
 ## Phase 1 - Socle MMO (indispensable)
-- Auth/login + session token (plus d'usurpation via characterId)
-- Autorite serveur stricte (inventaire/or/quetes/XP)
-- Persistence minimale (position, HP, stats, inventaire, monnaie)
-- Inventaire/monnaie atomiques + logs anti-dup
-- Validation serveur des operations (itemId, qty, stack max, poids)
-- Snapshot serveur au login (client ne pousse que des commandes)
-- Protection replay/duplicate (cmdId + fenetre temporelle)
+- (Termine)
 
 ## Phase 2 - MMO jouable
-- Quetes + progression persistantes
 - Commerce (P2P + marche simple) avec verrou/confirm
 - Groupes + combats de groupe
-- Drop/loot serveur (tables + RNG serveur)
 - Reconnexion solide + resync map/combat
-- Rate limits par type de commande (moves, inventaire, gold, etc.)
 - Outils admin (kick/ban, give item, inspect)
 - Audit events gameplay (trade, drop, quest turn-in)
+- Tests anti-cheat rapides (rate-limits + invalid quest actions)
 
 ## Phase 3 - MMO stable
 - Sharding / multi-process (world/combat/db worker)

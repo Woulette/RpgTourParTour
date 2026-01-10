@@ -61,6 +61,16 @@ export function createCombatExitHandlers({ ctx, helpers, syncHandlers }) {
       if (typeof entry.issue === "string" && entry.issue) {
         scene.combatState.issue = entry.issue;
       }
+      const localId = getNetPlayerId();
+      if (localId && entry?.lootByPlayer && entry.lootByPlayer[localId]) {
+        scene.combatState.serverLoot = entry.lootByPlayer[localId];
+      }
+      if (localId && entry?.xpByPlayer && Number.isFinite(entry.xpByPlayer[localId])) {
+        scene.combatState.serverXp = entry.xpByPlayer[localId];
+      }
+      if (localId && entry?.goldByPlayer && Number.isFinite(entry.goldByPlayer[localId])) {
+        scene.combatState.serverGold = entry.goldByPlayer[localId];
+      }
       endCombat(scene);
     }
     scene.__lanWorldMobsHidden = false;

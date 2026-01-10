@@ -8,7 +8,20 @@ function createResourceHandlers(ctx) {
     getHostId,
     ensureMapInitialized,
     resourceRespawnTimers,
+    getHarvestResourceDef,
+    getHarvestResourceDefsPromise,
+    getHarvestResourceDefsFailed,
+    applyInventoryOpFromServer,
   } = ctx;
+
+  const BUCHERON_XP_PER_HARVEST = 10;
+  const ALCHIMISTE_XP_PER_HARVEST = 8;
+
+  const rollQty = (min, max) => {
+    const low = Number.isInteger(min) ? min : 1;
+    const high = Number.isInteger(max) ? max : low;
+    return low + Math.floor(Math.random() * (high - low + 1));
+  };
 
   function sanitizeResourceEntries(raw) {
     if (!Array.isArray(raw)) return [];
@@ -107,12 +120,70 @@ function createResourceHandlers(ctx) {
     if (entry.harvested) return;
 
     entry.harvested = true;
+
+    const defsFailed =
+      typeof getHarvestResourceDefsFailed === "function"
+        ? getHarvestResourceDefsFailed()
+        : false;
+    const defsPromise =
+      typeof getHarvestResourceDefsPromise === "function"
+        ? getHarvestResourceDefsPromise()
+        : null;
+    if (!getHarvestResourceDef && defsPromise && !defsFailed) {
+      defsPromise.catch(() => {});
+    }
+
+    let gainedItems = 0;
+    let gainedXp = 0;
+    let itemId = null;
+    const kind = entry.kind;
+    if (kind === "tree" || kind === "herb") {
+      const def =
+        typeof getHarvestResourceDef === "function"
+          ? getHarvestResourceDef(entry.resourceId)
+          : null;
+      if (def && typeof def.itemId === "string") {
+        itemId = def.itemId;
+        const amount = rollQty(1, 5);
+        if (typeof applyInventoryOpFromServer === "function") {
+          gainedItems = applyInventoryOpFromServer(
+            clientInfo.id,
+            "add",
+            itemId,
+            amount,
+            "resource_harvest"
+          );
+        }
+        gainedXp =
+          typeof def.xpHarvest === "number" && def.xpHarvest > 0
+            ? def.xpHarvest
+            : kind === "tree"
+              ? BUCHERON_XP_PER_HARVEST
+              : ALCHIMISTE_XP_PER_HARVEST;
+      }
+    } else if (kind === "well") {
+      itemId = "eau";
+      const amount = rollQty(1, 10);
+      if (typeof applyInventoryOpFromServer === "function") {
+        gainedItems = applyInventoryOpFromServer(
+          clientInfo.id,
+          "add",
+          itemId,
+          amount,
+          "resource_well"
+        );
+      }
+    }
+
     broadcast({
       t: "EvResourceHarvested",
       mapId,
       entityId,
       kind: entry.kind,
       harvesterId: clientInfo.id,
+      itemId,
+      gainedItems,
+      gainedXp,
     });
     scheduleResourceRespawn(mapId, entry);
   }

@@ -109,12 +109,16 @@ export function createResourceHandlers(ctx) {
     const node = findResourceNodeByEntityId(msg.entityId);
     if (!node) return;
     const isLocal = getNetPlayerId() === msg.harvesterId;
+    const reward =
+      isLocal && (msg?.gainedItems || msg?.gainedXp)
+        ? { gainedItems: msg.gainedItems || 0, gainedXp: msg.gainedXp || 0 }
+        : null;
     if (node.kind === TREE_RESOURCE_KIND) {
-      applyTreeHarvested(scene, player, node, isLocal);
+      applyTreeHarvested(scene, player, node, false, reward);
     } else if (node.kind === HERB_RESOURCE_KIND) {
-      applyHerbHarvested(scene, player, node, isLocal);
+      applyHerbHarvested(scene, player, node, false, reward);
     } else if (node.kind === WELL_RESOURCE_KIND) {
-      applyWellHarvested(scene, player, node, isLocal);
+      applyWellHarvested(scene, player, node, false, reward);
     }
   };
 

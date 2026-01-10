@@ -4,6 +4,7 @@ import {
   removeItem as removeItemLocal,
   getItemDef,
 } from "./inventoryCore.js";
+import { getInventoryOpKey } from "../../../net/lanClient.js";
 
 function sendInventoryOp(op, itemId, qty) {
   if (typeof window === "undefined") return;
@@ -12,12 +13,15 @@ function sendInventoryOp(op, itemId, qty) {
   const playerId = window.__netPlayerId;
   if (!client || !Number.isInteger(playerId)) return;
   if (!itemId || qty <= 0) return;
+  const invKey = getInventoryOpKey();
+  if (!invKey) return;
   try {
     client.sendCmd("CmdInventoryOp", {
       playerId,
       op,
       itemId,
       qty,
+      __invKey: invKey,
     });
   } catch {
     // ignore network errors

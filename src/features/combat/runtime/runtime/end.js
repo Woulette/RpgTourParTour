@@ -114,33 +114,52 @@ export function endCombat(scene) {
   let niveauxGagnes = 0;
   let pointsCaracGagnes = 0;
   let pvMaxGagnes = 0;
+  const useAuthority =
+    typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+  const serverLoot = Array.isArray(state.serverLoot) ? state.serverLoot : null;
 
   if (issue === "victoire") {
-    xpGagne = state.xpGagne || 0;
-    goldGagne = state.goldGagne || 0;
+    const serverXp = Number.isFinite(state.serverXp) ? state.serverXp : null;
+    const serverGold = Number.isFinite(state.serverGold) ? state.serverGold : null;
+    if (useAuthority) {
+      xpGagne = serverXp ?? 0;
+      goldGagne = serverGold ?? 0;
+    } else {
+      xpGagne = state.xpGagne || 0;
+      goldGagne = state.goldGagne || 0;
+    }
 
     const { ok: challengeOk, xpBonusPct, dropBonusPct } =
       getChallengeBonusesIfSuccessful(scene, { issue });
 
-    if (challengeOk && xpGagne > 0) {
+    if (!useAuthority && challengeOk && xpGagne > 0) {
       xpGagne = Math.round(xpGagne * (1 + xpBonusPct));
     }
 
-    const prospectionValue =
-      typeof player?.stats?.prospection === "number" &&
-      Number.isFinite(player.stats.prospection)
-        ? player.stats.prospection
-        : 100;
-    const prospectionMult = Math.max(0, prospectionValue) / 100;
-    const dropMult = prospectionMult * (1 + (challengeOk ? dropBonusPct : 0));
-    const lootRolls = rollLootFromSources(
-      state.lootSources || [],
-      dropMult,
-      player
-    );
-    lootGagne = applyLootToPlayerInventory(player, lootRolls);
+    if (useAuthority && serverLoot) {
+      lootGagne = serverLoot;
+    } else {
+      const prospectionValue =
+        typeof player?.stats?.prospection === "number" &&
+        Number.isFinite(player.stats.prospection)
+          ? player.stats.prospection
+          : 100;
+      const prospectionMult = Math.max(0, prospectionValue) / 100;
+      const dropMult = prospectionMult * (1 + (challengeOk ? dropBonusPct : 0));
+      const lootRolls = rollLootFromSources(
+        state.lootSources || [],
+        dropMult,
+        player
+      );
+      lootGagne = applyLootToPlayerInventory(player, lootRolls);
+    }
+    if (useAuthority && state) {
+      state.serverLoot = null;
+      state.serverXp = null;
+      state.serverGold = null;
+    }
 
-    if (player && typeof addXpToPlayer === "function" && xpGagne > 0) {
+    if (!useAuthority && player && typeof addXpToPlayer === "function" && xpGagne > 0) {
       addXpToPlayer(player, xpGagne);
       const levelAfter = player?.levelState?.niveau ?? levelBefore;
       const pointsAfter = player?.levelState?.pointsCaracLibres ?? pointsBefore;
@@ -148,7 +167,14 @@ export function endCombat(scene) {
       pointsCaracGagnes = Math.max(0, pointsAfter - pointsBefore);
       pvMaxGagnes = niveauxGagnes * 5;
     }
-    if (player && typeof goldGagne === "number" && goldGagne > 0) {
+    if (useAuthority && player) {
+      const levelAfter = player?.levelState?.niveau ?? levelBefore;
+      const pointsAfter = player?.levelState?.pointsCaracLibres ?? pointsBefore;
+      niveauxGagnes = Math.max(0, levelAfter - levelBefore);
+      pointsCaracGagnes = Math.max(0, pointsAfter - pointsBefore);
+      pvMaxGagnes = niveauxGagnes * 5;
+    }
+    if (!useAuthority && player && typeof goldGagne === "number" && goldGagne > 0) {
       adjustGold(player, goldGagne, "combat_reward");
     }
 

@@ -719,7 +719,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
           path: safePath,
           toX: tileX,
           toY: tileY,
-          debug: debugMoves,
+          debug: typeof window !== "undefined" && window.__lanDebugMoves === true,
         });
       }
       return;

@@ -71,7 +71,7 @@ function applyWellRespawnVisual(scene, node) {
   node.sprite.setAlpha(1);
 }
 
-export function applyWellHarvested(scene, player, node, giveReward) {
+export function applyWellHarvested(scene, player, node, giveReward, reward) {
   if (!node) return;
   if (giveReward) {
     const qty = Phaser.Math.Between(1, 10);
@@ -79,6 +79,8 @@ export function applyWellHarvested(scene, player, node, giveReward) {
       addItem(player.inventory, "eau", qty);
     }
     showWellReward(scene, node, qty);
+  } else if (reward && reward.gainedItems) {
+    showWellReward(scene, node, reward.gainedItems);
   }
   node.cooldownUntil = Date.now() + WELL_COOLDOWN_MS;
   node.isHarvesting = false;

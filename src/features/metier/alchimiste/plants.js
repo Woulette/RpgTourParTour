@@ -123,12 +123,19 @@ function applyHerbRespawnVisual(scene, node) {
   }
 }
 
-export function applyHerbHarvested(scene, player, node, giveReward) {
+export function applyHerbHarvested(scene, player, node, giveReward, reward) {
   if (!node) return;
   let result = null;
   if (giveReward) {
     node.harvested = false;
     result = harvestHerb(scene, player, node);
+  } else if (reward) {
+    result = {
+      success: true,
+      node,
+      gainedItems: reward.gainedItems || 0,
+      gainedXp: reward.gainedXp || 0,
+    };
   } else {
     node.harvested = true;
   }

@@ -1,12 +1,14 @@
 import { ensureBijoutierState, addBijoutierXp } from "../../bijoutier/state.js";
 import { bijoutierRecipes } from "../../bijoutier/recipes.js";
 import { removeItem, addItem, getItemDef } from "../../../inventory/runtime/inventoryAuthority.js";
-import { emit as emitStoreEvent } from "../../../state/store.js";
+import { emit as emitStoreEvent, on as onStoreEvent } from "../../../state/store.js";
+import { getNetClient, getNetPlayerId } from "../../../../app/session.js";
 
 let panelEl = null;
 let isOpen = false;
 let lastCrafted = null;
 let activeRecipePreview = null;
+let craftUnsub = null;
 
 function labelForStatKey(key) {
   switch (key) {
@@ -701,6 +703,20 @@ export function openBijoutierCraftPanel(scene, player) {
         return;
       }
       if (btn.disabled) return;
+      const useAuthority =
+        typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+      if (useAuthority) {
+        const netClient = getNetClient();
+        const playerId = getNetPlayerId();
+        if (netClient && Number.isInteger(playerId)) {
+          netClient.sendCmd("CmdCraft", {
+            playerId,
+            metierId: "bijoutier",
+            recipeId: activeRecipe.id,
+          });
+        }
+        return;
+      }
       const inv = player?.inventory;
       const countItem = (id) =>
         inv?.slots?.reduce(
@@ -733,6 +749,16 @@ export function openBijoutierCraftPanel(scene, player) {
     };
   }
 
+  if (!craftUnsub) {
+    craftUnsub = onStoreEvent("craft:completed", (payload) => {
+      if (!payload || payload.metierId !== "bijoutier") return;
+      lastCrafted = { itemId: payload.itemId, qty: payload.qty };
+      renderInventory(player);
+      renderXpHeader(player);
+      refreshRecipes();
+    });
+  }
+
   panelEl.classList.add("open");
   isOpen = true;
 }
@@ -741,4 +767,8 @@ export function closeBijoutierCraftPanel() {
   if (!panelEl) return;
   panelEl.classList.remove("open");
   isOpen = false;
+  if (craftUnsub) {
+    craftUnsub();
+    craftUnsub = null;
+  }
 }
