@@ -27,16 +27,41 @@
         card.classList.add("is-selected");
       }
 
+      const header = document.createElement("div");
+      header.className = "server-header";
+
       const name = document.createElement("div");
       name.className = "server-name";
       name.textContent = server.name || server.id;
+
+      const status = document.createElement("div");
+      status.className = "server-status";
+      status.dataset.status = server.status || "online";
+      status.textContent = server.status || "online";
+
+      header.appendChild(name);
+      header.appendChild(status);
 
       const meta = document.createElement("div");
       meta.className = "server-meta";
       meta.textContent = server.url || "";
 
-      card.appendChild(name);
+      const stats = document.createElement("div");
+      stats.className = "server-stats";
+      stats.innerHTML = `
+        <div class="server-stat">
+          <span class="server-stat-label">Ping</span>
+          <span class="server-stat-value">${server.ping ?? "--"} ms</span>
+        </div>
+        <div class="server-stat">
+          <span class="server-stat-label">Population</span>
+          <span class="server-stat-value">${server.population ?? "--"}</span>
+        </div>
+      `;
+
+      card.appendChild(header);
       card.appendChild(meta);
+      card.appendChild(stats);
 
       card.addEventListener("click", () => {
         state.setSelectedServerId(server.id);

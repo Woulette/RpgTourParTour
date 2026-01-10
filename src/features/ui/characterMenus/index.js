@@ -88,7 +88,17 @@ export function initCharacterMenus({ onStartGame }) {
 
   const CLASS_ORDER = ["archer", "tank", "mage", "eryon"];
   const CAROUSEL_ORDER = ["archer", "tank", "mage", "eryon"];
-  const SERVERS = [{ id: "local", name: "Local", url: "ws://localhost:8080" }];
+  const SERVERS = [
+    {
+      id: "local",
+      name: "Primorce",
+      url: "ws://localhost:8080",
+      status: "online",
+      ping: 12,
+      population: "Faible",
+      region: "Local",
+    },
+  ];
   const classUi = {
     archer: {
       title: "Archer",
