@@ -37,7 +37,7 @@ export function createLanBootHandlers(ctx) {
     });
   };
 
-  const initialSync = () => {
+  const initialSync = (options = {}) => {
     const client = getNetClient();
     if (!client) return;
     const playerId = getNetPlayerId();
@@ -45,6 +45,7 @@ export function createLanBootHandlers(ctx) {
     if (!Number.isInteger(player?.currentTileX) || !Number.isInteger(player?.currentTileY)) {
       return;
     }
+    const skipMove = options?.skipMove === true;
     const baseSeqCandidates = [
       Number.isInteger(player?.__lanMoveSeq) ? player.__lanMoveSeq : 0,
       Number.isInteger(player?.__lanServerMoveSeq) ? player.__lanServerMoveSeq : 0,
@@ -54,14 +55,16 @@ export function createLanBootHandlers(ctx) {
     if (player) {
       player.__lanMoveSeq = nextSeq;
     }
-    client.sendCmd("CmdMove", {
-      playerId,
-      seq: nextSeq,
-      fromX: player.currentTileX,
-      fromY: player.currentTileY,
-      toX: player.currentTileX,
-      toY: player.currentTileY,
-    });
+    if (!skipMove) {
+      client.sendCmd("CmdMove", {
+        playerId,
+        seq: nextSeq,
+        fromX: player.currentTileX,
+        fromY: player.currentTileY,
+        toX: player.currentTileX,
+        toY: player.currentTileY,
+      });
+    }
     sendMapChange();
     sendMapResync();
     players.requestMapPlayers();

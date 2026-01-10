@@ -33,10 +33,12 @@ const MONSTER_STEP_DURATION_MS = 550;
 const monsterMoveTimers = new Map();
 const MOB_ROAM_TICK_MS = 500;
 const MOB_RESPAWN_DELAY_MS = 5000;
+const COMBAT_RECONNECT_GRACE_MS = 15000;
 const monsterRespawnTimers = new Map();
 const resourceRespawnTimers = new Map();
 const mapInitRequests = new Map();
 const DEBUG_COMBAT = process.env.LAN_COMBAT_DEBUG === "1";
+const LAN_TRACE = process.env.LAN_TRACE === "1";
 const characterStore = createCharacterStore({ dataDir: path.resolve(__dirname, "data") });
 const accountStore = createAccountStore({ dataDir: path.resolve(__dirname, "data") });
 const sessionTokens = new Map(); // token -> { accountId, issuedAt }
@@ -66,6 +68,34 @@ const statsApiPromise = import(
     statsApiFailed = true;
     // eslint-disable-next-line no-console
     console.warn("[LAN] Failed to load stats module:", err?.message || err);
+  });
+
+let levelApi = null;
+let levelApiFailed = false;
+const levelApiPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/core/level.js")).href
+)
+  .then((mod) => {
+    levelApi = mod || null;
+  })
+  .catch((err) => {
+    levelApiFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load level module:", err?.message || err);
+  });
+
+let xpConfig = null;
+let xpConfigFailed = false;
+const xpConfigPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/config/xp.js")).href
+)
+  .then((mod) => {
+    xpConfig = mod?.XP_CONFIG || null;
+  })
+  .catch((err) => {
+    xpConfigFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load XP config:", err?.message || err);
   });
 
 let classDefs = null;
@@ -110,6 +140,124 @@ const itemDefsPromise = import(
     itemDefsFailed = true;
     // eslint-disable-next-line no-console
     console.warn("[LAN] Failed to load item defs:", err?.message || err);
+  });
+
+let questDefs = null;
+let questDefsFailed = false;
+let questStates = null;
+const questDefsPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/features/quests/catalog.js")).href
+)
+  .then((mod) => {
+    questDefs = mod?.quests || null;
+    questStates = mod?.QUEST_STATES || null;
+  })
+  .catch((err) => {
+    questDefsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load quest defs:", err?.message || err);
+  });
+
+let harvestResourceDefs = null;
+let harvestResourceDefsFailed = false;
+const harvestResourceDefsPromise = Promise.all([
+  import(
+    pathToFileURL(
+      path.resolve(__dirname, "../src/features/metier/bucheron/resources.js")
+    ).href
+  ),
+  import(
+    pathToFileURL(
+      path.resolve(__dirname, "../src/features/metier/alchimiste/resources.js")
+    ).href
+  ),
+])
+  .then(([bucheron, alchimiste]) => {
+    harvestResourceDefs = {
+      ...(bucheron?.bucheronResources || {}),
+      ...(alchimiste?.alchimisteResources || {}),
+    };
+  })
+  .catch((err) => {
+    harvestResourceDefsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load harvest defs:", err?.message || err);
+  });
+
+let craftDefs = null;
+let craftDefsFailed = false;
+const craftDefsPromise = Promise.all([
+  import(
+    pathToFileURL(
+      path.resolve(__dirname, "../src/features/metier/tailleur/recipes.js")
+    ).href
+  ),
+  import(
+    pathToFileURL(
+      path.resolve(__dirname, "../src/features/metier/cordonnier/recipes.js")
+    ).href
+  ),
+  import(
+    pathToFileURL(
+      path.resolve(__dirname, "../src/features/metier/bijoutier/recipes.js")
+    ).href
+  ),
+  import(
+    pathToFileURL(
+      path.resolve(__dirname, "../src/features/metier/alchimiste/recipes.js")
+    ).href
+  ),
+  import(
+    pathToFileURL(
+      path.resolve(__dirname, "../src/features/metier/bucheron/recipes.js")
+    ).href
+  ),
+  import(
+    pathToFileURL(
+      path.resolve(__dirname, "../src/features/metier/bricoleur/recipes.js")
+    ).href
+  ),
+])
+  .then(
+    ([
+      tailleur,
+      cordonnier,
+      bijoutier,
+      alchimiste,
+      bucheron,
+      bricoleur,
+    ]) => {
+      craftDefs = {
+        tailleur: Array.isArray(tailleur?.tailleurRecipes)
+          ? tailleur.tailleurRecipes
+          : [],
+        cordonnier: Array.isArray(cordonnier?.cordonnierRecipes)
+          ? cordonnier.cordonnierRecipes
+          : [],
+        bijoutier: Array.isArray(bijoutier?.bijoutierRecipes)
+          ? bijoutier.bijoutierRecipes
+          : [],
+        alchimiste: [
+          ...(Array.isArray(alchimiste?.alchimieRecipes)
+            ? alchimiste.alchimieRecipes
+            : []),
+          ...(Array.isArray(alchimiste?.alchimieFusionRecipes)
+            ? alchimiste.alchimieFusionRecipes
+            : []),
+        ],
+        bucheron: Array.isArray(bucheron?.bucheronRecipes)
+          ? bucheron.bucheronRecipes
+          : [],
+        bricoleur: Array.isArray(bricoleur?.bricoleurRecipes)
+          ? bricoleur.bricoleurRecipes
+          : [],
+      };
+    }
+  )
+  .catch((err) => {
+    craftDefsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load craft defs:", err?.message || err);
   });
 const debugCombatLog = (...args) => {
   if (!DEBUG_COMBAT) return;
@@ -674,6 +822,8 @@ const RATE_LIMITS = {
   CmdPlayerSync: { limit: 4, windowMs: 2000 },
   CmdInventoryOp: { limit: 12, windowMs: 1000 },
   CmdGoldOp: { limit: 8, windowMs: 1000 },
+  CmdCraft: { limit: 4, windowMs: 1000 },
+  CmdQuestAction: { limit: 6, windowMs: 1000 },
 };
 
 function isCmdRateLimited(clientInfo, cmdType) {
@@ -777,6 +927,8 @@ const mobHandlers = createMobHandlers({
   config: { MONSTER_STEP_DURATION_MS, MOB_RESPAWN_DELAY_MS },
 });
 
+let playerHandlers = null;
+
 const resourceHandlers = createResourceHandlers({
   state,
   broadcast,
@@ -786,6 +938,12 @@ const resourceHandlers = createResourceHandlers({
   getHostId,
   ensureMapInitialized,
   resourceRespawnTimers,
+  getHarvestResourceDef: (resourceId) =>
+    harvestResourceDefs ? harvestResourceDefs[resourceId] || null : null,
+  getHarvestResourceDefsPromise: () => harvestResourceDefsPromise,
+  getHarvestResourceDefsFailed: () => harvestResourceDefsFailed,
+  applyInventoryOpFromServer: (...args) =>
+    playerHandlers?.applyInventoryOpFromServer?.(...args),
 });
 
 const combatHandlers = createCombatHandlers({
@@ -803,6 +961,13 @@ const combatHandlers = createCombatHandlers({
     isSimpleDamageSpell,
     rollSpellDamage,
     getMonsterDef,
+    applyInventoryOpFromServer: (...args) =>
+      playerHandlers?.applyInventoryOpFromServer?.(...args),
+    applyQuestKillProgressForPlayer: (...args) =>
+      playerHandlers?.applyQuestKillProgressForPlayer?.(...args),
+    applyCombatRewardsForPlayer: (...args) =>
+      playerHandlers?.applyCombatRewardsForPlayer?.(...args),
+    getXpConfig: () => xpConfig,
     getMonsterCombatStats,
     isMonsterCapturable,
     getCombatPattern,
@@ -829,7 +994,7 @@ function getCombatJoinPayload(playerId) {
   };
 }
 
-const playerHandlers = createPlayerHandlers({
+playerHandlers = createPlayerHandlers({
   state,
   clients,
   broadcast,
@@ -856,9 +1021,24 @@ const playerHandlers = createPlayerHandlers({
   persistPlayerState,
   getCombatJoinPayload,
   ensureCombatSnapshot: combatHandlers.ensureCombatSnapshot,
-  itemDefs,
-  itemDefsPromise,
-  itemDefsFailed,
+  getItemDefs: () => itemDefs,
+  getItemDefsPromise: () => itemDefsPromise,
+  getItemDefsFailed: () => itemDefsFailed,
+  getQuestDefs: () => questDefs,
+  getQuestDefsPromise: () => questDefsPromise,
+  getQuestDefsFailed: () => questDefsFailed,
+  getQuestStates: () => questStates,
+  getLevelApi: () => levelApi,
+  getLevelApiFailed: () => levelApiFailed,
+  getMonsterDef,
+  getCraftRecipe: (metierId, recipeId) => {
+    if (!craftDefs || !metierId || !recipeId) return null;
+    const list = craftDefs[metierId];
+    if (!Array.isArray(list)) return null;
+    return list.find((r) => r && r.id === recipeId) || null;
+  },
+  getCraftDefsPromise: () => craftDefsPromise,
+  getCraftDefsFailed: () => craftDefsFailed,
 });
 
 ensureMapInitialized(state.mapId);
@@ -879,6 +1059,17 @@ wss.on("connection", (ws) => {
     }
 
     if (msg?.t?.startsWith("Cmd")) {
+      if (LAN_TRACE && msg.t === "CmdInventoryOp") {
+        // Lightweight trace to confirm inventory ops reach the server.
+        // eslint-disable-next-line no-console
+        console.log("[LAN][Trace] CmdInventoryOp recv", {
+          cmdId: msg.cmdId ?? null,
+          playerId: msg.playerId ?? null,
+          op: msg.op ?? null,
+          itemId: msg.itemId ?? null,
+          qty: msg.qty ?? null,
+        });
+      }
       if (isCmdDuplicate(clientInfo, msg.cmdId)) {
         debugCombatLog("Cmd drop: duplicate", {
           t: msg.t,
@@ -936,8 +1127,14 @@ wss.on("connection", (ws) => {
       case "CmdInventoryOp":
         playerHandlers.handleCmdInventoryOp(ws, clientInfo, msg);
         break;
+      case "CmdCraft":
+        playerHandlers.handleCmdCraft(ws, clientInfo, msg);
+        break;
       case "CmdGoldOp":
         playerHandlers.handleCmdGoldOp(ws, clientInfo, msg);
+        break;
+      case "CmdQuestAction":
+        playerHandlers.handleCmdQuestAction(ws, clientInfo, msg);
         break;
       case "CmdMoveCombat":
         combatHandlers.handleCmdMoveCombat(clientInfo, msg);
@@ -1063,17 +1260,35 @@ wss.on("connection", (ws) => {
         broadcast({ t: "EvHostChanged", hostId });
       }
     }
-    if (player && Number.isInteger(player.combatId)) {
-      const combat = state.combats[player.combatId];
-      const participants = Array.isArray(combat?.participantIds)
-        ? combat.participantIds
-        : [];
-      const anyConnected = participants.some((id) => state.players[id]?.connected);
-      if (!anyConnected && combat) {
-        combatHandlers.finalizeCombat(combat.id);
+      if (player && Number.isInteger(player.combatId)) {
+        const combat = state.combats[player.combatId];
+        const participants = Array.isArray(combat?.participantIds)
+          ? combat.participantIds
+          : [];
+        const anyConnected = participants.some((id) => state.players[id]?.connected);
+        if (!anyConnected && combat) {
+          if (!combat.pendingFinalizeTimer) {
+            combat.pendingFinalizeAt = Date.now() + COMBAT_RECONNECT_GRACE_MS;
+            combat.pendingFinalizeTimer = setTimeout(() => {
+              const current = state.combats[combat.id];
+              if (!current) return;
+              const ids = Array.isArray(current.participantIds)
+                ? current.participantIds
+                : [];
+              const stillConnected = ids.some((id) => state.players[id]?.connected);
+              if (stillConnected) {
+                current.pendingFinalizeTimer = null;
+                current.pendingFinalizeAt = null;
+                return;
+              }
+              current.pendingFinalizeTimer = null;
+              current.pendingFinalizeAt = null;
+              combatHandlers.finalizeCombat(current.id, "disconnect");
+            }, COMBAT_RECONNECT_GRACE_MS);
+          }
+        }
       }
-    }
-  });
+    });
 });
 
 setInterval(() => mobHandlers.tickMobRoam(), MOB_ROAM_TICK_MS);

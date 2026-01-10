@@ -5,6 +5,8 @@ import {
   setNetIsHost,
 } from "../../app/session.js";
 import { spawnMonstersFromEntries } from "../../features/monsters/runtime/index.js";
+import { maps } from "../../features/maps/index.js";
+import { loadMapLikeMain } from "../../features/maps/world/load.js";
 import { emit as emitStoreEvent } from "../../state/store.js";
 
 export function createLanRouter(ctx) {
@@ -20,6 +22,7 @@ export function createLanRouter(ctx) {
     getCurrentMapKey,
     isMapReady,
     netDebugLog,
+    onWelcomeReady,
   } = ctx;
 
   let lastEventId = 0;
@@ -226,6 +229,43 @@ export function createLanRouter(ctx) {
     if (Number.isFinite(entry.gold)) player.gold = entry.gold;
     if (Number.isFinite(entry.honorPoints)) player.honorPoints = entry.honorPoints;
 
+    const tileX = Number.isInteger(entry.x)
+      ? entry.x
+      : Number.isInteger(entry.tileX)
+        ? entry.tileX
+        : null;
+    const tileY = Number.isInteger(entry.y)
+      ? entry.y
+      : Number.isInteger(entry.tileY)
+        ? entry.tileY
+        : null;
+    if (tileX !== null && tileY !== null && scene?.map && scene?.groundLayer) {
+      const wp = scene.map.tileToWorldXY(
+        tileX,
+        tileY,
+        undefined,
+        undefined,
+        scene.groundLayer
+      );
+      if (wp) {
+        player.currentTileX = tileX;
+        player.currentTileY = tileY;
+        player.x = wp.x + scene.map.tileWidth / 2;
+        player.y = wp.y + scene.map.tileHeight;
+        if (typeof player.setDepth === "function") {
+          player.setDepth(player.y);
+        }
+        if (player.isMoving) {
+          player.isMoving = false;
+          player.movePath = [];
+          if (player.currentMoveTween && player.currentMoveTween.stop) {
+            player.currentMoveTween.stop();
+          }
+          player.currentMoveTween = null;
+        }
+      }
+    }
+
     if (typeof player.recomputeStatsWithEquipment === "function") {
       player.recomputeStatsWithEquipment();
     }
@@ -247,6 +287,15 @@ export function createLanRouter(ctx) {
     emitStoreEvent("player:updated", player);
     emitStoreEvent("inventory:updated", { container: player.inventory });
     emitStoreEvent("equipment:updated", { slot: null });
+    if (entry.quests) {
+      emitStoreEvent("quest:updated", { questId: null, state: null });
+    }
+    if (entry.achievements) {
+      emitStoreEvent("achievements:updated", { progress: player.achievements });
+    }
+    if (entry.metiers) {
+      emitStoreEvent("metier:updated", { id: null, state: player.metiers });
+    }
   };
 
   return (msg) => {
@@ -300,6 +349,17 @@ export function createLanRouter(ctx) {
             }
           }
         }
+        if (localEntry?.mapId) {
+          const currentMap = getCurrentMapKey();
+          const mapDef = maps[localEntry.mapId] || null;
+          if (mapDef && currentMap !== localEntry.mapId) {
+            const startTile =
+              Number.isInteger(localEntry.x) && Number.isInteger(localEntry.y)
+                ? { x: localEntry.x, y: localEntry.y }
+                : null;
+            loadMapLikeMain(scene, mapDef, startTile ? { startTile } : undefined);
+          }
+        }
       }
       playersSnapshot.forEach((entry) => players.upsertRemoteData(entry));
       const combats = Array.isArray(snapshot?.combats) ? snapshot.combats : [];
@@ -314,6 +374,9 @@ export function createLanRouter(ctx) {
       mobs.requestMapMonsters();
       resources.requestMapResources();
       mobs.updateHostMobScheduler();
+      if (typeof onWelcomeReady === "function") {
+        onWelcomeReady();
+      }
       return;
     }
 
@@ -327,6 +390,19 @@ export function createLanRouter(ctx) {
       const playerId = getNetPlayerId();
       if (Number.isInteger(msg.playerId) && playerId === msg.playerId) {
         applyServerPlayerSnapshot(msg);
+      }
+      return;
+    }
+
+    if (msg.t === "EvCraftCompleted") {
+      if (Number.isInteger(msg.playerId) && msg.playerId === getNetPlayerId()) {
+        emitStoreEvent("craft:completed", {
+          metierId: msg.metierId || null,
+          recipeId: msg.recipeId || null,
+          itemId: msg.itemId || null,
+          qty: Number.isInteger(msg.qty) ? msg.qty : 0,
+          xpGain: Number.isFinite(msg.xpGain) ? msg.xpGain : 0,
+        });
       }
       return;
     }

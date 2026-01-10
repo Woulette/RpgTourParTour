@@ -9,6 +9,11 @@ function createStateHandlers(ctx, helpers) {
     serializeMonsterEntries,
     serializeActorOrder,
     persistPlayerState,
+    getMonsterDef,
+    applyInventoryOpFromServer,
+    applyQuestKillProgressForPlayer,
+    applyCombatRewardsForPlayer,
+    getXpConfig,
   } = ctx;
   const {
     collectCombatMobEntries,
@@ -21,6 +26,257 @@ function createStateHandlers(ctx, helpers) {
     advanceCombatTurn,
     resetSpellStateForActor,
   } = helpers;
+
+  const clampNonNegativeFinite = (n) =>
+    typeof n === "number" && Number.isFinite(n) ? Math.max(0, n) : 0;
+
+  const XP_FALLBACK = {
+    baseLevelBonus: { 1: 1.0, 2: 1.05, 3: 1.1, 4: 1.15 },
+    groupBonusBySize: { 1: 1.0, 2: 1.6, 3: 2.1, 4: 2.8 },
+    penaltyTiers: [
+      { maxDiff: 5, factor: 1.0 },
+      { maxDiff: 10, factor: 0.9 },
+      { maxDiff: 20, factor: 0.7 },
+      { maxDiff: 40, factor: 0.5 },
+      { maxDiff: 60, factor: 0.25 },
+      { maxDiff: Infinity, factor: 0.12 },
+    ],
+    wisdomPerPoint: 0.01,
+  };
+
+  const getXpConfigSafe = () => {
+    const cfg = typeof getXpConfig === "function" ? getXpConfig() : null;
+    return cfg || XP_FALLBACK;
+  };
+
+  const getJobLevel = (player, jobId) => {
+    if (!player || !jobId) return 0;
+    const level = player.metiers?.[jobId]?.level;
+    return typeof level === "number" && level > 0 ? level : 0;
+  };
+
+  const hasItem = (player, itemId) => {
+    if (!player || !player.inventory || !itemId) return false;
+    const slots = player.inventory.slots;
+    if (!Array.isArray(slots)) return false;
+    return slots.some((slot) => slot && slot.itemId === itemId && slot.qty > 0);
+  };
+
+  const rollLootFromSources = (lootSources, dropMultiplier = 1, player = null) => {
+    const sources = Array.isArray(lootSources) ? lootSources : [];
+    const mult = clampNonNegativeFinite(dropMultiplier) || 1;
+    const aggregated = [];
+
+    sources.forEach((src) => {
+      const table = Array.isArray(src?.lootTable) ? src.lootTable : [];
+      table.forEach((entry) => {
+        if (!entry || !entry.itemId) return;
+
+        const requiredJob = entry.requiresJob;
+        if (requiredJob) {
+          const minLevel =
+            typeof entry.minJobLevel === "number" ? entry.minJobLevel : 1;
+          if (getJobLevel(player, requiredJob) < minLevel) return;
+        }
+
+        const requiredItem =
+          entry.requiresItem ||
+          (typeof entry.itemId === "string" && entry.itemId.startsWith("essence_")
+            ? "extracteur_essence"
+            : null);
+        if (requiredItem && !hasItem(player, requiredItem)) return;
+
+        const baseRate = typeof entry.dropRate === "number" ? entry.dropRate : 1.0;
+        const finalRate = Math.min(1, Math.max(0, baseRate * mult));
+        if (Math.random() > finalRate) return;
+
+        const min = entry.min ?? 1;
+        const max = entry.max ?? min;
+        const lo = Math.min(min, max);
+        const hi = Math.max(min, max);
+        const qty = Math.max(0, lo + Math.floor(Math.random() * (hi - lo + 1)));
+        if (qty <= 0) return;
+
+        let slot = aggregated.find((l) => l.itemId === entry.itemId);
+        if (!slot) {
+          slot = { itemId: entry.itemId, qty: 0 };
+          aggregated.push(slot);
+        }
+        slot.qty += qty;
+      });
+    });
+
+    return aggregated;
+  };
+
+  function buildLootSources(combat) {
+    const mobEntries = collectCombatMobEntries(combat);
+    const sources = [];
+    mobEntries.forEach((entry) => {
+      const monsterId = entry?.monsterId;
+      if (!monsterId) return;
+      const def = typeof getMonsterDef === "function" ? getMonsterDef(monsterId) : null;
+      const lootTable = Array.isArray(def?.loot) ? def.loot : [];
+      if (lootTable.length === 0) return;
+      sources.push({ monsterId, lootTable });
+    });
+    return sources;
+  }
+
+  function computeHighestLevelBonus(levels, cfg) {
+    const highest = levels.reduce((max, lvl) => (lvl > max ? lvl : max), levels[0] ?? 1);
+    const table = cfg?.baseLevelBonus || {};
+    if (table[highest] != null) return table[highest];
+    const keys = Object.keys(table)
+      .map((k) => Number(k))
+      .filter((n) => !Number.isNaN(n));
+    if (keys.length === 0) return 1.0;
+    const maxKey = keys.reduce((m, v) => (v > m ? v : m), keys[0]);
+    return table[maxKey] ?? 1.0;
+  }
+
+  function computeGroupBonus(groupSize, cfg) {
+    const size = typeof groupSize === "number" && groupSize > 0 ? groupSize : 1;
+    const table = cfg?.groupBonusBySize || {};
+    if (table[size] != null) return table[size];
+    const keys = Object.keys(table)
+      .map((k) => Number(k))
+      .filter((n) => !Number.isNaN(n));
+    if (keys.length === 0) return 1.0;
+    const maxKey = keys.reduce((m, v) => (v > m ? v : m), keys[0]);
+    return table[maxKey] ?? 1.0;
+  }
+
+  function computeXpFactor(levels, playerLevel, cfg) {
+    const total = levels.reduce((sum, lvl) => sum + (lvl ?? 1), 0);
+    const highest = levels.reduce((max, lvl) => (lvl > max ? lvl : max), levels[0] ?? 1);
+    const effectiveLevel = Math.max(highest, Math.min(total, playerLevel));
+    const diff = Math.abs(effectiveLevel - playerLevel);
+
+    const tiers = Array.isArray(cfg?.penaltyTiers) ? cfg.penaltyTiers : [];
+    for (const tier of tiers) {
+      if (diff <= tier.maxDiff) {
+        return tier.factor;
+      }
+    }
+    return tiers.length > 0 ? tiers[tiers.length - 1].factor : 1.0;
+  }
+
+  function computeCombatRewards(combat, participantIds) {
+    const xpByPlayer = {};
+    const goldByPlayer = {};
+    const monsters = Array.isArray(combat?.stateSnapshot?.monsters)
+      ? combat.stateSnapshot.monsters
+      : [];
+    if (!Array.isArray(participantIds) || participantIds.length === 0) {
+      return { xpByPlayer, goldByPlayer };
+    }
+    if (monsters.length === 0) return { xpByPlayer, goldByPlayer };
+
+    const cfg = getXpConfigSafe();
+    const levels = monsters.map((entry) => {
+      const lvl = Number.isInteger(entry?.level) ? entry.level : null;
+      if (lvl) return lvl;
+      const def = typeof getMonsterDef === "function" ? getMonsterDef(entry?.monsterId) : null;
+      if (Number.isFinite(def?.baseLevel)) return Math.max(1, Math.round(def.baseLevel));
+      return 1;
+    });
+    const groupSize = levels.length;
+    const levelBonus = computeHighestLevelBonus(levels, cfg);
+    const groupBonus = computeGroupBonus(groupSize, cfg);
+
+    const totalBaseXp = monsters.reduce((sum, entry) => {
+      const def = typeof getMonsterDef === "function" ? getMonsterDef(entry?.monsterId) : null;
+      const base = Number.isFinite(def?.xpReward) ? def.xpReward : 0;
+      return sum + base;
+    }, 0);
+
+    const totalGold = monsters.reduce((sum, entry) => {
+      const def = typeof getMonsterDef === "function" ? getMonsterDef(entry?.monsterId) : null;
+      const min = Number.isFinite(def?.goldRewardMin) ? def.goldRewardMin : 0;
+      const max = Number.isFinite(def?.goldRewardMax)
+        ? def.goldRewardMax
+        : min;
+      if (max <= 0 && min <= 0) return sum;
+      const lo = Math.min(min, max);
+      const hi = Math.max(min, max);
+      const roll = lo >= hi ? lo : lo + Math.floor(Math.random() * (hi - lo + 1));
+      return sum + Math.max(0, roll);
+    }, 0);
+
+    participantIds.forEach((id) => {
+      const player = state.players[id];
+      if (!player) return;
+      const playerLevel = Number.isFinite(player?.levelState?.niveau)
+        ? player.levelState.niveau
+        : Number.isFinite(player?.level)
+          ? player.level
+          : 1;
+      const factor = computeXpFactor(levels, playerLevel, cfg);
+      const baseXp = totalBaseXp * levelBonus * groupBonus * factor;
+      const sagesse = Number.isFinite(player?.stats?.sagesse)
+        ? player.stats.sagesse
+        : 0;
+      const wisdomPerPoint =
+        typeof cfg?.wisdomPerPoint === "number" ? cfg.wisdomPerPoint : 0.01;
+      const xpMultiplier = 1 + Math.max(0, sagesse) * wisdomPerPoint;
+      const finalXp = Math.max(0, Math.round(baseXp * xpMultiplier));
+      if (finalXp > 0) xpByPlayer[id] = finalXp;
+
+      if (totalGold > 0) {
+        const share = Math.round(totalGold / participantIds.length);
+        if (share > 0) goldByPlayer[id] = share;
+      }
+    });
+
+    return { xpByPlayer, goldByPlayer };
+  }
+
+  function applyLootRewards(combat, participantIds) {
+    const lootByPlayer = {};
+    if (!Array.isArray(participantIds) || participantIds.length === 0) {
+      return lootByPlayer;
+    }
+    const sources = buildLootSources(combat);
+    if (sources.length === 0) return lootByPlayer;
+
+    participantIds.forEach((id) => {
+      const player = state.players[id];
+      if (!player) return;
+      const prospectionValue =
+        typeof player?.stats?.prospection === "number" &&
+        Number.isFinite(player.stats.prospection)
+          ? player.stats.prospection
+          : 100;
+      const dropMult = Math.max(0, prospectionValue) / 100;
+      const rolls = rollLootFromSources(sources, dropMult, player);
+      if (!Array.isArray(rolls) || rolls.length === 0) return;
+
+      const gained = [];
+      rolls.forEach((entry) => {
+        const itemId = entry?.itemId;
+        const qty = Number.isInteger(entry?.qty) ? entry.qty : 0;
+        if (!itemId || qty <= 0) return;
+        if (typeof applyInventoryOpFromServer === "function") {
+          const applied = applyInventoryOpFromServer(
+            id,
+            "add",
+            itemId,
+            qty,
+            "combat_loot"
+          );
+          if (applied > 0) {
+            gained.push({ itemId, qty: applied });
+          }
+        }
+      });
+      if (gained.length > 0) {
+        lootByPlayer[id] = gained;
+      }
+    });
+
+    return lootByPlayer;
+  }
 
   function serializeCombatEntry(entry) {
     if (!entry || !Number.isInteger(entry.id)) return null;
@@ -414,6 +670,11 @@ function createStateHandlers(ctx, helpers) {
       clearTimeout(combat.aiTimer);
       combat.aiTimer = null;
     }
+    if (combat.pendingFinalizeTimer) {
+      clearTimeout(combat.pendingFinalizeTimer);
+      combat.pendingFinalizeTimer = null;
+      combat.pendingFinalizeAt = null;
+    }
 
     combat.participantIds.forEach((id) => {
       const p = state.players[id];
@@ -492,6 +753,65 @@ function createStateHandlers(ctx, helpers) {
       issue,
       combatSeq: combat.combatSeq,
     };
+
+    if (issue === "victoire") {
+      const lootByPlayer = applyLootRewards(
+        combat,
+        Array.isArray(combat.participantIds) ? combat.participantIds : []
+      );
+      if (Object.keys(lootByPlayer).length > 0) {
+        payload.lootByPlayer = lootByPlayer;
+      }
+
+      const { xpByPlayer, goldByPlayer } = computeCombatRewards(
+        combat,
+        Array.isArray(combat.participantIds) ? combat.participantIds : []
+      );
+      const hasXp = Object.keys(xpByPlayer).length > 0;
+      const hasGold = Object.keys(goldByPlayer).length > 0;
+      if (hasXp) payload.xpByPlayer = xpByPlayer;
+      if (hasGold) payload.goldByPlayer = goldByPlayer;
+      if ((hasXp || hasGold) && typeof applyCombatRewardsForPlayer === "function") {
+        const participantIds = Array.isArray(combat.participantIds)
+          ? combat.participantIds
+          : [];
+        participantIds.forEach((id) => {
+          const xp = hasXp ? xpByPlayer[id] : 0;
+          const gold = hasGold ? goldByPlayer[id] : 0;
+          if (!xp && !gold) return;
+          applyCombatRewardsForPlayer(Number(id), { xp, gold });
+        });
+      }
+    }
+
+    if (issue === "victoire" && typeof applyQuestKillProgressForPlayer === "function") {
+      const monsters = Array.isArray(combat.stateSnapshot?.monsters)
+        ? combat.stateSnapshot.monsters
+        : [];
+      const killCounts = new Map();
+      monsters.forEach((entry) => {
+        if (!entry || typeof entry.monsterId !== "string") return;
+        const hp = Number.isFinite(entry.hp)
+          ? entry.hp
+          : Number.isFinite(entry.hpMax)
+            ? entry.hpMax
+            : 0;
+        if (hp > 0) return;
+        const prev = killCounts.get(entry.monsterId) || 0;
+        killCounts.set(entry.monsterId, prev + 1);
+      });
+      if (killCounts.size > 0) {
+        const participantIds = Array.isArray(combat.participantIds)
+          ? combat.participantIds
+          : [];
+        participantIds.forEach((playerId) => {
+          if (!Number.isInteger(playerId)) return;
+          killCounts.forEach((count, monsterId) => {
+            applyQuestKillProgressForPlayer(playerId, monsterId, count);
+          });
+        });
+      }
+    }
 
     broadcast(payload);
     delete state.combats[combatId];

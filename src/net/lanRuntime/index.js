@@ -115,7 +115,15 @@ export function initLanRuntime(scene, player, map, groundLayer) {
     getCurrentMapKey,
   });
 
-  boot.initialSync();
+  const initialSyncOnce = (() => {
+    let done = false;
+    return () => {
+      if (done) return;
+      done = true;
+      boot.initialSync({ skipMove: true });
+    };
+  })();
+
   createLanPersistenceHandlers(player);
 
   const router = createLanRouter({
@@ -133,6 +141,7 @@ export function initLanRuntime(scene, player, map, groundLayer) {
     isMapReady,
     netDebugLog,
     remotePlayers,
+    onWelcomeReady: initialSyncOnce,
   });
 
   setNetEventHandler(router);
