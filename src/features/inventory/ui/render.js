@@ -1,4 +1,4 @@
-import { getItemDef, removeItem } from "../runtime/inventoryCore.js";
+import { getItemDef, removeItem } from "../runtime/inventoryAuthority.js";
 import { equipFromInventory, unequipToInventory } from "../runtime/equipmentCore.js";
 import { applyConsumableEffect } from "./consumables.js";
 

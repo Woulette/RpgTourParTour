@@ -49,64 +49,105 @@ function extractCollisionKeys(mapJson) {
   const tileWidth = Number.isFinite(mapJson.tilewidth) ? mapJson.tilewidth : null;
   const tileHeight = Number.isFinite(mapJson.tileheight) ? mapJson.tileheight : null;
 
-  mapJson.layers.forEach((layer) => {
-    if (!layer || layer.name !== "collisions") return;
-    if (layer.type === "tilelayer" && Array.isArray(layer.data) && width && height) {
-      layer.data.forEach((gid, index) => {
-        if (!Number.isFinite(gid) || gid <= 0) return;
-        const x = index % width;
-        const y = Math.floor(index / width);
-        if (x >= 0 && y >= 0 && x < width && y < height) {
-          keys.add(`${x},${y}`);
+  const collisionGids = new Set();
+  if (Array.isArray(mapJson.tilesets)) {
+    mapJson.tilesets.forEach((tileset) => {
+      if (!tileset || !Number.isFinite(tileset.firstgid)) return;
+      const tiles = Array.isArray(tileset.tiles) ? tileset.tiles : [];
+      tiles.forEach((tile) => {
+        if (!tile || !Number.isFinite(tile.id)) return;
+        const objGroup = tile.objectgroup;
+        if (objGroup && Array.isArray(objGroup.objects) && objGroup.objects.length > 0) {
+          collisionGids.add(tileset.firstgid + tile.id);
         }
       });
-      return;
-    }
+    });
+  }
 
-    if (layer.type === "objectgroup" && Array.isArray(layer.objects)) {
-      layer.objects.forEach((obj) => {
-        if (!obj) return;
-        const props = Array.isArray(obj.properties) ? obj.properties : [];
-        const propX = props.find((p) => p?.name === "tileX");
-        const propY = props.find((p) => p?.name === "tileY");
-        const tileX = Number.isFinite(propX?.value) ? Math.round(propX.value) : null;
-        const tileY = Number.isFinite(propY?.value) ? Math.round(propY.value) : null;
-        if (
-          tileX !== null &&
-          tileY !== null &&
-          width &&
-          height &&
-          tileX >= 0 &&
-          tileY >= 0 &&
-          tileX < width &&
-          tileY < height
-        ) {
-          keys.add(`${tileX},${tileY}`);
-          return;
-        }
-        if (
-          tileWidth &&
-          tileHeight &&
-          Number.isFinite(obj.x) &&
-          Number.isFinite(obj.y)
-        ) {
-          const guessX = Math.floor(obj.x / tileWidth);
-          const guessY = Math.floor(obj.y / tileHeight);
+  const visitLayers = (layers) => {
+    if (!Array.isArray(layers)) return;
+    layers.forEach((layer) => {
+      if (!layer) return;
+      if (layer.type === "group" && Array.isArray(layer.layers)) {
+        visitLayers(layer.layers);
+        return;
+      }
+
+      const layerName = typeof layer.name === "string" ? layer.name.toLowerCase() : "";
+      const isCollisionLayer = layerName === "collisions";
+
+      if (layer.type === "tilelayer" && Array.isArray(layer.data)) {
+        const layerWidth = Number.isFinite(layer.width) ? layer.width : width;
+        const layerHeight = Number.isFinite(layer.height) ? layer.height : height;
+        layer.data.forEach((gid, index) => {
+          if (!Number.isFinite(gid) || gid <= 0) return;
+          const shouldBlock = isCollisionLayer || collisionGids.has(gid);
+          if (!shouldBlock) return;
+          const x = layerWidth ? index % layerWidth : null;
+          const y = layerWidth ? Math.floor(index / layerWidth) : null;
           if (
+            x !== null &&
+            y !== null &&
+            layerWidth &&
+            layerHeight &&
+            x >= 0 &&
+            y >= 0 &&
+            x < layerWidth &&
+            y < layerHeight
+          ) {
+            keys.add(`${x},${y}`);
+          }
+        });
+        return;
+      }
+
+      if (layer.type === "objectgroup" && Array.isArray(layer.objects)) {
+        if (!isCollisionLayer) return;
+        layer.objects.forEach((obj) => {
+          if (!obj) return;
+          const props = Array.isArray(obj.properties) ? obj.properties : [];
+          const propX = props.find((p) => p?.name === "tileX");
+          const propY = props.find((p) => p?.name === "tileY");
+          const tileX = Number.isFinite(propX?.value) ? Math.round(propX.value) : null;
+          const tileY = Number.isFinite(propY?.value) ? Math.round(propY.value) : null;
+          if (
+            tileX !== null &&
+            tileY !== null &&
             width &&
             height &&
-            guessX >= 0 &&
-            guessY >= 0 &&
-            guessX < width &&
-            guessY < height
+            tileX >= 0 &&
+            tileY >= 0 &&
+            tileX < width &&
+            tileY < height
           ) {
-            keys.add(`${guessX},${guessY}`);
+            keys.add(`${tileX},${tileY}`);
+            return;
           }
-        }
-      });
-    }
-  });
+          if (
+            tileWidth &&
+            tileHeight &&
+            Number.isFinite(obj.x) &&
+            Number.isFinite(obj.y)
+          ) {
+            const guessX = Math.floor(obj.x / tileWidth);
+            const guessY = Math.floor(obj.y / tileHeight);
+            if (
+              width &&
+              height &&
+              guessX >= 0 &&
+              guessY >= 0 &&
+              guessX < width &&
+              guessY < height
+            ) {
+              keys.add(`${guessX},${guessY}`);
+            }
+          }
+        });
+      }
+    });
+  };
 
+  visitLayers(mapJson.layers);
   return keys;
 }
 

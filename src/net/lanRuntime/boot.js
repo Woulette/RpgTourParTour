@@ -45,8 +45,20 @@ export function createLanBootHandlers(ctx) {
     if (!Number.isInteger(player?.currentTileX) || !Number.isInteger(player?.currentTileY)) {
       return;
     }
+    const baseSeqCandidates = [
+      Number.isInteger(player?.__lanMoveSeq) ? player.__lanMoveSeq : 0,
+      Number.isInteger(player?.__lanServerMoveSeq) ? player.__lanServerMoveSeq : 0,
+    ];
+    const baseSeq = Math.max(...baseSeqCandidates);
+    const nextSeq = baseSeq > 0 ? baseSeq + 1 : Date.now();
+    if (player) {
+      player.__lanMoveSeq = nextSeq;
+    }
     client.sendCmd("CmdMove", {
       playerId,
+      seq: nextSeq,
+      fromX: player.currentTileX,
+      fromY: player.currentTileY,
       toX: player.currentTileX,
       toY: player.currentTileY,
     });

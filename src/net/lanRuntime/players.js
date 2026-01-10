@@ -368,6 +368,17 @@ export function createPlayerHandlers(ctx) {
       if (msg.rejected) {
         player.__lanLastTarget = null;
         player.__lanLastCmdAt = 0;
+        if (
+          msg.reason === "seq_out_of_order" &&
+          Number.isInteger(msg.serverLastMoveSeq)
+        ) {
+          player.__lanServerMoveSeq = msg.serverLastMoveSeq;
+          player.__lanMoveSeq = msg.serverLastMoveSeq;
+        }
+        if (msg.reason) {
+          // eslint-disable-next-line no-console
+          console.warn("[LAN] Move rejected:", msg.reason, msg);
+        }
       }
       stopEntityMovement(player);
       const currentTile = worldToTile(player.x, player.y);

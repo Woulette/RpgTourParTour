@@ -1,4 +1,4 @@
-import { addItem } from "../../inventory/runtime/inventoryCore.js";
+import { addItem } from "../../inventory/runtime/inventoryAuthority.js";
 import { blockTile, isTileBlocked } from "../../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../../entities/movement/runtime.js";

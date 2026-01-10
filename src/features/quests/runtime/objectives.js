@@ -1,4 +1,4 @@
-import { removeItem } from "../../inventory/runtime/inventoryCore.js";
+import { removeItem } from "../../inventory/runtime/inventoryAuthority.js";
 
 export function getTurnInNpcId(stage) {
   return stage?.turnInNpcId || stage?.npcId || stage?.objective?.npcId || null;

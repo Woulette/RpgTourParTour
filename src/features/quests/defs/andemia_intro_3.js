@@ -1,4 +1,4 @@
-import { addItem } from "../../inventory/runtime/inventoryCore.js";
+import { addItem } from "../../inventory/runtime/inventoryAuthority.js";
 
 export const andemia_intro_3 = {
   id: "andemia_intro_3",

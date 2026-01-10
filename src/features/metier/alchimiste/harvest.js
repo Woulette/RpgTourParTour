@@ -1,6 +1,6 @@
 // Logique de base du metier alchimiste : recolte, inventaire, XP.
 
-import { addItem } from "../../inventory/runtime/inventoryCore.js";
+import { addItem } from "../../inventory/runtime/inventoryAuthority.js";
 import { alchimisteResources } from "./resources.js";
 import { addAlchimisteXp, ensureAlchimisteState } from "./state.js";
 import { emit as emitStoreEvent } from "../../../state/store.js";

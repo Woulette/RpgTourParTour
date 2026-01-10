@@ -1,6 +1,6 @@
 // Logique de base du metier bucheron : recolte, inventaire, XP.
 
-import { addItem } from "../../inventory/runtime/inventoryCore.js";
+import { addItem } from "../../inventory/runtime/inventoryAuthority.js";
 import { bucheronResources } from "./resources.js";
 import { addBucheronXp, ensureBucheronState } from "./state.js";
 import { emit as emitStoreEvent } from "../../../state/store.js";

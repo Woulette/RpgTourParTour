@@ -95,6 +95,22 @@ const mapDefsPromise = import(
     // eslint-disable-next-line no-console
     console.warn("[LAN] Failed to load map defs:", err?.message || err);
   });
+
+let itemDefs = null;
+let itemDefsFailed = false;
+const itemDefsPromise = import(
+  pathToFileURL(
+    path.resolve(__dirname, "../src/features/inventory/data/itemsConfig.js")
+  ).href
+)
+  .then((mod) => {
+    itemDefs = mod?.items || null;
+  })
+  .catch((err) => {
+    itemDefsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load item defs:", err?.message || err);
+  });
 const debugCombatLog = (...args) => {
   if (!DEBUG_COMBAT) return;
   // eslint-disable-next-line no-console
@@ -123,6 +139,9 @@ const COMBAT_EVENT_TYPES = new Set([
 const REGEN_TICK_MS = 1000;
 const REGEN_PER_TICK = 2;
 const PERSIST_TICK_MS = 10000;
+const PERSIST_DEBOUNCE_MS = 250;
+const PERSIST_SLOW_MS = 40;
+const pendingPersist = new Map();
 
   let spellDefs = null;
   let spellDefsFailed = false;
@@ -316,6 +335,7 @@ function buildCharacterEntryFromPlayer(player) {
     classId: player.classId || "archer",
     level: Number.isInteger(player.level) ? player.level : 1,
     baseStats: player.baseStats || null,
+    levelState: player.levelState || null,
     mapId: player.mapId || null,
     posX: Number.isFinite(player.x) ? player.x : null,
     posY: Number.isFinite(player.y) ? player.y : null,
@@ -328,14 +348,53 @@ function buildCharacterEntryFromPlayer(player) {
       : null,
     inventory: player.inventory || null,
     gold: Number.isFinite(player.gold) ? player.gold : null,
+    honorPoints: Number.isFinite(player.honorPoints) ? player.honorPoints : null,
+    equipment: player.equipment || null,
+    trash: player.trash || null,
+    quests: player.quests || null,
+    achievements: player.achievements || null,
+    metiers: player.metiers || null,
+    spellParchments: player.spellParchments || null,
   };
 }
 
-function persistPlayerState(player) {
+function persistPlayerStateNow(player) {
   if (!characterStore || !player) return;
   const entry = buildCharacterEntryFromPlayer(player);
   if (!entry) return;
+  const start = Date.now();
   characterStore.upsertCharacter(entry);
+  const elapsed = Date.now() - start;
+  if (elapsed >= PERSIST_SLOW_MS) {
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Slow persist", {
+      ms: elapsed,
+      playerId: player.id ?? null,
+      characterId: player.characterId ?? null,
+    });
+  }
+}
+
+function persistPlayerState(player, { immediate = false } = {}) {
+  if (!player) return;
+  const key = Number.isInteger(player.id) ? player.id : player.characterId || null;
+  if (immediate || key === null) {
+    if (key !== null) {
+      const pending = pendingPersist.get(key);
+      if (pending?.timer) clearTimeout(pending.timer);
+      pendingPersist.delete(key);
+    }
+    persistPlayerStateNow(player);
+    return;
+  }
+  const pending = pendingPersist.get(key) || { timer: null, player: null };
+  pending.player = player;
+  if (pending.timer) clearTimeout(pending.timer);
+  pending.timer = setTimeout(() => {
+    pendingPersist.delete(key);
+    persistPlayerStateNow(pending.player);
+  }, PERSIST_DEBOUNCE_MS);
+  pendingPersist.set(key, pending);
 }
 
 function getMonsterCombatStats(def, level) {
@@ -612,6 +671,9 @@ const RATE_LIMITS = {
   CmdRequestMapMonsters: { limit: 4, windowMs: 2000 },
   CmdRequestMapResources: { limit: 4, windowMs: 2000 },
   CmdResourceHarvest: { limit: 4, windowMs: 1000 },
+  CmdPlayerSync: { limit: 4, windowMs: 2000 },
+  CmdInventoryOp: { limit: 12, windowMs: 1000 },
+  CmdGoldOp: { limit: 8, windowMs: 1000 },
 };
 
 function isCmdRateLimited(clientInfo, cmdType) {
@@ -631,6 +693,14 @@ function isCmdRateLimited(clientInfo, cmdType) {
   entry.count += 1;
   clientInfo.rateLimits[cmdType] = entry;
   return false;
+}
+
+function isCmdSessionValid(clientInfo, msg) {
+  if (!clientInfo) return false;
+  if (!clientInfo.accountId) return true;
+  const token = typeof msg.sessionToken === "string" ? msg.sessionToken : null;
+  const accountId = getAccountIdFromSession(token);
+  return !!accountId && accountId === clientInfo.accountId;
 }
 
 function sanitizePlayerPath(raw, maxSteps = 32) {
@@ -786,6 +856,9 @@ const playerHandlers = createPlayerHandlers({
   persistPlayerState,
   getCombatJoinPayload,
   ensureCombatSnapshot: combatHandlers.ensureCombatSnapshot,
+  itemDefs,
+  itemDefsPromise,
+  itemDefsFailed,
 });
 
 ensureMapInitialized(state.mapId);
@@ -822,6 +895,11 @@ wss.on("connection", (ws) => {
         });
         return;
       }
+      if (!isCmdSessionValid(clientInfo, msg)) {
+        send(ws, { t: "EvRefuse", reason: "auth_required" });
+        ws.close();
+        return;
+      }
     }
 
     switch (msg.t) {
@@ -851,6 +929,15 @@ wss.on("connection", (ws) => {
         break;
       case "CmdRequestMapPlayers":
         playerHandlers.handleCmdRequestMapPlayers(ws, clientInfo, msg);
+        break;
+      case "CmdPlayerSync":
+        playerHandlers.handleCmdPlayerSync(clientInfo, msg);
+        break;
+      case "CmdInventoryOp":
+        playerHandlers.handleCmdInventoryOp(ws, clientInfo, msg);
+        break;
+      case "CmdGoldOp":
+        playerHandlers.handleCmdGoldOp(ws, clientInfo, msg);
         break;
       case "CmdMoveCombat":
         combatHandlers.handleCmdMoveCombat(clientInfo, msg);
@@ -961,7 +1048,7 @@ wss.on("connection", (ws) => {
     const player = state.players[clientInfo.id];
     if (player) {
       player.connected = false;
-      persistPlayerState(player);
+      persistPlayerState(player, { immediate: true });
     }
     clients.delete(ws);
     broadcast({

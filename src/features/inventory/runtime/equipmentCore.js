@@ -1,10 +1,9 @@
+import { getItemDef, compactInventory } from "./inventoryCore.js";
 import {
-  getItemDef,
   addItem,
   addItemToLastSlot,
   removeItem,
-  compactInventory,
-} from "./inventoryCore.js";
+} from "./inventoryAuthority.js";
 import { applyBonuses, applyDerivedAgilityStats } from "../../../core/stats.js";
 import { equipmentSets } from "../data/sets.js";
 import { emit as emitStoreEvent } from "../../../state/store.js";

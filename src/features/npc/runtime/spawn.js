@@ -135,25 +135,36 @@ function refreshNpcQuestMarkers(scene, player) {
   scene.npcs.forEach((npcInstance) => {
     if (!npcInstance) return;
 
-    // Détruit l'ancien marqueur éventuel
-    if (npcInstance.questMarker && npcInstance.questMarker.destroy) {
-      npcInstance.questMarker.destroy();
-      npcInstance.questMarker = null;
-    }
-
     const npcId = npcInstance.id;
     let markerTexture = null;
     const markerSymbol = getNpcMarker(player, npcId);
     if (markerSymbol === "!") markerTexture = "quest_exclamation";
     else if (markerSymbol === "?") markerTexture = "quest_question";
 
-    if (!markerTexture) return;
+    if (!markerTexture) {
+      if (npcInstance.questMarker && npcInstance.questMarker.destroy) {
+        npcInstance.questMarker.destroy();
+        npcInstance.questMarker = null;
+      }
+      return;
+    }
 
     const sprite = npcInstance.sprite;
-    if (!sprite) return;
+    if (!sprite || !sprite.active || !sprite.scene) return;
 
     const margin = 0;
-    const markerY = sprite.y - sprite.displayHeight - margin;
+    let markerY = null;
+    try {
+      markerY = sprite.y - sprite.displayHeight - margin;
+    } catch {
+      return;
+    }
+
+    if (npcInstance.questMarker && npcInstance.questMarker.destroy) {
+      npcInstance.questMarker.destroy();
+      npcInstance.questMarker = null;
+    }
+
     const marker = scene.add.image(sprite.x, markerY, markerTexture);
     marker.setOrigin(0.5, 1);
     marker.setDepth(Math.max((sprite.depth || 0) + 2, 100010));
@@ -179,6 +190,11 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
 
   // Met à jour les marqueurs une première fois pour cette map
   refreshNpcQuestMarkers(scene, scene.player);
+  if (scene?.time?.delayedCall) {
+    scene.time.delayedCall(200, () => {
+      refreshNpcQuestMarkers(scene, scene.player);
+    });
+  }
 
   // Etablie un listener global une seule fois pour réagir aux mises à jour de quête
   if (!questMarkerUnsubscribe) {

@@ -1,5 +1,6 @@
 import { emit as emitStoreEvent } from "../../../state/store.js";
-import { addItem, getItemDef } from "../../inventory/runtime/inventoryCore.js";
+import { addItem, getItemDef } from "../../inventory/runtime/inventoryAuthority.js";
+import { adjustGold } from "../../inventory/runtime/goldAuthority.js";
 import { addXpToPlayer } from "../../../entities/player.js";
 import { achievementDefs } from "../defs/index.js";
 import { addChatMessage } from "../../../chat/chat.js";
@@ -88,8 +89,7 @@ function applyRewards(player, rewards) {
     addXpToPlayer(player, xp);
   }
 
-  if (!player.gold) player.gold = 0;
-  if (gold > 0) player.gold += gold;
+  if (gold > 0) adjustGold(player, gold, "achievement_reward");
 
   if (!Number.isFinite(player.honorPoints)) player.honorPoints = 0;
   if (honorPoints > 0) player.honorPoints += honorPoints;

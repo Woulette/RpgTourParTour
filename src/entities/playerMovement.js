@@ -300,8 +300,12 @@ function createCalibratedWorldToTile(map, groundLayer) {
       updateCombatPreview(scene, map, groundLayer, path);
     });
 
+  if (scene?.input?.off && scene.__moveClickHandler) {
+    scene.input.off("pointerdown", scene.__moveClickHandler);
+  }
+
   // --- Clic pour dplacer ou lancer un sort ---
-  scene.input.on("pointerdown", (pointer) => {
+  const pointerDownHandler = (pointer) => {
     if (window.__uiPointerBlock) {
       return;
     }
@@ -407,11 +411,12 @@ function createCalibratedWorldToTile(map, groundLayer) {
 
     if (!isValidTile(map, tileX, tileY)) return;
 
+    const state = scene.combatState;
+    const inCombat = state && state.enCours;
+
     // Collision logique : si la tuile est bloque, on vise la tuile libre la plus proche
     // (sauf si un sort est actif en combat : on veut pouvoir cibler un monstre).
     if (isTileBlocked(scene, tileX, tileY)) {
-      const inCombat =
-        scene.combatState && scene.combatState.enCours;
       if (!(inCombat && activeSpell)) {
         const allowDiagonal = !inCombat;
         const nearest = findNearestReachableTile(
@@ -431,10 +436,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       }
     }
 
-    const state = scene.combatState;
-
     // Intention de sortie de map (hors combat uniquement).
-    const inCombat = state && state.enCours;
     if (!inCombat) {
       const clickedInRightBand = pointer.x >= GAME_WIDTH - bandWidthRight;
       const clickedInLeftBand = pointer.x <= bandWidthLeft;
@@ -597,7 +599,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
     if (player.currentTileX === tileX && player.currentTileY === tileY) return;
 
     // Chemin brut : diagonales autorises hors combat, interdites en combat
-    const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
+    const allowDiagonal = !inCombat;
 
     let path = findPathForPlayer(
       scene,
@@ -610,8 +612,13 @@ function createCalibratedWorldToTile(map, groundLayer) {
     );
 
     if (!path || path.length === 0) {
-      // Si on n'a aucun chemin, on ne dclenche rien (ni combat, ni sortie).
-      return;
+      // En LAN : on laisse le serveur valider (le path client peut etre stale).
+      if (netClient && netPlayerId && !inCombat && !(scene.prepState && scene.prepState.actif)) {
+        path = [];
+      } else {
+        // Si on n'a aucun chemin, on ne dclenche rien (ni combat, ni sortie).
+        return;
+      }
     }
 
     let moveCost = 0;
@@ -657,15 +664,15 @@ function createCalibratedWorldToTile(map, groundLayer) {
         return;
       }
 
-      if (netClient && netPlayerId) {
-        if (state && state.enCours && state.joueur === player) {
-          applyTaclePenalty(scene, player);
-        }
-        const now = Date.now();
-        const lastAt = player.__lanLastCmdAt || 0;
-        if (now - lastAt < 150) {
-          return;
-        }
+    if (netClient && netPlayerId) {
+      if (state && state.enCours && state.joueur === player) {
+        applyTaclePenalty(scene, player);
+      }
+      const now = Date.now();
+      const lastAt = player.__lanLastCmdAt || 0;
+      if (now - lastAt < 150) {
+        return;
+      }
       const lastTarget = player.__lanLastTarget || null;
       if (lastTarget && lastTarget.x === tileX && lastTarget.y === tileY) {
         return;
@@ -712,6 +719,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
           path: safePath,
           toX: tileX,
           toY: tileY,
+          debug: debugMoves,
         });
       }
       return;
@@ -741,7 +749,12 @@ function createCalibratedWorldToTile(map, groundLayer) {
       path,
       moveCost
     );
-  });
+  };
+
+  if (scene?.input?.on) {
+    scene.__moveClickHandler = pointerDownHandler;
+    scene.input.on("pointerdown", pointerDownHandler);
+  }
 }
 
 function updatePlayerTilePosition(player, worldToTile) {

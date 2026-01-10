@@ -5,6 +5,7 @@ import {
   setNetIsHost,
 } from "../../app/session.js";
 import { spawnMonstersFromEntries } from "../../features/monsters/runtime/index.js";
+import { emit as emitStoreEvent } from "../../state/store.js";
 
 export function createLanRouter(ctx) {
   const {
@@ -208,6 +209,46 @@ export function createLanRouter(ctx) {
     resources.spawnResourcesFromEntries(entries);
   };
 
+  const applyServerPlayerSnapshot = (entry) => {
+    if (!entry || !player) return;
+    if (entry.displayName) player.displayName = entry.displayName;
+    if (entry.classId) player.classId = entry.classId;
+    if (Number.isFinite(entry.level)) player.level = entry.level;
+    if (entry.baseStats) player.baseStats = entry.baseStats;
+    if (entry.levelState) player.levelState = entry.levelState;
+    if (entry.inventory) player.inventory = entry.inventory;
+    if (entry.trash) player.trash = entry.trash;
+    if (entry.equipment) player.equipment = entry.equipment;
+    if (entry.quests) player.quests = entry.quests;
+    if (entry.achievements) player.achievements = entry.achievements;
+    if (entry.metiers) player.metiers = entry.metiers;
+    if (entry.spellParchments) player.spellParchments = entry.spellParchments;
+    if (Number.isFinite(entry.gold)) player.gold = entry.gold;
+    if (Number.isFinite(entry.honorPoints)) player.honorPoints = entry.honorPoints;
+
+    if (typeof player.recomputeStatsWithEquipment === "function") {
+      player.recomputeStatsWithEquipment();
+    }
+
+    if (player.stats && (Number.isFinite(entry.hp) || Number.isFinite(entry.hpMax))) {
+      const hpMax = Number.isFinite(entry.hpMax)
+        ? entry.hpMax
+        : Number.isFinite(player.stats.hpMax)
+          ? player.stats.hpMax
+          : player.stats.hp ?? 0;
+      const hp = Number.isFinite(entry.hp) ? entry.hp : hpMax;
+      player.stats.hpMax = hpMax;
+      player.stats.hp = Math.min(hp, hpMax);
+      if (typeof player.updateHudHp === "function") {
+        player.updateHudHp(player.stats.hp, player.stats.hpMax);
+      }
+    }
+
+    emitStoreEvent("player:updated", player);
+    emitStoreEvent("inventory:updated", { container: player.inventory });
+    emitStoreEvent("equipment:updated", { slot: null });
+  };
+
   return (msg) => {
     if (!msg || !player) return;
     if (Number.isInteger(msg.eventId)) {
@@ -244,6 +285,7 @@ export function createLanRouter(ctx) {
       if (player && Number.isInteger(msg.playerId)) {
         const localEntry = playersSnapshot.find((p) => Number(p?.id) === msg.playerId) || null;
         if (localEntry && player.stats) {
+          applyServerPlayerSnapshot(localEntry);
           const hpMax = Number.isFinite(localEntry.hpMax)
             ? localEntry.hpMax
             : Number.isFinite(localEntry.hp)
@@ -278,6 +320,14 @@ export function createLanRouter(ctx) {
     if (msg.t === "EvPlayerJoined") {
       players.upsertRemoteData(msg.player);
       players.refreshRemoteSprites();
+      return;
+    }
+
+    if (msg.t === "EvPlayerSync") {
+      const playerId = getNetPlayerId();
+      if (Number.isInteger(msg.playerId) && playerId === msg.playerId) {
+        applyServerPlayerSnapshot(msg);
+      }
       return;
     }
 

@@ -1,6 +1,7 @@
 import { shops } from "../../shops/catalog.js";
-import { getItemDef, addItem, removeItem } from "../inventory/runtime/inventoryCore.js";
-import { on as onStoreEvent, updatePlayer } from "../../state/store.js";
+import { getItemDef, addItem, removeItem } from "../inventory/runtime/inventoryAuthority.js";
+import { on as onStoreEvent } from "../../state/store.js";
+import { adjustGold } from "../inventory/runtime/goldAuthority.js";
 import { startNpcDialogFlow } from "../npc/runtime/dialogFlow.js";
 
 let panelEl = null;
@@ -142,9 +143,7 @@ function renderBuyList(listEl) {
         setMessage("Inventaire plein.");
         return;
       }
-      updatePlayer((p) => {
-        p.gold = Math.max(0, (p.gold ?? 0) - price);
-      });
+      adjustGold(currentPlayer, -price, "shop_buy");
       setMessage("");
       renderShop();
     });
@@ -223,9 +222,7 @@ function renderSellList(listEl) {
       if (price <= 0) return;
       const removed = removeItem(currentPlayer.inventory, entry.itemId, 1);
       if (removed <= 0) return;
-      updatePlayer((p) => {
-        p.gold = (p.gold ?? 0) + price;
-      });
+      adjustGold(currentPlayer, price, "shop_sell");
       setMessage("");
       renderShop();
     });

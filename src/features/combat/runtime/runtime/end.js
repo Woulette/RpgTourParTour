@@ -25,6 +25,7 @@ import { joinPartsWrapped } from "./utils.js";
 import { setHarvestablesVisible } from "../../../maps/world/harvestables.js";
 import { clearCombatAuras } from "../auras.js";
 import { getNetClient, getNetPlayerId } from "../../../../app/session.js";
+import { adjustGold } from "../../../inventory/runtime/goldAuthority.js";
 
 export function endCombat(scene) {
   if (!scene.combatState) return;
@@ -148,11 +149,7 @@ export function endCombat(scene) {
       pvMaxGagnes = niveauxGagnes * 5;
     }
     if (player && typeof goldGagne === "number" && goldGagne > 0) {
-      const currentGold =
-        typeof player.gold === "number" && !Number.isNaN(player.gold)
-          ? player.gold
-          : 0;
-      player.gold = currentGold + goldGagne;
+      adjustGold(player, goldGagne, "combat_reward");
     }
 
     if (

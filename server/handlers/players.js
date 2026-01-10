@@ -22,9 +22,13 @@ function createPlayerHandlers(ctx) {
     ensureCombatSnapshot,
     issueSessionToken,
     getAccountIdFromSession,
+    itemDefs,
+    itemDefsPromise,
+    itemDefsFailed,
   } = ctx;
 
   const { PROTOCOL_VERSION, GAME_DATA_VERSION, MAX_PLAYERS } = config;
+  const MAX_INV_SIZE = 200;
 
   const sendCombatResync = (ws, player) => {
     if (!player || !player.inCombat) return;
@@ -125,6 +129,13 @@ function createPlayerHandlers(ctx) {
         const k = key(nx, ny);
         if (visited.has(k)) continue;
         if (blocked && blocked.has(k)) continue;
+        if (dx !== 0 && dy !== 0) {
+          const sideA = `${current.x + dx},${current.y}`;
+          const sideB = `${current.x},${current.y + dy}`;
+          if (blocked && (blocked.has(sideA) || blocked.has(sideB))) {
+            continue;
+          }
+        }
         visited.add(k);
         prev.set(k, current);
         if (nx === endX && ny === endY) {
@@ -153,6 +164,352 @@ function createPlayerHandlers(ctx) {
     return null;
   }
 
+  function sanitizeInventorySnapshot(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const size =
+      Number.isInteger(raw.size) && raw.size > 0 && raw.size <= 200
+        ? raw.size
+        : null;
+    if (!size) return null;
+    const slots = Array.isArray(raw.slots) ? raw.slots.slice(0, size) : [];
+    while (slots.length < size) slots.push(null);
+
+    const cleanSlots = slots.map((slot) => {
+      if (!slot || typeof slot !== "object") return null;
+      const itemId = typeof slot.itemId === "string" ? slot.itemId : null;
+      const qty =
+        Number.isInteger(slot.qty) && slot.qty > 0 ? Math.min(slot.qty, 9999) : null;
+      if (!itemId || qty === null) return null;
+      return { itemId, qty };
+    });
+
+    const autoGrow =
+      raw.autoGrow && typeof raw.autoGrow === "object"
+        ? {
+            enabled: raw.autoGrow.enabled === true,
+            minEmptySlots:
+              Number.isInteger(raw.autoGrow.minEmptySlots) && raw.autoGrow.minEmptySlots >= 0
+                ? raw.autoGrow.minEmptySlots
+                : 0,
+            growBy:
+              Number.isInteger(raw.autoGrow.growBy) && raw.autoGrow.growBy > 0
+                ? raw.autoGrow.growBy
+                : 0,
+          }
+        : null;
+
+    return {
+      size,
+      slots: cleanSlots,
+      autoGrow,
+    };
+  }
+
+  function sanitizeLevel(raw) {
+    if (!Number.isFinite(raw)) return null;
+    const lvl = Math.round(raw);
+    if (lvl < 1 || lvl > 200) return null;
+    return lvl;
+  }
+
+  function sanitizeJsonPayload(raw, maxLen) {
+    if (raw == null) return null;
+    if (typeof raw !== "object") return null;
+    try {
+      const json = JSON.stringify(raw);
+      if (Number.isInteger(maxLen) && json.length > maxLen) return null;
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  function sanitizeEquipment(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const slots = [
+      "head",
+      "cape",
+      "amulet",
+      "weapon",
+      "ring1",
+      "ring2",
+      "belt",
+      "boots",
+    ];
+    const cleaned = {};
+    for (const slot of slots) {
+      const entry = raw[slot];
+      if (!entry || typeof entry !== "object") {
+        cleaned[slot] = null;
+        continue;
+      }
+      const itemId = typeof entry.itemId === "string" ? entry.itemId : null;
+      cleaned[slot] = itemId ? { itemId } : null;
+    }
+    return cleaned;
+  }
+
+  function summarizeInventory(inv) {
+    if (!inv || !Array.isArray(inv.slots)) return new Map();
+    const summary = new Map();
+    inv.slots.forEach((slot) => {
+      if (!slot || typeof slot.itemId !== "string") return;
+      const qty = Number.isInteger(slot.qty) ? slot.qty : 0;
+      if (qty <= 0) return;
+      summary.set(slot.itemId, (summary.get(slot.itemId) || 0) + qty);
+    });
+    return summary;
+  }
+
+  function diffInventory(beforeInv, afterInv) {
+    const before = summarizeInventory(beforeInv);
+    const after = summarizeInventory(afterInv);
+    const deltas = [];
+    const itemIds = new Set([...before.keys(), ...after.keys()]);
+    for (const itemId of itemIds) {
+      const delta = (after.get(itemId) || 0) - (before.get(itemId) || 0);
+      if (delta !== 0) {
+        deltas.push({ itemId, delta });
+      }
+    }
+    deltas.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    return deltas;
+  }
+
+  function logAntiDup(entry) {
+    if (!entry) return;
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const logPath = path.resolve(__dirname, "..", "data", "anti_dup.log");
+      const line = `${JSON.stringify(entry)}\n`;
+      fs.appendFile(logPath, line, "utf8", () => {});
+    } catch {
+      // ignore logging errors
+    }
+  }
+
+  function getItemDef(itemId) {
+    if (!itemDefs || !itemId) return null;
+    return itemDefs[itemId] || null;
+  }
+
+  function ensurePlayerInventory(player) {
+    if (player.inventory && Array.isArray(player.inventory.slots)) {
+      return normalizeInventory(player.inventory, player);
+    }
+    const size = 50;
+    player.inventory = {
+      size,
+      slots: new Array(size).fill(null),
+      autoGrow: { enabled: true, minEmptySlots: 10, growBy: 5 },
+    };
+    return normalizeInventory(player.inventory, player);
+  }
+
+  function normalizeInventory(inv, player) {
+    if (!inv || !Array.isArray(inv.slots)) return inv;
+    let size = Number.isInteger(inv.size) ? inv.size : inv.slots.length;
+    if (!Number.isInteger(size) || size <= 0) size = inv.slots.length || 50;
+    if (size > MAX_INV_SIZE) {
+      size = MAX_INV_SIZE;
+    }
+    inv.size = size;
+    if (inv.slots.length > size) {
+      inv.slots = inv.slots.slice(0, size);
+    }
+    while (inv.slots.length < size) inv.slots.push(null);
+    inv.slots = inv.slots.map((slot) => {
+      if (!slot || typeof slot !== "object") return null;
+      const itemId = typeof slot.itemId === "string" ? slot.itemId : null;
+      const qty =
+        Number.isInteger(slot.qty) && slot.qty > 0 ? Math.min(slot.qty, 9999) : null;
+      if (!itemId || qty === null) return null;
+      return { itemId, qty };
+    });
+    return inv;
+  }
+
+  function countEmptySlots(inv) {
+    if (!inv || !Array.isArray(inv.slots)) return 0;
+    let empty = 0;
+    for (let i = 0; i < inv.size; i += 1) {
+      if (!inv.slots[i]) empty += 1;
+    }
+    return empty;
+  }
+
+  function maybeAutoGrow(inv) {
+    const cfg = inv?.autoGrow;
+    if (!cfg || cfg.enabled !== true) return;
+    const minEmptySlots =
+      Number.isFinite(cfg.minEmptySlots) && cfg.minEmptySlots >= 0
+        ? cfg.minEmptySlots
+        : 0;
+    const growBy = Number.isFinite(cfg.growBy) && cfg.growBy > 0 ? cfg.growBy : 0;
+    if (growBy <= 0) return;
+    let empty = countEmptySlots(inv);
+    while (empty < minEmptySlots) {
+      inv.size += growBy;
+      for (let i = 0; i < growBy; i += 1) inv.slots.push(null);
+      empty += growBy;
+    }
+  }
+
+  function findStackSlot(inv, itemId, maxStack) {
+    for (let i = 0; i < inv.size; i += 1) {
+      const slot = inv.slots[i];
+      if (slot && slot.itemId === itemId && slot.qty < maxStack) return i;
+    }
+    return -1;
+  }
+
+  function findEmptySlot(inv) {
+    for (let i = 0; i < inv.size; i += 1) {
+      if (!inv.slots[i]) return i;
+    }
+    return -1;
+  }
+
+  function addItemToInventory(inv, itemId, qty) {
+    if (!inv || !itemId || qty <= 0) return 0;
+    const def = getItemDef(itemId);
+    const stackable = def?.stackable !== false;
+    const maxStack =
+      stackable && Number.isFinite(def?.maxStack) ? Math.max(1, def.maxStack) : 1;
+
+    let remaining = qty;
+    maybeAutoGrow(inv);
+    const maxIterations =
+      Math.max(1, Number.isInteger(inv.size) ? inv.size : 1) + remaining + 50;
+    let iterations = 0;
+
+    while (remaining > 0) {
+      iterations += 1;
+      if (iterations > maxIterations) {
+        break;
+      }
+      let slotIndex = stackable ? findStackSlot(inv, itemId, maxStack) : -1;
+      if (slotIndex === -1) {
+        slotIndex = findEmptySlot(inv);
+        if (slotIndex === -1) {
+          maybeAutoGrow(inv);
+          slotIndex = findEmptySlot(inv);
+          if (slotIndex === -1) break;
+        }
+        inv.slots[slotIndex] = { itemId, qty: 0 };
+      }
+
+      const slot = inv.slots[slotIndex];
+      if (!Number.isFinite(slot.qty)) slot.qty = 0;
+      const space = Math.max(0, maxStack - slot.qty);
+      const addNow = stackable ? Math.min(space, remaining) : 1;
+      if (!Number.isFinite(addNow) || addNow <= 0) {
+        break;
+      }
+      slot.qty += addNow;
+      remaining -= addNow;
+      if (!stackable) {
+        // non-stackable: move to next slot each time
+        continue;
+      }
+    }
+
+    return qty - remaining;
+  }
+
+  function removeItemFromInventory(inv, itemId, qty) {
+    if (!inv || !itemId || qty <= 0) return 0;
+    let remaining = qty;
+    let removed = 0;
+    for (let i = 0; i < inv.size && remaining > 0; i += 1) {
+      const slot = inv.slots[i];
+      if (!slot || slot.itemId !== itemId) continue;
+      const take = Math.min(slot.qty, remaining);
+      slot.qty -= take;
+      remaining -= take;
+      removed += take;
+      if (slot.qty <= 0) {
+        inv.slots[i] = null;
+      }
+    }
+    return removed;
+  }
+
+  function sendPlayerSync(ws, player, reason) {
+    if (!ws || !player) return;
+    send(ws, {
+      t: "EvPlayerSync",
+      eventId: getNextEventId(),
+      playerId: player.id,
+      reason: reason || null,
+      inventory: player.inventory || null,
+      gold: Number.isFinite(player.gold) ? player.gold : 0,
+      honorPoints: Number.isFinite(player.honorPoints) ? player.honorPoints : 0,
+      equipment: player.equipment || null,
+      levelState: player.levelState || null,
+      baseStats: player.baseStats || null,
+      hp: Number.isFinite(player.hp) ? player.hp : null,
+      hpMax: Number.isFinite(player.hpMax) ? player.hpMax : null,
+    });
+  }
+
+  function sanitizeBaseStats(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const allowed = new Set([
+      "force",
+      "intelligence",
+      "agilite",
+      "chance",
+      "tacle",
+      "fuite",
+      "pods",
+      "dommagesCrit",
+      "soins",
+      "resistanceFixeTerre",
+      "resistanceFixeFeu",
+      "resistanceFixeAir",
+      "resistanceFixeEau",
+      "prospection",
+      "critChancePct",
+      "puissance",
+      "vitalite",
+      "initiative",
+      "sagesse",
+      "hpMax",
+      "hp",
+      "pa",
+      "pm",
+      "pushDamage",
+      "dommage",
+      "dommageFeu",
+      "dommageEau",
+      "dommageAir",
+      "dommageTerre",
+      "baseTacle",
+      "baseFuite",
+      "basePods",
+      "baseDommagesCrit",
+      "baseSoins",
+      "baseResistanceFixeTerre",
+      "baseResistanceFixeFeu",
+      "baseResistanceFixeAir",
+      "baseResistanceFixeEau",
+      "baseProspection",
+      "baseCritChancePct",
+    ]);
+    const cleaned = {};
+    let count = 0;
+    for (const [key, value] of Object.entries(raw)) {
+      if (!allowed.has(key)) continue;
+      if (!Number.isFinite(value)) continue;
+      cleaned[key] = Math.round(value);
+      count += 1;
+      if (count > 64) break;
+    }
+    return count > 0 ? cleaned : null;
+  }
+
   function handleHello(ws, msg) {
     const protoOk = msg.protocolVersion === PROTOCOL_VERSION;
     const dataOk = msg.dataHash === GAME_DATA_VERSION;
@@ -169,6 +526,7 @@ function createPlayerHandlers(ctx) {
 
     const sessionToken =
       typeof msg.sessionToken === "string" ? msg.sessionToken : null;
+    const inventoryAuthority = msg.inventoryAuthority === true;
     const accountName =
       typeof msg.accountName === "string" ? msg.accountName : null;
     const accountPassword =
@@ -304,6 +662,8 @@ function createPlayerHandlers(ctx) {
         lastCmdId: 0,
         ready: true,
         lastAckEventId: 0,
+        accountId: existingPlayer.accountId || accountId || null,
+        inventoryAuthority,
       });
 
       if (!getHostId()) {
@@ -417,13 +777,30 @@ function createPlayerHandlers(ctx) {
       : null;
     player.inventory = character.inventory || null;
     player.gold = Number.isFinite(character.gold) ? character.gold : player.gold;
+    player.honorPoints = Number.isFinite(character.honorPoints)
+      ? character.honorPoints
+      : player.honorPoints;
+    player.levelState = character.levelState || null;
+    player.equipment = character.equipment || null;
+    player.trash = character.trash || null;
+    player.quests = character.quests || null;
+    player.achievements = character.achievements || null;
+    player.metiers = character.metiers || null;
+    player.spellParchments = character.spellParchments || null;
     player.mapId = character.mapId || state.mapId;
     if (Number.isFinite(character.posX) && Number.isFinite(character.posY)) {
       player.x = character.posX;
       player.y = character.posY;
     }
     state.players[playerId] = player;
-    clients.set(ws, { id: playerId, lastCmdId: 0, ready: true, lastAckEventId: 0 });
+    clients.set(ws, {
+      id: playerId,
+      lastCmdId: 0,
+      ready: true,
+      lastAckEventId: 0,
+      accountId: player.accountId || accountId || null,
+      inventoryAuthority,
+    });
 
     if (!getHostId()) {
       setHostId(playerId);
@@ -473,19 +850,67 @@ function createPlayerHandlers(ctx) {
 
     const player = state.players[clientInfo.id];
     if (!player) return;
-    if (player.inCombat) return;
     const seq = Number.isInteger(msg.seq) ? msg.seq : 0;
-    if (seq <= (player.lastMoveSeq || 0)) return;
+    const mapId = player.mapId;
+    if (msg?.debug === true) {
+      // eslint-disable-next-line no-console
+      console.log("[LAN] CmdMove", {
+        playerId: player.id,
+        mapId,
+        seq,
+        fromX: msg.fromX,
+        fromY: msg.fromY,
+        toX: msg.toX,
+        toY: msg.toY,
+      });
+    }
+    const sendMoveCorrection = (reason, details) => {
+      broadcast({
+        t: "EvMoveStart",
+        seq,
+        playerId: player.id,
+        mapId,
+        fromX: Number.isInteger(player.x) ? player.x : 0,
+        fromY: Number.isInteger(player.y) ? player.y : 0,
+        toX: Number.isInteger(player.x) ? player.x : 0,
+        toY: Number.isInteger(player.y) ? player.y : 0,
+        path: [],
+        rejected: true,
+        reason,
+        ...(details || null),
+      });
+    };
+
+    if (player.inCombat) {
+      sendMoveCorrection("in_combat");
+      return;
+    }
+    if (seq <= (player.lastMoveSeq || 0)) {
+      if (msg?.debug === true) {
+        // eslint-disable-next-line no-console
+        console.log("[LAN] CmdMove drop (seq)", {
+          playerId: player.id,
+          mapId,
+          seq,
+          lastMoveSeq: player.lastMoveSeq || 0,
+        });
+      }
+      sendMoveCorrection("seq_out_of_order", {
+        serverLastMoveSeq: player.lastMoveSeq || 0,
+        clientSeq: seq,
+      });
+      return;
+    }
     player.lastMoveSeq = seq;
     player.lastMoveAt = 0;
 
-    const mapId = player.mapId;
     const meta = mapId ? state.mapMeta[mapId] : null;
     const blocked = mapId ? state.mapCollisions?.[mapId] : null;
     if (!meta || !Number.isInteger(meta.width) || !Number.isInteger(meta.height)) {
       if (typeof ensureMapInitialized === "function" && mapId) {
         ensureMapInitialized(mapId);
       }
+      sendMoveCorrection("map_not_ready");
       return;
     }
 
@@ -512,27 +937,10 @@ function createPlayerHandlers(ctx) {
       }
     }
 
-    let prevX = Number.isInteger(player.x) ? player.x : null;
-    let prevY = Number.isInteger(player.y) ? player.y : null;
-    if (prevX === null || prevY === null) return;
-    let invalid = false;
-    const sendMoveCorrection = () => {
-      broadcast({
-        t: "EvMoveStart",
-        seq,
-        playerId: player.id,
-        mapId,
-        fromX: player.x,
-        fromY: player.y,
-        toX: player.x,
-        toY: player.y,
-        path: [],
-        rejected: true,
-      });
-    };
-
-    if (invalid) {
-      sendMoveCorrection();
+    const prevX = Number.isInteger(player.x) ? player.x : null;
+    const prevY = Number.isInteger(player.y) ? player.y : null;
+    if (prevX === null || prevY === null) {
+      sendMoveCorrection("invalid_position");
       return;
     }
 
@@ -545,10 +953,11 @@ function createPlayerHandlers(ctx) {
       targetX >= meta.width ||
       targetY >= meta.height
     ) {
+      sendMoveCorrection("out_of_bounds");
       return;
     }
     if (blocked && blocked.has(`${targetX},${targetY}`)) {
-      sendMoveCorrection();
+      sendMoveCorrection("blocked_target");
       return;
     }
 
@@ -563,13 +972,13 @@ function createPlayerHandlers(ctx) {
       MAX_PATH_STEPS
     );
     if (!serverPath) {
-      sendMoveCorrection();
+      sendMoveCorrection("no_path");
       return;
     }
 
     const lastMoveAt = Number.isFinite(player.lastMoveAt) ? player.lastMoveAt : 0;
     if (lastMoveAt && now - lastMoveAt < MIN_MOVE_MS) {
-      sendMoveCorrection();
+      sendMoveCorrection("rate_limited");
       return;
     }
 
@@ -648,6 +1057,193 @@ function createPlayerHandlers(ctx) {
     });
   }
 
+  function handleCmdPlayerSync(clientInfo, msg) {
+    if (clientInfo.id !== msg.playerId) return;
+    const player = state.players[clientInfo.id];
+    if (!player) return;
+
+    const beforeInventory = player.inventory || null;
+    const beforeGold = Number.isFinite(player.gold) ? player.gold : 0;
+    const allowInventorySync = clientInfo.inventoryAuthority !== true;
+
+    if (allowInventorySync) {
+      const inventory = sanitizeInventorySnapshot(msg.inventory);
+      if (inventory) {
+        player.inventory = inventory;
+      }
+      if (Number.isFinite(msg.gold)) {
+        player.gold = Math.max(0, Math.round(msg.gold));
+      }
+    }
+    if (Number.isFinite(msg.honorPoints)) {
+      player.honorPoints = Math.max(0, Math.round(msg.honorPoints));
+    }
+
+    const level = sanitizeLevel(msg.level);
+    if (level !== null) {
+      player.level = level;
+    }
+
+    const baseStats = sanitizeBaseStats(msg.baseStats);
+    if (baseStats) {
+      player.baseStats = baseStats;
+      if (typeof computeFinalStats === "function") {
+        const nextStats = computeFinalStats(baseStats);
+        if (nextStats) {
+          player.stats = nextStats;
+          player.hpMax = Number.isFinite(nextStats.hpMax) ? nextStats.hpMax : player.hpMax;
+          if (Number.isFinite(player.hp)) {
+            player.hp = Math.min(player.hp, player.hpMax);
+          } else if (Number.isFinite(nextStats.hp)) {
+            player.hp = Math.min(nextStats.hp, player.hpMax);
+          }
+        }
+      }
+    }
+
+    const levelState = sanitizeJsonPayload(msg.levelState, 50000);
+    if (levelState) {
+      player.levelState = levelState;
+    }
+
+    const equipment = sanitizeEquipment(msg.equipment);
+    if (equipment) {
+      player.equipment = equipment;
+    }
+
+    const trash = sanitizeJsonPayload(msg.trash, 20000);
+    if (trash) {
+      player.trash = trash;
+    }
+
+    const quests = sanitizeJsonPayload(msg.quests, 80000);
+    if (quests) {
+      player.quests = quests;
+    }
+
+    const achievements = sanitizeJsonPayload(msg.achievements, 60000);
+    if (achievements) {
+      player.achievements = achievements;
+    }
+
+    const metiers = sanitizeJsonPayload(msg.metiers, 60000);
+    if (metiers) {
+      player.metiers = metiers;
+    }
+
+    const spellParchments = sanitizeJsonPayload(msg.spellParchments, 20000);
+    if (spellParchments) {
+      player.spellParchments = spellParchments;
+    }
+
+    if (typeof persistPlayerState === "function") {
+      persistPlayerState(player);
+    }
+
+    const afterInventory = player.inventory || null;
+    const afterGold = Number.isFinite(player.gold) ? player.gold : 0;
+    const goldDelta = afterGold - beforeGold;
+    const itemDeltas = diffInventory(beforeInventory, afterInventory);
+    if (goldDelta !== 0 || itemDeltas.length > 0) {
+      logAntiDup({
+        ts: Date.now(),
+        reason: "CmdPlayerSync",
+        accountId: player.accountId || null,
+        characterId: player.characterId || null,
+        playerId: player.id || null,
+        mapId: player.mapId || null,
+        goldDelta,
+        itemDeltas: itemDeltas.slice(0, 20),
+      });
+    }
+  }
+
+  function handleCmdInventoryOp(ws, clientInfo, msg) {
+    if (clientInfo.id !== msg.playerId) return;
+    if (!msg || (msg.op !== "add" && msg.op !== "remove")) return;
+    const itemId = typeof msg.itemId === "string" ? msg.itemId : null;
+    const qty = Number.isInteger(msg.qty) ? msg.qty : 0;
+    if (!itemId || qty <= 0) return;
+
+    if (!itemDefs && !itemDefsFailed) {
+      if (!msg.__itemDefsWaited) {
+        msg.__itemDefsWaited = true;
+        itemDefsPromise?.then(() => handleCmdInventoryOp(ws, clientInfo, msg));
+        return;
+      }
+    }
+
+    const player = state.players[clientInfo.id];
+    if (!player) return;
+    const inv = ensurePlayerInventory(player);
+    const beforeInv = {
+      size: inv.size,
+      slots: inv.slots.map((slot) =>
+        slot && typeof slot.itemId === "string" && Number.isInteger(slot.qty)
+          ? { itemId: slot.itemId, qty: slot.qty }
+          : null
+      ),
+      autoGrow: inv.autoGrow ? { ...inv.autoGrow } : null,
+    };
+
+    let applied = 0;
+    if (msg.op === "add") {
+      if (itemDefs && !getItemDef(itemId)) return;
+      applied = addItemToInventory(inv, itemId, qty);
+    } else {
+      applied = removeItemFromInventory(inv, itemId, qty);
+    }
+    if (applied <= 0) return;
+
+    if (typeof persistPlayerState === "function") {
+      persistPlayerState(player);
+    }
+
+    const deltas = diffInventory(beforeInv, inv);
+    logAntiDup({
+      ts: Date.now(),
+      reason: msg.reason || "CmdInventoryOp",
+      accountId: player.accountId || null,
+      characterId: player.characterId || null,
+      playerId: player.id || null,
+      mapId: player.mapId || null,
+      op: msg.op,
+      itemId,
+      qty: applied,
+      itemDeltas: deltas.slice(0, 20),
+    });
+
+    sendPlayerSync(ws, player, "inventory");
+  }
+
+  function handleCmdGoldOp(ws, clientInfo, msg) {
+    if (clientInfo.id !== msg.playerId) return;
+    const delta = Number.isFinite(msg.delta) ? Math.round(msg.delta) : 0;
+    if (!delta) return;
+    const player = state.players[clientInfo.id];
+    if (!player) return;
+    const beforeGold = Number.isFinite(player.gold) ? player.gold : 0;
+    const nextGold = Math.max(0, beforeGold + delta);
+    if (nextGold === beforeGold) return;
+    player.gold = nextGold;
+
+    if (typeof persistPlayerState === "function") {
+      persistPlayerState(player);
+    }
+
+    logAntiDup({
+      ts: Date.now(),
+      reason: msg.reason || "CmdGoldOp",
+      accountId: player.accountId || null,
+      characterId: player.characterId || null,
+      playerId: player.id || null,
+      mapId: player.mapId || null,
+      goldDelta: nextGold - beforeGold,
+    });
+
+    sendPlayerSync(ws, player, "gold");
+  }
+
   function handleCmdEndTurn(clientInfo, msg) {
     if (clientInfo.id !== msg.playerId) return;
     if (state.combat.activeId !== msg.playerId) return;
@@ -672,6 +1268,9 @@ function createPlayerHandlers(ctx) {
     handleCmdEndTurn,
     handleCmdCombatResync,
     handleCmdRequestMapPlayers,
+    handleCmdPlayerSync,
+    handleCmdInventoryOp,
+    handleCmdGoldOp,
   };
 }
 

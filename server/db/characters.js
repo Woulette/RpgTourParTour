@@ -25,6 +25,7 @@ function createCharacterStore({ dataDir } = {}) {
       class_id TEXT,
       level INTEGER,
       base_stats TEXT,
+      level_state TEXT,
       map_id TEXT,
       pos_x INTEGER,
       pos_y INTEGER,
@@ -34,6 +35,13 @@ function createCharacterStore({ dataDir } = {}) {
       captured_monster_level INTEGER,
       inventory TEXT,
       gold INTEGER,
+      honor_points INTEGER,
+      equipment TEXT,
+      trash TEXT,
+      quests TEXT,
+      achievements TEXT,
+      metiers TEXT,
+      spell_parchments TEXT,
       created_at INTEGER,
       updated_at INTEGER
     );
@@ -55,28 +63,40 @@ function createCharacterStore({ dataDir } = {}) {
   ensureColumn("captured_monster_level", "INTEGER");
   ensureColumn("inventory", "TEXT");
   ensureColumn("gold", "INTEGER");
+  ensureColumn("level_state", "TEXT");
+  ensureColumn("honor_points", "INTEGER");
+  ensureColumn("equipment", "TEXT");
+  ensureColumn("trash", "TEXT");
+  ensureColumn("quests", "TEXT");
+  ensureColumn("achievements", "TEXT");
+  ensureColumn("metiers", "TEXT");
+  ensureColumn("spell_parchments", "TEXT");
 
   const selectStmt = db.prepare(
-    `SELECT character_id, account_id, name, class_id, level, base_stats,
+    `SELECT character_id, account_id, name, class_id, level, base_stats, level_state,
             map_id, pos_x, pos_y, hp, hp_max,
-            captured_monster_id, captured_monster_level, inventory, gold
+            captured_monster_id, captured_monster_level, inventory, gold, honor_points,
+            equipment, trash, quests, achievements, metiers, spell_parchments
      FROM characters WHERE character_id = ?`
   );
   const selectByNameStmt = db.prepare(
-    `SELECT character_id, account_id, name, class_id, level, base_stats,
+    `SELECT character_id, account_id, name, class_id, level, base_stats, level_state,
             map_id, pos_x, pos_y, hp, hp_max,
-            captured_monster_id, captured_monster_level, inventory, gold
+            captured_monster_id, captured_monster_level, inventory, gold, honor_points,
+            equipment, trash, quests, achievements, metiers, spell_parchments
      FROM characters WHERE lower(name) = ?`
   );
   const insertStmt = db.prepare(`
     INSERT INTO characters
-      (character_id, account_id, name, class_id, level, base_stats,
+      (character_id, account_id, name, class_id, level, base_stats, level_state,
        map_id, pos_x, pos_y, hp, hp_max, captured_monster_id, captured_monster_level,
-       inventory, gold, created_at, updated_at)
+       inventory, gold, honor_points, equipment, trash, quests, achievements, metiers,
+       spell_parchments, created_at, updated_at)
     VALUES
-      (@characterId, @accountId, @name, @classId, @level, @baseStats,
+      (@characterId, @accountId, @name, @classId, @level, @baseStats, @levelState,
        @mapId, @posX, @posY, @hp, @hpMax, @capturedMonsterId, @capturedMonsterLevel,
-       @inventory, @gold, @createdAt, @updatedAt)
+       @inventory, @gold, @honorPoints, @equipment, @trash, @quests, @achievements, @metiers,
+       @spellParchments, @createdAt, @updatedAt)
   `);
   const updateStmt = db.prepare(`
     UPDATE characters
@@ -85,6 +105,7 @@ function createCharacterStore({ dataDir } = {}) {
         class_id = @classId,
         level = @level,
         base_stats = @baseStats,
+        level_state = @levelState,
         map_id = @mapId,
         pos_x = @posX,
         pos_y = @posY,
@@ -94,6 +115,13 @@ function createCharacterStore({ dataDir } = {}) {
         captured_monster_level = @capturedMonsterLevel,
         inventory = @inventory,
         gold = @gold,
+        honor_points = @honorPoints,
+        equipment = @equipment,
+        trash = @trash,
+        quests = @quests,
+        achievements = @achievements,
+        metiers = @metiers,
+        spell_parchments = @spellParchments,
         updated_at = @updatedAt
     WHERE character_id = @characterId
   `);
@@ -109,6 +137,7 @@ function createCharacterStore({ dataDir } = {}) {
       classId: row.class_id || "archer",
       level: Number.isInteger(row.level) ? row.level : 1,
       baseStats: row.base_stats ? JSON.parse(row.base_stats) : null,
+      levelState: row.level_state ? JSON.parse(row.level_state) : null,
       mapId: row.map_id || null,
       posX: Number.isFinite(row.pos_x) ? row.pos_x : null,
       posY: Number.isFinite(row.pos_y) ? row.pos_y : null,
@@ -120,6 +149,13 @@ function createCharacterStore({ dataDir } = {}) {
         : null,
       inventory: row.inventory ? JSON.parse(row.inventory) : null,
       gold: Number.isFinite(row.gold) ? row.gold : null,
+      honorPoints: Number.isFinite(row.honor_points) ? row.honor_points : null,
+      equipment: row.equipment ? JSON.parse(row.equipment) : null,
+      trash: row.trash ? JSON.parse(row.trash) : null,
+      quests: row.quests ? JSON.parse(row.quests) : null,
+      achievements: row.achievements ? JSON.parse(row.achievements) : null,
+      metiers: row.metiers ? JSON.parse(row.metiers) : null,
+      spellParchments: row.spell_parchments ? JSON.parse(row.spell_parchments) : null,
     };
   };
 
@@ -135,6 +171,7 @@ function createCharacterStore({ dataDir } = {}) {
       classId: row.class_id || "archer",
       level: Number.isInteger(row.level) ? row.level : 1,
       baseStats: row.base_stats ? JSON.parse(row.base_stats) : null,
+      levelState: row.level_state ? JSON.parse(row.level_state) : null,
       mapId: row.map_id || null,
       posX: Number.isFinite(row.pos_x) ? row.pos_x : null,
       posY: Number.isFinite(row.pos_y) ? row.pos_y : null,
@@ -146,8 +183,23 @@ function createCharacterStore({ dataDir } = {}) {
         : null,
       inventory: row.inventory ? JSON.parse(row.inventory) : null,
       gold: Number.isFinite(row.gold) ? row.gold : null,
+      honorPoints: Number.isFinite(row.honor_points) ? row.honor_points : null,
+      equipment: row.equipment ? JSON.parse(row.equipment) : null,
+      trash: row.trash ? JSON.parse(row.trash) : null,
+      quests: row.quests ? JSON.parse(row.quests) : null,
+      achievements: row.achievements ? JSON.parse(row.achievements) : null,
+      metiers: row.metiers ? JSON.parse(row.metiers) : null,
+      spellParchments: row.spell_parchments ? JSON.parse(row.spell_parchments) : null,
     };
   };
+
+  const upsertTxn = db.transaction((payload, exists) => {
+    if (!exists) {
+      insertStmt.run(payload);
+    } else {
+      updateStmt.run(payload);
+    }
+  });
 
   const upsertCharacter = (entry) => {
     if (!entry || !entry.characterId) return null;
@@ -159,6 +211,7 @@ function createCharacterStore({ dataDir } = {}) {
       classId: entry.classId || "archer",
       level: Number.isInteger(entry.level) ? entry.level : 1,
       baseStats: entry.baseStats ? JSON.stringify(entry.baseStats) : null,
+      levelState: entry.levelState ? JSON.stringify(entry.levelState) : null,
       mapId: entry.mapId || null,
       posX: Number.isFinite(entry.posX) ? entry.posX : null,
       posY: Number.isFinite(entry.posY) ? entry.posY : null,
@@ -170,15 +223,22 @@ function createCharacterStore({ dataDir } = {}) {
         : null,
       inventory: entry.inventory ? JSON.stringify(entry.inventory) : null,
       gold: Number.isFinite(entry.gold) ? Math.round(entry.gold) : null,
+      honorPoints: Number.isFinite(entry.honorPoints)
+        ? Math.round(entry.honorPoints)
+        : null,
+      equipment: entry.equipment ? JSON.stringify(entry.equipment) : null,
+      trash: entry.trash ? JSON.stringify(entry.trash) : null,
+      quests: entry.quests ? JSON.stringify(entry.quests) : null,
+      achievements: entry.achievements ? JSON.stringify(entry.achievements) : null,
+      metiers: entry.metiers ? JSON.stringify(entry.metiers) : null,
+      spellParchments: entry.spellParchments
+        ? JSON.stringify(entry.spellParchments)
+        : null,
       createdAt: now,
       updatedAt: now,
     };
     const existing = getCharacter(entry.characterId);
-    if (!existing) {
-      insertStmt.run(payload);
-    } else {
-      updateStmt.run(payload);
-    }
+    upsertTxn(payload, !!existing);
     return getCharacter(entry.characterId);
   };
 

@@ -8,6 +8,7 @@ import { createResourceHandlers } from "./resources.js";
 import { createCombatUiHandlers } from "./ui.js";
 import { createLanRouter } from "./router.js";
 import { createLanBootHandlers } from "./boot.js";
+import { createLanPersistenceHandlers } from "./persistence.js";
 
 export function initLanRuntime(scene, player, map, groundLayer) {
   const remotePlayers = new Map();
@@ -115,6 +116,7 @@ export function initLanRuntime(scene, player, map, groundLayer) {
   });
 
   boot.initialSync();
+  createLanPersistenceHandlers(player);
 
   const router = createLanRouter({
     scene,

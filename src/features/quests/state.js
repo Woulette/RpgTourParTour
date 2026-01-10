@@ -4,6 +4,7 @@ import { emit as emitStoreEvent } from "../../state/store.js";
 import { addXpToPlayer } from "../../entities/player.js";
 import { addChatMessage } from "../../chat/chat.js";
 import { items as itemDefs } from "../inventory/data/itemsConfig.js";
+import { adjustGold } from "../inventory/runtime/goldAuthority.js";
 
 function ensureQuestContainer(player) {
   if (!player.quests) {
@@ -411,11 +412,8 @@ export function completeQuest(scene, player, questId) {
     addXpToPlayer(player, xp);
   }
 
-  if (!player.gold) {
-    player.gold = 0;
-  }
   if (gold > 0) {
-    player.gold += gold;
+    adjustGold(player, gold, "quest_reward");
   }
 
   const rewardParts = [];

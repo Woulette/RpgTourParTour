@@ -1,4 +1,8 @@
-import { getItemDef, addItemToLastSlot } from "../runtime/inventoryCore.js";
+import {
+  getItemDef,
+  addItemToLastSlot,
+  removeItem,
+} from "../runtime/inventoryAuthority.js";
 import {
   addItemToTrash,
   canAddItemToTrash,
@@ -100,8 +104,7 @@ function renderInventoryGrid(player) {
         if (!canAddItemToTrash(trash, slot.itemId, slot.qty ?? 1)) {
           return;
         }
-        inv.slots[i] = null;
-        emitStoreEvent("inventory:updated", { container: inv });
+        removeItem(inv, slot.itemId, slot.qty ?? 1);
         addItemToTrash(trash, slot.itemId, slot.qty ?? 1);
         renderTrashGrid(player);
         renderInventoryGrid(player);

@@ -23,7 +23,12 @@ export function createLanClient({
   const client = {
     sendCmd(type, payload = {}) {
       cmdId += 1;
-      sendRaw({ t: type, cmdId, ...payload });
+      sendRaw({
+        t: type,
+        cmdId,
+        sessionToken: account?.sessionToken || null,
+        ...payload,
+      });
     },
     close() {
       ws.close();
@@ -32,6 +37,7 @@ export function createLanClient({
   client.__ws = ws;
   if (typeof window !== "undefined") {
     window.__lanClient = client;
+    window.__lanInventoryAuthority = true;
   }
 
   ws.addEventListener("open", () => {
@@ -43,6 +49,7 @@ export function createLanClient({
       accountName: account?.name || null,
       accountPassword: account?.password || null,
       authMode,
+      inventoryAuthority: true,
       characterId: character?.id || null,
       characterName: character?.name || null,
       classId: character?.classId || null,

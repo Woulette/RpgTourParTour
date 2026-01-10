@@ -4,6 +4,10 @@ import { attachMonsterTooltip } from "../../features/ui/monsterTooltip.js";
 import { attachCombatTileHover } from "../../features/ui/combatTileHover.js";
 
 export function setupSceneInput(scene, hudY, map, groundLayer) {
+  scene.__moveInputConfig = { hudY, map, groundLayer };
+  scene.__rebindMoveInput = () =>
+    enableClickToMove(scene, scene.player, hudY, map, groundLayer);
+
   enableClickToMove(scene, scene.player, hudY, map, groundLayer);
 
   attachCombatPreview(scene);

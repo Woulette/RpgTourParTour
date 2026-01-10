@@ -1,4 +1,4 @@
-import { addItem } from "../../../inventory/runtime/inventoryCore.js";
+import { addItem } from "../../../inventory/runtime/inventoryAuthority.js";
 import { clampNonNegativeFinite, getJobLevel, hasItem } from "./utils.js";
 
 export function applyLootToPlayerInventory(player, loot) {

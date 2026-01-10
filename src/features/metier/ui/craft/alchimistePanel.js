@@ -1,6 +1,6 @@
 import { ensureAlchimisteState, addAlchimisteXp } from "../../alchimiste/state.js";
 import { alchimieRecipes, alchimieFusionRecipes } from "../../alchimiste/recipes.js";
-import { removeItem, addItem, getItemDef } from "../../../inventory/runtime/inventoryCore.js";
+import { removeItem, addItem, getItemDef } from "../../../inventory/runtime/inventoryAuthority.js";
 import { emit as emitStoreEvent } from "../../../state/store.js";
 
 let panelEl = null;

@@ -1,4 +1,4 @@
-import { openNpcDialog } from "../../ui/domNpcDialog.js";
+import { forceCloseNpcDialog, openNpcDialog } from "../../ui/domNpcDialog.js";
 import {
   getQuestContextForNpc,
   getOfferableQuestsForNpc,
@@ -15,14 +15,47 @@ import {
   tryTurnInStage,
   getTurnInNpcId,
 } from "../../quests/runtime/objectives.js";
-import { removeItem } from "../../inventory/runtime/inventoryCore.js";
+import { removeItem } from "../../inventory/runtime/inventoryAuthority.js";
 import { enterDungeon } from "../../../features/dungeons/runtime.js";
 import { addChatMessage } from "../../../chat/chat.js";
 import { startPrep } from "../../combat/runtime/prep.js";
 import { createMonster } from "../../../entities/monster.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
+import { isUiBlockingOpen } from "../../ui/uiBlock.js";
 
 const DUNGEON_KEY_ITEM_ID = "clef_aluineeks";
+
+function logQuestDebug(...args) {
+  if (typeof window === "undefined") return;
+  if (window.__lanDebugQuest !== true) return;
+  // eslint-disable-next-line no-console
+  console.log("[QuestDebug]", ...args);
+}
+
+function resetUiAfterQuest(scene) {
+  try {
+    forceCloseNpcDialog();
+  } catch {
+    // ignore close errors
+  }
+  if (typeof window !== "undefined") {
+    window.__uiPointerBlock = false;
+  }
+  if (scene?.input) {
+    scene.input.enabled = true;
+    if (scene.input.manager) {
+      scene.input.manager.enabled = true;
+    }
+  }
+  if (typeof document !== "undefined") {
+    const blocker = document.getElementById("ui-input-blocker");
+    const shouldBlock = isUiBlockingOpen();
+    document.body.classList.toggle("ui-blocking-open", shouldBlock);
+    if (blocker) {
+      blocker.setAttribute("aria-hidden", shouldBlock ? "false" : "true");
+    }
+  }
+}
 
 function openDialogSequence(npc, player, screens, onDone) {
   const list = Array.isArray(screens) ? screens : [];
@@ -273,6 +306,13 @@ export function startNpcDialogFlow(scene, player, npc) {
 
   if (questContext) {
     const { quest, state, stage, offerable, turnInReady } = questContext;
+    logQuestDebug("npc", npc.id, "questContext", {
+      questId: quest?.id || null,
+      state: state?.state || null,
+      stageId: stage?.id || null,
+      offerable,
+      turnInReady,
+    });
 
     const objectiveType = stage?.objective?.type;
     const dialogState =
@@ -463,12 +503,25 @@ export function startNpcDialogFlow(scene, player, npc) {
             return;
           }
         }
+        logQuestDebug("turnIn", quest.id, stage?.id, "before");
         const result = tryTurnInStage(scene, player, quest.id, quest, state, stage);
+        logQuestDebug("turnIn", quest.id, stage?.id, "result", result);
         if (!result.ok) return;
         advanceQuestStage(player, quest.id, { scene });
+        logQuestDebug("advanceQuestStage", quest.id, stage?.id, "after");
+        if (quest.id === "andemia_intro_2" && stage?.id === "bring_corbeau_parts") {
+          resetUiAfterQuest(scene);
+          if (scene && typeof scene.__rebindMoveInput === "function") {
+            scene.__rebindMoveInput();
+          }
+        }
 
         const nextState = getQuestState(player, quest.id, { emit: false });
         const nextStage = getCurrentQuestStage(quest, nextState);
+        logQuestDebug("nextStage", quest.id, {
+          state: nextState?.state || null,
+          stageId: nextStage?.id || null,
+        });
         if (
           quest.id === "keeper_north_explosion_1" &&
           stage?.id === "return_to_maire_north" &&
@@ -477,6 +530,7 @@ export function startNpcDialogFlow(scene, player, npc) {
           spawnOmbreTitan(scene, npc, player);
         }
         const offersAfter = getOfferableQuestsForNpc(player, npc.id);
+        logQuestDebug("offersAfter", quest.id, offersAfter.map((o) => o.id));
         if (
           nextState.state === QUEST_STATES.IN_PROGRESS &&
           nextStage &&
