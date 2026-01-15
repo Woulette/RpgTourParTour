@@ -92,7 +92,9 @@ export function initCharacterMenus({ onStartGame }) {
     typeof window !== "undefined" && window.location
       ? window.location.hostname
       : "localhost";
-  const defaultUrl = `ws://${host}:8080`;
+  const defaultUrl = host.includes("onrender.com")
+    ? `wss://${host}`
+    : `ws://${host}:8080`;
   const SERVERS = [
     {
       id: "local",

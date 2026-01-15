@@ -32,7 +32,9 @@ export function createLanHelpers({
       typeof window !== "undefined" && window.location
         ? window.location.hostname
         : "localhost";
-    const defaultUrl = `ws://${host}:8080`;
+    const defaultUrl = host.includes("onrender.com")
+      ? `wss://${host}`
+      : `ws://${host}:8080`;
     const serverUrl =
       url || (typeof getServerUrl === "function" ? getServerUrl() : null) || defaultUrl;
     if (!serverUrl) {
