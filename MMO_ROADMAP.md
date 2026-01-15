@@ -24,6 +24,7 @@
 
 ## Phase 4 - MMO production
 - Optim perf reseau (delta snapshots, compression)
+- Deploiement online (hebergement, DNS/SSL, ports, config prod)
 - Migration/patching data live
 - Equilibrage, economie, taxations, sinks
 - Scalabilite horizontale (redis/pubsub)

@@ -88,11 +88,16 @@ export function initCharacterMenus({ onStartGame }) {
 
   const CLASS_ORDER = ["archer", "tank", "mage", "eryon"];
   const CAROUSEL_ORDER = ["archer", "tank", "mage", "eryon"];
+  const host =
+    typeof window !== "undefined" && window.location
+      ? window.location.hostname
+      : "localhost";
+  const defaultUrl = `ws://${host}:8080`;
   const SERVERS = [
     {
       id: "local",
       name: "Primorce",
-      url: "ws://localhost:8080",
+      url: defaultUrl,
       status: "online",
       ping: 12,
       population: "Faible",

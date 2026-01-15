@@ -28,7 +28,13 @@ export function createLanHelpers({
   }
 
   function connectLan(account, { authMode, url } = {}) {
-    const serverUrl = url || (typeof getServerUrl === "function" ? getServerUrl() : null) || "ws://localhost:8080";
+    const host =
+      typeof window !== "undefined" && window.location
+        ? window.location.hostname
+        : "localhost";
+    const defaultUrl = `ws://${host}:8080`;
+    const serverUrl =
+      url || (typeof getServerUrl === "function" ? getServerUrl() : null) || defaultUrl;
     if (!serverUrl) {
       setLanButtonLabel("Compte");
       return;
@@ -103,8 +109,8 @@ export function createLanHelpers({
           setLanConnected(false);
           setPendingStartCharacter(null);
           const reason = msg?.reason || "unknown";
-          setLoginError(authMessages[reason] || `Connexion refusee: ${reason}`);
           if (typeof onAuthRefused === "function") onAuthRefused();
+          setLoginError(authMessages[reason] || `Connexion refusee: ${reason}`);
         }
       },
       onClose: () => {
