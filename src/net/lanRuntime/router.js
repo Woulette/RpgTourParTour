@@ -9,6 +9,8 @@ import { maps } from "../../features/maps/index.js";
 import { loadMapLikeMain } from "../../features/maps/world/load.js";
 import { emit as emitStoreEvent } from "../../state/store.js";
 import { addChatMessage } from "../../chat/chat.js";
+import { openFriendInvite } from "../../features/ui/domFriendInvite.js";
+import { showToast } from "../../features/ui/domToasts.js";
 
 export function createLanRouter(ctx) {
   const {
@@ -475,7 +477,10 @@ export function createLanRouter(ctx) {
     if (msg.t === "EvPlayerSync") {
       const playerId = getNetPlayerId();
       if (Number.isInteger(msg.playerId) && playerId === msg.playerId) {
-        applyServerPlayerSnapshot(msg);
+        const shouldIgnoreEquipment =
+          msg.reason === "inventory" || msg.reason === "inventory_migration";
+        const snapshot = shouldIgnoreEquipment ? { ...msg, equipment: null } : msg;
+        applyServerPlayerSnapshot(snapshot);
       }
       return;
     }
@@ -560,6 +565,66 @@ export function createLanRouter(ctx) {
 
     if (msg.t === "EvGroupCombatInvite") {
       groups?.handleGroupCombatInvite?.(msg);
+      return;
+    }
+
+    if (msg.t === "EvFriendsSync") {
+      emitStoreEvent("friends:updated", {
+        friends: Array.isArray(msg.friends) ? msg.friends : [],
+        ignored: Array.isArray(msg.ignored) ? msg.ignored : [],
+      });
+      return;
+    }
+
+    if (msg.t === "EvFriendInvite") {
+      const inviterAccountId = msg.inviterAccountId || null;
+      if (!inviterAccountId) return;
+      openFriendInvite(
+        {
+          inviterAccountId,
+          inviterName: msg.inviterName || "Un joueur",
+        },
+        {
+          onAccept: (invite) => {
+            const client = getNetClient();
+            const playerId = getNetPlayerId();
+            if (!client || !playerId) return;
+            client.sendCmd("CmdFriendAccept", {
+              playerId,
+              inviterAccountId: invite.inviterAccountId,
+            });
+            showToast({ title: "Amis", text: "Demande acceptee." });
+          },
+          onDecline: (invite) => {
+            const client = getNetClient();
+            const playerId = getNetPlayerId();
+            if (!client || !playerId) return;
+            client.sendCmd("CmdFriendDecline", {
+              playerId,
+              inviterAccountId: invite.inviterAccountId,
+            });
+            showToast({ title: "Amis", text: "Demande refusee." });
+          },
+        }
+      );
+      return;
+    }
+
+    if (msg.t === "EvFriendInviteResult") {
+      const targetName = msg.targetName || "joueur";
+      if (msg.status === "accepted") {
+        showToast({ title: "Amis", text: `${targetName} a accepte.` });
+      } else if (msg.status === "declined") {
+        showToast({ title: "Amis", text: `${targetName} a refuse.` });
+      } else if (msg.status === "offline") {
+        showToast({ title: "Amis", text: `${targetName} est hors ligne.` });
+      } else if (msg.status === "blocked") {
+        showToast({ title: "Amis", text: "Demande refusee." });
+      } else if (msg.status === "already_friends") {
+        showToast({ title: "Amis", text: "Deja dans tes amis." });
+      } else if (msg.status === "not_found") {
+        showToast({ title: "Amis", text: "Joueur introuvable." });
+      }
       return;
     }
 

@@ -86,6 +86,16 @@ function createCharacterStore({ dataDir } = {}) {
             equipment, trash, quests, achievements, metiers, spell_parchments
      FROM characters WHERE lower(name) = ?`
   );
+  const selectByAccountStmt = db.prepare(
+    `SELECT character_id, account_id, name, class_id, level, base_stats, level_state,
+            map_id, pos_x, pos_y, hp, hp_max,
+            captured_monster_id, captured_monster_level, inventory, gold, honor_points,
+            equipment, trash, quests, achievements, metiers, spell_parchments
+     FROM characters
+     WHERE account_id = ?
+     ORDER BY updated_at DESC, created_at DESC
+     LIMIT 1`
+  );
   const insertStmt = db.prepare(`
     INSERT INTO characters
       (character_id, account_id, name, class_id, level, base_stats, level_state,
@@ -193,6 +203,39 @@ function createCharacterStore({ dataDir } = {}) {
     };
   };
 
+  const getCharacterByAccountId = (accountId) => {
+    if (!accountId) return null;
+    const row = selectByAccountStmt.get(accountId);
+    if (!row) return null;
+    return {
+      characterId: row.character_id,
+      accountId: row.account_id || null,
+      name: row.name || "Joueur",
+      classId: row.class_id || "archer",
+      level: Number.isInteger(row.level) ? row.level : 1,
+      baseStats: row.base_stats ? JSON.parse(row.base_stats) : null,
+      levelState: row.level_state ? JSON.parse(row.level_state) : null,
+      mapId: row.map_id || null,
+      posX: Number.isFinite(row.pos_x) ? row.pos_x : null,
+      posY: Number.isFinite(row.pos_y) ? row.pos_y : null,
+      hp: Number.isFinite(row.hp) ? row.hp : null,
+      hpMax: Number.isFinite(row.hp_max) ? row.hp_max : null,
+      capturedMonsterId: row.captured_monster_id || null,
+      capturedMonsterLevel: Number.isFinite(row.captured_monster_level)
+        ? row.captured_monster_level
+        : null,
+      inventory: row.inventory ? JSON.parse(row.inventory) : null,
+      gold: Number.isFinite(row.gold) ? row.gold : null,
+      honorPoints: Number.isFinite(row.honor_points) ? row.honor_points : null,
+      equipment: row.equipment ? JSON.parse(row.equipment) : null,
+      trash: row.trash ? JSON.parse(row.trash) : null,
+      quests: row.quests ? JSON.parse(row.quests) : null,
+      achievements: row.achievements ? JSON.parse(row.achievements) : null,
+      metiers: row.metiers ? JSON.parse(row.metiers) : null,
+      spellParchments: row.spell_parchments ? JSON.parse(row.spell_parchments) : null,
+    };
+  };
+
   const upsertTxn = db.transaction((payload, exists) => {
     if (!exists) {
       insertStmt.run(payload);
@@ -245,6 +288,7 @@ function createCharacterStore({ dataDir } = {}) {
   return {
     getCharacter,
     getCharacterByName,
+    getCharacterByAccountId,
     upsertCharacter,
     close: () => db.close(),
   };

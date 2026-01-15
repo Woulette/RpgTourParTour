@@ -47,10 +47,60 @@ export function createPlayer(scene, x, y, classId) {
   player.baseTextureKey = `${textureKey}_idle_south-east`;
   player.lastDirection = "south-east";
 
+  const showLocalHoverName = () => {
+    if (!scene || !scene.add) return;
+
+    if (!player.hoverLabel) {
+      const text = scene.add.text(0, 0, "", {
+        fontFamily: "Tahoma, Arial, sans-serif",
+        fontSize: "11px",
+        color: "#f8fafc",
+        backgroundColor: "rgba(15, 23, 32, 0.75)",
+        padding: { left: 6, right: 6, top: 2, bottom: 2 },
+      });
+      text.setOrigin(0.5, 1);
+      text.setDepth((player.depth || 0) + 2);
+      if (scene.hudCamera) {
+        scene.hudCamera.ignore(text);
+      }
+      player.hoverLabel = text;
+    }
+
+    const name = player.displayName || player.name || player.characterName || "Vous";
+    player.hoverLabel.setText(name);
+    player.hoverLabel.setVisible(true);
+
+    const update = () => {
+      if (!player || !player.hoverLabel) return;
+      const bounds = player.getBounds ? player.getBounds() : null;
+      const x = bounds ? bounds.centerX : player.x;
+      const y = bounds ? bounds.top - 6 : player.y - 32;
+      player.hoverLabel.setPosition(x, y);
+    };
+
+    update();
+    if (!player.__hoverUpdate) {
+      player.__hoverUpdate = update;
+      scene.events.on("postupdate", player.__hoverUpdate);
+    }
+  };
+
+  const hideLocalHoverName = () => {
+    if (player.__hoverUpdate) {
+      scene.events.off("postupdate", player.__hoverUpdate);
+      player.__hoverUpdate = null;
+    }
+    if (player.hoverLabel) {
+      player.hoverLabel.destroy();
+      player.hoverLabel = null;
+    }
+  };
+
   // Rend le joueur survolable (en combat) pour afficher la fiche cible.
   if (player && typeof player.setInteractive === "function") {
     player.setInteractive({ useHandCursor: false });
     player.on("pointerover", () => {
+      showLocalHoverName();
       if (
         scene?.combatState?.enCours &&
         typeof scene.showCombatTargetPanel === "function"
@@ -59,6 +109,7 @@ export function createPlayer(scene, x, y, classId) {
       }
     });
     player.on("pointerout", () => {
+      hideLocalHoverName();
       if (typeof scene?.hideCombatTargetPanel === "function") {
         scene.hideCombatTargetPanel();
       }

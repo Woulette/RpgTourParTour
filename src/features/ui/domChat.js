@@ -13,6 +13,7 @@ const CHAT_CHANNELS = [
   { id: "quest", label: "Quetes" },
   { id: "trade", label: "Commerce" },
   { id: "recruitment", label: "Recrutement" },
+  { id: "private", label: "Prive" },
 ];
 
 function formatTime(ts) {
@@ -211,6 +212,7 @@ export function initDomChat(player) {
     "/t": "total",
     "/c": "trade",
     "/r": "recruitment",
+    "/p": "private",
   };
 
   const passesFilter = (msg) => {

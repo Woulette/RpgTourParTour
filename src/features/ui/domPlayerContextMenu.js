@@ -6,6 +6,8 @@ let nameEl = null;
 let groupBtn = null;
 let tradeBtn = null;
 let messageBtn = null;
+let friendBtn = null;
+let ignoreBtn = null;
 let currentTarget = null;
 let currentTargetId = null;
 let currentScene = null;
@@ -24,6 +26,8 @@ function ensureMenu() {
         <button type="button" class="player-context-btn" data-action="group">Groupe</button>
         <button type="button" class="player-context-btn" data-action="trade">Echange</button>
         <button type="button" class="player-context-btn" data-action="message">Message</button>
+        <button type="button" class="player-context-btn" data-action="friend">Ajouter ami</button>
+        <button type="button" class="player-context-btn" data-action="ignore">Ignorer</button>
       </div>
     </div>
   `;
@@ -31,6 +35,8 @@ function ensureMenu() {
   groupBtn = menuEl.querySelector("[data-action='group']");
   tradeBtn = menuEl.querySelector("[data-action='trade']");
   messageBtn = menuEl.querySelector("[data-action='message']");
+  friendBtn = menuEl.querySelector("[data-action='friend']");
+  ignoreBtn = menuEl.querySelector("[data-action='ignore']");
 
   menuEl.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -64,6 +70,32 @@ function ensureMenu() {
     showToast({ title: "Message", text: "Bientot disponible." });
     closePlayerContextMenu();
   });
+
+  friendBtn.addEventListener("click", () => {
+    if (!currentTargetId) return;
+    const client = getNetClient();
+    const playerId = getNetPlayerId();
+    if (!client || !playerId) return;
+    client.sendCmd("CmdFriendAdd", {
+      playerId,
+      targetId: currentTargetId,
+    });
+    showToast({ title: "Ami", text: "Demande envoyee." });
+    closePlayerContextMenu();
+  });
+
+  ignoreBtn.addEventListener("click", () => {
+    if (!currentTargetId) return;
+    const client = getNetClient();
+    const playerId = getNetPlayerId();
+    if (!client || !playerId) return;
+    client.sendCmd("CmdIgnoreAdd", {
+      playerId,
+      targetId: currentTargetId,
+    });
+    showToast({ title: "Ignorer", text: "Joueur ignore." });
+    closePlayerContextMenu();
+  });
 }
 
 function updatePosition() {
@@ -76,10 +108,14 @@ function updatePosition() {
   const worldLeft = Number.isFinite(cam.worldView?.x) ? cam.worldView.x : cam.scrollX;
   const worldTop = Number.isFinite(cam.worldView?.y) ? cam.worldView.y : cam.scrollY;
   const bounds = currentTarget.getBounds ? currentTarget.getBounds() : null;
-  const worldX = bounds ? bounds.centerX : currentTarget.x;
-  const worldY = bounds ? bounds.top : currentTarget.y;
-  const screenX = (worldX - worldLeft) * cam.zoom + 26;
-  const screenY = (worldY - worldTop) * cam.zoom + 6;
+  const worldX = bounds ? bounds.right : currentTarget.x;
+  const worldY = bounds ? bounds.centerY : currentTarget.y;
+  const scaleX = canvas.width ? rect.width / canvas.width : 1;
+  const scaleY = canvas.height ? rect.height / canvas.height : 1;
+  const offsetX = 105;
+  const offsetY = 28;
+  const screenX = (worldX - worldLeft) * cam.zoom * scaleX + offsetX;
+  const screenY = (worldY - worldTop) * cam.zoom * scaleY + offsetY;
 
   if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) {
     if (lastPointerScreen) {
@@ -101,6 +137,10 @@ export function openPlayerContextMenu({
   pointer,
 }) {
   if (!scene || !target || !Number.isInteger(targetId)) return;
+  if (menuEl && currentTargetId === targetId && menuEl.classList.contains("is-open")) {
+    closePlayerContextMenu();
+    return;
+  }
   ensureMenu();
   currentScene = scene;
   currentTarget = target;

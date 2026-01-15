@@ -140,25 +140,34 @@ body.hud-friends-open #hud-friends-panel {
 
 .friends-list-header {
   display: grid;
-  grid-template-columns: 1.6fr 2fr 1fr;
+  grid-template-columns: 1.7fr 0.8fr 1fr;
   column-gap: 0.3rem;
   padding: 0.35rem 0.5rem;
   background: #1f2a36;
+  background-image: linear-gradient(
+      90deg,
+      transparent 48.6%,
+      rgba(255, 255, 255, 0.08) 48.6%,
+      rgba(255, 255, 255, 0.08) 49%,
+      transparent 49%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 71.4%,
+      rgba(255, 255, 255, 0.08) 71.4%,
+      rgba(255, 255, 255, 0.08) 71.8%,
+      transparent 71.8%
+    );
   color: #eaf1fb;
   font-weight: 700;
 }
 
-.friends-empty-note {
-  justify-self: start;
-  font-weight: 500;
-  font-style: italic;
-  color: rgba(233, 238, 246, 0.7);
-  margin-left: 4rem;
-  font-size: 0.85em;
+.friends-list-header span:nth-child(2) {
+  text-align: center;
 }
 
 .friends-list-header span:last-child {
-  justify-self: end;
+  text-align: right;
 }
 
 .friends-list {
@@ -170,8 +179,53 @@ body.hud-friends-open #hud-friends-panel {
     rgba(255, 255, 255, 0.05) 26px,
     rgba(0, 0, 0, 0.1) 26px,
     rgba(0, 0, 0, 0.1) 52px
+  ),
+  linear-gradient(
+    90deg,
+    transparent 48.6%,
+    rgba(255, 255, 255, 0.07) 48.6%,
+    rgba(255, 255, 255, 0.07) 49%,
+    transparent 49%
+  ),
+  linear-gradient(
+    90deg,
+    transparent 71.4%,
+    rgba(255, 255, 255, 0.07) 71.4%,
+    rgba(255, 255, 255, 0.07) 71.8%,
+    transparent 71.8%
   );
   overflow: auto;
+}
+
+.friends-entry {
+  display: grid;
+  grid-template-columns: 1.7fr 0.8fr 1fr;
+  align-items: center;
+  padding: 0.35rem 0.4rem;
+  color: #eaf1fb;
+  font-size: 12px;
+}
+
+.friends-entry-name {
+  font-weight: 700;
+  position: relative;
+  top: -4px;
+}
+
+.friends-entry-level {
+  text-align: center;
+  opacity: 0.9;
+  font-weight: 700;
+  position: relative;
+  top: -4px;
+}
+
+.friends-entry-accomp {
+  text-align: right;
+  opacity: 0.9;
+  font-weight: 700;
+  position: relative;
+  top: -4px;
 }
 
 .friends-list.empty {

@@ -289,7 +289,7 @@ function createQuestHandlers({
           : 50;
       player.baseStats.hpMax = baseHpMax + levelsGained * 5;
       if (typeof computeFinalStats === "function") {
-        const nextStats = computeFinalStats(player.baseStats);
+        const nextStats = computeFinalStats(player.baseStats, player.equipment);
         if (nextStats) {
           player.stats = nextStats;
           player.hpMax = Number.isFinite(nextStats.hpMax) ? nextStats.hpMax : player.hpMax;

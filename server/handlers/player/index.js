@@ -9,6 +9,7 @@ const { createCombatHandlers } = require("./combat");
 const { createAuthHandlers } = require("./auth");
 const { createEconomyHandlers } = require("./economy");
 const { createGroupHandlers } = require("./groups");
+const { createFriendHandlers } = require("./friends");
 
 function createPlayerHandlers(ctx) {
   const MAX_INV_SIZE = 200;
@@ -94,6 +95,7 @@ function createPlayerHandlers(ctx) {
     sendToPlayerId: ctx.sendToPlayerId,
     getNextEventId: ctx.getNextEventId,
     getNextGroupId: ctx.getNextGroupId,
+    accountStore: ctx.accountStore,
   });
 
   const movement = createMovementHandlers({
@@ -104,6 +106,14 @@ function createPlayerHandlers(ctx) {
     persistPlayerState: ctx.persistPlayerState,
     getNextEventId: ctx.getNextEventId,
     tryStartCombatIfNeeded: ctx.tryStartCombatIfNeeded,
+  });
+
+  const friends = createFriendHandlers({
+    state: ctx.state,
+    accountStore: ctx.accountStore,
+    characterStore: ctx.characterStore,
+    sendToPlayerId: ctx.sendToPlayerId,
+    getNextEventId: ctx.getNextEventId,
   });
 
   const auth = createAuthHandlers({
@@ -125,6 +135,7 @@ function createPlayerHandlers(ctx) {
     issueSessionToken: ctx.issueSessionToken,
     getAccountIdFromSession: ctx.getAccountIdFromSession,
     combat,
+    onPlayerConnected: (playerId) => friends.handlePlayerConnected(playerId),
   });
 
   const chat = createChatHandlers({
@@ -132,6 +143,7 @@ function createPlayerHandlers(ctx) {
     clients: ctx.clients,
     send: ctx.send,
     getNextEventId: ctx.getNextEventId,
+    accountStore: ctx.accountStore,
   });
 
   return {
@@ -153,7 +165,18 @@ function createPlayerHandlers(ctx) {
     handleCmdGroupKick: groups.handleCmdGroupKick,
     handleCmdGroupDisband: groups.handleCmdGroupDisband,
     handleCmdChatMessage: chat.handleCmdChatMessage,
-    handlePlayerDisconnect: groups.handlePlayerDisconnect,
+    handleCmdWhisper: chat.handleCmdWhisper,
+    handleCmdFriendAdd: friends.handleCmdFriendAdd,
+    handleCmdFriendAddByName: friends.handleCmdFriendAddByName,
+    handleCmdFriendAccept: friends.handleCmdFriendAccept,
+    handleCmdFriendDecline: friends.handleCmdFriendDecline,
+    handleCmdFriendRemove: friends.handleCmdFriendRemove,
+    handleCmdIgnoreAdd: friends.handleCmdIgnoreAdd,
+    handleCmdIgnoreAccount: friends.handleCmdIgnoreAccount,
+    handlePlayerDisconnect: (playerId) => {
+      groups.handlePlayerDisconnect(playerId);
+      friends.handlePlayerDisconnect(playerId);
+    },
     handleGroupHpTick: groups.handleGroupHpTick,
     applyInventoryOpFromServer: inventory.applyInventoryOpFromServer,
     applyQuestKillProgressForPlayer: quests.applyQuestKillProgressForPlayer,

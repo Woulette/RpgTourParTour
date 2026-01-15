@@ -772,6 +772,10 @@ export function initCharacterMenus({ onStartGame }) {
   btnBackSelect.addEventListener("click", () => selectScreen.showSelect());
   btnLanConnect.addEventListener("click", () => {
     if (lanClient) {
+      const playerId = getNetPlayerId();
+      if (Number.isInteger(playerId) && typeof lanClient.sendCmd === "function") {
+        lanClient.sendCmd("CmdLogout", { playerId });
+      }
       lanClient.close();
       lanClient = null;
     }

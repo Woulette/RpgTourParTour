@@ -11,6 +11,7 @@ function createInitialState() {
     playerGroups: {},
     groupInvites: {},
     groupCombatInvites: {},
+    friendInvites: {},
     combat: {
       inCombat: false,
       turnIndex: 0,

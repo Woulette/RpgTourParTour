@@ -27,6 +27,20 @@ function createAccountStore({ dataDir } = {}) {
       updated_at INTEGER
     );
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS account_friends (
+      account_id TEXT,
+      friend_account_id TEXT,
+      created_at INTEGER,
+      PRIMARY KEY (account_id, friend_account_id)
+    );
+    CREATE TABLE IF NOT EXISTS account_ignored (
+      account_id TEXT,
+      ignored_account_id TEXT,
+      created_at INTEGER,
+      PRIMARY KEY (account_id, ignored_account_id)
+    );
+  `);
 
   const selectByNameStmt = db.prepare(
     "SELECT account_id, name, password_hash, password_salt FROM accounts WHERE name = ?"
@@ -39,6 +53,35 @@ function createAccountStore({ dataDir } = {}) {
       (account_id, name, password_hash, password_salt, created_at, updated_at)
     VALUES
       (@accountId, @name, @passwordHash, @passwordSalt, @createdAt, @updatedAt)
+  `);
+  const selectFriendsStmt = db.prepare(
+    "SELECT friend_account_id FROM account_friends WHERE account_id = ?"
+  );
+  const selectFriendsOfStmt = db.prepare(
+    "SELECT account_id FROM account_friends WHERE friend_account_id = ?"
+  );
+  const selectIgnoredStmt = db.prepare(
+    "SELECT ignored_account_id FROM account_ignored WHERE account_id = ?"
+  );
+  const insertFriendStmt = db.prepare(`
+    INSERT OR IGNORE INTO account_friends
+      (account_id, friend_account_id, created_at)
+    VALUES
+      (@accountId, @friendAccountId, @createdAt)
+  `);
+  const deleteFriendStmt = db.prepare(`
+    DELETE FROM account_friends
+    WHERE account_id = ? AND friend_account_id = ?
+  `);
+  const insertIgnoredStmt = db.prepare(`
+    INSERT OR IGNORE INTO account_ignored
+      (account_id, ignored_account_id, created_at)
+    VALUES
+      (@accountId, @ignoredAccountId, @createdAt)
+  `);
+  const deleteIgnoredStmt = db.prepare(`
+    DELETE FROM account_ignored
+    WHERE account_id = ? AND ignored_account_id = ?
   `);
 
   const getAccountByName = (name) => {
@@ -104,6 +147,60 @@ function createAccountStore({ dataDir } = {}) {
     getAccountById,
     createAccount,
     verifyPassword,
+    getFriends: (accountId) => {
+      if (!accountId) return [];
+      return selectFriendsStmt
+        .all(accountId)
+        .map((row) => row.friend_account_id)
+        .filter(Boolean);
+    },
+    getFriendsOf: (accountId) => {
+      if (!accountId) return [];
+      return selectFriendsOfStmt
+        .all(accountId)
+        .map((row) => row.account_id)
+        .filter(Boolean);
+    },
+    getIgnored: (accountId) => {
+      if (!accountId) return [];
+      return selectIgnoredStmt
+        .all(accountId)
+        .map((row) => row.ignored_account_id)
+        .filter(Boolean);
+    },
+    addFriend: (accountId, friendAccountId) => {
+      if (!accountId || !friendAccountId || accountId === friendAccountId) return false;
+      insertFriendStmt.run({
+        accountId,
+        friendAccountId,
+        createdAt: Date.now(),
+      });
+      return true;
+    },
+    removeFriend: (accountId, friendAccountId) => {
+      if (!accountId || !friendAccountId) return false;
+      deleteFriendStmt.run(accountId, friendAccountId);
+      return true;
+    },
+    addIgnored: (accountId, ignoredAccountId) => {
+      if (!accountId || !ignoredAccountId || accountId === ignoredAccountId) return false;
+      insertIgnoredStmt.run({
+        accountId,
+        ignoredAccountId,
+        createdAt: Date.now(),
+      });
+      return true;
+    },
+    removeIgnored: (accountId, ignoredAccountId) => {
+      if (!accountId || !ignoredAccountId) return false;
+      deleteIgnoredStmt.run(accountId, ignoredAccountId);
+      return true;
+    },
+    isIgnored: (accountId, otherAccountId) => {
+      if (!accountId || !otherAccountId) return false;
+      const rows = selectIgnoredStmt.all(accountId);
+      return rows.some((row) => row.ignored_account_id === otherAccountId);
+    },
     close: () => db.close(),
   };
 }

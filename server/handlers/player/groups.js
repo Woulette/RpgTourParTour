@@ -6,6 +6,7 @@ function createGroupHandlers(ctx) {
     sendToPlayerId,
     getNextEventId,
     getNextGroupId,
+    accountStore,
   } = ctx;
 
   const getGroup = (groupId) => state.groups[groupId] || null;
@@ -108,8 +109,15 @@ function createGroupHandlers(ctx) {
     if (!target || target.connected === false) return;
     const inviter = state.players[clientInfo.id];
     if (!inviter) return;
+    if (
+      accountStore?.isIgnored &&
+      target.accountId &&
+      inviter.accountId &&
+      accountStore.isIgnored(target.accountId, inviter.accountId)
+    ) {
+      return;
+    }
     if (state.playerGroups[targetId]) return;
-    if (inviter.mapId && target.mapId && inviter.mapId !== target.mapId) return;
 
     const group = ensureGroupForLeader(clientInfo.id);
     if (!group) return;

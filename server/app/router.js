@@ -108,6 +108,9 @@ function createRouterHandlers(ctx) {
       case "CmdChatMessage":
         playerHandlers.handleCmdChatMessage(clientInfo, msg);
         break;
+      case "CmdWhisper":
+        playerHandlers.handleCmdWhisper(clientInfo, msg);
+        break;
       case "CmdGroupInvite":
         playerHandlers.handleCmdGroupInvite(clientInfo, msg);
         break;
@@ -125,6 +128,30 @@ function createRouterHandlers(ctx) {
         break;
       case "CmdGroupDisband":
         playerHandlers.handleCmdGroupDisband(clientInfo, msg);
+        break;
+      case "CmdLogout":
+        ws.close();
+        break;
+      case "CmdFriendAdd":
+        playerHandlers.handleCmdFriendAdd(clientInfo, msg);
+        break;
+      case "CmdFriendAddByName":
+        playerHandlers.handleCmdFriendAddByName(clientInfo, msg);
+        break;
+      case "CmdFriendRemove":
+        playerHandlers.handleCmdFriendRemove(clientInfo, msg);
+        break;
+      case "CmdIgnoreAccount":
+        playerHandlers.handleCmdIgnoreAccount(clientInfo, msg);
+        break;
+      case "CmdFriendAccept":
+        playerHandlers.handleCmdFriendAccept(clientInfo, msg);
+        break;
+      case "CmdFriendDecline":
+        playerHandlers.handleCmdFriendDecline(clientInfo, msg);
+        break;
+      case "CmdIgnoreAdd":
+        playerHandlers.handleCmdIgnoreAdd(clientInfo, msg);
         break;
       case "CmdMoveCombat":
         combatHandlers.handleCmdMoveCombat(clientInfo, msg);
@@ -239,12 +266,12 @@ function createRouterHandlers(ctx) {
     const clientInfo = clients.get(ws);
     if (!clientInfo) return;
     const player = state.players[clientInfo.id];
-    if (typeof playerHandlers.handlePlayerDisconnect === "function") {
-      playerHandlers.handlePlayerDisconnect(clientInfo.id);
-    }
     if (player) {
       player.connected = false;
       persistPlayerState(player, { immediate: true });
+    }
+    if (typeof playerHandlers.handlePlayerDisconnect === "function") {
+      playerHandlers.handlePlayerDisconnect(clientInfo.id);
     }
     clients.delete(ws);
     broadcast({

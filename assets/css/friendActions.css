@@ -1,0 +1,127 @@
+.friend-actions {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 10, 14, 0.45);
+  z-index: 1800;
+}
+
+.friend-actions.is-open {
+  display: flex;
+}
+
+.friend-actions-card {
+  min-width: 280px;
+  max-width: 360px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(21, 30, 42, 0.96);
+  border: 1px solid rgba(74, 163, 255, 0.45);
+  color: #e9eef6;
+  position: relative;
+}
+
+.friend-actions-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.friend-actions-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.friend-actions-btn {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(30, 41, 59, 0.9);
+  color: #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.friend-actions-btn.primary {
+  background: linear-gradient(120deg, #7cc0ff, #4aa3ff);
+  color: #0f1a26;
+  border: none;
+}
+
+.friend-actions-btn.danger {
+  background: linear-gradient(120deg, #f97373, #ef4444);
+  color: #1b1b1b;
+  border: none;
+}
+
+.friend-actions-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(220, 38, 38, 0.7);
+  background: rgba(20, 20, 20, 0.6);
+  color: #f87171;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.friend-actions-message {
+  margin-top: 10px;
+  display: none;
+  gap: 6px;
+}
+
+.friend-actions-message.is-open {
+  display: flex;
+}
+
+.friend-actions-message input {
+  flex: 1;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #46566b;
+  background: #243140;
+  padding: 0 0.5rem;
+  color: #e9eef6;
+  font-size: 12px;
+}
+
+.friend-actions-confirm {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 18, 0.6);
+  border-radius: 10px;
+}
+
+.friend-actions-confirm.is-open {
+  display: flex;
+}
+
+.friend-actions-confirm-card {
+  background: rgba(20, 28, 38, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-width: 220px;
+  text-align: center;
+}
+
+.friend-actions-confirm-text {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.friend-actions-confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}

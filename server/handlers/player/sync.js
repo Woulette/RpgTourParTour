@@ -58,6 +58,8 @@ function createPlayerSyncHandlers({
     const beforeInventory = player.inventory || null;
     const beforeGold = Number.isFinite(player.gold) ? player.gold : 0;
     const allowInventorySync = clientInfo.inventoryAuthority !== true;
+    let shouldRecompute = false;
+
     if (!allowInventorySync) {
       if (msg?.migrateInventory === true) {
         if (player.inventoryMigrated) return;
@@ -93,41 +95,28 @@ function createPlayerSyncHandlers({
           sendPlayerSync(target.ws, player, "inventory_migration");
         }
       }
-      // Server-authoritative: ignore client snapshots to prevent desync/cheat.
-      return;
-    }
+    } else {
+      const inventory = sanitizeInventorySnapshot(msg.inventory);
+      if (inventory) {
+        player.inventory = inventory;
+      }
+      if (Number.isFinite(msg.gold)) {
+        player.gold = Math.max(0, Math.round(msg.gold));
+      }
+      if (Number.isFinite(msg.honorPoints)) {
+        player.honorPoints = Math.max(0, Math.round(msg.honorPoints));
+      }
 
-    const inventory = sanitizeInventorySnapshot(msg.inventory);
-    if (inventory) {
-      player.inventory = inventory;
-    }
-    if (Number.isFinite(msg.gold)) {
-      player.gold = Math.max(0, Math.round(msg.gold));
-    }
-    if (Number.isFinite(msg.honorPoints)) {
-      player.honorPoints = Math.max(0, Math.round(msg.honorPoints));
-    }
-
-    const level = sanitizeLevel(msg.level);
-    if (level !== null) {
-      player.level = level;
+      const level = sanitizeLevel(msg.level);
+      if (level !== null) {
+        player.level = level;
+      }
     }
 
     const baseStats = sanitizeBaseStats(msg.baseStats);
     if (baseStats) {
       player.baseStats = baseStats;
-      if (typeof computeFinalStats === "function") {
-        const nextStats = computeFinalStats(baseStats);
-        if (nextStats) {
-          player.stats = nextStats;
-          player.hpMax = Number.isFinite(nextStats.hpMax) ? nextStats.hpMax : player.hpMax;
-          if (Number.isFinite(player.hp)) {
-            player.hp = Math.min(player.hp, player.hpMax);
-          } else if (Number.isFinite(nextStats.hp)) {
-            player.hp = Math.min(nextStats.hp, player.hpMax);
-          }
-        }
-      }
+      shouldRecompute = true;
     }
 
     const levelState = sanitizeJsonPayload(msg.levelState, 50000);
@@ -138,6 +127,7 @@ function createPlayerSyncHandlers({
     const equipment = sanitizeEquipment(msg.equipment);
     if (equipment) {
       player.equipment = equipment;
+      shouldRecompute = true;
     }
 
     const trash = sanitizeJsonPayload(msg.trash, 20000);
@@ -165,25 +155,40 @@ function createPlayerSyncHandlers({
       player.spellParchments = spellParchments;
     }
 
+    if (shouldRecompute && typeof computeFinalStats === "function" && player.baseStats) {
+      const nextStats = computeFinalStats(player.baseStats, player.equipment);
+      if (nextStats) {
+        player.stats = nextStats;
+        player.hpMax = Number.isFinite(nextStats.hpMax) ? nextStats.hpMax : player.hpMax;
+        if (Number.isFinite(player.hp)) {
+          player.hp = Math.min(player.hp, player.hpMax);
+        } else if (Number.isFinite(nextStats.hp)) {
+          player.hp = Math.min(nextStats.hp, player.hpMax);
+        }
+      }
+    }
+
     if (typeof persistPlayerState === "function") {
       persistPlayerState(player);
     }
 
-    const afterInventory = player.inventory || null;
-    const afterGold = Number.isFinite(player.gold) ? player.gold : 0;
-    const goldDelta = afterGold - beforeGold;
-    const itemDeltas = diffInventory(beforeInventory, afterInventory);
-    if (goldDelta !== 0 || itemDeltas.length > 0) {
-      logAntiDup({
-        ts: Date.now(),
-        reason: "CmdPlayerSync",
-        accountId: player.accountId || null,
-        characterId: player.characterId || null,
-        playerId: player.id || null,
-        mapId: player.mapId || null,
-        goldDelta,
-        itemDeltas: itemDeltas.slice(0, 20),
-      });
+    if (allowInventorySync) {
+      const afterInventory = player.inventory || null;
+      const afterGold = Number.isFinite(player.gold) ? player.gold : 0;
+      const goldDelta = afterGold - beforeGold;
+      const itemDeltas = diffInventory(beforeInventory, afterInventory);
+      if (goldDelta !== 0 || itemDeltas.length > 0) {
+        logAntiDup({
+          ts: Date.now(),
+          reason: "CmdPlayerSync",
+          accountId: player.accountId || null,
+          characterId: player.characterId || null,
+          playerId: player.id || null,
+          mapId: player.mapId || null,
+          goldDelta,
+          itemDeltas: itemDeltas.slice(0, 20),
+        });
+      }
     }
   }
 

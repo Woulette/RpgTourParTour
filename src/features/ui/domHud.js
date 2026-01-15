@@ -5,7 +5,7 @@
 
 import { classes } from "../../config/classes.js";
 import { getXpTotalForLevel } from "../../core/level.js";
-import { getPlayer, on as onStoreEvent } from "../../state/store.js";
+import { emit as emitStoreEvent, getPlayer, on as onStoreEvent } from "../../state/store.js";
 import { mountUiInputBlocker } from "./uiBlock.js";
 
 let uiInputGuardMounted = false;
@@ -310,6 +310,7 @@ function initStatControls(getActivePlayer) {
 
   const updateAll = (player) => {
     mettreAJourStatsPanel(player);
+    emitStoreEvent("player:updated", player);
   };
 
   // Boutons +/-

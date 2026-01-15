@@ -10,6 +10,7 @@ import {
   setUiApi,
   getUiApi,
   getNetClient,
+  getNetPlayerId,
 } from "./app/session.js";
 import { getPlayer } from "./state/store.js";
 import { updateCombatAuras } from "./features/combat/runtime/auras.js";
@@ -78,6 +79,12 @@ const sessionSwitch = createSessionSwitch({
     document.body.classList.remove("game-running");
     document.body.classList.add("menu-open");
     const client = getNetClient();
+    if (client && typeof client.sendCmd === "function") {
+      const playerId = getNetPlayerId();
+      if (Number.isInteger(playerId)) {
+        client.sendCmd("CmdLogout", { playerId });
+      }
+    }
     if (client && typeof client.close === "function") {
       client.close();
     }

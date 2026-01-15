@@ -145,6 +145,20 @@ const itemDefsPromise = import(
     console.warn("[LAN] Failed to load item defs:", err?.message || err);
   });
 
+let equipmentSets = null;
+let equipmentSetsFailed = false;
+const equipmentSetsPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/features/inventory/data/sets.js")).href
+)
+  .then((mod) => {
+    equipmentSets = mod?.equipmentSets || null;
+  })
+  .catch((err) => {
+    equipmentSetsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load equipment sets:", err?.message || err);
+  });
+
 let questDefs = null;
 let questDefsFailed = false;
 let questStates = null;
@@ -448,11 +462,57 @@ function buildBaseStatsForClass(classId) {
   return derived;
 }
 
-function computeFinalStats(baseStats) {
+function computeFinalStats(baseStats, equipment = null) {
   if (!statsApi || !baseStats) return null;
-  const { applyDerivedAgilityStats } = statsApi;
-  if (!applyDerivedAgilityStats) return null;
-  const derived = applyDerivedAgilityStats({ ...baseStats });
+  const { applyBonuses, applyDerivedAgilityStats } = statsApi;
+  if (!applyBonuses || !applyDerivedAgilityStats) return null;
+
+  let merged = { ...baseStats };
+  if (equipment && itemDefs && equipmentSets) {
+    const bonuses = [];
+    const setCounts = {};
+    for (const entry of Object.values(equipment)) {
+      if (!entry || !entry.itemId) continue;
+      const def = itemDefs[entry.itemId];
+      if (!def) continue;
+      if (def.statsBonus) {
+        bonuses.push(def.statsBonus);
+      }
+      if (def.setId) {
+        let setId = def.setId;
+        if (setId === "corbeau") {
+          const id = def.id || entry.itemId;
+          const match =
+            typeof id === "string" ? id.match(/_(air|eau|feu|terre)$/) : null;
+          const element = match ? match[1] : "air";
+          setId = `corbeau_${element}`;
+        }
+        setCounts[setId] = (setCounts[setId] || 0) + 1;
+      }
+    }
+
+    for (const [setId, count] of Object.entries(setCounts)) {
+      const setDef = equipmentSets[setId];
+      if (!setDef || !setDef.thresholds) continue;
+      let bestThreshold = -1;
+      let bestBonus = null;
+      for (const [thresholdStr, bonus] of Object.entries(setDef.thresholds)) {
+        const threshold = parseInt(thresholdStr, 10);
+        if (Number.isNaN(threshold)) continue;
+        if (count >= threshold && bonus && threshold > bestThreshold) {
+          bestThreshold = threshold;
+          bestBonus = bonus;
+        }
+      }
+      if (bestBonus) {
+        bonuses.push(bestBonus);
+      }
+    }
+
+    merged = applyBonuses(merged, bonuses);
+  }
+
+  const derived = applyDerivedAgilityStats({ ...merged });
   const initBonus = derived.initiative ?? 0;
   const derivedInit =
     (derived.force ?? 0) +
@@ -460,7 +520,7 @@ function computeFinalStats(baseStats) {
     (derived.agilite ?? 0) +
     (derived.chance ?? 0);
   derived.initiative = initBonus + derivedInit;
-  const baseHpMax = derived.hpMax ?? baseStats.hpMax ?? 50;
+  const baseHpMax = derived.hpMax ?? merged.hpMax ?? baseStats.hpMax ?? 50;
   const vit = derived.vitalite ?? 0;
   derived.hpMax = baseHpMax + vit;
   if (!Number.isFinite(derived.hp)) {

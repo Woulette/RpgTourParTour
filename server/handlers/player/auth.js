@@ -17,6 +17,7 @@ function createAuthHandlers({
   issueSessionToken,
   getAccountIdFromSession,
   combat,
+  onPlayerConnected,
 }) {
   const { PROTOCOL_VERSION, GAME_DATA_VERSION, MAX_PLAYERS } = config;
 
@@ -210,6 +211,9 @@ function createAuthHandlers({
         mapId: existingPlayer.mapId || null,
         player: existingPlayer,
       });
+      if (typeof onPlayerConnected === "function") {
+        onPlayerConnected(existingPlayer.id);
+      }
       return;
     }
 
@@ -260,7 +264,7 @@ function createAuthHandlers({
 
     const baseStats =
       character.baseStats || buildBaseStatsForClass(character.classId || "archer");
-    const finalStats = computeFinalStats(baseStats) || {};
+    const finalStats = computeFinalStats(baseStats, character?.equipment) || {};
     const computedHpMax = Number.isFinite(finalStats.hpMax) ? finalStats.hpMax : 0;
     const savedHpMax = Number.isFinite(character.hpMax) ? character.hpMax : null;
     const hpMax = savedHpMax !== null ? Math.max(savedHpMax, computedHpMax) : computedHpMax;
@@ -300,6 +304,18 @@ function createAuthHandlers({
       : player.honorPoints;
     player.levelState = character.levelState || null;
     player.equipment = character.equipment || null;
+    if (typeof computeFinalStats === "function" && player.baseStats) {
+      const nextStats = computeFinalStats(player.baseStats, player.equipment);
+      if (nextStats) {
+        player.stats = nextStats;
+        player.hpMax = Number.isFinite(nextStats.hpMax) ? nextStats.hpMax : player.hpMax;
+        if (Number.isFinite(player.hp)) {
+          player.hp = Math.min(player.hp, player.hpMax);
+        } else if (Number.isFinite(nextStats.hp)) {
+          player.hp = Math.min(nextStats.hp, player.hpMax);
+        }
+      }
+    }
     player.trash = character.trash || null;
     player.quests = character.quests || null;
     player.achievements = character.achievements || null;
@@ -337,6 +353,10 @@ function createAuthHandlers({
       sessionToken: nextSessionToken,
       snapshot: snapshotForClient(),
     });
+
+    if (typeof onPlayerConnected === "function") {
+      onPlayerConnected(player.id);
+    }
 
     try {
       combat.sendCombatResync(ws, player);
