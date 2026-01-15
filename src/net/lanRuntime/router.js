@@ -18,6 +18,7 @@ export function createLanRouter(ctx) {
     mobs,
     resources,
     combat,
+    groups,
     sendMapChange,
     getCurrentMapKey,
     isMapReady,
@@ -68,6 +69,7 @@ export function createLanRouter(ctx) {
 
     if (msg.t === "EvCombatState") {
       combat.applyCombatState(msg);
+      groups?.handleCombatState?.(msg);
       return;
     }
 
@@ -116,6 +118,9 @@ export function createLanRouter(ctx) {
       combat.applyCombatEnded(msg);
       if (Number.isInteger(msg.combatId)) {
         combatSeqState.delete(msg.combatId);
+      }
+      if (groups && typeof groups.handleCombatEnded === "function") {
+        groups.handleCombatEnded(msg);
       }
     }
   };
@@ -186,7 +191,10 @@ export function createLanRouter(ctx) {
   };
 
   const handleMapMonsters = (msg) => {
-    if (scene?.combatState?.enCours) return;
+    if (scene?.combatState?.enCours || scene?.prepState?.actif) {
+      scene.__lanMobsRefreshNeeded = true;
+      return;
+    }
     if (!isMapReady()) {
       scheduleMapRetry("MapMonsters", msg, handleMapMonsters);
       return;
@@ -457,6 +465,26 @@ export function createLanRouter(ctx) {
       return;
     }
 
+    if (msg.t === "EvGroupUpdate") {
+      groups?.handleGroupUpdate?.(msg);
+      return;
+    }
+
+    if (msg.t === "EvGroupDisband") {
+      groups?.handleGroupDisband?.(msg);
+      return;
+    }
+
+    if (msg.t === "EvGroupInvite") {
+      groups?.handleGroupInvite?.(msg);
+      return;
+    }
+
+    if (msg.t === "EvGroupCombatInvite") {
+      groups?.handleGroupCombatInvite?.(msg);
+      return;
+    }
+
     if (msg.t === "EvMobMoveStart") {
       mobs.handleMobMoveStart(msg);
       return;
@@ -475,6 +503,10 @@ export function createLanRouter(ctx) {
     }
 
     if (msg.t === "EvMobRespawn") {
+      if (scene?.combatState?.enCours || scene?.prepState?.actif) {
+        scene.__lanMobsRefreshNeeded = true;
+        return;
+      }
       const currentMap = getCurrentMapKey();
       if (!currentMap || msg.mapId !== currentMap) return;
       const entry = msg.monster || null;

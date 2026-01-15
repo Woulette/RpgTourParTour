@@ -14,6 +14,16 @@ export function applyCombatPlayersState({
 
   msg.players.forEach((p) => {
     if (!Number.isInteger(p?.playerId)) return;
+    if (scene.prepState?.actif) {
+      const tx = Number.isInteger(p.tileX) ? p.tileX : null;
+      const ty = Number.isInteger(p.tileY) ? p.tileY : null;
+      if (tx !== null && ty !== null) {
+        if (!(scene.__lanPrepServerPlacements instanceof Map)) {
+          scene.__lanPrepServerPlacements = new Map();
+        }
+        scene.__lanPrepServerPlacements.set(p.playerId, { x: tx, y: ty });
+      }
+    }
     if (remotePlayersData) {
       const prev = remotePlayersData.get(p.playerId) || { id: p.playerId };
       remotePlayersData.set(p.playerId, {
@@ -48,6 +58,26 @@ export function applyCombatPlayersState({
         ) || null;
     }
     if (!target) return;
+    if (scene.prepState?.actif) {
+      if (localId && p.playerId === localId) {
+        const manual = scene.prepState?.__lanManualPlacement || null;
+        if (
+          manual &&
+          Number.isInteger(manual.x) &&
+          Number.isInteger(manual.y) &&
+          (manual.x !== tileX || manual.y !== tileY)
+        ) {
+          return;
+        }
+      } else if (Array.isArray(scene.prepState.allowedTiles)) {
+        const allowed = scene.prepState.allowedTiles.some(
+          (t) => t && t.x === tileX && t.y === tileY
+        );
+        if (!allowed) {
+          return;
+        }
+      }
+    }
     if (Number.isInteger(p.playerId)) {
       if (!Number.isInteger(target.netId)) target.netId = p.playerId;
       if (!Number.isInteger(target.id)) target.id = p.playerId;

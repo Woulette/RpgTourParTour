@@ -4,9 +4,12 @@
 - (Termine)
 
 ## Phase 2 - MMO jouable
+- Quetes + progression persistantes (cote serveur)
 - Commerce (P2P + marche simple) avec verrou/confirm
 - Groupes + combats de groupe
 - Reconnexion solide + resync map/combat
+- Chat (global / prive / groupe) + mute/ignore basique
+- Liste d'amis / blocage joueur
 - Outils admin (kick/ban, give item, inspect)
 - Audit events gameplay (trade, drop, quest turn-in)
 - Tests anti-cheat rapides (rate-limits + invalid quest actions)
@@ -19,6 +22,8 @@
 - Interest management par zone/viewport
 - Reconciliation client/serveur (correction des ecarts)
 - Job queue pour taches lourdes
+- Profiling perf (tick budget, hotspots, memoires)
+- Outils GM avances (teleport, spawn, view stats)
 
 ## Phase 4 - MMO production
 - Optim perf reseau (delta snapshots, compression)

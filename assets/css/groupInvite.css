@@ -1,0 +1,74 @@
+.group-invite {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 10, 14, 0.45);
+  z-index: 1900;
+}
+
+.group-invite.is-open {
+  display: flex;
+}
+
+.group-invite-card {
+  min-width: 300px;
+  max-width: 420px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: rgba(15, 23, 32, 0.95);
+  border: 1px solid rgba(234, 179, 8, 0.55);
+  color: #f8fafc;
+  position: relative;
+}
+
+.group-invite-title {
+  color: #facc15;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.group-invite-text {
+  font-size: 13px;
+  margin-bottom: 12px;
+  color: #d1d5db;
+}
+
+.group-invite-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.group-invite-btn {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(30, 41, 59, 0.9);
+  color: #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.group-invite-btn.primary {
+  background: linear-gradient(120deg, #facc15, #f59e0b);
+  color: #1b1b1b;
+  border: none;
+}
+
+.group-invite-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(220, 38, 38, 0.7);
+  background: rgba(20, 20, 20, 0.6);
+  color: #f87171;
+  cursor: pointer;
+  line-height: 1;
+}

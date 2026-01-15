@@ -80,21 +80,26 @@ export function applyCombatMonstersState({
       !!target.currentMoveTween ||
       !!target.__lanCombatMoveTween ||
       !!target.__lanMoveTween;
-    if (!isMoving || msg.resync === true || scene.prepState?.actif) {
-      const pos = buildEntityWorldPosition(target, tileX, tileY);
-      if (!pos) return;
-      target.x = pos.x;
-      target.y = pos.y;
-      target.tileX = tileX;
-      target.tileY = tileY;
-      target.currentTileX = tileX;
-      target.currentTileY = tileY;
-      if (typeof target.setDepth === "function") {
-        target.setDepth(target.y);
-      }
-      target.__lanCombatPlaced = true;
-      if (scene.prepState?.actif && typeof updateBlockedTile === "function") {
-        updateBlockedTile(target, tileX, tileY);
+    const inPrep = scene.prepState?.actif === true;
+    if (!isMoving || msg.resync === true) {
+      if (inPrep && msg.resync !== true) {
+        // En preparation, on garde les positions locales pour eviter les overlaps.
+      } else {
+        const pos = buildEntityWorldPosition(target, tileX, tileY);
+        if (!pos) return;
+        target.x = pos.x;
+        target.y = pos.y;
+        target.tileX = tileX;
+        target.tileY = tileY;
+        target.currentTileX = tileX;
+        target.currentTileY = tileY;
+        if (typeof target.setDepth === "function") {
+          target.setDepth(target.y);
+        }
+        target.__lanCombatPlaced = true;
+        if (scene.prepState?.actif && typeof updateBlockedTile === "function") {
+          updateBlockedTile(target, tileX, tileY);
+        }
       }
     }
     if (target.stats) {

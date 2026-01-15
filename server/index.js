@@ -30,6 +30,7 @@ let nextEventId = 1;
 let nextMonsterEntityId = 1;
 let nextResourceEntityId = 1;
 let nextCombatId = 1;
+let nextGroupId = 1;
 let hostId = null;
 const MONSTER_STEP_DURATION_MS = 550;
 const monsterMoveTimers = new Map();
@@ -288,6 +289,7 @@ const COMBAT_EVENT_TYPES = new Set([
 
 const REGEN_TICK_MS = 1000;
 const REGEN_PER_TICK = 2;
+const GROUP_HP_TICK_MS = 1000;
 const PERSIST_TICK_MS = 10000;
 const PERSIST_DEBOUNCE_MS = 250;
 const PERSIST_SLOW_MS = 40;
@@ -826,6 +828,14 @@ const RATE_LIMITS = {
   CmdGoldOp: { limit: 8, windowMs: 1000 },
   CmdCraft: { limit: 4, windowMs: 1000 },
   CmdQuestAction: { limit: 6, windowMs: 1000 },
+  CmdGroupInvite: { limit: 4, windowMs: 2000 },
+  CmdGroupAccept: { limit: 4, windowMs: 2000 },
+  CmdGroupDecline: { limit: 4, windowMs: 2000 },
+  CmdGroupLeave: { limit: 2, windowMs: 2000 },
+  CmdGroupKick: { limit: 4, windowMs: 2000 },
+  CmdGroupDisband: { limit: 2, windowMs: 2000 },
+  CmdGroupCombatJoin: { limit: 4, windowMs: 2000 },
+  CmdGroupCombatDecline: { limit: 6, windowMs: 2000 },
 };
 
 function isCmdRateLimited(clientInfo, cmdType) {
@@ -909,12 +919,23 @@ const getNextPlayerId = () => nextPlayerId++;
 const getNextMonsterEntityId = () => nextMonsterEntityId++;
 const getNextResourceEntityId = () => nextResourceEntityId++;
 const getNextCombatId = () => nextCombatId++;
+const getNextGroupId = () => nextGroupId++;
 let nextSummonId = 1;
 const getNextSummonId = () => nextSummonId++;
 const getHostId = () => hostId;
 const setHostId = (id) => {
   hostId = id;
 };
+
+function sendToPlayerId(playerId, payload) {
+  if (!Number.isInteger(playerId)) return;
+  for (const [ws, info] of clients.entries()) {
+    if (info && info.id === playerId) {
+      send(ws, payload);
+      return;
+    }
+  }
+}
 
 const mobHandlers = createMobHandlers({
   state,
@@ -952,6 +973,7 @@ const combatHandlers = createCombatHandlers({
     state,
     broadcast,
     send,
+    sendToPlayerId,
     getNextCombatId,
     getNextEventId,
     getNextSummonId,
@@ -1001,6 +1023,7 @@ playerHandlers = createPlayerHandlers({
   clients,
   broadcast,
   send,
+  sendToPlayerId,
   createPlayer,
   accountStore,
   config: {
@@ -1010,6 +1033,7 @@ playerHandlers = createPlayerHandlers({
   },
   getNextPlayerId,
   getNextEventId,
+  getNextGroupId,
   getHostId,
   setHostId,
   tryStartCombatIfNeeded,
@@ -1086,9 +1110,11 @@ wss.on("connection", (ws) => {
 startServerTimers({
   mobHandlers,
   tickPlayerRegen,
+  tickGroupHpUpdates: () => playerHandlers?.handleGroupHpTick?.(),
   persistAllPlayers,
   MOB_ROAM_TICK_MS,
   REGEN_TICK_MS,
+  GROUP_HP_TICK_MS,
   PERSIST_TICK_MS,
 });
 

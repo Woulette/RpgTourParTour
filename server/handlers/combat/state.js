@@ -3,6 +3,7 @@ function createStateHandlers(ctx, helpers) {
     state,
     broadcast,
     send,
+    sendToPlayerId,
     getNextCombatId,
     getNextEventId,
     monsterMoveTimers,
@@ -19,6 +20,7 @@ function createStateHandlers(ctx, helpers) {
     collectCombatMobEntries,
     ensureCombatSnapshot,
     applyCombatPlacement,
+    applyCombatPrepPlacement,
     upsertSnapshotPlayer,
     buildCombatActorOrder,
     runMonsterAiTurn,
@@ -26,6 +28,51 @@ function createStateHandlers(ctx, helpers) {
     advanceCombatTurn,
     resetSpellStateForActor,
   } = helpers;
+
+  const GROUP_COMBAT_INVITE_TTL_MS = 45000;
+
+  const clearCombatInvitesByCombatId = (combatId) => {
+    Object.entries(state.groupCombatInvites || {}).forEach(([playerId, invite]) => {
+      if (invite && invite.combatId === combatId) {
+        delete state.groupCombatInvites[playerId];
+      }
+    });
+  };
+
+  const sendGroupCombatInvites = (combatEntry, inviterId) => {
+    if (!combatEntry || !Number.isInteger(inviterId)) return;
+    const groupId = state.playerGroups?.[inviterId];
+    if (!groupId) return;
+    const group = state.groups?.[groupId];
+    if (!group || !Array.isArray(group.memberIds)) return;
+    const inviter = state.players[inviterId];
+    const now = Date.now();
+    const expiresAt = now + GROUP_COMBAT_INVITE_TTL_MS;
+
+    group.memberIds.forEach((memberId) => {
+      if (!Number.isInteger(memberId)) return;
+      if (memberId === inviterId) return;
+      const member = state.players[memberId];
+      if (!member || member.inCombat) return;
+      state.groupCombatInvites[memberId] = {
+        combatId: combatEntry.id,
+        mapId: combatEntry.mapId,
+        inviterId,
+        createdAt: now,
+        expiresAt,
+      };
+      sendToPlayerId(memberId, {
+        t: "EvGroupCombatInvite",
+        eventId: getNextEventId ? getNextEventId() : null,
+        combatId: combatEntry.id,
+        mapId: combatEntry.mapId,
+        inviterId,
+        inviterName: inviter?.displayName || null,
+        createdAt: now,
+        expiresAt,
+      });
+    });
+  };
 
   const clampNonNegativeFinite = (n) =>
     typeof n === "number" && Number.isFinite(n) ? Math.max(0, n) : 0;
@@ -326,21 +373,7 @@ function createStateHandlers(ctx, helpers) {
     if (!mapId) return;
     if (player.mapId !== mapId) return;
 
-    const requestedIds = Array.isArray(msg.participantIds) ? msg.participantIds : [];
-    const candidateIds = [clientInfo.id, ...requestedIds];
-    const participants = [];
-    const seen = new Set();
-    candidateIds.forEach((raw) => {
-      const id = Number(raw);
-      if (!Number.isInteger(id)) return;
-      if (seen.has(id)) return;
-      const p = state.players[id];
-      if (!p || p.inCombat) return;
-      if (p.mapId !== mapId) return;
-      seen.add(id);
-      participants.push(id);
-    });
-    if (participants.length === 0) return;
+    const participants = [clientInfo.id];
 
     const list = state.mapMonsters[mapId];
     const requestedMobs = Array.isArray(msg.mobEntityIds) ? msg.mobEntityIds : [];
@@ -436,11 +469,45 @@ function createStateHandlers(ctx, helpers) {
     const mobEntries = collectCombatMobEntries(combatEntry);
     combatEntry.mobEntries = mobEntries.slice();
     ensureCombatSnapshot(combatEntry);
+    applyCombatPrepPlacement(combatEntry);
     broadcast({
       t: "EvCombatJoinReady",
       combat: serializeCombatEntry(combatEntry),
       mobEntries: serializeMonsterEntries(mobEntries),
     });
+    if (combatEntry.stateSnapshot) {
+      broadcast({
+        t: "EvCombatState",
+        combatId,
+        mapId,
+        turn: combatEntry.turn || null,
+        round: Number.isInteger(combatEntry.round) ? combatEntry.round : null,
+        activePlayerId: Number.isInteger(combatEntry.activePlayerId)
+          ? combatEntry.activePlayerId
+          : null,
+        activeMonsterId: Number.isInteger(combatEntry.activeMonsterId)
+          ? combatEntry.activeMonsterId
+          : null,
+        activeMonsterIndex: Number.isInteger(combatEntry.activeMonsterIndex)
+          ? combatEntry.activeMonsterIndex
+          : null,
+        activeSummonId: Number.isInteger(combatEntry.activeSummonId)
+          ? combatEntry.activeSummonId
+          : null,
+        actorOrder: serializeActorOrder ? serializeActorOrder(combatEntry) : undefined,
+        players: Array.isArray(combatEntry.stateSnapshot.players)
+          ? combatEntry.stateSnapshot.players
+          : [],
+        monsters: Array.isArray(combatEntry.stateSnapshot.monsters)
+          ? combatEntry.stateSnapshot.monsters
+          : [],
+        summons: Array.isArray(combatEntry.stateSnapshot.summons)
+          ? combatEntry.stateSnapshot.summons
+          : [],
+      });
+    }
+
+    sendGroupCombatInvites(combatEntry, clientInfo.id);
   }
 
   function handleCmdJoinCombat(ws, clientInfo, msg) {
@@ -479,8 +546,64 @@ function createStateHandlers(ctx, helpers) {
       combat: serializeCombatEntry(combat),
       mobEntries: serializeMonsterEntries(mobEntries),
     });
+    applyCombatPrepPlacement(combat);
+    if (combat.stateSnapshot) {
+      broadcast({
+        t: "EvCombatState",
+        combatId: combat.id,
+        mapId: combat.mapId || null,
+        turn: combat.turn || null,
+        round: Number.isInteger(combat.round) ? combat.round : null,
+        activePlayerId: Number.isInteger(combat.activePlayerId)
+          ? combat.activePlayerId
+          : null,
+        activeMonsterId: Number.isInteger(combat.activeMonsterId)
+          ? combat.activeMonsterId
+          : null,
+        activeMonsterIndex: Number.isInteger(combat.activeMonsterIndex)
+          ? combat.activeMonsterIndex
+          : null,
+        activeSummonId: Number.isInteger(combat.activeSummonId)
+          ? combat.activeSummonId
+          : null,
+        actorOrder: serializeActorOrder ? serializeActorOrder(combat) : undefined,
+        players: Array.isArray(combat.stateSnapshot.players)
+          ? combat.stateSnapshot.players
+          : [],
+        monsters: Array.isArray(combat.stateSnapshot.monsters)
+          ? combat.stateSnapshot.monsters
+          : [],
+        summons: Array.isArray(combat.stateSnapshot.summons)
+          ? combat.stateSnapshot.summons
+          : [],
+      });
+    }
 
     broadcast({ t: "EvCombatUpdated", ...serializeCombatEntry(combat) });
+  }
+
+  function handleCmdGroupCombatJoin(ws, clientInfo, msg) {
+    if (clientInfo.id !== msg.playerId) return;
+    const combatId = Number.isInteger(msg.combatId) ? msg.combatId : null;
+    if (!combatId) return;
+    const invite = state.groupCombatInvites?.[clientInfo.id];
+    if (!invite || invite.combatId !== combatId) return;
+    if (Date.now() > invite.expiresAt) {
+      delete state.groupCombatInvites[clientInfo.id];
+      return;
+    }
+    delete state.groupCombatInvites[clientInfo.id];
+    handleCmdJoinCombat(ws, clientInfo, {
+      playerId: clientInfo.id,
+      combatId,
+    });
+  }
+
+  function handleCmdGroupCombatDecline(clientInfo, msg) {
+    if (clientInfo.id !== msg.playerId) return;
+    const invite = state.groupCombatInvites?.[clientInfo.id];
+    if (!invite) return;
+    delete state.groupCombatInvites[clientInfo.id];
   }
 
   function handleCmdCombatReady(clientInfo, msg) {
@@ -728,6 +851,8 @@ function createStateHandlers(ctx, helpers) {
       }
     });
 
+    clearCombatInvitesByCombatId(combatId);
+
     const list = state.mapMonsters[mapId];
     if (Array.isArray(list)) {
       list.forEach((entry) => {
@@ -834,6 +959,8 @@ function createStateHandlers(ctx, helpers) {
     listActiveCombats,
     handleCmdCombatStart,
     handleCmdJoinCombat,
+    handleCmdGroupCombatJoin,
+    handleCmdGroupCombatDecline,
     handleCmdCombatReady,
     handleCmdCombatEnd,
     finalizeCombat,

@@ -283,6 +283,32 @@ export function endCombat(scene) {
     scene.hiddenWorldMonsters = null;
   }
 
+  if (scene.monsters && Array.isArray(scene.monsters)) {
+    scene.monsters.forEach((m) => {
+      if (!m || m.destroyed) return;
+      if (m.isCombatOnly) return;
+      if (m.setVisible) m.setVisible(true);
+      if (m.setInteractive) {
+        m.setInteractive({ useHandCursor: true });
+      }
+    });
+  }
+
+  if (scene.hiddenWorldPlayers && Array.isArray(scene.hiddenWorldPlayers)) {
+    scene.hiddenWorldPlayers.forEach((p) => {
+      if (!p || p.destroyed) return;
+      if (p.setVisible) p.setVisible(true);
+      if (p.setInteractive) {
+        p.setInteractive({
+          useHandCursor: true,
+          pixelPerfect: true,
+          alphaTolerance: 1,
+        });
+      }
+    });
+    scene.hiddenWorldPlayers = null;
+  }
+
   if (scene.clearDamagePreview) {
     scene.clearDamagePreview();
   }
@@ -320,6 +346,23 @@ export function endCombat(scene) {
   }
 
   scene.combatState = null;
+  const mapId = scene.currentMapKey || scene.currentMapDef?.key || null;
+  if (client && playerId && mapId) {
+    client.sendCmd("CmdRequestMapMonsters", { playerId, mapId });
+    client.sendCmd("CmdRequestMapPlayers", { playerId, mapId });
+    const retry = () => {
+      if (scene?.combatState?.enCours || scene?.prepState?.actif) return;
+      const currentMap = scene.currentMapKey || scene.currentMapDef?.key || null;
+      if (!currentMap || currentMap !== mapId) return;
+      client.sendCmd("CmdRequestMapMonsters", { playerId, mapId });
+      client.sendCmd("CmdRequestMapPlayers", { playerId, mapId });
+    };
+    if (scene?.time && typeof scene.time.delayedCall === "function") {
+      scene.time.delayedCall(350, retry);
+    } else {
+      setTimeout(retry, 350);
+    }
+  }
 
   if (scene?.pendingQuestAfterDuel) {
     const { questId, monsterId } = scene.pendingQuestAfterDuel;

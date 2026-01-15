@@ -7,6 +7,10 @@ function createInitialState() {
     mapCollisions: {},
     mapResources: {},
     combats: {},
+    groups: {},
+    playerGroups: {},
+    groupInvites: {},
+    groupCombatInvites: {},
     combat: {
       inCombat: false,
       turnIndex: 0,

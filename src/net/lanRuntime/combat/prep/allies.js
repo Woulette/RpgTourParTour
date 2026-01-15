@@ -102,13 +102,33 @@ export function createCombatPrepAlliesHandlers(ctx, helpers) {
     const allowedTiles = scene.prepState?.allowedTiles || [];
 
     const placementMap = new Map();
+    const serverPlacementMap = new Map();
     if (scene.prepState && scene.prepState.actif) {
       const ordered = participantIds
         .map((id) => Number(id))
         .filter((id) => Number.isInteger(id))
         .sort((a, b) => a - b);
       const placementKey = ordered.join(",");
+      const serverPlacements =
+        scene.__lanPrepServerPlacements instanceof Map
+          ? scene.__lanPrepServerPlacements
+          : null;
+      if (serverPlacements) {
+        ordered.forEach((id) => {
+          const tile = serverPlacements.get(id) || null;
+          if (
+            tile &&
+            Number.isInteger(tile.x) &&
+            Number.isInteger(tile.y) &&
+            allowedTiles.some((t) => t && t.x === tile.x && t.y === tile.y)
+          ) {
+            placementMap.set(id, { x: tile.x, y: tile.y });
+            serverPlacementMap.set(id, { x: tile.x, y: tile.y });
+          }
+        });
+      }
       ordered.forEach((id, idx) => {
+        if (placementMap.has(id)) return;
         const tile = allowedTiles[idx] || null;
         if (tile && Number.isInteger(tile.x) && Number.isInteger(tile.y)) {
           placementMap.set(id, { x: tile.x, y: tile.y });
@@ -118,7 +138,31 @@ export function createCombatPrepAlliesHandlers(ctx, helpers) {
       if (scene.prepState.__lanPlacementKey !== placementKey) {
         scene.prepState.__lanPlacementKey = placementKey;
         const localTile = placementMap.get(localId) || null;
-        if (localTile && mapForSpawn && layerForSpawn) {
+        const hasCurrentTile =
+          Number.isInteger(player?.currentTileX) &&
+          Number.isInteger(player?.currentTileY);
+        const currentAllowed =
+          hasCurrentTile &&
+          allowedTiles.some(
+            (t) =>
+              t &&
+              t.x === player.currentTileX &&
+              t.y === player.currentTileY
+          );
+        const manualTile = scene.prepState?.__lanManualPlacement || null;
+        const manualAllowed =
+          manualTile &&
+          Number.isInteger(manualTile.x) &&
+          Number.isInteger(manualTile.y) &&
+          allowedTiles.some(
+            (t) => t && t.x === manualTile.x && t.y === manualTile.y
+          );
+        if (
+          localTile &&
+          mapForSpawn &&
+          layerForSpawn &&
+          (!hasCurrentTile || (!currentAllowed && !manualAllowed))
+        ) {
           const wp = mapForSpawn.tileToWorldXY(
             localTile.x,
             localTile.y,
@@ -176,12 +220,47 @@ export function createCombatPrepAlliesHandlers(ctx, helpers) {
           (ally) => ally?.isPlayerAlly && Number(ally.netId) === playerId
         );
         if (!existing) return;
+        const hasCurrentTile =
+          Number.isInteger(existing.currentTileX) &&
+          Number.isInteger(existing.currentTileY);
+        const currentAllowed =
+          hasCurrentTile &&
+          allowedTiles.some(
+            (t) => t && t.x === existing.currentTileX && t.y === existing.currentTileY
+          );
+        const hasServerPlacement = serverPlacementMap.has(playerId);
+        const shouldSnapToServer =
+          hasServerPlacement &&
+          reserved &&
+          (!hasCurrentTile ||
+            existing.currentTileX !== reserved.x ||
+            existing.currentTileY !== reserved.y);
         const tile =
           reserved ||
-          (!Number.isInteger(existing.currentTileX) ||
-          !Number.isInteger(existing.currentTileY)
-            ? pickTile()
-            : null);
+          (!hasCurrentTile || !currentAllowed ? pickTile() : null);
+        if (shouldSnapToServer) {
+          // Server placement wins during prep to avoid desync.
+          if (reserved) {
+            if (mapForSpawn && layerForSpawn) {
+              const wp = mapForSpawn.tileToWorldXY(
+                reserved.x,
+                reserved.y,
+                undefined,
+                undefined,
+                layerForSpawn
+              );
+              if (wp) {
+                existing.x = wp.x + mapForSpawn.tileWidth / 2;
+                existing.y = wp.y + mapForSpawn.tileHeight / 2;
+                existing.currentTileX = reserved.x;
+                existing.currentTileY = reserved.y;
+                if (existing.setDepth) existing.setDepth(existing.y);
+                updateBlockedTile(existing, reserved.x, reserved.y);
+              }
+            }
+          }
+          return;
+        }
         if (tile && mapForSpawn && layerForSpawn) {
           const wp = mapForSpawn.tileToWorldXY(
             tile.x,

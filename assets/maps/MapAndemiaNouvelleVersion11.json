@@ -321,12 +321,12 @@
                         {
                          "name":"tileX",
                          "type":"int",
-                         "value":14
+                         "value":16
                         }, 
                         {
                          "name":"tileY",
                          "type":"int",
-                         "value":19
+                         "value":21
                         }],
                  "rotation":0,
                  "type":"",
@@ -344,12 +344,12 @@
                         {
                          "name":"tileX",
                          "type":"int",
-                         "value":24
+                         "value":23
                         }, 
                         {
                          "name":"tileY",
                          "type":"int",
-                         "value":12
+                         "value":14
                         }],
                  "rotation":0,
                  "type":"",

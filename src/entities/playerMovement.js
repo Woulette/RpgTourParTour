@@ -26,6 +26,9 @@ import { getNetClient, getNetPlayerId } from "../app/session.js";
  * sur la carte isomtrique.
  */
 function createCalibratedWorldToTile(map, groundLayer) {
+  if (!map || !groundLayer || typeof groundLayer.worldToTileXY !== "function") {
+    return () => null;
+  }
   const testTileX = 0;
   const testTileY = 0;
 
@@ -643,6 +646,9 @@ function createCalibratedWorldToTile(map, groundLayer) {
       }
 
       if (scene.prepState && scene.prepState.actif && netClient && netPlayerId) {
+        if (scene.prepState) {
+          scene.prepState.__lanManualPlacement = { x: tileX, y: tileY };
+        }
         netClient.sendCmd("CmdCombatPlacement", {
           playerId: netPlayerId,
           combatId: scene.__lanCombatId ?? null,

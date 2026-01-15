@@ -19,6 +19,7 @@ function attachMonsterTooltip(scene) {
         return entity.getBounds();
       } catch {
         // ignore
+      }
     }
     const x = entity.x ?? 0;
     const y = entity.y ?? 0;

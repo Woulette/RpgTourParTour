@@ -4,6 +4,10 @@ import { movePlayerAlongPathNetwork } from "../../entities/playerMovement.js";
 import { recalcDepths } from "../../features/maps/world/decor.js";
 import { PLAYER_SPEED } from "../../config/constants.js";
 import { getNetClient, getNetPlayerId } from "../../app/session.js";
+import {
+  openPlayerContextMenu,
+  closePlayerContextMenuIfTarget,
+} from "../../features/ui/domPlayerContextMenu.js";
 
 export function createPlayerHandlers(ctx) {
   const {
@@ -265,6 +269,40 @@ export function createPlayerHandlers(ctx) {
     remote.mapId = entry.mapId || entry.mapKey || null;
     remote.displayName = entry.displayName || remote.displayName || "Joueur";
     placeEntityOnTile(remote, spawnX, spawnY);
+    if (!remote.__contextMenuBound) {
+      if (typeof remote.setInteractive === "function") {
+        remote.setInteractive({
+          useHandCursor: true,
+          pixelPerfect: true,
+          alphaTolerance: 1,
+        });
+      }
+      remote.on("pointerdown", (pointer) => {
+        if (pointer?.event && typeof pointer.event.stopPropagation === "function") {
+          pointer.event.stopPropagation();
+        }
+        if (typeof window !== "undefined") {
+          window.__uiPointerBlock = true;
+          window.setTimeout(() => {
+            window.__uiPointerBlock = false;
+          }, 0);
+        }
+        openPlayerContextMenu({
+          scene,
+          target: remote,
+          targetId: remote.netId,
+          displayName: remote.displayName,
+          pointer,
+        });
+      });
+      remote.on("pointerover", () => {
+        showRemoteHoverUi(remote);
+      });
+      remote.on("pointerout", () => {
+        hideRemoteHoverUi(remote);
+      });
+      remote.__contextMenuBound = true;
+    }
     remotePlayers.set(playerId, remote);
     return remote;
   };
@@ -272,9 +310,11 @@ export function createPlayerHandlers(ctx) {
   const removeRemotePlayer = (playerId) => {
     const remote = remotePlayers.get(playerId);
     if (!remote) return;
+    hideRemoteHoverUi(remote);
     if (remote.destroy) remote.destroy();
     remotePlayers.delete(playerId);
     remotePlayersData.delete(playerId);
+    closePlayerContextMenuIfTarget(playerId);
   };
 
   const upsertRemoteData = (entry) => {
@@ -313,6 +353,7 @@ export function createPlayerHandlers(ctx) {
         return;
       }
       if (!shouldShow && existing) {
+        hideRemoteHoverUi(existing);
         if (existing.destroy) existing.destroy();
         remotePlayers.delete(id);
       }
@@ -496,4 +537,86 @@ export function createPlayerHandlers(ctx) {
     requestMapPlayers,
     handleMapPlayers,
   };
+}
+
+function showRemoteHoverUi(remote) {
+  if (!remote || !remote.scene) return;
+  const scene = remote.scene;
+
+  if (!remote.hoverHighlight && scene.add) {
+    const overlay = scene.add.sprite(remote.x, remote.y, remote.texture.key);
+    overlay.setOrigin(remote.originX, remote.originY);
+    if (remote.frame && overlay.setFrame) {
+      overlay.setFrame(remote.frame.name);
+    }
+    if (typeof remote.scaleX === "number" && typeof remote.scaleY === "number") {
+      overlay.setScale(remote.scaleX, remote.scaleY);
+    }
+    overlay.setBlendMode(Phaser.BlendModes.ADD);
+    overlay.setAlpha(0.6);
+    overlay.setDepth((remote.depth || 0) + 1);
+    if (scene.hudCamera) {
+      scene.hudCamera.ignore(overlay);
+    }
+    remote.hoverHighlight = overlay;
+  }
+
+  if (!remote.hoverLabel && scene.add) {
+    const text = scene.add.text(0, 0, "", {
+      fontFamily: "Tahoma, Arial, sans-serif",
+      fontSize: "11px",
+      color: "#f8fafc",
+      backgroundColor: "rgba(15, 23, 32, 0.75)",
+      padding: { left: 6, right: 6, top: 2, bottom: 2 },
+    });
+    text.setOrigin(0.5, 1);
+    text.setDepth((remote.depth || 0) + 2);
+    if (scene.hudCamera) {
+      scene.hudCamera.ignore(text);
+    }
+    remote.hoverLabel = text;
+  }
+
+  if (remote.hoverLabel) {
+    remote.hoverLabel.setText(remote.displayName || "Joueur");
+    remote.hoverLabel.setVisible(true);
+  }
+
+  const update = () => {
+    if (!remote || !remote.hoverLabel) return;
+    const bounds = remote.getBounds ? remote.getBounds() : null;
+    const x = bounds ? bounds.centerX : remote.x;
+    const y = bounds ? bounds.top - 6 : remote.y - 32;
+    remote.hoverLabel.setPosition(x, y);
+    if (remote.hoverHighlight) {
+      remote.hoverHighlight.x = remote.x;
+      remote.hoverHighlight.y = remote.y;
+      if (remote.frame && remote.hoverHighlight.setFrame) {
+        remote.hoverHighlight.setFrame(remote.frame.name);
+      }
+    }
+  };
+
+  update();
+  if (!remote.__hoverUpdate) {
+    remote.__hoverUpdate = update;
+    scene.events.on("postupdate", remote.__hoverUpdate);
+  }
+}
+
+function hideRemoteHoverUi(remote) {
+  if (!remote || !remote.scene) return;
+  const scene = remote.scene;
+  if (remote.__hoverUpdate) {
+    scene.events.off("postupdate", remote.__hoverUpdate);
+    remote.__hoverUpdate = null;
+  }
+  if (remote.hoverHighlight) {
+    remote.hoverHighlight.destroy();
+    remote.hoverHighlight = null;
+  }
+  if (remote.hoverLabel) {
+    remote.hoverLabel.destroy();
+    remote.hoverLabel = null;
+  }
 }

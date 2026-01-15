@@ -432,6 +432,18 @@ export function startPrep(scene, player, monster, map, groundLayer, options = {}
     scene.hiddenWorldMonsters.push(m);
   });
 
+  // Cache les joueurs distants du monde pendant la preparation/combat.
+  const remotePlayers = scene.__lanRemotePlayers;
+  if (remotePlayers && typeof remotePlayers.values === "function") {
+    scene.hiddenWorldPlayers = [];
+    Array.from(remotePlayers.values()).forEach((remote) => {
+      if (!remote || remote.isCombatAlly || remote.isPlayerAlly) return;
+      if (remote.setVisible) remote.setVisible(false);
+      if (remote.disableInteractive) remote.disableInteractive();
+      scene.hiddenWorldPlayers.push(remote);
+    });
+  }
+
   // Placement automatique du joueur sur une case bleue aleatoire des la preparation.
   if (allowedTiles.length > 0) {
     const currentX = player.currentTileX;

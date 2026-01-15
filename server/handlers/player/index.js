@@ -7,6 +7,7 @@ const { createMovementHandlers } = require("./movement");
 const { createCombatHandlers } = require("./combat");
 const { createAuthHandlers } = require("./auth");
 const { createEconomyHandlers } = require("./economy");
+const { createGroupHandlers } = require("./groups");
 
 function createPlayerHandlers(ctx) {
   const MAX_INV_SIZE = 200;
@@ -87,6 +88,13 @@ function createPlayerHandlers(ctx) {
     ensureCombatSnapshot: ctx.ensureCombatSnapshot,
   });
 
+  const groups = createGroupHandlers({
+    state: ctx.state,
+    sendToPlayerId: ctx.sendToPlayerId,
+    getNextEventId: ctx.getNextEventId,
+    getNextGroupId: ctx.getNextGroupId,
+  });
+
   const movement = createMovementHandlers({
     state: ctx.state,
     broadcast: ctx.broadcast,
@@ -130,6 +138,14 @@ function createPlayerHandlers(ctx) {
     handleCmdCraft: craft.handleCmdCraft,
     handleCmdGoldOp: economy.handleCmdGoldOp,
     handleCmdQuestAction: quests.handleCmdQuestAction,
+    handleCmdGroupInvite: groups.handleCmdGroupInvite,
+    handleCmdGroupAccept: groups.handleCmdGroupAccept,
+    handleCmdGroupDecline: groups.handleCmdGroupDecline,
+    handleCmdGroupLeave: groups.handleCmdGroupLeave,
+    handleCmdGroupKick: groups.handleCmdGroupKick,
+    handleCmdGroupDisband: groups.handleCmdGroupDisband,
+    handlePlayerDisconnect: groups.handlePlayerDisconnect,
+    handleGroupHpTick: groups.handleGroupHpTick,
     applyInventoryOpFromServer: inventory.applyInventoryOpFromServer,
     applyQuestKillProgressForPlayer: quests.applyQuestKillProgressForPlayer,
     applyCombatRewardsForPlayer: quests.applyCombatRewardsForPlayer,

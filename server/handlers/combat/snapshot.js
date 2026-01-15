@@ -235,15 +235,11 @@ function createSnapshotHandlers(ctx, helpers) {
         combat.stateSnapshot.players.find((p) => p && p.playerId === playerId) || null;
       if (!entry) return;
       const player = state.players[playerId];
-      const hasManualPlacement =
-        player && Number.isInteger(player.lastCombatMoveSeq) && player.lastCombatMoveSeq > 0;
-      if (!hasManualPlacement || entry.tileX === null || entry.tileY === null) {
-        entry.tileX = tile.x;
-        entry.tileY = tile.y;
-        if (player) {
-          player.x = tile.x;
-          player.y = tile.y;
-        }
+      entry.tileX = tile.x;
+      entry.tileY = tile.y;
+      if (player) {
+        player.x = tile.x;
+        player.y = tile.y;
       }
     });
 
@@ -263,6 +259,101 @@ function createSnapshotHandlers(ctx, helpers) {
     });
 
     combat.stateSnapshot.updatedAt = Date.now();
+  }
+
+  function applyCombatPrepPlacement(combat) {
+    const placement = resolveCombatPlacement(combat);
+    if (!placement) return false;
+    const { playerTiles } = placement;
+    const snapshot = ensureCombatSnapshot(combat);
+    if (!snapshot) return false;
+
+    const participants = Array.isArray(combat.participantIds)
+      ? combat.participantIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id))
+          .sort((a, b) => a - b)
+      : [];
+
+    const prepPlacements =
+      combat.prepPlacements || (combat.prepPlacements = {});
+
+    const used = new Set();
+
+    const pickFirstAvailable = () => {
+      for (const tile of playerTiles) {
+        if (!tile || !Number.isInteger(tile.x) || !Number.isInteger(tile.y)) continue;
+        const key = `${tile.x},${tile.y}`;
+        if (used.has(key)) continue;
+        used.add(key);
+        return tile;
+      }
+      const fallback = playerTiles[playerTiles.length - 1] || null;
+      if (fallback) {
+        used.add(`${fallback.x},${fallback.y}`);
+      }
+      return fallback;
+    };
+
+    let changed = false;
+    participants.forEach((playerId, idx) => {
+      const req = prepPlacements[playerId];
+      let tile = null;
+      if (
+        req &&
+        Number.isInteger(req.x) &&
+        Number.isInteger(req.y) &&
+        playerTiles.some((t) => t.x === req.x && t.y === req.y) &&
+        !used.has(`${req.x},${req.y}`)
+      ) {
+        tile = req;
+        used.add(`${req.x},${req.y}`);
+      } else if (
+        req &&
+        Number.isInteger(req.x) &&
+        Number.isInteger(req.y) &&
+        playerTiles.some((t) => t.x === req.x && t.y === req.y)
+      ) {
+        // Duplicate reservation: keep first, reassign later ones.
+        tile = pickFirstAvailable();
+      } else if (playerTiles[idx]) {
+        const candidate = playerTiles[idx];
+        const key = `${candidate.x},${candidate.y}`;
+        if (!used.has(key)) {
+          tile = candidate;
+          used.add(key);
+        } else {
+          tile = pickFirstAvailable();
+        }
+      } else {
+        tile = pickFirstAvailable();
+      }
+
+      if (!tile) return;
+      prepPlacements[playerId] = { x: tile.x, y: tile.y };
+
+      const entry =
+        snapshot.players.find((p) => p && p.playerId === playerId) || null;
+      if (entry) {
+        if (entry.tileX !== tile.x || entry.tileY !== tile.y) {
+          entry.tileX = tile.x;
+          entry.tileY = tile.y;
+          changed = true;
+        }
+      }
+
+      const player = state.players[playerId];
+      if (player && (player.x !== tile.x || player.y !== tile.y)) {
+        player.x = tile.x;
+        player.y = tile.y;
+      }
+    });
+
+    if (changed) {
+      snapshot.updatedAt = Date.now();
+    }
+
+    return changed;
   }
 
   function getMonsterBaseHp(monsterId) {
@@ -651,6 +742,7 @@ function createSnapshotHandlers(ctx, helpers) {
     applyDamageToCombatSnapshot,
     applyCombatPlacement,
     resolveCombatPlacement,
+    applyCombatPrepPlacement,
     handleCmdCombatState,
   };
 }

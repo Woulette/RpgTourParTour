@@ -9,6 +9,7 @@ import { createCombatUiHandlers } from "./ui.js";
 import { createLanRouter } from "./router.js";
 import { createLanBootHandlers } from "./boot.js";
 import { createLanPersistenceHandlers } from "./persistence.js";
+import { createGroupHandlers } from "./groups.js";
 
 export function initLanRuntime(scene, player, map, groundLayer) {
   const remotePlayers = new Map();
@@ -87,6 +88,12 @@ export function initLanRuntime(scene, player, map, groundLayer) {
     resourceNodes,
   });
 
+  const groups = createGroupHandlers({
+    scene,
+    getCurrentMapKey,
+    isSceneReady,
+  });
+
   const combat = createCombatHandlers({
     scene,
     player,
@@ -100,6 +107,7 @@ export function initLanRuntime(scene, player, map, groundLayer) {
     findWorldMonsterByEntityId: mobs.findWorldMonsterByEntityId,
     removeWorldMonsterByEntityId: mobs.removeWorldMonsterByEntityId,
     refreshRemoteSprites: players.refreshRemoteSprites,
+    requestMapPlayers: players.requestMapPlayers,
     updateCombatWatchUi: ui.updateCombatWatchUi,
     refreshMapMonstersFromServer: mobs.refreshMapMonstersFromServer,
     removeCombatJoinMarker: ui.removeCombatJoinMarker,
@@ -134,6 +142,7 @@ export function initLanRuntime(scene, player, map, groundLayer) {
     mobs,
     resources,
     combat,
+    groups,
     sendMapChange: boot.sendMapChange,
     getCurrentMapKey,
     getCurrentMapObj,
@@ -146,5 +155,8 @@ export function initLanRuntime(scene, player, map, groundLayer) {
 
   setNetEventHandler(router);
 
-  onStoreEvent("map:changed", boot.handleMapChanged);
+  onStoreEvent("map:changed", (payload) => {
+    boot.handleMapChanged(payload);
+    groups.handleMapChanged(payload);
+  });
 }

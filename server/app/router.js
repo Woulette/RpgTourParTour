@@ -105,6 +105,24 @@ function createRouterHandlers(ctx) {
       case "CmdQuestAction":
         playerHandlers.handleCmdQuestAction(ws, clientInfo, msg);
         break;
+      case "CmdGroupInvite":
+        playerHandlers.handleCmdGroupInvite(clientInfo, msg);
+        break;
+      case "CmdGroupAccept":
+        playerHandlers.handleCmdGroupAccept(clientInfo, msg);
+        break;
+      case "CmdGroupDecline":
+        playerHandlers.handleCmdGroupDecline(clientInfo, msg);
+        break;
+      case "CmdGroupLeave":
+        playerHandlers.handleCmdGroupLeave(clientInfo, msg);
+        break;
+      case "CmdGroupKick":
+        playerHandlers.handleCmdGroupKick(clientInfo, msg);
+        break;
+      case "CmdGroupDisband":
+        playerHandlers.handleCmdGroupDisband(clientInfo, msg);
+        break;
       case "CmdMoveCombat":
         combatHandlers.handleCmdMoveCombat(clientInfo, msg);
         break;
@@ -140,6 +158,12 @@ function createRouterHandlers(ctx) {
         break;
       case "CmdJoinCombat":
         combatHandlers.handleCmdJoinCombat(ws, clientInfo, msg);
+        break;
+      case "CmdGroupCombatJoin":
+        combatHandlers.handleCmdGroupCombatJoin(ws, clientInfo, msg);
+        break;
+      case "CmdGroupCombatDecline":
+        combatHandlers.handleCmdGroupCombatDecline(clientInfo, msg);
         break;
       case "CmdCombatReady":
         combatHandlers.handleCmdCombatReady(clientInfo, msg);
@@ -212,6 +236,9 @@ function createRouterHandlers(ctx) {
     const clientInfo = clients.get(ws);
     if (!clientInfo) return;
     const player = state.players[clientInfo.id];
+    if (typeof playerHandlers.handlePlayerDisconnect === "function") {
+      playerHandlers.handlePlayerDisconnect(clientInfo.id);
+    }
     if (player) {
       player.connected = false;
       persistPlayerState(player, { immediate: true });

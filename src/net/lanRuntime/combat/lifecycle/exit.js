@@ -12,6 +12,7 @@ export function createCombatExitHandlers({ ctx, helpers, syncHandlers }) {
     refreshRemoteSprites,
     updateCombatWatchUi,
     refreshMapMonstersFromServer,
+    requestMapPlayers,
     removeCombatJoinMarker,
   } = ctx;
   const { shouldApplyCombatEvent } = helpers;
@@ -78,6 +79,13 @@ export function createCombatExitHandlers({ ctx, helpers, syncHandlers }) {
     const currentMap = getCurrentMapKey();
     if (entry.mapId && entry.mapId === currentMap) {
       refreshMapMonstersFromServer();
+    }
+    if (scene.__lanMobsRefreshNeeded) {
+      scene.__lanMobsRefreshNeeded = false;
+      refreshMapMonstersFromServer();
+    }
+    if (typeof requestMapPlayers === "function") {
+      requestMapPlayers();
     }
 
     refreshRemoteSprites();
