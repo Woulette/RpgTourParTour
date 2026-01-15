@@ -1,5 +1,6 @@
 import { on as onStoreEvent } from "../../state/store.js";
 import { addChatMessage, getChatMessages } from "../../chat/chat.js";
+import { getNetClient, getNetPlayerId } from "../../app/session.js";
 
 let chatInitialized = false;
 let unsubscribeChat = null;
@@ -204,7 +205,13 @@ export function initDomChat(player) {
     return;
   }
 
-  let activeChannel = "total";
+  let activeChannel = "global";
+  const commandChannels = {
+    "/g": "global",
+    "/t": "total",
+    "/c": "trade",
+    "/r": "recruitment",
+  };
 
   const passesFilter = (msg) => {
     const chan = normalizeChannel(msg);
@@ -251,7 +258,7 @@ export function initDomChat(player) {
     tabsEl.appendChild(btn);
   });
 
-  setActiveChannel("total");
+  setActiveChannel("global");
 
   keydownHandler = (event) => {
     if (event.key === "Enter") {
@@ -269,18 +276,49 @@ export function initDomChat(player) {
   };
   document.addEventListener("keydown", keydownHandler);
 
-  formEl.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const text = (inputEl.value || "").trim();
-    if (!text) return;
-
+  const sendChatMessage = (text, channelId) => {
     const playerRef = getPlayer();
     if (!playerRef) return;
-    const sendChannel = activeChannel === "total" ? "global" : activeChannel;
+    const channel = channelId || "global";
+    const netClient = getNetClient();
+    const netPlayerId = getNetPlayerId();
+    if (netClient && netPlayerId) {
+      netClient.sendCmd("CmdChatMessage", {
+        playerId: netPlayerId,
+        mapId: playerRef.mapId || null,
+        channel,
+        text,
+      });
+      return;
+    }
     addChatMessage(
-      { kind: "player", author: "Vous", text, channel: sendChannel },
+      { kind: "player", author: playerRef.displayName || "Vous", text, channel },
       { player: playerRef }
     );
+  };
+
+  formEl.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const raw = (inputEl.value || "").trim();
+    const text = raw;
+    if (!text) return;
+
+    const parts = text.split(/\s+/);
+    const cmd = parts[0]?.toLowerCase() || "";
+    if (commandChannels[cmd]) {
+      const channel = commandChannels[cmd];
+      const message = text.slice(cmd.length).trim();
+      setActiveChannel(channel);
+      inputEl.value = "";
+      if (message) {
+        const sendChannel = channel === "total" ? "global" : channel;
+        sendChatMessage(message, sendChannel);
+      }
+      return;
+    }
+
+    const sendChannel = activeChannel === "total" ? "global" : activeChannel;
+    sendChatMessage(text, sendChannel);
     inputEl.value = "";
   });
 

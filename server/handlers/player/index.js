@@ -3,6 +3,7 @@ const { createPlayerSyncHandlers } = require("./sync");
 const { createInventoryHandlers } = require("./inventory");
 const { createCraftHandlers } = require("./craft");
 const { createQuestHandlers } = require("./quests");
+const { createChatHandlers } = require("./chat");
 const { createMovementHandlers } = require("./movement");
 const { createCombatHandlers } = require("./combat");
 const { createAuthHandlers } = require("./auth");
@@ -126,6 +127,13 @@ function createPlayerHandlers(ctx) {
     combat,
   });
 
+  const chat = createChatHandlers({
+    state: ctx.state,
+    clients: ctx.clients,
+    send: ctx.send,
+    getNextEventId: ctx.getNextEventId,
+  });
+
   return {
     handleHello: auth.handleHello,
     handleCmdMove: movement.handleCmdMove,
@@ -144,6 +152,7 @@ function createPlayerHandlers(ctx) {
     handleCmdGroupLeave: groups.handleCmdGroupLeave,
     handleCmdGroupKick: groups.handleCmdGroupKick,
     handleCmdGroupDisband: groups.handleCmdGroupDisband,
+    handleCmdChatMessage: chat.handleCmdChatMessage,
     handlePlayerDisconnect: groups.handlePlayerDisconnect,
     handleGroupHpTick: groups.handleGroupHpTick,
     applyInventoryOpFromServer: inventory.applyInventoryOpFromServer,

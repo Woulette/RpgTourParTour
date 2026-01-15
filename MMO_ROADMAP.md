@@ -4,10 +4,7 @@
 - (Termine)
 
 ## Phase 2 - MMO jouable
-- Quetes + progression persistantes (cote serveur)
 - Commerce (P2P + marche simple) avec verrou/confirm
-- Groupes + combats de groupe
-- Reconnexion solide + resync map/combat
 - Chat (global / prive / groupe) + mute/ignore basique
 - Liste d'amis / blocage joueur
 - Outils admin (kick/ban, give item, inspect)
@@ -33,3 +30,8 @@
 - Securite (DDoS basic, auth durci)
 - Observabilite temps reel (TPS, latence, drops)
 - Backups chiffres + rotation
+
+## Fait recemment
+- Groupes + combats de groupe (prep stable, placements ok)
+- Resync fin de combat (monstres/joueurs visibles sans changer de map)
+- Quetes + progression persistantes (cote serveur)

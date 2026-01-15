@@ -105,6 +105,9 @@ function createRouterHandlers(ctx) {
       case "CmdQuestAction":
         playerHandlers.handleCmdQuestAction(ws, clientInfo, msg);
         break;
+      case "CmdChatMessage":
+        playerHandlers.handleCmdChatMessage(clientInfo, msg);
+        break;
       case "CmdGroupInvite":
         playerHandlers.handleCmdGroupInvite(clientInfo, msg);
         break;

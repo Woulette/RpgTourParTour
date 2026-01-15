@@ -828,6 +828,7 @@ const RATE_LIMITS = {
   CmdGoldOp: { limit: 8, windowMs: 1000 },
   CmdCraft: { limit: 4, windowMs: 1000 },
   CmdQuestAction: { limit: 6, windowMs: 1000 },
+  CmdChatMessage: { limit: 6, windowMs: 1000 },
   CmdGroupInvite: { limit: 4, windowMs: 2000 },
   CmdGroupAccept: { limit: 4, windowMs: 2000 },
   CmdGroupDecline: { limit: 4, windowMs: 2000 },

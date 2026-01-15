@@ -8,6 +8,7 @@ import { spawnMonstersFromEntries } from "../../features/monsters/runtime/index.
 import { maps } from "../../features/maps/index.js";
 import { loadMapLikeMain } from "../../features/maps/world/load.js";
 import { emit as emitStoreEvent } from "../../state/store.js";
+import { addChatMessage } from "../../chat/chat.js";
 
 export function createLanRouter(ctx) {
   const {
@@ -231,6 +232,70 @@ export function createLanRouter(ctx) {
       return;
     }
     players.handleMapPlayers(msg);
+  };
+
+  const showChatBubble = (entity, text) => {
+    if (!scene || !entity || !text) return;
+    if (entity.__chatBubbleTimer?.remove) {
+      entity.__chatBubbleTimer.remove(false);
+    } else if (entity.__chatBubbleTimer) {
+      clearTimeout(entity.__chatBubbleTimer);
+    }
+    if (entity.__chatBubble) {
+      entity.__chatBubble.setText(text);
+      entity.__chatBubble.setVisible(true);
+    } else if (scene.add) {
+      const bubble = scene.add.text(0, 0, text, {
+        fontFamily: "Tahoma, Arial, sans-serif",
+        fontSize: "12px",
+        color: "#ffffff",
+        backgroundColor: "rgba(20, 28, 40, 0.85)",
+        padding: { left: 6, right: 6, top: 3, bottom: 3 },
+      });
+      bubble.setOrigin(0.5, 1);
+      bubble.setDepth((entity.depth || 0) + 5);
+      entity.__chatBubble = bubble;
+    }
+
+    const update = () => {
+      if (!entity || entity.destroyed || !entity.scene || !entity.__chatBubble) {
+        if (entity?.__chatBubble) {
+          entity.__chatBubble.destroy();
+          entity.__chatBubble = null;
+        }
+        if (entity?.__chatBubbleUpdate) {
+          scene.events.off("postupdate", entity.__chatBubbleUpdate);
+          entity.__chatBubbleUpdate = null;
+        }
+        return;
+      }
+      const bounds = entity.getBounds ? entity.getBounds() : null;
+      const x = bounds ? bounds.centerX : entity.x;
+      const y = bounds ? bounds.top - 8 : entity.y - 36;
+      entity.__chatBubble.setPosition(x, y);
+    };
+
+    update();
+    if (!entity.__chatBubbleUpdate) {
+      entity.__chatBubbleUpdate = update;
+      scene.events.on("postupdate", entity.__chatBubbleUpdate);
+    }
+
+    const schedule = (fn) =>
+      scene.time && typeof scene.time.delayedCall === "function"
+        ? scene.time.delayedCall(2400, fn)
+        : setTimeout(fn, 2400);
+    entity.__chatBubbleTimer = schedule(() => {
+      if (entity.__chatBubble) {
+        entity.__chatBubble.destroy();
+        entity.__chatBubble = null;
+      }
+      if (entity.__chatBubbleUpdate) {
+        scene.events.off("postupdate", entity.__chatBubbleUpdate);
+        entity.__chatBubbleUpdate = null;
+      }
+      entity.__chatBubbleTimer = null;
+    });
   };
 
   const applyServerPlayerSnapshot = (entry) => {
@@ -495,6 +560,43 @@ export function createLanRouter(ctx) {
 
     if (msg.t === "EvGroupCombatInvite") {
       groups?.handleGroupCombatInvite?.(msg);
+      return;
+    }
+
+    if (msg.t === "EvChatMessage") {
+      const playerRef = player || null;
+      if (!playerRef) return;
+      const author =
+        Number.isInteger(msg.playerId) && msg.playerId === getNetPlayerId()
+          ? "Vous"
+          : typeof msg.author === "string" && msg.author
+            ? msg.author
+            : "Joueur";
+      const channel = msg.channel || "global";
+      const text = typeof msg.text === "string" ? msg.text : "";
+      if (!text) return;
+      addChatMessage(
+        {
+          kind: "player",
+          author,
+          text,
+          channel,
+        },
+        { player: playerRef }
+      );
+      if (channel === "global") {
+        const currentMap = getCurrentMapKey();
+        if (msg.mapId && currentMap && msg.mapId !== currentMap) return;
+        let target = null;
+        if (Number.isInteger(msg.playerId) && msg.playerId === getNetPlayerId()) {
+          target = player;
+        } else if (scene?.__lanRemotePlayers?.get) {
+          target = scene.__lanRemotePlayers.get(msg.playerId) || null;
+        }
+        if (target) {
+          showChatBubble(target, text);
+        }
+      }
       return;
     }
 
