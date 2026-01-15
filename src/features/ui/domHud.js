@@ -131,6 +131,7 @@ function mountHudDockMenu() {
 
   const ids = [
     "hud-metiers-button",
+    "hud-friends-button",
     "hud-quests-button",
     "hud-map-button",
     "hud-inventory-button",

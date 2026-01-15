@@ -43,6 +43,7 @@
   <link rel="stylesheet" href="assets/css/playerContextMenu.css" />
   <link rel="stylesheet" href="assets/css/groupInvite.css" />
   <link rel="stylesheet" href="assets/css/groupPanel.css" />
+  <link rel="stylesheet" href="assets/css/friends.css" />
 </head>
 <body class="menu-open">
   <!-- Menus (création / sélection personnage) -->
@@ -198,6 +199,9 @@
           />
         </form>
       </section>
+      <button class="hud-pill" id="hud-friends-button" aria-label="Ouvrir la liste d'amis">
+        +
+      </button>
       <button class="hud-pill" id="hud-quests-button" aria-label="Ouvrir les quêtes">
         QUETES
       </button>
@@ -816,6 +820,45 @@
           <p id="quest-detail-rewards" class="quest-detail-rewards"></p>
         </div>
       </section>
+    </aside>
+
+    <!-- Fenetre des amis -->
+    <aside id="hud-friends-panel" aria-label="Fenetre des amis">
+      <header class="friends-header">
+        <h2 class="friends-title">Amis</h2>
+        <button type="button" class="friends-close" aria-label="Fermer">X</button>
+      </header>
+      <section class="friends-add">
+        <span class="friends-add-label">Ajouter un ami</span>
+        <input
+          id="friends-add-input"
+          class="friends-add-input"
+          type="text"
+          placeholder="Pseudo"
+          maxlength="32"
+        />
+        <button type="button" class="friends-add-button">Ajouter</button>
+      </section>
+      <nav class="friends-tabs" aria-label="Filtres amis">
+        <button type="button" class="friends-tab is-active" data-tab="friends">Amis</button>
+        <button type="button" class="friends-tab" data-tab="offline">Non connectes</button>
+        <button type="button" class="friends-tab" data-tab="ignored">Ignores</button>
+      </nav>
+      <section class="friends-columns">
+        <div class="friends-column">
+          <div class="friends-column-title">Connectes</div>
+          <div class="friends-list-header">
+            <span>Nom</span>
+            <span class="friends-empty-note">Aucun ami connecte.</span>
+            <span>Niveau</span>
+          </div>
+          <div class="friends-list empty"></div>
+        </div>
+      </section>
+      <label class="friends-notify">
+        <input id="friends-notify-toggle" type="checkbox" />
+        M'avertir lors de la connexion d'un ami.
+      </label>
     </aside>
 
     <!-- Fenetre des accomplissements -->

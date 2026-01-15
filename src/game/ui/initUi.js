@@ -21,6 +21,7 @@ import { initDomGroupCombatInvite } from "../../features/ui/domGroupCombatInvite
 import { initDomPlayerContextMenu } from "../../features/ui/domPlayerContextMenu.js";
 import { initDomGroupInvite } from "../../features/ui/domGroupInvite.js";
 import { initDomGroupPanel } from "../../features/ui/domGroupPanel.js";
+import { initDomFriends } from "../../features/ui/domFriends.js";
 
 export function setupHudAndCameras(scene, map, mapLayers, startX, startY, mapDef, grid) {
   const { hudY, uiElements } = createHud(scene);
@@ -81,5 +82,6 @@ export function initDomUi(scene, player) {
   initDomPlayerContextMenu(scene);
   initDomGroupInvite();
   initDomGroupPanel();
+  initDomFriends();
   initDomChat(player);
 }

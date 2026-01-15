@@ -4,6 +4,7 @@ const OPEN_CLASSES = [
   "hud-inventory-open",
   "hud-quests-open",
   "hud-metiers-open",
+  "hud-friends-open",
   "hud-map-open",
   "hud-spells-open",
   "hud-stats-open",
