@@ -567,7 +567,7 @@ export function initCharacterMenus({ onStartGame }) {
       pendingStartCharacter = chosen;
       if (activeAccount?.name && activeAccount?.password) {
         lan.connectLan(activeAccount, {
-          authMode: "login",
+          authMode: loginMode,
           url: getSelectedServerUrl(),
         });
       } else {
