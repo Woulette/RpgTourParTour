@@ -36,6 +36,7 @@ export function createCombatExitHandlers({ ctx, helpers, syncHandlers }) {
     const participantIds = Array.isArray(entry.participantIds)
       ? entry.participantIds
       : [];
+    const mapIdForParticipants = entry.mapId || getCurrentMapKey() || null;
     participantIds.forEach((id) => {
       const playerId = Number(id);
       if (!Number.isInteger(playerId)) return;
@@ -45,6 +46,7 @@ export function createCombatExitHandlers({ ctx, helpers, syncHandlers }) {
         ...prev,
         inCombat: false,
         combatId: null,
+        mapId: prev.mapId || mapIdForParticipants,
       });
     });
 

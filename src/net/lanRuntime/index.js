@@ -15,6 +15,7 @@ export function initLanRuntime(scene, player, map, groundLayer) {
   const remotePlayers = new Map();
   const remotePlayersData = new Map();
   scene.__lanRemotePlayers = remotePlayers;
+  scene.__lanRemotePlayersData = remotePlayersData;
   const activeCombats = new Map();
   scene.__lanActiveCombats = activeCombats;
   const combatJoinMarkers = new Map();
@@ -154,6 +155,11 @@ export function initLanRuntime(scene, player, map, groundLayer) {
   });
 
   setNetEventHandler(router);
+
+  scene.__lanRequestMapPlayers = players.requestMapPlayers;
+  scene.__lanRefreshRemoteSprites = players.refreshRemoteSprites;
+  scene.__lanRequestMapMonsters = mobs.requestMapMonsters;
+  scene.__lanClearWorldMonsters = mobs.clearWorldMonsters;
 
   onStoreEvent("map:changed", (payload) => {
     boot.handleMapChanged(payload);

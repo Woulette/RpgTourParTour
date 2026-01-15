@@ -46,6 +46,25 @@ export function endCombat(scene) {
   }
   scene.__lanCombatId = null;
   scene.__lanCombatStartSent = false;
+  if (typeof scene?.__lanWorldMobsHidden !== "undefined") {
+    scene.__lanWorldMobsHidden = false;
+  }
+  if (
+    scene.__lanRemotePlayersData &&
+    combatId !== null &&
+    Number.isInteger(combatId)
+  ) {
+    scene.__lanRemotePlayersData.forEach((data, id) => {
+      if (!data || !Number.isInteger(id)) return;
+      if (data.combatId === combatId) {
+        scene.__lanRemotePlayersData.set(id, {
+          ...data,
+          inCombat: false,
+          combatId: null,
+        });
+      }
+    });
+  }
 
   clearAllSummons(scene);
   clearAllCombatAllies(scene);
@@ -346,6 +365,19 @@ export function endCombat(scene) {
   }
 
   scene.combatState = null;
+  if (scene?.__lanPendingMapMonsters && typeof scene.__lanApplyMapMonsters === "function") {
+    const pending = scene.__lanPendingMapMonsters;
+    scene.__lanPendingMapMonsters = null;
+    scene.__lanApplyMapMonsters(pending);
+  }
+  if (scene?.__lanPendingMapPlayers && typeof scene.__lanApplyMapPlayers === "function") {
+    const pending = scene.__lanPendingMapPlayers;
+    scene.__lanPendingMapPlayers = null;
+    scene.__lanApplyMapPlayers(pending);
+  }
+  if (typeof scene.__lanRefreshRemoteSprites === "function") {
+    scene.__lanRefreshRemoteSprites();
+  }
   const mapId = scene.currentMapKey || scene.currentMapDef?.key || null;
   if (client && playerId && mapId) {
     client.sendCmd("CmdRequestMapMonsters", { playerId, mapId });
@@ -361,6 +393,36 @@ export function endCombat(scene) {
       scene.time.delayedCall(350, retry);
     } else {
       setTimeout(retry, 350);
+    }
+    const forceResync = () => {
+      if (scene?.combatState?.enCours || scene?.prepState?.actif) return;
+      const currentMap = scene.currentMapKey || scene.currentMapDef?.key || null;
+      if (!currentMap || currentMap !== mapId) return;
+      const monsters = Array.isArray(scene.monsters) ? scene.monsters : [];
+      const visibleWorld = monsters.filter(
+        (m) => m && !m.isCombatOnly && m.visible !== false
+      );
+      if (visibleWorld.length === 0 && typeof scene.__lanClearWorldMonsters === "function") {
+        scene.__lanClearWorldMonsters();
+      }
+      if (typeof scene.__lanRequestMapMonsters === "function") {
+        scene.__lanRequestMapMonsters();
+      } else if (client && playerId) {
+        client.sendCmd("CmdRequestMapMonsters", { playerId, mapId });
+      }
+      if (typeof scene.__lanRequestMapPlayers === "function") {
+        scene.__lanRequestMapPlayers();
+      } else if (client && playerId) {
+        client.sendCmd("CmdRequestMapPlayers", { playerId, mapId });
+      }
+      if (typeof scene.__lanRefreshRemoteSprites === "function") {
+        scene.__lanRefreshRemoteSprites();
+      }
+    };
+    if (scene?.time && typeof scene.time.delayedCall === "function") {
+      scene.time.delayedCall(900, forceResync);
+    } else {
+      setTimeout(forceResync, 900);
     }
   }
 

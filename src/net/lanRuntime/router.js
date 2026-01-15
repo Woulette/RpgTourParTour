@@ -193,6 +193,7 @@ export function createLanRouter(ctx) {
   const handleMapMonsters = (msg) => {
     if (scene?.combatState?.enCours || scene?.prepState?.actif) {
       scene.__lanMobsRefreshNeeded = true;
+      scene.__lanPendingMapMonsters = msg;
       return;
     }
     if (!isMapReady()) {
@@ -209,6 +210,10 @@ export function createLanRouter(ctx) {
     mobs.updateHostMobScheduler();
   };
 
+  if (scene) {
+    scene.__lanApplyMapMonsters = handleMapMonsters;
+  }
+
   const handleMapResources = (msg) => {
     if (!isMapReady()) {
       scheduleMapRetry("MapResources", msg, handleMapResources);
@@ -218,6 +223,14 @@ export function createLanRouter(ctx) {
     if (!currentMap || msg.mapId !== currentMap) return;
     const entries = Array.isArray(msg.resources) ? msg.resources : [];
     resources.spawnResourcesFromEntries(entries);
+  };
+
+  const handleMapPlayers = (msg) => {
+    if (scene?.combatState?.enCours || scene?.prepState?.actif) {
+      scene.__lanPendingMapPlayers = msg;
+      return;
+    }
+    players.handleMapPlayers(msg);
   };
 
   const applyServerPlayerSnapshot = (entry) => {
@@ -461,7 +474,7 @@ export function createLanRouter(ctx) {
     }
 
     if (msg.t === "EvMapPlayers") {
-      players.handleMapPlayers(msg);
+      handleMapPlayers(msg);
       return;
     }
 
@@ -545,4 +558,11 @@ export function createLanRouter(ctx) {
       return;
     }
   };
+
+  if (scene) {
+    scene.__lanApplyMapPlayers = handleMapPlayers;
+    if (players?.refreshRemoteSprites) {
+      scene.__lanRefreshRemoteSprites = players.refreshRemoteSprites;
+    }
+  }
 }

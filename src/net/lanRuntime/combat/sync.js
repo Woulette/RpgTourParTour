@@ -195,19 +195,25 @@ export function createCombatSyncHandlers(ctx, helpers) {
     const localPlayer = state?.joueur || player;
 
     if (isLocalParticipant && inCombat && !scene.__lanWorldMobsHidden) {
+      const hidden = [];
       if (Array.isArray(scene.monsters)) {
-        scene.monsters = scene.monsters.filter((monster) => {
-          if (!monster) return false;
-          if (monster.isCombatOnly || monster.isCombatMember || monster.isSummon) {
-            return true;
-          }
+        scene.monsters.forEach((monster) => {
+          if (!monster) return;
+          if (monster.isCombatOnly || monster.isCombatMember || monster.isSummon) return;
           if (monster.roamTimer?.remove) monster.roamTimer.remove(false);
           if (monster.roamTween?.stop) monster.roamTween.stop();
-          if (monster.destroy) monster.destroy();
-          return false;
+          monster.isMoving = false;
+          monster.targetTileX = null;
+          monster.targetTileY = null;
+          if (monster.setVisible) monster.setVisible(false);
+          if (monster.disableInteractive) monster.disableInteractive();
+          hidden.push(monster);
         });
-      } else {
-        scene.monsters = [];
+      }
+      if (hidden.length > 0) {
+        scene.hiddenWorldMonsters = Array.isArray(scene.hiddenWorldMonsters)
+          ? scene.hiddenWorldMonsters.concat(hidden)
+          : hidden;
       }
       scene.__lanWorldMobsHidden = true;
     }
