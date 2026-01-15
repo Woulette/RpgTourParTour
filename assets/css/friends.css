@@ -28,11 +28,12 @@ body.hud-friends-open #hud-friends-panel {
 .friends-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0.55rem 0.9rem;
   background: #2f3f52;
   color: #eaf1fb;
   border-bottom: 2px solid #223041;
+  position: relative;
 }
 
 .friends-title {
@@ -42,6 +43,10 @@ body.hud-friends-open #hud-friends-panel {
 }
 
 .friends-close {
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
   width: 26px;
   height: 26px;
   border: 1px solid #223041;
@@ -172,16 +177,6 @@ body.hud-friends-open #hud-friends-panel {
 .friends-list.empty {
   color: rgba(233, 238, 246, 0.7);
   font-style: italic;
-}
-
-.friends-notify {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.9rem 0.9rem;
-  background: #2a3646;
-  border-top: 1px solid rgba(0, 0, 0, 0.2);
-  font-size: 0.95rem;
 }
 
 @media (max-width: 860px) {
