@@ -92,9 +92,16 @@ export function initCharacterMenus({ onStartGame }) {
     typeof window !== "undefined" && window.location
       ? window.location.hostname
       : "localhost";
+  const renderHost = "rpgtourpartour.onrender.com";
+  const isHttps =
+    typeof window !== "undefined" && window.location
+      ? window.location.protocol === "https:"
+      : false;
   const defaultUrl = host.includes("onrender.com")
     ? `wss://${host}`
-    : `ws://${host}:8080`;
+    : host.includes("netlify.app") || isHttps
+      ? `wss://${renderHost}`
+      : `ws://${host}:8080`;
   const SERVERS = [
     {
       id: "local",
