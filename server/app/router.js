@@ -12,6 +12,7 @@ function createRouterHandlers(ctx) {
     isCmdDuplicate,
     isCmdRateLimited,
     isCmdSessionValid,
+    revokeSessionToken,
     sendMapSnapshotToClient,
     persistPlayerState,
     getHostId,
@@ -24,6 +25,15 @@ function createRouterHandlers(ctx) {
     const clientInfo = clients.get(ws);
     if (!clientInfo) {
       if (msg?.t === "Hello") playerHandlers.handleHello(ws, msg);
+      if (msg?.t === "CmdAccountSelectCharacter") {
+        playerHandlers.handleCmdAccountSelectCharacter(ws, msg);
+      }
+      if (msg?.t === "CmdAccountCreateCharacter") {
+        playerHandlers.handleCmdAccountCreateCharacter(ws, msg);
+      }
+      if (msg?.t === "CmdAccountDeleteCharacter") {
+        playerHandlers.handleCmdAccountDeleteCharacter(ws, msg);
+      }
       return;
     }
 
@@ -130,6 +140,10 @@ function createRouterHandlers(ctx) {
         playerHandlers.handleCmdGroupDisband(clientInfo, msg);
         break;
       case "CmdLogout":
+        if (typeof revokeSessionToken === "function") {
+          const token = typeof msg.sessionToken === "string" ? msg.sessionToken : null;
+          revokeSessionToken(token);
+        }
         ws.close();
         break;
       case "CmdFriendAdd":
@@ -152,6 +166,27 @@ function createRouterHandlers(ctx) {
         break;
       case "CmdIgnoreAdd":
         playerHandlers.handleCmdIgnoreAdd(clientInfo, msg);
+        break;
+      case "CmdTradeInvite":
+        playerHandlers.handleCmdTradeInvite(clientInfo, msg);
+        break;
+      case "CmdTradeAccept":
+        playerHandlers.handleCmdTradeAccept(clientInfo, msg);
+        break;
+      case "CmdTradeDecline":
+        playerHandlers.handleCmdTradeDecline(clientInfo, msg);
+        break;
+      case "CmdTradeCancel":
+        playerHandlers.handleCmdTradeCancel(clientInfo, msg);
+        break;
+      case "CmdTradeOfferItem":
+        playerHandlers.handleCmdTradeOfferItem(clientInfo, msg);
+        break;
+      case "CmdTradeOfferGold":
+        playerHandlers.handleCmdTradeOfferGold(clientInfo, msg);
+        break;
+      case "CmdTradeValidate":
+        playerHandlers.handleCmdTradeValidate(clientInfo, msg);
         break;
       case "CmdMoveCombat":
         combatHandlers.handleCmdMoveCombat(clientInfo, msg);

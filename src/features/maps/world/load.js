@@ -191,6 +191,7 @@ export function maybeHandlePortal(scene) {
   const py = scene.player.currentTileY;
   if (typeof px !== "number" || typeof py !== "number") return;
 
+
   const hit = portals.find(
     (p) =>
       p &&

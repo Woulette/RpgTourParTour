@@ -12,6 +12,7 @@ function createInitialState() {
     groupInvites: {},
     groupCombatInvites: {},
     friendInvites: {},
+    trades: {},
     combat: {
       inCombat: false,
       turnIndex: 0,
@@ -56,6 +57,7 @@ function createPlayer(id) {
     mapId: null,
     inCombat: false,
     combatId: null,
+    tradeId: null,
   };
 }
 

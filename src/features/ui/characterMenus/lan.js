@@ -18,6 +18,9 @@ export function createLanHelpers({
   onShowSelect,
   onStartGameWithCharacter,
   onAuthRefused,
+  onAccountCharacters,
+  onAccountCreateFailed,
+  onAccountDeleteFailed,
 }) {
   const { btnLanConnect, loginRemember } = elements;
   const { setLoginError, saveLanAccount, loadLanAccount } = accountHelpers;
@@ -27,7 +30,7 @@ export function createLanHelpers({
     btnLanConnect.textContent = label;
   }
 
-  function connectLan(account, { authMode, url } = {}) {
+  function connectLan(account, { authMode, url, requestCharacters } = {}) {
     const host =
       typeof window !== "undefined" && window.location
         ? window.location.hostname
@@ -58,25 +61,29 @@ export function createLanHelpers({
       setLanButtonLabel("Compte");
       return;
     }
-    const characters = getCharacters();
-    const selected =
-      characters.find((c) => c && c.id === getSelectedCharacterId()) ||
-      sessionFns.getSessionSelectedCharacter?.() ||
-      characters[0] ||
-      null;
-    if (selected?.id && !getSelectedCharacterId()) {
-      setSelectedCharacterId(selected.id);
-    }
-    if (!selected || !selected.id) {
-      setLoginError("Cree un personnage avant de te connecter.");
-      setLanButtonLabel("Compte");
-      return;
+    let selected = null;
+    if (requestCharacters !== true) {
+      const characters = getCharacters();
+      selected =
+        characters.find((c) => c && c.id === getSelectedCharacterId()) ||
+        sessionFns.getSessionSelectedCharacter?.() ||
+        characters[0] ||
+        null;
+      if (selected?.id && !getSelectedCharacterId()) {
+        setSelectedCharacterId(selected.id);
+      }
+      if (!selected || !selected.id) {
+        setLoginError("Cree un personnage avant de te connecter.");
+        setLanButtonLabel("Compte");
+        return;
+      }
     }
     const client = createLanClient({
       url: serverUrl,
       character: selected,
       account,
       authMode,
+      requestCharacters: requestCharacters === true,
       onEvent: (msg) => {
         if (typeof window !== "undefined") {
           window.__lanLastEvent = msg;
@@ -90,6 +97,34 @@ export function createLanHelpers({
           });
           if (history.length > 50) history.shift();
           window.__lanEventHistory = history;
+        }
+        if (msg?.t === "EvAccountCharacters") {
+          setLanConnected(true);
+          setActiveAccount(account);
+          if (msg.sessionToken && typeof window !== "undefined") {
+            account.sessionToken = msg.sessionToken;
+          }
+          saveLanAccount(account, { remember: loginRemember.checked });
+          setLoginError("");
+          if (typeof onAccountCharacters === "function") {
+            onAccountCharacters(msg.characters || []);
+          }
+          setLanButtonLabel("Compte: OK");
+          return;
+        }
+        if (msg?.t === "EvAccountCreateFailed") {
+          const reason = msg?.reason || "unknown";
+          if (typeof onAccountCreateFailed === "function") {
+            onAccountCreateFailed(reason);
+          }
+          return;
+        }
+        if (msg?.t === "EvAccountDeleteFailed") {
+          const reason = msg?.reason || "unknown";
+          if (typeof onAccountDeleteFailed === "function") {
+            onAccountDeleteFailed(reason);
+          }
+          return;
         }
         if (msg?.t === "EvWelcome") {
           sessionFns.setNetPlayerId(msg.playerId);
@@ -143,7 +178,7 @@ export function createLanHelpers({
 
   function ensureAccountFromStorage() {
     const saved = loadLanAccount();
-    if (saved?.name && saved?.password) {
+    if (saved?.name) {
       return saved;
     }
     return null;

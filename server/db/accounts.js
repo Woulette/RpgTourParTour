@@ -28,6 +28,14 @@ function createAccountStore({ dataDir } = {}) {
     );
   `);
   db.exec(`
+    CREATE TABLE IF NOT EXISTS session_tokens (
+      token TEXT PRIMARY KEY,
+      account_id TEXT,
+      created_at INTEGER,
+      expires_at INTEGER
+    );
+  `);
+  db.exec(`
     CREATE TABLE IF NOT EXISTS account_friends (
       account_id TEXT,
       friend_account_id TEXT,
@@ -54,6 +62,19 @@ function createAccountStore({ dataDir } = {}) {
     VALUES
       (@accountId, @name, @passwordHash, @passwordSalt, @createdAt, @updatedAt)
   `);
+  const insertTokenStmt = db.prepare(`
+    INSERT INTO session_tokens
+      (token, account_id, created_at, expires_at)
+    VALUES
+      (@token, @accountId, @createdAt, @expiresAt)
+  `);
+  const selectTokenStmt = db.prepare(
+    "SELECT token, account_id, expires_at FROM session_tokens WHERE token = ?"
+  );
+  const deleteTokenStmt = db.prepare("DELETE FROM session_tokens WHERE token = ?");
+  const deleteExpiredTokensStmt = db.prepare(
+    "DELETE FROM session_tokens WHERE expires_at IS NOT NULL AND expires_at <= ?"
+  );
   const selectFriendsStmt = db.prepare(
     "SELECT friend_account_id FROM account_friends WHERE account_id = ?"
   );
@@ -141,12 +162,47 @@ function createAccountStore({ dataDir } = {}) {
     return hash === account.passwordHash;
   };
 
+  const issueSessionToken = (accountId, ttlMs) => {
+    if (!accountId) return null;
+    deleteExpiredTokensStmt.run(Date.now());
+    const token = crypto.randomBytes(24).toString("hex");
+    const now = Date.now();
+    const expiresAt = Number.isFinite(ttlMs) ? now + Math.max(0, ttlMs) : null;
+    insertTokenStmt.run({
+      token,
+      accountId,
+      createdAt: now,
+      expiresAt,
+    });
+    return token;
+  };
+
+  const getAccountIdFromSession = (token) => {
+    if (!token) return null;
+    const row = selectTokenStmt.get(token);
+    if (!row) return null;
+    if (Number.isFinite(row.expires_at) && row.expires_at <= Date.now()) {
+      deleteTokenStmt.run(token);
+      return null;
+    }
+    return row.account_id || null;
+  };
+
+  const revokeSessionToken = (token) => {
+    if (!token) return false;
+    deleteTokenStmt.run(token);
+    return true;
+  };
+
   return {
     normalizeAccountName,
     getAccountByName,
     getAccountById,
     createAccount,
     verifyPassword,
+    issueSessionToken,
+    getAccountIdFromSession,
+    revokeSessionToken,
     getFriends: (accountId) => {
       if (!accountId) return [];
       return selectFriendsStmt

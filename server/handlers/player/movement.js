@@ -6,6 +6,7 @@ function createMovementHandlers({
   persistPlayerState,
   getNextEventId,
   tryStartCombatIfNeeded,
+  onPlayerTradeCancel,
 }) {
   function findPathOnGrid(startX, startY, endX, endY, meta, blocked, allowDiagonal, maxSteps) {
     if (!meta) return null;
@@ -97,6 +98,9 @@ function createMovementHandlers({
 
     const player = state.players[clientInfo.id];
     if (!player) return;
+    if (Number.isInteger(player.tradeId)) {
+      return;
+    }
     const seq = Number.isInteger(msg.seq) ? msg.seq : 0;
     const mapId = player.mapId;
     if (msg?.debug === true) {
@@ -258,6 +262,11 @@ function createMovementHandlers({
     const player = state.players[clientInfo.id];
     if (!player) return;
     if (player.inCombat) return;
+    if (Number.isInteger(player.tradeId)) {
+      if (typeof onPlayerTradeCancel === "function") {
+        onPlayerTradeCancel(player.id, "map_change");
+      }
+    }
 
     const fromMapId = player.mapId;
     player.mapId = mapId;

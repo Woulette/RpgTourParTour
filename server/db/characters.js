@@ -96,6 +96,13 @@ function createCharacterStore({ dataDir } = {}) {
      ORDER BY updated_at DESC, created_at DESC
      LIMIT 1`
   );
+  const deleteByIdStmt = db.prepare("DELETE FROM characters WHERE character_id = ?");
+  const selectAllByAccountStmt = db.prepare(
+    `SELECT character_id, account_id, name, class_id, level, updated_at, created_at
+     FROM characters
+     WHERE account_id = ?
+     ORDER BY updated_at DESC, created_at DESC`
+  );
   const insertStmt = db.prepare(`
     INSERT INTO characters
       (character_id, account_id, name, class_id, level, base_stats, level_state,
@@ -236,6 +243,28 @@ function createCharacterStore({ dataDir } = {}) {
     };
   };
 
+  const listCharactersByAccountId = (accountId) => {
+    if (!accountId) return [];
+    const rows = selectAllByAccountStmt.all(accountId) || [];
+    return rows.map((row) => ({
+      characterId: row.character_id,
+      accountId: row.account_id || null,
+      name: row.name || "Joueur",
+      classId: row.class_id || "archer",
+      level: Number.isInteger(row.level) ? row.level : 1,
+      updatedAt: Number.isFinite(row.updated_at) ? row.updated_at : null,
+      createdAt: Number.isFinite(row.created_at) ? row.created_at : null,
+    }));
+  };
+
+  const deleteCharacter = (characterId) => {
+    if (!characterId) return false;
+    const row = selectStmt.get(characterId);
+    if (!row) return false;
+    deleteByIdStmt.run(characterId);
+    return true;
+  };
+
   const upsertTxn = db.transaction((payload, exists) => {
     if (!exists) {
       insertStmt.run(payload);
@@ -289,6 +318,8 @@ function createCharacterStore({ dataDir } = {}) {
     getCharacter,
     getCharacterByName,
     getCharacterByAccountId,
+    listCharactersByAccountId,
+    deleteCharacter,
     upsertCharacter,
     close: () => db.close(),
   };

@@ -37,9 +37,9 @@
     btnLanConnect.hidden = true;
 
     account.setLoginError("");
-    account.setLoginMode(state.getLoginMode());
+    account.setLoginMode("login");
     const saved = state.getActiveAccount() || account.loadLanAccount();
-    if (saved && (saved.name || saved.password)) {
+    if (saved && saved.name) {
       state.setActiveAccount(saved);
       account.fillLoginForm(saved);
       loginRemember.checked = true;
@@ -57,7 +57,7 @@
 
   function initLoginState() {
     const savedAccount = account.loadLanAccount();
-    if (savedAccount?.name && savedAccount?.password) {
+    if (savedAccount?.name) {
       state.setActiveAccount(savedAccount);
       account.fillLoginForm(savedAccount);
       loginRemember.checked = true;

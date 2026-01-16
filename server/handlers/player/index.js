@@ -10,6 +10,7 @@ const { createAuthHandlers } = require("./auth");
 const { createEconomyHandlers } = require("./economy");
 const { createGroupHandlers } = require("./groups");
 const { createFriendHandlers } = require("./friends");
+const { createTradeHandlers } = require("./trade");
 
 function createPlayerHandlers(ctx) {
   const MAX_INV_SIZE = 200;
@@ -98,6 +99,28 @@ function createPlayerHandlers(ctx) {
     accountStore: ctx.accountStore,
   });
 
+  const friends = createFriendHandlers({
+    state: ctx.state,
+    accountStore: ctx.accountStore,
+    characterStore: ctx.characterStore,
+    sendToPlayerId: ctx.sendToPlayerId,
+    getNextEventId: ctx.getNextEventId,
+  });
+
+  const trade = createTradeHandlers({
+    state: ctx.state,
+    sendToPlayerId: ctx.sendToPlayerId,
+    getNextEventId: ctx.getNextEventId,
+    getNextTradeId: ctx.getNextTradeId,
+    persistPlayerState: ctx.persistPlayerState,
+    helpers,
+    sync,
+    getItemDefs: ctx.getItemDefs,
+    getItemDefsPromise: ctx.getItemDefsPromise,
+    getItemDefsFailed: ctx.getItemDefsFailed,
+    MAX_TRADE_GOLD: 1000000000,
+  });
+
   const movement = createMovementHandlers({
     state: ctx.state,
     broadcast: ctx.broadcast,
@@ -106,14 +129,7 @@ function createPlayerHandlers(ctx) {
     persistPlayerState: ctx.persistPlayerState,
     getNextEventId: ctx.getNextEventId,
     tryStartCombatIfNeeded: ctx.tryStartCombatIfNeeded,
-  });
-
-  const friends = createFriendHandlers({
-    state: ctx.state,
-    accountStore: ctx.accountStore,
-    characterStore: ctx.characterStore,
-    sendToPlayerId: ctx.sendToPlayerId,
-    getNextEventId: ctx.getNextEventId,
+    onPlayerTradeCancel: trade.cancelTradeForPlayer,
   });
 
   const auth = createAuthHandlers({
@@ -127,6 +143,7 @@ function createPlayerHandlers(ctx) {
     buildBaseStatsForClass: ctx.buildBaseStatsForClass,
     computeFinalStats: ctx.computeFinalStats,
     config: ctx.config,
+    ensureMapInitialized: ctx.ensureMapInitialized,
     getNextPlayerId: ctx.getNextPlayerId,
     getNextEventId: ctx.getNextEventId,
     getHostId: ctx.getHostId,
@@ -148,6 +165,9 @@ function createPlayerHandlers(ctx) {
 
   return {
     handleHello: auth.handleHello,
+    handleCmdAccountSelectCharacter: auth.handleCmdAccountSelectCharacter,
+    handleCmdAccountCreateCharacter: auth.handleCmdAccountCreateCharacter,
+    handleCmdAccountDeleteCharacter: auth.handleCmdAccountDeleteCharacter,
     handleCmdMove: movement.handleCmdMove,
     handleCmdMapChange: movement.handleCmdMapChange,
     handleCmdEndTurn: combat.handleCmdEndTurn,
@@ -173,9 +193,20 @@ function createPlayerHandlers(ctx) {
     handleCmdFriendRemove: friends.handleCmdFriendRemove,
     handleCmdIgnoreAdd: friends.handleCmdIgnoreAdd,
     handleCmdIgnoreAccount: friends.handleCmdIgnoreAccount,
+    handleCmdTradeInvite: trade.handleCmdTradeInvite,
+    handleCmdTradeAccept: trade.handleCmdTradeAccept,
+    handleCmdTradeDecline: trade.handleCmdTradeDecline,
+    handleCmdTradeCancel: trade.handleCmdTradeCancel,
+    handleCmdTradeOfferItem: trade.handleCmdTradeOfferItem,
+    handleCmdTradeOfferGold: trade.handleCmdTradeOfferGold,
+    handleCmdTradeValidate: trade.handleCmdTradeValidate,
+    handlePlayerCombatStateChanged: (playerId, inCombat) => {
+      if (inCombat) trade.cancelTradeForPlayer(playerId, "in_combat");
+    },
     handlePlayerDisconnect: (playerId) => {
       groups.handlePlayerDisconnect(playerId);
       friends.handlePlayerDisconnect(playerId);
+      trade.handlePlayerDisconnect(playerId);
     },
     handleGroupHpTick: groups.handleGroupHpTick,
     applyInventoryOpFromServer: inventory.applyInventoryOpFromServer,

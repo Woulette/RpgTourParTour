@@ -192,17 +192,22 @@ function createResourceHandlers(ctx) {
     if (clientInfo.id !== msg.playerId) return;
     const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
     if (!mapId) return;
-    const list = state.mapResources[mapId];
-    if (!Array.isArray(list)) {
-      ensureMapInitialized(mapId);
-      return;
-    }
-    send(ws, {
-      t: "EvMapResources",
-      eventId: getNextEventId(),
-      mapId,
-      resources: serializeResourceEntries(list),
-    });
+    const sendSnapshot = () => {
+      const list = state.mapResources[mapId];
+      if (!Array.isArray(list)) return false;
+      send(ws, {
+        t: "EvMapResources",
+        eventId: getNextEventId(),
+        mapId,
+        resources: serializeResourceEntries(list),
+      });
+      return true;
+    };
+    if (sendSnapshot()) return;
+    ensureMapInitialized(mapId);
+    setTimeout(() => {
+      sendSnapshot();
+    }, 80);
   }
 
   return {

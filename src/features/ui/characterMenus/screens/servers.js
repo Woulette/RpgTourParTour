@@ -91,6 +91,10 @@
     btnServersBack.addEventListener("click", () => actions.showLogin());
     btnServersContinue.addEventListener("click", () => {
       if (!state.getSelectedServerId()) return;
+      if (typeof actions.connectAccount === "function") {
+        actions.connectAccount();
+        return;
+      }
       if (state.getCharactersLength() === 0) actions.showCreate();
       else actions.showSelect();
     });

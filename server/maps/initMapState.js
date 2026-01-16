@@ -25,6 +25,58 @@ function resolveMapDef(mapId, maps) {
   return null;
 }
 
+function buildGroundTileInfo(mapJson, mapDef) {
+  if (!mapJson || !Array.isArray(mapJson.layers)) return null;
+  const targetName = mapDef?.groundLayerName ? String(mapDef.groundLayerName) : null;
+  let groundLayer = null;
+  if (targetName) {
+    groundLayer = mapJson.layers.find(
+      (layer) => layer && layer.type === "tilelayer" && layer.name === targetName
+    );
+  }
+  if (!groundLayer) {
+    groundLayer = mapJson.layers.find((layer) => layer && layer.type === "tilelayer") || null;
+  }
+  if (!groundLayer || !Array.isArray(groundLayer.data)) return null;
+
+  const width = Number.isFinite(groundLayer.width)
+    ? groundLayer.width
+    : Number.isFinite(mapJson.width)
+      ? mapJson.width
+      : null;
+  const height = Number.isFinite(groundLayer.height)
+    ? groundLayer.height
+    : Number.isFinite(mapJson.height)
+      ? mapJson.height
+      : null;
+  if (!width || !height) return null;
+
+  const tiles = new Set();
+  let minX = width - 1;
+  let maxX = 0;
+  let minY = height - 1;
+  let maxY = 0;
+  let found = false;
+
+  groundLayer.data.forEach((gid, index) => {
+    if (!Number.isFinite(gid) || gid <= 0) return;
+    const x = index % width;
+    const y = Math.floor(index / width);
+    tiles.add(`${x},${y}`);
+    found = true;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  });
+
+  if (!found) return null;
+  return {
+    tiles,
+    bounds: { minX, maxX, minY, maxY },
+  };
+}
+
 function loadMapJson(mapDef, projectRoot) {
   if (!mapDef?.jsonPath || !projectRoot) return null;
   const cacheKey = mapDef.key || mapDef.jsonPath;
@@ -374,8 +426,38 @@ function initializeMapState({
     return null;
   }
 
-  const meta = { width: Math.round(mapJson.width), height: Math.round(mapJson.height) };
+  const groundInfo = buildGroundTileInfo(mapJson, mapDef);
+  const meta = {
+    width: Math.round(mapJson.width),
+    height: Math.round(mapJson.height),
+    playableBounds: groundInfo?.bounds || null,
+    groundTiles: groundInfo?.tiles || null,
+  };
   const collisions = extractCollisionKeys(mapJson);
+  const addStaticBlocker = (tileX, tileY) => {
+    if (!Number.isFinite(tileX) || !Number.isFinite(tileY)) return;
+    const x = Math.round(tileX);
+    const y = Math.round(tileY);
+    if (x < 0 || y < 0 || x >= meta.width || y >= meta.height) return;
+    collisions.add(`${x},${y}`);
+  };
+
+  const resources = buildResourceEntries(mapDef).map((entry) => ({
+    ...entry,
+    entityId: getNextResourceEntityId(),
+    spawnMapKey: mapId,
+  }));
+
+  resources.forEach((entry) => {
+    addStaticBlocker(entry.tileX, entry.tileY);
+  });
+
+  if (Array.isArray(mapDef.workstations)) {
+    mapDef.workstations.forEach((ws) => {
+      addStaticBlocker(ws.tileX, ws.tileY);
+    });
+  }
+
   const monsters = buildMonsterEntries(mapDef, meta, rollMonsterLevel).map((entry) => ({
     ...entry,
     entityId: getNextMonsterEntityId(),
@@ -387,12 +469,6 @@ function initializeMapState({
     moveEndAt: 0,
     inCombat: false,
     combatId: null,
-  }));
-
-  const resources = buildResourceEntries(mapDef).map((entry) => ({
-    ...entry,
-    entityId: getNextResourceEntityId(),
-    spawnMapKey: mapId,
   }));
 
   return { meta, collisions, monsters, resources };

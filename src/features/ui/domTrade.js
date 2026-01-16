@@ -29,6 +29,11 @@ let cooldownTimer = null;
 let unsubInventory = null;
 let unsubPlayer = null;
 let currentFilter = "all";
+let localOfferShadow = null;
+let shadowTradeId = null;
+let pendingOfferMap = new Map();
+let pendingOfferTimer = null;
+let lastInventoryClickAt = 0;
 
 function ensurePanel() {
   if (panelEl) return panelEl;
@@ -64,6 +69,37 @@ function ensurePanel() {
         goldInputTimer = null;
         sendGoldOffer();
       }, 200);
+    });
+  }
+
+  if (inventoryGrid) {
+    inventoryGrid.addEventListener("click", (event) => {
+      const now = Date.now();
+      const delta = now - lastInventoryClickAt;
+      lastInventoryClickAt = now;
+      if (delta > 300) return;
+
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      const slot = target?.closest?.(".inventory-slot");
+      const itemId = slot?.dataset?.itemId || "";
+      if (!itemId) return;
+      if (event.ctrlKey) {
+        const available = getInventoryCount(getPlayer(), itemId);
+        requestOfferItemSet(itemId, available);
+        return;
+      }
+      requestOfferItemChange(itemId, +1);
+    });
+    inventoryGrid.addEventListener("dragover", (event) => {
+      const itemId = event.dataTransfer?.getData("application/x-trade-remove") || "";
+      if (!itemId) return;
+      event.preventDefault();
+    });
+    inventoryGrid.addEventListener("drop", (event) => {
+      const itemId = event.dataTransfer?.getData("application/x-trade-remove") || "";
+      if (!itemId) return;
+      event.preventDefault();
+      promptRemoveQuantity(itemId);
     });
   }
 
@@ -174,7 +210,34 @@ function getInventoryCount(player, itemId) {
 
 function getLocalOffer() {
   if (!tradeState) return null;
-  return tradeState.offersById?.[tradeState.localId] || null;
+  const offer = tradeState.offersById?.[tradeState.localId] || null;
+  if (!offer) return null;
+  if (!localOfferShadow || shadowTradeId !== tradeState.tradeId) {
+    return offer;
+  }
+  const items = [];
+  localOfferShadow.forEach((qty, itemId) => {
+    if (!itemId || !Number.isFinite(qty) || qty <= 0) return;
+    items.push({ itemId, qty });
+  });
+  return {
+    ...offer,
+    items,
+    itemsById: localOfferShadow,
+  };
+}
+
+function syncShadowFromState() {
+  if (!tradeState) return;
+  shadowTradeId = tradeState.tradeId || null;
+  const base =
+    tradeState.offersById?.[tradeState.localId]?.itemsById || new Map();
+  localOfferShadow = new Map(base);
+  if (pendingOfferMap.size > 0) {
+    pendingOfferMap.forEach((qty, itemId) => {
+      localOfferShadow.set(itemId, qty);
+    });
+  }
 }
 
 function getRemoteOffer() {
@@ -231,9 +294,13 @@ function renderTradeGrid(panel, offer, allowRemove) {
     }
 
     if (allowRemove) {
-      slot.addEventListener("dblclick", () => {
+      slot.addEventListener("dblclick", (event) => {
         const itemId = slot.dataset.itemId;
         if (!itemId) return;
+        if (event.ctrlKey) {
+          requestOfferItemSet(itemId, 0);
+          return;
+        }
         requestOfferItemChange(itemId, -1);
       });
       slot.addEventListener("dragover", (event) => {
@@ -245,6 +312,13 @@ function renderTradeGrid(panel, offer, allowRemove) {
         if (!itemId) return;
         promptDropQuantity(itemId);
       });
+      if (entry?.itemId) {
+        slot.draggable = true;
+        slot.addEventListener("dragstart", (event) => {
+          event.dataTransfer?.setData("application/x-trade-remove", entry.itemId);
+          event.dataTransfer?.setData("text/plain", entry.itemId);
+        });
+      }
     }
 
     grid.appendChild(slot);
@@ -324,15 +398,6 @@ function renderInventoryGrid() {
         }
 
         if (isAllowed) {
-          slotEl.addEventListener("dblclick", (event) => {
-            if (event.ctrlKey) {
-              const available = getInventoryCount(player, entry.itemId);
-              requestOfferItemSet(entry.itemId, available);
-              return;
-            }
-            requestOfferItemChange(entry.itemId, +1);
-          });
-
           slotEl.addEventListener("dragstart", (event) => {
             event.dataTransfer?.setData("text/plain", entry.itemId);
           });
@@ -425,6 +490,52 @@ function renderTradeState() {
   }
 }
 
+function renderTradePanelsOnly() {
+  if (!tradeState) return;
+  const localOffer = getLocalOffer();
+  const remoteOffer = getRemoteOffer();
+
+  const localName = getLocalName();
+  const remoteName = getRemoteName();
+
+  const localNameEl = localPanel?.querySelector("[data-role='name']");
+  const remoteNameEl = remotePanel?.querySelector("[data-role='name']");
+  if (localNameEl) localNameEl.textContent = localName;
+  if (remoteNameEl) remoteNameEl.textContent = remoteName;
+
+  const remoteGoldEl = remotePanel?.querySelector("[data-role='gold']");
+  if (remoteGoldEl) remoteGoldEl.textContent = String(remoteOffer?.gold ?? 0);
+
+  if (localGoldInput && localOffer) {
+    const value = Number.isFinite(localOffer.gold) ? localOffer.gold : 0;
+    if (String(localGoldInput.value) !== String(value)) {
+      localGoldInput.value = String(value);
+    }
+  }
+  const player = getPlayer();
+  const totalGold =
+    typeof player?.gold === "number" && !Number.isNaN(player?.gold) ? player.gold : 0;
+  if (localGoldTotalEl) {
+    localGoldTotalEl.textContent = `/ ${totalGold}`;
+  }
+  if (localGoldInput) {
+    const maxGold = Math.max(0, Math.min(1000000000, totalGold));
+    localGoldInput.max = String(maxGold);
+  }
+
+  renderTradeGrid(remotePanel, remoteOffer, false);
+  renderTradeGrid(localPanel, localOffer, true);
+
+  const localValidated = tradeState.validated?.[tradeState.localId] === true;
+  const remoteId =
+    tradeState.localId === tradeState.aId ? tradeState.bId : tradeState.aId;
+  const remoteValidated = tradeState.validated?.[remoteId] === true;
+
+  updatePanelStatus(localPanel, localValidated);
+  updatePanelStatus(remotePanel, remoteValidated);
+}
+
+
 function requestOfferItemChange(itemId, delta) {
   if (!tradeState || !itemId || !delta) return;
   const player = getPlayer();
@@ -436,18 +547,20 @@ function requestOfferItemChange(itemId, delta) {
   }
   const available = getInventoryCount(player, itemId);
   const localOffer = getLocalOffer();
-  const current = localOffer?.itemsById?.get(itemId) || 0;
+  const current =
+    localOfferShadow?.get(itemId) ??
+    localOffer?.itemsById?.get(itemId) ??
+    0;
   const next = Math.max(0, Math.min(available, current + delta));
   if (next === current) return;
 
-  const client = getNetClient();
-  const playerId = getNetPlayerId();
-  if (!client || !playerId) return;
-  client.sendCmd("CmdTradeOfferItem", {
-    playerId,
-    itemId,
-    qty: next,
-  });
+  if (localOfferShadow) {
+    localOfferShadow.set(itemId, next);
+  }
+  pendingOfferMap.set(itemId, next);
+  scheduleOfferFlush();
+  renderTradePanelsOnly();
+  renderInventoryGrid();
 }
 
 function requestOfferItemSet(itemId, qty) {
@@ -462,16 +575,18 @@ function requestOfferItemSet(itemId, qty) {
   const available = getInventoryCount(player, itemId);
   const safeQty = Math.max(0, Math.min(available, Math.round(qty || 0)));
   const localOffer = getLocalOffer();
-  const current = localOffer?.itemsById?.get(itemId) || 0;
+  const current =
+    localOfferShadow?.get(itemId) ??
+    localOffer?.itemsById?.get(itemId) ??
+    0;
   if (safeQty === current) return;
-  const client = getNetClient();
-  const playerId = getNetPlayerId();
-  if (!client || !playerId) return;
-  client.sendCmd("CmdTradeOfferItem", {
-    playerId,
-    itemId,
-    qty: safeQty,
-  });
+  if (localOfferShadow) {
+    localOfferShadow.set(itemId, safeQty);
+  }
+  pendingOfferMap.set(itemId, safeQty);
+  scheduleOfferFlush();
+  renderTradePanelsOnly();
+  renderInventoryGrid();
 }
 
 function promptDropQuantity(itemId) {
@@ -479,7 +594,10 @@ function promptDropQuantity(itemId) {
   if (!player?.inventory) return;
   const available = getInventoryCount(player, itemId);
   const localOffer = getLocalOffer();
-  const current = localOffer?.itemsById?.get(itemId) || 0;
+  const current =
+    localOfferShadow?.get(itemId) ??
+    localOffer?.itemsById?.get(itemId) ??
+    0;
   const remaining = Math.max(0, available - current);
   if (remaining <= 0) return;
   const raw = window.prompt(
@@ -490,6 +608,24 @@ function promptDropQuantity(itemId) {
   const qty = Math.max(0, Math.min(remaining, Math.round(Number(raw))));
   if (!Number.isFinite(qty) || qty <= 0) return;
   requestOfferItemSet(itemId, current + qty);
+}
+
+function promptRemoveQuantity(itemId) {
+  if (!tradeState) return;
+  const localOffer = getLocalOffer();
+  const current =
+    localOfferShadow?.get(itemId) ??
+    localOffer?.itemsById?.get(itemId) ??
+    0;
+  if (!Number.isFinite(current) || current <= 0) return;
+  const raw = window.prompt(
+    `Quantite a retirer (max ${current}) :`,
+    String(current)
+  );
+  if (raw === null) return;
+  const qty = Math.max(0, Math.min(current, Math.round(Number(raw))));
+  if (!Number.isFinite(qty) || qty <= 0) return;
+  requestOfferItemSet(itemId, current - qty);
 }
 
 function sendGoldOffer() {
@@ -525,6 +661,8 @@ function openTradePanel(trade) {
   const normalized = normalizeTrade(trade);
   if (!normalized || !panelEl) return;
   tradeState = normalized;
+  pendingOfferMap = new Map();
+  syncShadowFromState();
   document.body.classList.add("hud-trade-open");
   window.__tradeLockMovement = true;
   renderTradeState();
@@ -553,6 +691,7 @@ function updateTradeState(trade) {
   const normalized = normalizeTrade(trade);
   if (!normalized) return;
   tradeState = normalized;
+  syncShadowFromState();
   renderTradeState();
 }
 
@@ -572,8 +711,35 @@ function closeTradePanel({ sendCancel } = {}) {
     }
   }
   tradeState = null;
+  localOfferShadow = null;
+  shadowTradeId = null;
+  pendingOfferMap = new Map();
+  if (pendingOfferTimer) {
+    window.clearTimeout(pendingOfferTimer);
+    pendingOfferTimer = null;
+  }
   document.body.classList.remove("hud-trade-open");
   window.__tradeLockMovement = false;
+}
+
+function scheduleOfferFlush() {
+  if (pendingOfferTimer) return;
+  pendingOfferTimer = window.setTimeout(() => {
+    pendingOfferTimer = null;
+    if (!tradeState || pendingOfferMap.size === 0) return;
+    const client = getNetClient();
+    const playerId = getNetPlayerId();
+    if (!client || !playerId) return;
+    const entries = Array.from(pendingOfferMap.entries());
+    pendingOfferMap = new Map();
+    entries.forEach(([itemId, qty]) => {
+      client.sendCmd("CmdTradeOfferItem", {
+        playerId,
+        itemId,
+        qty,
+      });
+    });
+  }, 300);
 }
 
 function openTradeInvite(invite) {

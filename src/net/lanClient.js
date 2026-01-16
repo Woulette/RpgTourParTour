@@ -22,6 +22,7 @@ export function createLanClient({
   character = null,
   account = null,
   authMode = null,
+  requestCharacters = false,
   onEvent,
   onClose,
 } = {}) {
@@ -69,10 +70,14 @@ export function createLanClient({
       accountPassword: account?.password || null,
       authMode,
       inventoryAuthority: true,
-      characterId: character?.id || null,
-      characterName: character?.name || null,
-      classId: character?.classId || null,
-      level: Number.isFinite(character?.level) ? Math.round(character.level) : null,
+      requestCharacters: requestCharacters === true,
+      characterId: requestCharacters ? null : character?.id || null,
+      characterName: requestCharacters ? null : character?.name || null,
+      classId: requestCharacters ? null : character?.classId || null,
+      level:
+        requestCharacters || !Number.isFinite(character?.level)
+          ? null
+          : Math.round(character.level),
     });
   });
 

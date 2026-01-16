@@ -123,31 +123,6 @@
     }, 650);
   }
 
-  function makeUniqueName(raw) {
-    const base = String(raw || "").trim();
-    if (!base) return "";
-
-    const exists = (name) =>
-      state
-        .getCharacters()
-        .some(
-          (c) =>
-            c &&
-            typeof c.name === "string" &&
-            c.name.trim().toLowerCase() === name.trim().toLowerCase()
-        );
-
-    if (!exists(base)) return base;
-
-    let n = 2;
-    let next = `${base} ${n}`;
-    while (exists(next) && n < 999) {
-      n += 1;
-      next = `${base} ${n}`;
-    }
-    return next;
-  }
-
   function handleCreateSubmit(e) {
     e.preventDefault();
     if (!state.getSelectedClassId()) {
@@ -161,22 +136,12 @@
       return;
     }
 
-    const name = makeUniqueName(rawName);
-    const character = {
-      id:
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : String(Date.now()),
-      name,
-      classId: state.getSelectedClassId(),
-      level: 1,
-    };
-
-    state.getCharacters().push(character);
-    actions.upsertCharacterMeta(character);
-    state.setSelectedCharacterId(character.id);
-    actions.showSelect();
-    btnPlay.disabled = false;
+    if (typeof actions.createCharacter === "function") {
+      actions.createCharacter({
+        name: rawName,
+        classId: state.getSelectedClassId(),
+      });
+    }
   }
 
   function attachCreateEvents() {

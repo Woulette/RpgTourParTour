@@ -373,17 +373,22 @@ function createMobHandlers(ctx) {
     if (clientInfo.id !== msg.playerId) return;
     const mapId = typeof msg.mapId === "string" ? msg.mapId : null;
     if (!mapId) return;
-    const list = state.mapMonsters[mapId];
-    if (!Array.isArray(list)) {
-      ensureMapInitialized(mapId);
-      return;
-    }
-    send(ws, {
-      t: "EvMapMonsters",
-      eventId: getNextEventId(),
-      mapId,
-      monsters: serializeMonsterEntries(getVisibleMonstersForMap(mapId)),
-    });
+    const sendSnapshot = () => {
+      const list = state.mapMonsters[mapId];
+      if (!Array.isArray(list)) return false;
+      send(ws, {
+        t: "EvMapMonsters",
+        eventId: getNextEventId(),
+        mapId,
+        monsters: serializeMonsterEntries(getVisibleMonstersForMap(mapId)),
+      });
+      return true;
+    };
+    if (sendSnapshot()) return;
+    ensureMapInitialized(mapId);
+    setTimeout(() => {
+      sendSnapshot();
+    }, 80);
   }
 
   function pickRandomNeighborTile(entry, width, height, occupiedKeys) {

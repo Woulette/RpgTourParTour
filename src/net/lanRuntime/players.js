@@ -76,6 +76,40 @@ export function createPlayerHandlers(ctx) {
     resetEntityIdle(entity);
   };
 
+  const updateEntityTileFromWorld = (entity) => {
+    if (!entity || !map || !groundLayer || typeof map.tileToWorldXY !== "function") return;
+    const base = worldToTile(entity.x, entity.y);
+    if (!base) return;
+    const candidates = [];
+    for (let dy = -1; dy <= 1; dy += 1) {
+      for (let dx = -1; dx <= 1; dx += 1) {
+        const cx = base.x + dx;
+        const cy = base.y + dy;
+        if (cx < 0 || cy < 0 || cx >= map.width || cy >= map.height) continue;
+        candidates.push({ x: cx, y: cy });
+      }
+    }
+    if (candidates.length === 0) return;
+    let best = candidates[0];
+    let bestDist = Infinity;
+    const halfW = map.tileWidth / 2;
+    const halfH = map.tileHeight / 2;
+    candidates.forEach((c) => {
+      const wp = map.tileToWorldXY(c.x, c.y, undefined, undefined, groundLayer);
+      const centerX = wp.x + halfW;
+      const centerY = wp.y + halfH;
+      const dx = entity.x - centerX;
+      const dy = entity.y - centerY;
+      const dist2 = dx * dx + dy * dy;
+      if (dist2 < bestDist) {
+        bestDist = dist2;
+        best = c;
+      }
+    });
+    entity.currentTileX = best.x;
+    entity.currentTileY = best.y;
+  };
+
   const forceMoveToTile = (entity, tileX, tileY) => {
     const worldPos = map.tileToWorldXY(
       tileX,
@@ -422,11 +456,7 @@ export function createPlayerHandlers(ctx) {
         }
       }
       stopEntityMovement(player);
-      const currentTile = worldToTile(player.x, player.y);
-      if (currentTile) {
-        player.currentTileX = currentTile.x;
-        player.currentTileY = currentTile.y;
-      }
+      updateEntityTileFromWorld(player);
       if (shouldIgnoreMove(player, msg)) {
         return;
       }

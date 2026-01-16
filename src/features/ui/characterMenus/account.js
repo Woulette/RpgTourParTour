@@ -4,10 +4,16 @@ export const AUTH_MESSAGES = {
   account_exists: "Ce compte existe deja.",
   account_missing: "Compte introuvable.",
   account_in_use: "Ce compte est deja connecte.",
+  auth_mode_invalid: "Mode de connexion invalide.",
+  invalid_identifier: "Identifiant invalide.",
+  invalid_password: "Mot de passe invalide.",
+  auth_rate_limited: "Trop de tentatives. Attends 10 minutes.",
+  auth_cooldown: "Attends 2 secondes avant de reessayer.",
   character_owned: "Ce personnage appartient a un autre compte.",
   name_in_use: "Ce nom de personnage est deja pris.",
   character_in_use: "Personnage deja connecte.",
   character_required: "Selectionne un personnage avant de te connecter.",
+  character_missing: "Personnage introuvable.",
   room_full: "Serveur plein.",
   server_loading: "Serveur en chargement, reessaie.",
 };
@@ -32,11 +38,10 @@ export function createAccountHelpers({
   function loadLanAccount() {
     if (typeof window === "undefined") return null;
     const savedName = localStorage.getItem("lanAccountName") || "";
-    const savedPassword = localStorage.getItem("lanAccountPassword") || "";
     const savedToken = localStorage.getItem("lanSessionToken") || "";
     return {
       name: savedName,
-      password: savedPassword,
+      password: "",
       sessionToken: savedToken || null,
     };
   }
@@ -45,12 +50,10 @@ export function createAccountHelpers({
     if (typeof window === "undefined") return;
     if (!account || remember === false) {
       localStorage.removeItem("lanAccountName");
-      localStorage.removeItem("lanAccountPassword");
       localStorage.removeItem("lanSessionToken");
       return;
     }
     localStorage.setItem("lanAccountName", account.name || "");
-    localStorage.setItem("lanAccountPassword", account.password || "");
     if (account.sessionToken) {
       localStorage.setItem("lanSessionToken", account.sessionToken);
     }
@@ -62,7 +65,12 @@ export function createAccountHelpers({
 
   function applyLoginMode(nextMode) {
     setLoginMode(nextMode === "register" ? "register" : "login");
-    loginConfirmWrap.hidden = getLoginMode() !== "register";
+    const isRegister = getLoginMode() === "register";
+    loginConfirmWrap.hidden = !isRegister;
+    loginConfirmWrap.style.display = isRegister ? "" : "none";
+    if (!isRegister) {
+      loginPasswordConfirm.value = "";
+    }
     btnLoginSubmit.textContent =
       getLoginMode() === "register" ? "Inscription" : "Connexion";
     btnLoginToggle.textContent =
@@ -79,7 +87,7 @@ export function createAccountHelpers({
   function fillLoginForm(account) {
     if (!account) return;
     loginIdentifier.value = account.name || "";
-    loginPassword.value = account.password || "";
+    loginPassword.value = "";
     loginPasswordConfirm.value = "";
   }
 
@@ -87,8 +95,24 @@ export function createAccountHelpers({
     const name = String(loginIdentifier.value || "").trim();
     const password = String(loginPassword.value || "");
     const confirm = String(loginPasswordConfirm.value || "");
+    const hasUpper = /[A-Z]/.test(password);
+    const hasValidNameChars = /^[a-zA-Z0-9._-]+$/.test(name);
     if (!name || !password) {
-      setLoginError("Identifiant et mot de passe requis.");
+      if (!name && !password) {
+        setLoginError("Identifiant et mot de passe requis.");
+      } else if (!name) {
+        setLoginError("Identifiant requis.");
+      } else {
+        setLoginError("Mot de passe requis.");
+      }
+      return null;
+    }
+    if (name.length < 6 || name.length > 20 || !hasValidNameChars) {
+      setLoginError("Identifiant invalide (6-20, lettres/chiffres/._-).");
+      return null;
+    }
+    if (password.length < 8 || password.length > 64 || !hasUpper) {
+      setLoginError("Mot de passe invalide (8-64, 1 majuscule).");
       return null;
     }
     if (getLoginMode() === "register" && password !== confirm) {

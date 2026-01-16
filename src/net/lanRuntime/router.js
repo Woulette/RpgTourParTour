@@ -355,7 +355,7 @@ export function createLanRouter(ctx) {
         player.currentTileX = tileX;
         player.currentTileY = tileY;
         player.x = wp.x + scene.map.tileWidth / 2;
-        player.y = wp.y + scene.map.tileHeight;
+        player.y = wp.y + scene.map.tileHeight / 2;
         if (typeof player.setDepth === "function") {
           player.setDepth(player.y);
         }

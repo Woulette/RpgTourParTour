@@ -372,7 +372,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
     }
 
     // Resynchronise la tuile courante a partir de la position actuelle
-    updatePlayerTilePosition(player, worldToTile);
+    updatePlayerTilePosition(player, worldToTile, map, groundLayer);
 
     // Si on clique sur un monstre, on utilise sa tuile
     // plutt que la tuile "derrire" dtecte par le clic.
@@ -416,6 +416,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
     }
 
     if (!isValidTile(map, tileX, tileY)) return;
+
 
     const state = scene.combatState;
     const inCombat = state && state.enCours;
@@ -627,6 +628,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       }
     }
 
+
     let moveCost = 0;
 
     // Si on est en combat, on laisse le module de combat dcider
@@ -766,12 +768,49 @@ function createCalibratedWorldToTile(map, groundLayer) {
   }
 }
 
-function updatePlayerTilePosition(player, worldToTile) {
+function updatePlayerTilePosition(player, worldToTile, map, groundLayer) {
   const t = worldToTile(player.x, player.y);
   if (!t) return;
+  if (!map || !groundLayer || typeof map.tileToWorldXY !== "function") {
+    player.currentTileX = t.x;
+    player.currentTileY = t.y;
+    return;
+  }
 
-  player.currentTileX = t.x;
-  player.currentTileY = t.y;
+  const candidates = [];
+  for (let dy = -1; dy <= 1; dy += 1) {
+    for (let dx = -1; dx <= 1; dx += 1) {
+      const cx = t.x + dx;
+      const cy = t.y + dy;
+      if (!isValidTile(map, cx, cy)) continue;
+      candidates.push({ x: cx, y: cy });
+    }
+  }
+  if (candidates.length === 0) {
+    player.currentTileX = t.x;
+    player.currentTileY = t.y;
+    return;
+  }
+
+  let best = candidates[0];
+  let bestDist = Infinity;
+  const halfW = map.tileWidth / 2;
+  const halfH = map.tileHeight / 2;
+  candidates.forEach((c) => {
+    const wp = map.tileToWorldXY(c.x, c.y, undefined, undefined, groundLayer);
+    const centerX = wp.x + halfW;
+    const centerY = wp.y + halfH;
+    const dx = player.x - centerX;
+    const dy = player.y - centerY;
+    const dist2 = dx * dx + dy * dy;
+    if (dist2 < bestDist) {
+      bestDist = dist2;
+      best = c;
+    }
+  });
+
+  player.currentTileX = best.x;
+  player.currentTileY = best.y;
 }
 
 // Wrapper autour du mouvement runtime : excute le dplacement puis,

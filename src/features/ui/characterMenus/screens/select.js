@@ -168,22 +168,10 @@
 
         const label = c.name || "Joueur";
         const ok = window.confirm(
-          `Supprimer \"${label}\" ?\n\nCette action efface sa sauvegarde locale (irreversible).`
+          `Supprimer \"${label}\" ?\n\nCette action supprime le personnage cote serveur (irreversible).`
         );
         if (!ok) return;
-
         actions.deleteCharacter(c.id);
-        const idx = characters.findIndex((x) => x && x.id === c.id);
-        if (idx >= 0) characters.splice(idx, 1);
-
-        if (state.getSelectedCharacterId() === c.id) {
-          state.setSelectedCharacterId(null);
-        }
-        if (state.getSessionSelectedCharacter()?.id === c.id) {
-          actions.clearSelectedCharacter();
-        }
-
-        refreshSelectAfterCharactersChanged();
       });
 
       actionsWrap.appendChild(btnDelete);

@@ -83,6 +83,13 @@ function createInventoryHandlers({
       }
       return 0;
     }
+    if (Number.isInteger(player.tradeId)) {
+      if (trace) {
+        // eslint-disable-next-line no-console
+        console.log("[LAN][Trace] inventoryOp:reject", "trade_locked");
+      }
+      return 0;
+    }
     const inv = ensurePlayerInventory(player);
     const def = getItemDef(itemId);
     if (!def) {

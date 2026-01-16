@@ -31,6 +31,7 @@ let nextMonsterEntityId = 1;
 let nextResourceEntityId = 1;
 let nextCombatId = 1;
 let nextGroupId = 1;
+let nextTradeId = 1;
 let hostId = null;
 const MONSTER_STEP_DURATION_MS = 550;
 const monsterMoveTimers = new Map();
@@ -44,19 +45,31 @@ const DEBUG_COMBAT = process.env.LAN_COMBAT_DEBUG === "1";
 const LAN_TRACE = process.env.LAN_TRACE === "1";
 const characterStore = createCharacterStore({ dataDir: path.resolve(__dirname, "data") });
 const accountStore = createAccountStore({ dataDir: path.resolve(__dirname, "data") });
-const sessionTokens = new Map(); // token -> { accountId, issuedAt }
+const SESSION_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function issueSessionToken(accountId) {
   if (!accountId) return null;
+  if (accountStore?.issueSessionToken) {
+    return accountStore.issueSessionToken(accountId, SESSION_TOKEN_TTL_MS);
+  }
   const token = crypto.randomBytes(24).toString("hex");
-  sessionTokens.set(token, { accountId, issuedAt: Date.now() });
   return token;
 }
 
 function getAccountIdFromSession(token) {
   if (!token) return null;
-  const entry = sessionTokens.get(token);
-  return entry?.accountId || null;
+  if (accountStore?.getAccountIdFromSession) {
+    return accountStore.getAccountIdFromSession(token);
+  }
+  return null;
+}
+
+function revokeSessionToken(token) {
+  if (!token) return false;
+  if (accountStore?.revokeSessionToken) {
+    return accountStore.revokeSessionToken(token);
+  }
+  return false;
 }
 
 let statsApi = null;
@@ -570,10 +583,77 @@ function buildCharacterEntryFromPlayer(player) {
   };
 }
 
+function isValidPersistPosition(mapId, x, y) {
+  if (!mapId || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+  try {
+    ensureMapInitialized(mapId);
+  } catch {
+    // ignore init errors
+  }
+  const meta = state.mapMeta?.[mapId];
+  const width = Number.isFinite(meta?.width) ? Math.round(meta.width) : null;
+  const height = Number.isFinite(meta?.height) ? Math.round(meta.height) : null;
+  if (!width || !height) return false;
+
+  const tileX = Math.round(x);
+  const tileY = Math.round(y);
+  if (tileX < 0 || tileY < 0 || tileX >= width || tileY >= height) return false;
+
+  const bounds = meta?.playableBounds;
+  if (bounds) {
+    if (
+      tileX < bounds.minX ||
+      tileX > bounds.maxX ||
+      tileY < bounds.minY ||
+      tileY > bounds.maxY
+    ) {
+      return false;
+    }
+  }
+
+  const edgeMargin = 1;
+  if (width > edgeMargin * 2 && height > edgeMargin * 2) {
+    if (
+      tileX <= edgeMargin ||
+      tileY <= edgeMargin ||
+      tileX >= width - 1 - edgeMargin ||
+      tileY >= height - 1 - edgeMargin
+    ) {
+      return false;
+    }
+  }
+
+  const groundTiles = meta?.groundTiles;
+  if (groundTiles && typeof groundTiles.has === "function") {
+    if (!groundTiles.has(`${tileX},${tileY}`)) return false;
+  }
+
+  const collisions = state.mapCollisions?.[mapId];
+  if (collisions && typeof collisions.has === "function") {
+    if (collisions.has(`${tileX},${tileY}`)) return false;
+  }
+
+  return true;
+}
+
 function persistPlayerStateNow(player) {
   if (!characterStore || !player) return;
   const entry = buildCharacterEntryFromPlayer(player);
   if (!entry) return;
+  if (!isValidPersistPosition(entry.mapId, entry.posX, entry.posY)) {
+    const existing =
+      typeof characterStore.getCharacter === "function"
+        ? characterStore.getCharacter(entry.characterId)
+        : null;
+    if (existing) {
+      entry.mapId = existing.mapId || entry.mapId;
+      entry.posX = Number.isFinite(existing.posX) ? existing.posX : entry.posX;
+      entry.posY = Number.isFinite(existing.posY) ? existing.posY : entry.posY;
+    } else {
+      entry.posX = null;
+      entry.posY = null;
+    }
+  }
   const start = Date.now();
   characterStore.upsertCharacter(entry);
   const elapsed = Date.now() - start;
@@ -909,6 +989,9 @@ const RATE_LIMITS = {
   CmdGroupDisband: { limit: 2, windowMs: 2000 },
   CmdGroupCombatJoin: { limit: 4, windowMs: 2000 },
   CmdGroupCombatDecline: { limit: 6, windowMs: 2000 },
+  CmdAccountSelectCharacter: { limit: 4, windowMs: 2000 },
+  CmdAccountCreateCharacter: { limit: 2, windowMs: 5000 },
+  CmdAccountDeleteCharacter: { limit: 2, windowMs: 5000 },
 };
 
 function isCmdRateLimited(clientInfo, cmdType) {
@@ -993,6 +1076,7 @@ const getNextMonsterEntityId = () => nextMonsterEntityId++;
 const getNextResourceEntityId = () => nextResourceEntityId++;
 const getNextCombatId = () => nextCombatId++;
 const getNextGroupId = () => nextGroupId++;
+const getNextTradeId = () => nextTradeId++;
 let nextSummonId = 1;
 const getNextSummonId = () => nextSummonId++;
 const getHostId = () => hostId;
@@ -1042,35 +1126,38 @@ const resourceHandlers = createResourceHandlers({
     playerHandlers?.applyInventoryOpFromServer?.(...args),
 });
 
-const combatHandlers = createCombatHandlers({
-    state,
-    broadcast,
-    send,
-    sendToPlayerId,
-    getNextCombatId,
-    getNextEventId,
-    getNextSummonId,
-    getHostId,
-    sanitizePlayerPath,
-    serializeMonsterEntries: mobHandlers.serializeMonsterEntries,
-    monsterMoveTimers,
-    getSpellDef,
-    isSimpleDamageSpell,
-    rollSpellDamage,
-    getMonsterDef,
-    applyInventoryOpFromServer: (...args) =>
-      playerHandlers?.applyInventoryOpFromServer?.(...args),
-    applyQuestKillProgressForPlayer: (...args) =>
-      playerHandlers?.applyQuestKillProgressForPlayer?.(...args),
-    applyCombatRewardsForPlayer: (...args) =>
-      playerHandlers?.applyCombatRewardsForPlayer?.(...args),
-    getXpConfig: () => xpConfig,
-    getMonsterCombatStats,
-    isMonsterCapturable,
-    getCombatPattern,
-    getCombatStartPositions,
-    persistPlayerState,
-  });
+const combatContext = {
+  state,
+  broadcast,
+  send,
+  sendToPlayerId,
+  getNextCombatId,
+  getNextEventId,
+  getNextSummonId,
+  getHostId,
+  sanitizePlayerPath,
+  serializeMonsterEntries: mobHandlers.serializeMonsterEntries,
+  monsterMoveTimers,
+  getSpellDef,
+  isSimpleDamageSpell,
+  rollSpellDamage,
+  getMonsterDef,
+  applyInventoryOpFromServer: (...args) =>
+    playerHandlers?.applyInventoryOpFromServer?.(...args),
+  applyQuestKillProgressForPlayer: (...args) =>
+    playerHandlers?.applyQuestKillProgressForPlayer?.(...args),
+  applyCombatRewardsForPlayer: (...args) =>
+    playerHandlers?.applyCombatRewardsForPlayer?.(...args),
+  getXpConfig: () => xpConfig,
+  getMonsterCombatStats,
+  isMonsterCapturable,
+  getCombatPattern,
+  getCombatStartPositions,
+  persistPlayerState,
+  onPlayerCombatStateChanged: null,
+};
+
+const combatHandlers = createCombatHandlers(combatContext);
 
 function getCombatJoinPayload(playerId) {
   if (!Number.isInteger(playerId)) return null;
@@ -1107,6 +1194,7 @@ playerHandlers = createPlayerHandlers({
   getNextPlayerId,
   getNextEventId,
   getNextGroupId,
+  getNextTradeId,
   getHostId,
   setHostId,
   tryStartCombatIfNeeded,
@@ -1140,6 +1228,9 @@ playerHandlers = createPlayerHandlers({
   getCraftDefsFailed: () => craftDefsFailed,
 });
 
+combatContext.onPlayerCombatStateChanged =
+  playerHandlers.handlePlayerCombatStateChanged || null;
+
 ensureMapInitialized(state.mapId);
 
 const router = createRouterHandlers({
@@ -1155,6 +1246,7 @@ const router = createRouterHandlers({
   isCmdDuplicate,
   isCmdRateLimited,
   isCmdSessionValid,
+  revokeSessionToken,
   sendMapSnapshotToClient,
   persistPlayerState,
   getHostId,

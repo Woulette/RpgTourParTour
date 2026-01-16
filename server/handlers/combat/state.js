@@ -432,6 +432,9 @@ function createStateHandlers(ctx, helpers) {
       if (!p) return;
       p.inCombat = true;
       p.combatId = combatId;
+      if (typeof ctx.onPlayerCombatStateChanged === "function") {
+        ctx.onPlayerCombatStateChanged(p.id, true);
+      }
     });
 
     if (Array.isArray(list)) {
@@ -537,6 +540,9 @@ function createStateHandlers(ctx, helpers) {
     }
 
     player.inCombat = true;
+    if (typeof ctx.onPlayerCombatStateChanged === "function") {
+      ctx.onPlayerCombatStateChanged(player.id, true);
+    }
     player.combatId = combatId;
     upsertSnapshotPlayer(combat, player.id);
 

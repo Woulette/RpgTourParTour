@@ -21,6 +21,7 @@ function createTradeHandlers({
   const { sendPlayerSync, findClientByPlayerId } = sync;
 
   const allowedCategories = new Set(["equipement", "ressource", "consommable"]);
+  const OFFER_RATE_LIMIT_MS = 150;
 
   function sendTradeError(playerId, reason, message) {
     sendToPlayerId(playerId, {
@@ -179,6 +180,7 @@ function createTradeHandlers({
       },
       validated: { [playerId]: false, [targetId]: false },
       cooldownUntil: 0,
+      lastOfferAt: {},
       createdAt: Date.now(),
     };
 
@@ -267,6 +269,38 @@ function createTradeHandlers({
     sendTradeState(trade);
   }
 
+  function queueOfferUpdate(trade, playerId, itemId, qty, delayMs) {
+    if (!trade) return;
+    if (!trade.pendingOfferQueue) {
+      trade.pendingOfferQueue = {};
+    }
+    const queue = trade.pendingOfferQueue;
+    let entry = queue[playerId];
+    if (!entry) {
+      entry = { items: new Map(), timer: null };
+      queue[playerId] = entry;
+    }
+    entry.items.set(itemId, qty);
+    if (entry.timer) return;
+    const delay = Math.max(0, Math.round(delayMs || 0));
+    entry.timer = setTimeout(() => {
+      entry.timer = null;
+      const activeTrade = state.trades[trade.id];
+      if (!activeTrade || activeTrade !== trade || trade.status !== "active") {
+        entry.items.clear();
+        return;
+      }
+      const lastOfferAt = trade.lastOfferAt || {};
+      lastOfferAt[playerId] = Date.now();
+      trade.lastOfferAt = lastOfferAt;
+      const items = Array.from(entry.items.entries());
+      entry.items.clear();
+      items.forEach(([queuedItemId, queuedQty]) => {
+        updateOfferItem(playerId, trade, queuedItemId, queuedQty);
+      });
+    }, delay);
+  }
+
   function handleCmdTradeOfferItem(clientInfo, msg) {
     if (clientInfo.id !== msg.playerId) return;
     const trade = getTradeByPlayer(clientInfo.id);
@@ -280,6 +314,15 @@ function createTradeHandlers({
     const itemId = typeof msg.itemId === "string" ? msg.itemId : null;
     if (!itemId) return;
     const qty = Number.isFinite(msg.qty) ? msg.qty : 0;
+    const now = Date.now();
+    const lastOfferAt = trade.lastOfferAt || {};
+    const last = lastOfferAt[clientInfo.id] || 0;
+    if (OFFER_RATE_LIMIT_MS > 0 && now - last < OFFER_RATE_LIMIT_MS) {
+      queueOfferUpdate(trade, clientInfo.id, itemId, qty, last + OFFER_RATE_LIMIT_MS - now);
+      return;
+    }
+    lastOfferAt[clientInfo.id] = now;
+    trade.lastOfferAt = lastOfferAt;
     updateOfferItem(clientInfo.id, trade, itemId, qty);
   }
 
@@ -368,12 +411,20 @@ function createTradeHandlers({
       return;
     }
 
+    function rollbackItems(inv, items) {
+      if (!inv || !items || items.length === 0) return;
+      items.forEach((entry) => addItemToInventory(inv, entry.itemId, entry.qty));
+    }
+
     const removedA = [];
     const removedB = [];
     for (const [itemId, qty] of aItems) {
       const removed = removeItemFromInventory(aInv, itemId, qty);
       if (removed !== qty) {
-        removedA.push({ itemId, qty: removed });
+        if (removed > 0) {
+          removedA.push({ itemId, qty: removed });
+        }
+        rollbackItems(aInv, removedA);
         cancelTrade(trade, "insufficient_items");
         return;
       }
@@ -382,8 +433,11 @@ function createTradeHandlers({
     for (const [itemId, qty] of bItems) {
       const removed = removeItemFromInventory(bInv, itemId, qty);
       if (removed !== qty) {
-        removedB.push({ itemId, qty: removed });
-        removedA.forEach((entry) => addItemToInventory(aInv, entry.itemId, entry.qty));
+        if (removed > 0) {
+          removedB.push({ itemId, qty: removed });
+        }
+        rollbackItems(bInv, removedB);
+        rollbackItems(aInv, removedA);
         cancelTrade(trade, "insufficient_items");
         return;
       }
