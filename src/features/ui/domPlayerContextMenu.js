@@ -62,7 +62,15 @@ function ensureMenu() {
   });
 
   tradeBtn.addEventListener("click", () => {
-    showToast({ title: "Echange", text: "Bientot disponible." });
+    if (!currentTargetId) return;
+    const client = getNetClient();
+    const playerId = getNetPlayerId();
+    if (!client || !playerId) return;
+    client.sendCmd("CmdTradeInvite", {
+      playerId,
+      targetId: currentTargetId,
+    });
+    showToast({ title: "Echange", text: "Invitation envoyee." });
     closePlayerContextMenu();
   });
 

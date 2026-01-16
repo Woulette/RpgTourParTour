@@ -312,6 +312,9 @@ function createCalibratedWorldToTile(map, groundLayer) {
     if (window.__uiPointerBlock) {
       return;
     }
+    if (window.__tradeLockMovement) {
+      return;
+    }
     if (isUiBlockingOpen()) {
       return;
     }

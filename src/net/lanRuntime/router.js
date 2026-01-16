@@ -11,6 +11,14 @@ import { emit as emitStoreEvent } from "../../state/store.js";
 import { addChatMessage } from "../../chat/chat.js";
 import { openFriendInvite } from "../../features/ui/domFriendInvite.js";
 import { showToast } from "../../features/ui/domToasts.js";
+import {
+  handleTradeInvite,
+  handleTradeStarted,
+  handleTradeUpdated,
+  handleTradeCancelled,
+  handleTradeComplete,
+  handleTradeError,
+} from "../../features/ui/domTrade.js";
 
 export function createLanRouter(ctx) {
   const {
@@ -635,6 +643,36 @@ export function createLanRouter(ctx) {
       } else if (msg.status === "not_found") {
         showToast({ title: "Amis", text: "Joueur introuvable." });
       }
+      return;
+    }
+
+    if (msg.t === "EvTradeInvite") {
+      handleTradeInvite(msg);
+      return;
+    }
+
+    if (msg.t === "EvTradeStarted") {
+      handleTradeStarted(msg);
+      return;
+    }
+
+    if (msg.t === "EvTradeUpdate") {
+      handleTradeUpdated(msg);
+      return;
+    }
+
+    if (msg.t === "EvTradeCancelled") {
+      handleTradeCancelled(msg);
+      return;
+    }
+
+    if (msg.t === "EvTradeComplete") {
+      handleTradeComplete(msg);
+      return;
+    }
+
+    if (msg.t === "EvTradeError") {
+      handleTradeError(msg);
       return;
     }
 

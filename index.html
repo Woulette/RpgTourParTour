@@ -46,6 +46,7 @@
   <link rel="stylesheet" href="assets/css/friendInvite.css" />
   <link rel="stylesheet" href="assets/css/friendActions.css" />
   <link rel="stylesheet" href="assets/css/friends.css" />
+  <link rel="stylesheet" href="assets/css/trade.css" />
 </head>
 <body class="menu-open">
   <!-- Menus (création / sélection personnage) -->
@@ -855,6 +856,64 @@
             <span>Accomplissements</span>
           </div>
           <div class="friends-list"></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Fenetre d'echange -->
+    <aside id="hud-trade-panel" aria-label="Fenetre d'echange">
+      <header class="trade-header">
+        <h2 class="trade-title">Echange</h2>
+        <button type="button" class="trade-close" aria-label="Fermer">X</button>
+      </header>
+      <section class="trade-body">
+        <div class="trade-panel trade-panel-remote" data-side="remote">
+          <div class="trade-panel-top">
+            <span class="trade-player-name" data-role="name">Joueur</span>
+            <div class="trade-gold">
+              Or : <span class="trade-gold-value" data-role="gold">0</span>
+            </div>
+          </div>
+          <div class="trade-grid" data-role="grid"></div>
+          <div class="trade-panel-actions">
+            <span class="trade-status" data-role="status">En attente</span>
+          </div>
+        </div>
+        <div class="trade-panel trade-panel-local" data-side="local">
+          <div class="trade-panel-top">
+            <span class="trade-player-name" data-role="name">Vous</span>
+            <label class="trade-gold">
+              Or :
+              <input
+                class="trade-gold-input"
+                data-role="gold-input"
+                type="number"
+                min="0"
+                max="1000000000"
+                step="1"
+                value="0"
+              />
+              <span class="trade-gold-total" data-role="gold-total">0</span>
+            </label>
+          </div>
+          <div class="trade-grid" data-role="grid"></div>
+          <div class="trade-panel-actions">
+            <span class="trade-status" data-role="status">En attente</span>
+            <button type="button" class="trade-btn trade-btn-cancel">Annuler</button>
+            <button type="button" class="trade-btn trade-btn-validate">Valider</button>
+          </div>
+        </div>
+        <div class="trade-inventory">
+          <div class="trade-inventory-header">
+            <span class="trade-inventory-title">Inventaire</span>
+            <div class="trade-inventory-filters">
+              <button type="button" class="trade-filter-btn is-active" data-filter="all">Tout</button>
+              <button type="button" class="trade-filter-btn" data-filter="equipement">Equip.</button>
+              <button type="button" class="trade-filter-btn" data-filter="consommable">Consom.</button>
+              <button type="button" class="trade-filter-btn" data-filter="ressource">Ress.</button>
+            </div>
+          </div>
+          <div class="trade-inventory-grid" id="trade-inventory-grid"></div>
         </div>
       </section>
     </aside>

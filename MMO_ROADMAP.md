@@ -4,9 +4,10 @@
 - (Termine)
 
 ## Phase 2 - MMO jouable
-- Commerce (P2P + marche simple) avec verrou/confirm
-- Chat (global / prive / groupe) + mute/ignore basique
-- Liste d'amis / blocage joueur
+- Commerce P2P avec verrou/confirm (fait)
+- Marche simple (listings, achat, annulation, taxes) a faire
+- Chat (global / prive / groupe) + mute/ignore basique (fait)
+- Liste d'amis / blocage joueur (fait)
 - Outils admin (kick/ban, give item, inspect)
 - Audit events gameplay (trade, drop, quest turn-in)
 - Tests anti-cheat rapides (rate-limits + invalid quest actions)
@@ -18,6 +19,7 @@
 - Anti-cheat avance (rate limit + detection anomalies)
 - Interest management par zone/viewport
 - Reconciliation client/serveur (correction des ecarts)
+- Relance serveur sans perte (recovery crash + reload state)
 - Job queue pour taches lourdes
 - Profiling perf (tick budget, hotspots, memoires)
 - Outils GM avances (teleport, spawn, view stats)

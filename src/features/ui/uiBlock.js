@@ -18,6 +18,7 @@ export function isUiBlockingOpen() {
     "hud-achievements-open",
     "hud-spells-open",
     "hud-claim-open",
+    "hud-trade-open",
     "shop-open",
     "npc-dialog-open",
     "menu-open",
