@@ -728,7 +728,19 @@ function sendEventToSockets(sockets, event) {
 function broadcast(payload) {
   const event = buildEvent(payload);
   if (COMBAT_EVENT_TYPES.has(event.t) && Number.isInteger(event.combatId)) {
-    sendEventToSockets(getSocketsForCombat(event.combatId), event);
+    const combatSockets = getSocketsForCombat(event.combatId);
+    if (
+      (event.t === "EvCombatCreated" ||
+        event.t === "EvCombatUpdated" ||
+        event.t === "EvCombatEnded") &&
+      typeof event.mapId === "string"
+    ) {
+      const mapSockets = getSocketsForMap(event.mapId);
+      const unique = new Set([...combatSockets, ...mapSockets]);
+      sendEventToSockets(Array.from(unique), event);
+      return;
+    }
+    sendEventToSockets(combatSockets, event);
     return;
   }
   if (event.t === "EvPlayerMap" && typeof event.fromMapId === "string") {

@@ -380,6 +380,17 @@ export function endCombat(scene) {
   }
   const mapId = scene.currentMapKey || scene.currentMapDef?.key || null;
   if (client && playerId && mapId) {
+    if (
+      Number.isInteger(player?.currentTileX) &&
+      Number.isInteger(player?.currentTileY)
+    ) {
+      client.sendCmd("CmdMapChange", {
+        playerId,
+        mapId,
+        tileX: player.currentTileX,
+        tileY: player.currentTileY,
+      });
+    }
     client.sendCmd("CmdRequestMapMonsters", { playerId, mapId });
     client.sendCmd("CmdRequestMapPlayers", { playerId, mapId });
     const retry = () => {

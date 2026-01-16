@@ -134,6 +134,14 @@ export function createLanRouter(ctx) {
       applyCombatEvent(msg);
       return;
     }
+    if (msg.t === "EvCombatEnded") {
+      const localId = getNetPlayerId();
+      const participantIds = Array.isArray(msg.participantIds) ? msg.participantIds : [];
+      if (!localId || !participantIds.includes(localId)) {
+        applyCombatEvent(msg);
+        return;
+      }
+    }
     const state = combatSeqState.get(combatId) || {
       expected: null,
       pending: new Map(),
@@ -509,6 +517,8 @@ export function createLanRouter(ctx) {
         mapId: msg.mapId,
         x: msg.tileX,
         y: msg.tileY,
+        inCombat: false,
+        combatId: null,
       });
       const remote = ctx.remotePlayers?.get(msg.playerId) || null;
       if (remote) remote.mapId = msg.mapId || null;
