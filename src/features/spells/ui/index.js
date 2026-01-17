@@ -24,7 +24,15 @@ export function initDomSpells(player) {
     const classDef = classes[classId] || classes.archer;
     const spellIds = classDef.spells || [];
     const knownSpells = spellIds.map((id) => spells[id]).filter((s) => !!s);
-    return { classId, classDef, spellIds, knownSpells };
+    const playerLevel = Number.isFinite(currentPlayer?.level) ? currentPlayer.level : 1;
+    const barSpells = spellIds.map((id) => {
+      const spell = spells[id] || null;
+      if (!spell) return null;
+      const requiredLevel =
+        Number.isFinite(spell.requiredLevel) ? spell.requiredLevel : 1;
+      return playerLevel >= requiredLevel ? spell : null;
+    });
+    return { classId, classDef, spellIds, knownSpells, barSpells };
   };
 
   const initialConfig = resolveSpellConfig(getActivePlayer());
@@ -42,7 +50,7 @@ export function initDomSpells(player) {
     tierButtons,
   });
 
-  const spellBar = initSpellBar(getActivePlayer, bar, initialConfig.knownSpells);
+  const spellBar = initSpellBar(getActivePlayer, bar, initialConfig.barSpells);
 
   onStoreEvent("player:changed", (nextPlayer) => {
     currentPlayer = nextPlayer || currentPlayer;
@@ -53,7 +61,7 @@ export function initDomSpells(player) {
       spellBook.setSpellBookConfig(config);
     }
     if (spellBar && typeof spellBar.setKnownSpells === "function") {
-      spellBar.setKnownSpells(config.knownSpells);
+      spellBar.setKnownSpells(config.barSpells);
     }
   });
 }

@@ -11,6 +11,9 @@ const { createEconomyHandlers } = require("./economy");
 const { createGroupHandlers } = require("./groups");
 const { createFriendHandlers } = require("./friends");
 const { createTradeHandlers } = require("./trade");
+const { createShopHandlers } = require("./shop");
+const { createAchievementHandlers } = require("./achievements");
+const { createMarketHandlers } = require("./market");
 
 function createPlayerHandlers(ctx) {
   const MAX_INV_SIZE = 200;
@@ -35,6 +38,7 @@ function createPlayerHandlers(ctx) {
 
   const quests = createQuestHandlers({
     state: ctx.state,
+    send: ctx.send,
     persistPlayerState: ctx.persistPlayerState,
     getQuestDefs: ctx.getQuestDefs,
     getQuestDefsPromise: ctx.getQuestDefsPromise,
@@ -45,6 +49,7 @@ function createPlayerHandlers(ctx) {
     computeFinalStats: ctx.computeFinalStats,
     helpers,
     sync,
+    getNextEventId: ctx.getNextEventId,
   });
 
   const inventory = createInventoryHandlers({
@@ -56,6 +61,7 @@ function createPlayerHandlers(ctx) {
     getItemDefsFailed: ctx.getItemDefsFailed,
     helpers,
     sync,
+    computeFinalStats: ctx.computeFinalStats,
     MAX_QTY_PER_OP,
   });
 
@@ -163,6 +169,41 @@ function createPlayerHandlers(ctx) {
     accountStore: ctx.accountStore,
   });
 
+  const achievements = createAchievementHandlers({
+    state: ctx.state,
+    persistPlayerState: ctx.persistPlayerState,
+    helpers,
+    sync,
+    getAchievementDefs: ctx.getAchievementDefs,
+    getAchievementDefsPromise: ctx.getAchievementDefsPromise,
+    getAchievementDefsFailed: ctx.getAchievementDefsFailed,
+    getLevelApi: ctx.getLevelApi,
+    computeFinalStats: ctx.computeFinalStats,
+  });
+
+  const shop = createShopHandlers({
+    state: ctx.state,
+    persistPlayerState: ctx.persistPlayerState,
+    helpers,
+    sync,
+    getShopDefs: ctx.getShopDefs,
+    getShopDefsPromise: ctx.getShopDefsPromise,
+    getShopDefsFailed: ctx.getShopDefsFailed,
+    MAX_QTY_PER_OP,
+    MAX_GOLD_DELTA,
+  });
+
+  const market = createMarketHandlers({
+    state: ctx.state,
+    send: ctx.send,
+    helpers,
+    sync,
+    marketStore: ctx.marketStore,
+    getItemDefs: ctx.getItemDefs,
+    MAX_QTY_PER_OP,
+    persistPlayerState: ctx.persistPlayerState,
+  });
+
   return {
     handleHello: auth.handleHello,
     handleCmdAccountSelectCharacter: auth.handleCmdAccountSelectCharacter,
@@ -175,6 +216,12 @@ function createPlayerHandlers(ctx) {
     handleCmdRequestMapPlayers: movement.handleCmdRequestMapPlayers,
     handleCmdPlayerSync: sync.handleCmdPlayerSync,
     handleCmdInventoryOp: inventory.handleCmdInventoryOp,
+    handleCmdEquipItem: inventory.handleCmdEquipItem,
+    handleCmdUnequipItem: inventory.handleCmdUnequipItem,
+    handleCmdUseItem: inventory.handleCmdUseItem,
+    handleCmdConsumeItem: inventory.handleCmdConsumeItem,
+    handleCmdTrashItem: inventory.handleCmdTrashItem,
+    handleCmdTrashRestore: inventory.handleCmdTrashRestore,
     handleCmdCraft: craft.handleCmdCraft,
     handleCmdGoldOp: economy.handleCmdGoldOp,
     handleCmdQuestAction: quests.handleCmdQuestAction,
@@ -200,6 +247,17 @@ function createPlayerHandlers(ctx) {
     handleCmdTradeOfferItem: trade.handleCmdTradeOfferItem,
     handleCmdTradeOfferGold: trade.handleCmdTradeOfferGold,
     handleCmdTradeValidate: trade.handleCmdTradeValidate,
+    handleCmdShopBuy: shop.handleCmdShopBuy,
+    handleCmdShopSell: shop.handleCmdShopSell,
+    handleCmdAchievementClaim: achievements.handleCmdAchievementClaim,
+    handleCmdMarketList: market.handleCmdMarketList,
+    handleCmdMarketMyListings: market.handleCmdMarketMyListings,
+    handleCmdMarketBalance: market.handleCmdMarketBalance,
+    handleCmdMarketSell: market.handleCmdMarketSell,
+    handleCmdMarketBuy: market.handleCmdMarketBuy,
+    handleCmdMarketCancel: market.handleCmdMarketCancel,
+    handleCmdMarketWithdraw: market.handleCmdMarketWithdraw,
+    handleCmdMarketClaimReturn: market.handleCmdMarketClaimReturn,
     handlePlayerCombatStateChanged: (playerId, inCombat) => {
       if (inCombat) trade.cancelTradeForPlayer(playerId, "in_combat");
     },
@@ -210,6 +268,7 @@ function createPlayerHandlers(ctx) {
     },
     handleGroupHpTick: groups.handleGroupHpTick,
     applyInventoryOpFromServer: inventory.applyInventoryOpFromServer,
+    applyGoldOpFromServer: economy.applyGoldOpFromServer,
     applyQuestKillProgressForPlayer: quests.applyQuestKillProgressForPlayer,
     applyCombatRewardsForPlayer: quests.applyCombatRewardsForPlayer,
   };

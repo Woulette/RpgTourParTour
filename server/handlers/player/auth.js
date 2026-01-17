@@ -574,6 +574,13 @@ function createAuthHandlers({
         : msg.authMode === "login"
           ? "login"
           : "invalid";
+    const sessionToken =
+      typeof msg.sessionToken === "string" ? msg.sessionToken : null;
+    const sessionAccountId =
+      typeof getAccountIdFromSession === "function"
+        ? getAccountIdFromSession(sessionToken)
+        : null;
+    const hasSession = !!sessionAccountId;
     let accountId = null;
 
     const hasCredentials = !!(accountName && accountPassword);
@@ -602,78 +609,84 @@ function createAuthHandlers({
       ws.close();
       return;
     }
-    if (!hasCredentials) {
-      send(ws, { t: "EvRefuse", reason: "auth_required" });
-      registerFailure(ipBucket, now);
-      registerFailure(accountBucket, now);
-      ws.close();
-      return;
-    }
-    if (authMode === "invalid") {
-      send(ws, { t: "EvRefuse", reason: "auth_mode_invalid" });
-      registerFailure(ipBucket, now);
-      registerFailure(accountBucket, now);
-      ws.close();
-      return;
-    }
-    if (!isValidAccountName(accountName)) {
-      send(ws, { t: "EvRefuse", reason: "invalid_identifier" });
-      registerFailure(ipBucket, now);
-      registerFailure(accountBucket, now);
-      ws.close();
-      return;
-    }
-    if (!isValidPassword(accountPassword)) {
-      send(ws, { t: "EvRefuse", reason: "invalid_password" });
-      registerFailure(ipBucket, now);
-      registerFailure(accountBucket, now);
-      ws.close();
-      return;
-    }
-    const existingAccount = accountStore.getAccountByName(accountName);
-    if (authMode === "register") {
-      if (existingAccount) {
-        send(ws, { t: "EvRefuse", reason: "account_exists" });
-        registerFailure(ipBucket, now);
-        registerFailure(accountBucket, now);
-        ws.close();
-        return;
-      }
-      const created = accountStore.createAccount({
-        name: accountName,
-        password: accountPassword,
-      });
-      if (!created) {
-        send(ws, { t: "EvRefuse", reason: "auth_failed" });
-        registerFailure(ipBucket, now);
-        registerFailure(accountBucket, now);
-        ws.close();
-        return;
-      }
-      accountId = created.accountId;
-    } else if (authMode === "login") {
-      if (!existingAccount) {
-        send(ws, { t: "EvRefuse", reason: "account_missing" });
-        registerFailure(ipBucket, now);
-        registerFailure(accountBucket, now);
-        ws.close();
-        return;
-      }
-      const ok = accountStore.verifyPassword(existingAccount, accountPassword);
-      if (!ok) {
-        send(ws, { t: "EvRefuse", reason: "auth_failed" });
-        registerFailure(ipBucket, now);
-        registerFailure(accountBucket, now);
-        ws.close();
-        return;
-      }
-      accountId = existingAccount.accountId;
+    if (hasSession) {
+      accountId = sessionAccountId;
+      registerSuccess(ipBucket, now);
+      registerSuccess(accountBucket, now);
     } else {
-      send(ws, { t: "EvRefuse", reason: "auth_mode_invalid" });
-      registerFailure(ipBucket, now);
-      registerFailure(accountBucket, now);
-      ws.close();
-      return;
+      if (!hasCredentials) {
+        send(ws, { t: "EvRefuse", reason: "auth_required" });
+        registerFailure(ipBucket, now);
+        registerFailure(accountBucket, now);
+        ws.close();
+        return;
+      }
+      if (authMode === "invalid") {
+        send(ws, { t: "EvRefuse", reason: "auth_mode_invalid" });
+        registerFailure(ipBucket, now);
+        registerFailure(accountBucket, now);
+        ws.close();
+        return;
+      }
+      if (!isValidAccountName(accountName)) {
+        send(ws, { t: "EvRefuse", reason: "invalid_identifier" });
+        registerFailure(ipBucket, now);
+        registerFailure(accountBucket, now);
+        ws.close();
+        return;
+      }
+      if (!isValidPassword(accountPassword)) {
+        send(ws, { t: "EvRefuse", reason: "invalid_password" });
+        registerFailure(ipBucket, now);
+        registerFailure(accountBucket, now);
+        ws.close();
+        return;
+      }
+      const existingAccount = accountStore.getAccountByName(accountName);
+      if (authMode === "register") {
+        if (existingAccount) {
+          send(ws, { t: "EvRefuse", reason: "account_exists" });
+          registerFailure(ipBucket, now);
+          registerFailure(accountBucket, now);
+          ws.close();
+          return;
+        }
+        const created = accountStore.createAccount({
+          name: accountName,
+          password: accountPassword,
+        });
+        if (!created) {
+          send(ws, { t: "EvRefuse", reason: "auth_failed" });
+          registerFailure(ipBucket, now);
+          registerFailure(accountBucket, now);
+          ws.close();
+          return;
+        }
+        accountId = created.accountId;
+      } else if (authMode === "login") {
+        if (!existingAccount) {
+          send(ws, { t: "EvRefuse", reason: "account_missing" });
+          registerFailure(ipBucket, now);
+          registerFailure(accountBucket, now);
+          ws.close();
+          return;
+        }
+        const ok = accountStore.verifyPassword(existingAccount, accountPassword);
+        if (!ok) {
+          send(ws, { t: "EvRefuse", reason: "auth_failed" });
+          registerFailure(ipBucket, now);
+          registerFailure(accountBucket, now);
+          ws.close();
+          return;
+        }
+        accountId = existingAccount.accountId;
+      } else {
+        send(ws, { t: "EvRefuse", reason: "auth_mode_invalid" });
+        registerFailure(ipBucket, now);
+        registerFailure(accountBucket, now);
+        ws.close();
+        return;
+      }
     }
     registerSuccess(ipBucket, now);
     registerSuccess(accountBucket, now);

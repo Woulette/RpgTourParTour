@@ -385,6 +385,16 @@
                  "name":"",
                  "properties":[
                         {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
+                        {
                          "name":"tileX",
                          "type":"int",
                          "value":7
@@ -407,6 +417,16 @@
                  "id":700,
                  "name":"",
                  "properties":[
+                        {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
                         {
                          "name":"tileX",
                          "type":"int",
@@ -431,6 +451,16 @@
                  "name":"",
                  "properties":[
                         {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
+                        {
                          "name":"tileX",
                          "type":"int",
                          "value":6
@@ -453,6 +483,16 @@
                  "id":702,
                  "name":"",
                  "properties":[
+                        {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
                         {
                          "name":"tileX",
                          "type":"int",
@@ -477,6 +517,16 @@
                  "name":"",
                  "properties":[
                         {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
+                        {
                          "name":"tileX",
                          "type":"int",
                          "value":9
@@ -499,6 +549,16 @@
                  "id":704,
                  "name":"",
                  "properties":[
+                        {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
                         {
                          "name":"tileX",
                          "type":"int",
@@ -523,6 +583,16 @@
                  "name":"",
                  "properties":[
                         {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
+                        {
                          "name":"tileX",
                          "type":"int",
                          "value":12
@@ -545,6 +615,16 @@
                  "id":706,
                  "name":"",
                  "properties":[
+                        {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
                         {
                          "name":"tileX",
                          "type":"int",
@@ -569,6 +649,16 @@
                  "name":"",
                  "properties":[
                         {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
+                        {
                          "name":"tileX",
                          "type":"int",
                          "value":14
@@ -591,6 +681,16 @@
                  "id":708,
                  "name":"",
                  "properties":[
+                        {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
                         {
                          "name":"tileX",
                          "type":"int",
@@ -638,6 +738,16 @@
                  "name":"",
                  "properties":[
                         {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
+                        {
                          "name":"tileX",
                          "type":"int",
                          "value":16
@@ -660,6 +770,16 @@
                  "id":711,
                  "name":"",
                  "properties":[
+                        {
+                         "name":"offsetX",
+                         "type":"int",
+                         "value":0
+                        }, 
+                        {
+                         "name":"offsetY",
+                         "type":"int",
+                         "value":13
+                        }, 
                         {
                          "name":"tileX",
                          "type":"int",
@@ -3645,10 +3765,477 @@
                  "width":64,
                  "x":32,
                  "y":480
+                }, 
+                {
+                 "height":0,
+                 "id":712,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1.00000000000011,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333333333331,
+                         "y":-14.3333333333333
+                        }, 
+                        {
+                         "x":9.33333333333331,
+                         "y":-10.6666666666667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":5
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":17
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":176.333333333333,
+                 "y":563.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":713,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":6
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":16
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":206.666666666667,
+                 "y":533.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":714,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":7
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":19
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":236.666666666667,
+                 "y":628.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":715,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":6
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":20
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":205,
+                 "y":661.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":716,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":10
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":20
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":333.333333333333,
+                 "y":660
+                }, 
+                {
+                 "height":0,
+                 "id":717,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":12
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":23
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":398,
+                 "y":759.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":718,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":14
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":24
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":461.666666666667,
+                 "y":790.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":719,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":17
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":27
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":558,
+                 "y":886
+                }, 
+                {
+                 "height":0,
+                 "id":720,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":16
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":29
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":526.333333333333,
+                 "y":951
+                }, 
+                {
+                 "height":0,
+                 "id":721,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":15
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":27
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":495.666666666667,
+                 "y":887
+                }, 
+                {
+                 "height":0,
+                 "id":722,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":13
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":27
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":427.333333333333,
+                 "y":884.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":723,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":12
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":25
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":397,
+                 "y":821.666666666667
+                },
+            
+                {
+                 "height":0,
+                 "id":724,
+                 "name":"",
+                 "polygon":[
+                        {
+                         "x":-1,
+                         "y":1
+                        }, 
+                        {
+                         "x":-4.33333,
+                         "y":-14.3333
+                        }, 
+                        {
+                         "x":9.33333,
+                         "y":-10.6667
+                        }],
+                 "properties":[
+                        {
+                         "name":"tileX",
+                         "type":"int",
+                         "value":9
+                        }, 
+                        {
+                         "name":"tileY",
+                         "type":"int",
+                         "value":22
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":305.333333333333,
+                 "y":729.333333333333
                 }],
          "opacity":1,
+         "properties":[
+                {
+                 "name":"tileX",
+                 "type":"int",
+                 "value":17
+                }, 
+                {
+                 "name":"tileY",
+                 "type":"int",
+                 "value":27
+                }],
          "type":"objectgroup",
-         "visible":false,
+         "visible":true,
          "x":0,
          "y":0
         }, 
@@ -5497,7 +6084,7 @@
          "y":0
         }],
  "nextlayerid":14,
- "nextobjectid":712,
+ "nextobjectid":725,
  "orientation":"isometric",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

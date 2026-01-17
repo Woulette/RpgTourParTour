@@ -14,6 +14,7 @@ const { createResourceHandlers } = require("./handlers/resources");
 const { createPlayerHandlers } = require("./handlers/players");
 const { createAccountStore } = require("./db/accounts");
 const { createCharacterStore } = require("./db/characters");
+const { createMarketStore } = require("./db/market");
 const { buildMonsterStats } = require("./handlers/combat/monsterStats");
 const { initializeMapState } = require("./maps/initMapState");
 const { createRouterHandlers } = require("./app/router");
@@ -45,6 +46,7 @@ const DEBUG_COMBAT = process.env.LAN_COMBAT_DEBUG === "1";
 const LAN_TRACE = process.env.LAN_TRACE === "1";
 const characterStore = createCharacterStore({ dataDir: path.resolve(__dirname, "data") });
 const accountStore = createAccountStore({ dataDir: path.resolve(__dirname, "data") });
+const marketStore = createMarketStore({ dataDir: path.resolve(__dirname, "data") });
 const SESSION_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function issueSessionToken(accountId) {
@@ -186,6 +188,34 @@ const questDefsPromise = import(
     questDefsFailed = true;
     // eslint-disable-next-line no-console
     console.warn("[LAN] Failed to load quest defs:", err?.message || err);
+  });
+
+let achievementDefs = null;
+let achievementDefsFailed = false;
+const achievementDefsPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/features/achievements/defs/index.js")).href
+)
+  .then((mod) => {
+    achievementDefs = mod?.achievementDefs || null;
+  })
+  .catch((err) => {
+    achievementDefsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load achievement defs:", err?.message || err);
+  });
+
+let shopDefs = null;
+let shopDefsFailed = false;
+const shopDefsPromise = import(
+  pathToFileURL(path.resolve(__dirname, "../src/shops/catalog.js")).href
+)
+  .then((mod) => {
+    shopDefs = mod?.shops || null;
+  })
+  .catch((err) => {
+    shopDefsFailed = true;
+    // eslint-disable-next-line no-console
+    console.warn("[LAN] Failed to load shop defs:", err?.message || err);
   });
 
 let harvestResourceDefs = null;
@@ -977,6 +1007,23 @@ const RATE_LIMITS = {
   CmdResourceHarvest: { limit: 4, windowMs: 1000 },
   CmdPlayerSync: { limit: 4, windowMs: 2000 },
   CmdInventoryOp: { limit: 12, windowMs: 1000 },
+  CmdEquipItem: { limit: 8, windowMs: 1000 },
+  CmdUnequipItem: { limit: 8, windowMs: 1000 },
+  CmdUseItem: { limit: 6, windowMs: 1000 },
+  CmdConsumeItem: { limit: 6, windowMs: 1000 },
+  CmdTrashItem: { limit: 6, windowMs: 1000 },
+  CmdTrashRestore: { limit: 6, windowMs: 1000 },
+  CmdShopBuy: { limit: 6, windowMs: 1000 },
+  CmdShopSell: { limit: 6, windowMs: 1000 },
+  CmdMarketList: { limit: 6, windowMs: 1000 },
+  CmdMarketMyListings: { limit: 4, windowMs: 1000 },
+  CmdMarketBalance: { limit: 4, windowMs: 1000 },
+  CmdMarketSell: { limit: 4, windowMs: 1000 },
+  CmdMarketBuy: { limit: 6, windowMs: 1000 },
+  CmdMarketCancel: { limit: 4, windowMs: 1000 },
+  CmdMarketWithdraw: { limit: 4, windowMs: 1000 },
+  CmdMarketClaimReturn: { limit: 4, windowMs: 1000 },
+  CmdAchievementClaim: { limit: 4, windowMs: 2000 },
   CmdGoldOp: { limit: 8, windowMs: 1000 },
   CmdCraft: { limit: 4, windowMs: 1000 },
   CmdQuestAction: { limit: 6, windowMs: 1000 },
@@ -1201,6 +1248,7 @@ playerHandlers = createPlayerHandlers({
   snapshotForClient,
   ensureMapInitialized,
   characterStore,
+  marketStore,
   issueSessionToken,
   getAccountIdFromSession,
   buildBaseStatsForClass,
@@ -1215,6 +1263,12 @@ playerHandlers = createPlayerHandlers({
   getQuestDefsPromise: () => questDefsPromise,
   getQuestDefsFailed: () => questDefsFailed,
   getQuestStates: () => questStates,
+  getAchievementDefs: () => achievementDefs,
+  getAchievementDefsPromise: () => achievementDefsPromise,
+  getAchievementDefsFailed: () => achievementDefsFailed,
+  getShopDefs: () => shopDefs,
+  getShopDefsPromise: () => shopDefsPromise,
+  getShopDefsFailed: () => shopDefsFailed,
   getLevelApi: () => levelApi,
   getLevelApiFailed: () => levelApiFailed,
   getMonsterDef,

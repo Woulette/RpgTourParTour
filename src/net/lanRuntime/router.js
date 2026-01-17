@@ -343,7 +343,13 @@ export function createLanRouter(ctx) {
       : Number.isInteger(entry.tileY)
         ? entry.tileY
         : null;
-    if (tileX !== null && tileY !== null && scene?.map && scene?.groundLayer) {
+    if (
+      tileX !== null &&
+      tileY !== null &&
+      scene?.map &&
+      scene?.groundLayer &&
+      scene.groundLayer.layer
+    ) {
       const wp = scene.map.tileToWorldXY(
         tileX,
         tileY,
@@ -673,6 +679,26 @@ export function createLanRouter(ctx) {
 
     if (msg.t === "EvTradeError") {
       handleTradeError(msg);
+      return;
+    }
+
+    if (msg.t === "EvMarketList") {
+      emitStoreEvent("market:list", msg);
+      return;
+    }
+
+    if (msg.t === "EvMarketMine") {
+      emitStoreEvent("market:mine", msg);
+      return;
+    }
+
+    if (msg.t === "EvMarketBalance") {
+      emitStoreEvent("market:balance", msg);
+      return;
+    }
+
+    if (msg.t === "EvMarketNotice") {
+      emitStoreEvent("market:notice", msg);
       return;
     }
 

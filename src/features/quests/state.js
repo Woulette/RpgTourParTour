@@ -6,6 +6,10 @@ import { addChatMessage } from "../../chat/chat.js";
 import { items as itemDefs } from "../inventory/data/itemsConfig.js";
 import { adjustGold } from "../inventory/runtime/goldAuthority.js";
 
+function useQuestAuthority() {
+  return typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+}
+
 function ensureQuestContainer(player) {
   if (!player.quests) {
     player.quests = {};
@@ -78,6 +82,7 @@ export function getQuestState(player, questId, { emit = true } = {}) {
 }
 
 export function acceptQuest(player, questId) {
+  if (useQuestAuthority()) return;
   const questDef = getQuestDef(questId);
   if (!questDef || !player) return;
   const state = getQuestState(player, questId);
@@ -107,6 +112,7 @@ export function acceptQuest(player, questId) {
 }
 
 export function advanceQuestStage(player, questId, { scene } = {}) {
+  if (useQuestAuthority()) return;
   const questDef = getQuestDef(questId);
   if (!questDef || !player) return;
   const state = getQuestState(player, questId);
@@ -151,6 +157,7 @@ export function isQuestCompleted(player, questId) {
 }
 
 export function incrementKillProgress(scene, player, questId, monsterId) {
+  if (useQuestAuthority()) return;
   const questDef = getQuestDef(questId);
   if (!questDef || !player) return;
 
@@ -204,6 +211,7 @@ export function incrementKillProgress(scene, player, questId, monsterId) {
 }
 
 export function incrementRiftProgress(scene, player, questId, count = 1) {
+  if (useQuestAuthority()) return;
   const questDef = getQuestDef(questId);
   if (!questDef || !player) return;
   if (!Number.isFinite(count) || count <= 0) return;
@@ -230,6 +238,7 @@ export function incrementRiftProgress(scene, player, questId, count = 1) {
 }
 
 export function incrementRiftProgressForAll(scene, player, count = 1) {
+  if (useQuestAuthority()) return;
   if (!player) return;
   if (!Number.isFinite(count) || count <= 0) return;
 
@@ -258,6 +267,7 @@ export function incrementRiftProgressForAll(scene, player, count = 1) {
 }
 
 export function incrementKillProgressForAll(scene, player, monsterId) {
+  if (useQuestAuthority()) return;
   if (!player || !monsterId) return;
 
   Object.values(quests).forEach((questDef) => {
@@ -315,6 +325,7 @@ export function incrementKillProgressForAll(scene, player, monsterId) {
 }
 
 export function incrementCraftProgress(player, itemId, qty = 1) {
+  if (useQuestAuthority()) return;
   const craftedQty = qty || 1;
   if (!player || !itemId || craftedQty <= 0) return;
 
@@ -389,6 +400,7 @@ export function incrementCraftProgress(player, itemId, qty = 1) {
 }
 
 export function completeQuest(scene, player, questId) {
+  if (useQuestAuthority()) return;
   const questDef = getQuestDef(questId);
   if (!questDef || !player) return;
   const state = getQuestState(player, questId);

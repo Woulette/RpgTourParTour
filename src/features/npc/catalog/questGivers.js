@@ -84,6 +84,7 @@ export const questGiverNpcs = [
     spritePath: "assets/npc/Marchandsouth-east.png",
     type: "merchant",
     shopId: "boutique",
+    marketId: "hdv",
     questIds: [],
   },
   {

@@ -19,7 +19,7 @@ function mountUiInputGuard() {
     if (!target || !target.closest) return;
 
     const inUi = target.closest(
-      "#hud-root, .craft-panel, .shop-panel, .npc-dialog-panel, #combat-result-overlay, #levelup-overlay, .menu-panel"
+      "#hud-root, .craft-panel, .shop-panel, .market-panel, .npc-dialog-panel, #combat-result-overlay, #levelup-overlay, .menu-panel"
     );
     if (!inUi) return;
 

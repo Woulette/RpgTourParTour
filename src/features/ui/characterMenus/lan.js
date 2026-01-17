@@ -57,7 +57,8 @@ export function createLanHelpers({
       setLanClient(null);
     }
     setLanButtonLabel("Compte: ...");
-    if (!account || !account.name || !account.password) {
+    const hasToken = !!account?.sessionToken;
+    if (!account || !account.name || (!account.password && !hasToken)) {
       setLanButtonLabel("Compte");
       return;
     }

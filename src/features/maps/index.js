@@ -397,6 +397,7 @@ export const maps = {
       { tileX: 15, tileY: 9 },
       { tileX: 21, tileY: 16 },
     ],
+    unblockTiles: [{ x: 16, y: 27 }],
     exitBounds: null,
   },
   MapAndemiaNouvelleVersion4: {

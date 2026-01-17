@@ -70,6 +70,7 @@ body.menu-open #combat-result-overlay {
   box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
   overflow: hidden;
   backdrop-filter: blur(6px);
+  position: relative;
 }
 
 .menu-panel.menu-v2 .menu-center {
@@ -244,6 +245,14 @@ body.menu-open #combat-result-overlay {
 
 .menu-panel.menu-v2 .menu-screen {
   padding: 14px 14px;
+}
+
+.menu-panel.menu-v2 #menu-screen-select {
+  padding-bottom: 68px;
+}
+
+.menu-panel.menu-v2 #btn-go-servers {
+  margin-right: auto;
 }
 
 .menu-panel.menu-v2 .menu-screen-title {

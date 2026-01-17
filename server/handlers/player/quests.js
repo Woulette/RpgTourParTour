@@ -1,5 +1,6 @@
 function createQuestHandlers({
   state,
+  send,
   persistPlayerState,
   getQuestDefs,
   getQuestDefsPromise,
@@ -10,6 +11,7 @@ function createQuestHandlers({
   computeFinalStats,
   helpers,
   sync,
+  getNextEventId,
 }) {
   const {
     ensurePlayerInventory,
@@ -140,30 +142,75 @@ function createQuestHandlers({
     if (!objective) return true;
 
     const type = objective.type;
-    if (type === "kill") {
-      const targetCount = Number.isInteger(objective.count) ? objective.count : 1;
+    if (type === "talk_to_npc") {
+      if (questDef.id === "alchimiste_marchand_5" && stage.id === "apply_parchemin") {
+        return hasAppliedParchment(player, state);
+      }
+      return true;
+    }
+    if (type === "kill_monster") {
+      const targetCount = Number.isInteger(objective.requiredCount)
+        ? objective.requiredCount
+        : 1;
       const current = Number.isInteger(state.progress?.currentCount)
         ? state.progress.currentCount
         : 0;
       return current >= targetCount;
     }
-    if (type === "deliver") {
+    if (type === "kill_monsters") {
+      const list = Array.isArray(objective.monsters) ? objective.monsters : [];
+      if (list.length === 0) return false;
+      const kills = state.progress?.kills || {};
+      return list.every((entry) => {
+        if (!entry || !entry.monsterId) return false;
+        const required = entry.requiredCount || 1;
+        const current = kills[entry.monsterId] || 0;
+        return current >= required;
+      });
+    }
+    if (type === "deliver_item") {
       const itemId = typeof objective.itemId === "string" ? objective.itemId : null;
-      const count = Number.isInteger(objective.count) ? objective.count : 1;
+      const count = Number.isInteger(objective.qty) ? objective.qty : 1;
       if (!itemId) return false;
       const available = countItemInInventory(player.inventory, itemId);
       return available >= count;
     }
-    if (type === "craft") {
-      const itemId = typeof objective.itemId === "string" ? objective.itemId : null;
-      const count = Number.isInteger(objective.count) ? objective.count : 1;
-      if (!itemId) return false;
-      return getCraftedCount(player, state, itemId) >= count;
+    if (type === "deliver_items") {
+      const items = Array.isArray(objective.items) ? objective.items : [];
+      if (items.length === 0) return false;
+      return items.every((entry) => {
+        if (!entry || !entry.itemId) return false;
+        const count = Number.isInteger(entry.qty) ? entry.qty : 1;
+        const available = countItemInInventory(player.inventory, entry.itemId);
+        return available >= count;
+      });
     }
-    if (type === "apply_parchment") {
-      return hasAppliedParchment(player, state);
+    if (type === "craft_items") {
+      const items = Array.isArray(objective.items) ? objective.items : [];
+      if (items.length === 0) return false;
+      return items.every((entry) => {
+        if (!entry || !entry.itemId) return false;
+        const count = Number.isInteger(entry.qty) ? entry.qty : 1;
+        return getCraftedCount(player, state, entry.itemId) >= count;
+      });
     }
-    return true;
+    if (type === "craft_set") {
+      const requiredSlots = Array.isArray(objective.requiredSlots)
+        ? objective.requiredSlots.filter(Boolean)
+        : [];
+      const required =
+        requiredSlots.length > 0 ? requiredSlots.length : objective.requiredCount || 1;
+      const current = state.progress?.currentCount || 0;
+      return current >= required;
+    }
+    if (type === "close_rifts") {
+      const required = Number.isInteger(objective.requiredCount)
+        ? objective.requiredCount
+        : 1;
+      const current = state.progress?.currentCount || 0;
+      return current >= required;
+    }
+    return false;
   }
 
   function applyQuestStageHook(player, questId, stageId, hookName) {
@@ -214,6 +261,22 @@ function createQuestHandlers({
     sendPlayerSync(target.ws, player, reason || "quest");
   }
 
+  function sendQuestChat(player, text) {
+    const target = findClientByPlayerId(player.id);
+    if (!target?.ws || !text) return;
+    if (typeof send !== "function") return;
+    send(target.ws, {
+      t: "EvChatMessage",
+      eventId: typeof getNextEventId === "function" ? getNextEventId() : null,
+      playerId: player.id,
+      author: "Quetes",
+      channel: "quest",
+      text,
+      mapId: null,
+      ts: Date.now(),
+    });
+  }
+
   function applyQuestRewards(player, questDef) {
     if (!player || !questDef) return;
     const rewards = questDef.rewards || {};
@@ -250,6 +313,15 @@ function createQuestHandlers({
         goldDelta: player.gold - beforeGold,
       });
     }
+
+    const rewardParts = [];
+    if (xp > 0) rewardParts.push(`+${xp} XP`);
+    if (gold > 0) rewardParts.push(`+${gold} or`);
+    const rewardText = rewardParts.length > 0 ? ` (${rewardParts.join(", ")})` : "";
+    sendQuestChat(
+      player,
+      `Quete terminee : ${questDef.title || questDef.id}${rewardText}`
+    );
   }
 
   function applyCombatRewardsForPlayer(playerId, { xp = 0, gold = 0 } = {}) {
@@ -379,18 +451,50 @@ function createQuestHandlers({
       const questDef = getQuestDef(questId);
       if (!questDef) return;
       const stage = getCurrentQuestStage(questDef, state);
-      if (!stage || stage.objective?.type !== "kill") return;
-      if (!isMonsterObjectiveMatch(stage.objective, monsterId)) return;
-      const max = Number.isInteger(stage.objective.count) ? stage.objective.count : 1;
-      const prev = Number.isInteger(state.progress?.currentCount)
-        ? state.progress.currentCount
-        : 0;
-      const next = Math.min(prev + count, max);
-      if (next !== prev) {
+      if (!stage || !stage.objective?.type) return;
+      if (stage.objective.type === "kill_monster") {
+        if (!isMonsterObjectiveMatch(stage.objective, monsterId)) return;
+        const max = Number.isInteger(stage.objective.requiredCount)
+          ? stage.objective.requiredCount
+          : 1;
+        const prev = Number.isInteger(state.progress?.currentCount)
+          ? state.progress.currentCount
+          : 0;
+        const next = Math.min(prev + count, max);
+        if (next !== prev) {
+          if (!state.progress) state.progress = {};
+          state.progress.currentCount = next;
+          changed = true;
+          if (next >= max) {
+            advanceQuestStage(player, questDef, state);
+          }
+        }
+      }
+      if (stage.objective.type === "kill_monsters") {
+        const list = Array.isArray(stage.objective.monsters)
+          ? stage.objective.monsters
+          : [];
+        if (list.length === 0) return;
+        const target = list.find((entry) => isMonsterObjectiveMatch(entry, monsterId));
+        if (!target) return;
         if (!state.progress) state.progress = {};
-        state.progress.currentCount = next;
-        changed = true;
-        if (next >= max) {
+        if (!state.progress.kills) state.progress.kills = {};
+        const max = Number.isInteger(target.requiredCount) ? target.requiredCount : 1;
+        const prev = Number.isInteger(state.progress.kills[target.monsterId])
+          ? state.progress.kills[target.monsterId]
+          : 0;
+        const next = Math.min(prev + count, max);
+        if (next !== prev) {
+          state.progress.kills[target.monsterId] = next;
+          changed = true;
+        }
+        const done = list.every((entry) => {
+          if (!entry || !entry.monsterId) return false;
+          const required = entry.requiredCount || 1;
+          const current = state.progress.kills[entry.monsterId] || 0;
+          return current >= required;
+        });
+        if (done) {
           advanceQuestStage(player, questDef, state);
         }
       }
@@ -407,23 +511,93 @@ function createQuestHandlers({
       const questDef = getQuestDef(questId);
       if (!questDef) return;
       const stage = getCurrentQuestStage(questDef, state);
-      if (!stage || stage.objective?.type !== "craft") return;
-      if (stage.objective.itemId !== itemId) return;
-      const max = Number.isInteger(stage.objective.count) ? stage.objective.count : 1;
-      const crafted = state.progress?.crafted || {};
-      const prev = Number.isInteger(crafted[itemId]) ? crafted[itemId] : 0;
-      const next = Math.min(prev + qty, max);
-      if (!state.progress) state.progress = {};
-      if (!state.progress.crafted) state.progress.crafted = {};
-      if (next !== prev) {
-        state.progress.crafted[itemId] = next;
+      if (!stage || !stage.objective?.type) return;
+      if (stage.objective.type === "craft_items") {
+        const list = Array.isArray(stage.objective.items)
+          ? stage.objective.items
+          : [];
+        if (list.length === 0) return;
+        const target = list.find((entry) => entry && entry.itemId === itemId);
+        if (!target) return;
+        const max = Number.isInteger(target.qty) ? target.qty : 1;
+        if (!state.progress) state.progress = {};
+        if (!state.progress.crafted) state.progress.crafted = {};
+        const prev = Number.isInteger(state.progress.crafted[itemId])
+          ? state.progress.crafted[itemId]
+          : 0;
+        const next = Math.min(prev + qty, max);
+        if (next !== prev) {
+          state.progress.crafted[itemId] = next;
+          changed = true;
+        }
+        const totalRequired = list.reduce((acc, it) => acc + (it?.qty || 1), 0);
+        const totalCurrent = list.reduce(
+          (acc, it) =>
+            acc + Math.min(it?.qty || 1, state.progress.crafted[it.itemId] || 0),
+          0
+        );
+        state.progress.currentCount = Math.min(totalRequired, totalCurrent);
+        if (totalCurrent >= totalRequired) {
+          advanceQuestStage(player, questDef, state);
+        }
+      }
+      if (stage.objective.type === "craft_set") {
+        const def = getItemDef(itemId);
+        const setId = stage.objective.setId;
+        if (!def || !setId) return;
+        const defSetId = def.setId || "";
+        const matchesSet = defSetId === setId || defSetId.startsWith(`${setId}_`);
+        if (!matchesSet) return;
+        if (!state.progress) state.progress = {};
+        const requiredSlots = Array.isArray(stage.objective.requiredSlots)
+          ? stage.objective.requiredSlots.filter(Boolean)
+          : [];
+        if (requiredSlots.length > 0) {
+          const slot = def.slot || null;
+          if (!slot || !requiredSlots.includes(slot)) return;
+          state.progress.craftedSlots = state.progress.craftedSlots || {};
+          state.progress.craftedSlots[slot] = true;
+          const current = requiredSlots.reduce(
+            (acc, s) => acc + (state.progress.craftedSlots[s] ? 1 : 0),
+            0
+          );
+          state.progress.currentCount = Math.min(requiredSlots.length, current);
+        } else {
+          const required = stage.objective.requiredCount || 1;
+          const current = state.progress.currentCount || 0;
+          state.progress.currentCount = Math.min(required, current + qty);
+        }
         changed = true;
-        if (next >= max) {
+        const needed =
+          requiredSlots.length > 0 ? requiredSlots.length : stage.objective.requiredCount || 1;
+        if (state.progress.currentCount >= needed) {
           advanceQuestStage(player, questDef, state);
         }
       }
     });
     return changed;
+  }
+
+  function incrementRiftProgressForPlayer(player, questDef, state, stage, count = 1, riftId) {
+    if (!player || !questDef || !state || !stage) return false;
+    if (!Number.isFinite(count) || count <= 0) return false;
+    if (stage.objective?.type !== "close_rifts") return false;
+    if (!state.progress) state.progress = {};
+    state.progress.closedRifts = state.progress.closedRifts || {};
+    if (riftId && state.progress.closedRifts[riftId]) return false;
+    if (riftId) state.progress.closedRifts[riftId] = true;
+    const required = Number.isInteger(stage.objective.requiredCount)
+      ? stage.objective.requiredCount
+      : 1;
+    const current = Number.isInteger(state.progress.currentCount)
+      ? state.progress.currentCount
+      : 0;
+    const next = Math.min(required, current + count);
+    state.progress.currentCount = next;
+    if (next >= required) {
+      advanceQuestStage(player, questDef, state);
+    }
+    return next !== current;
   }
 
   function handleQuestActionAccept(player, questDef, npcId) {
@@ -450,9 +624,10 @@ function createQuestHandlers({
     if (stageId && stage.id !== stageId) return { ok: false };
     if (!isTurnInReadyAtNpc(player, questDef, state, stage, npcId)) return { ok: false };
 
-    if (stage.objective?.type === "deliver") {
-      const itemId = typeof stage.objective.itemId === "string" ? stage.objective.itemId : null;
-      const count = Number.isInteger(stage.objective.count) ? stage.objective.count : 1;
+    if (stage.objective?.type === "deliver_item") {
+      const itemId =
+        typeof stage.objective.itemId === "string" ? stage.objective.itemId : null;
+      const count = Number.isInteger(stage.objective.qty) ? stage.objective.qty : 1;
       if (!itemId) return { ok: false };
       const inv = ensurePlayerInventory(player);
       const beforeInv = snapshotInventory(inv);
@@ -472,6 +647,34 @@ function createQuestHandlers({
         op: "remove",
         itemId,
         qty: count,
+        itemDeltas: deltas.slice(0, 20),
+      });
+    }
+    if (stage.objective?.type === "deliver_items") {
+      const items = Array.isArray(stage.objective.items) ? stage.objective.items : [];
+      if (items.length === 0) return { ok: false };
+      const inv = ensurePlayerInventory(player);
+      const beforeInv = snapshotInventory(inv);
+      let ok = true;
+      items.forEach((entry) => {
+        if (!entry || !entry.itemId) return;
+        const count = Number.isInteger(entry.qty) ? entry.qty : 1;
+        const removed = removeItemFromInventory(inv, entry.itemId, count);
+        if (removed < count) ok = false;
+      });
+      if (!ok) {
+        restoreInventory(inv, beforeInv);
+        return { ok: false };
+      }
+      const deltas = diffInventory(beforeInv, inv);
+      logAntiDup({
+        ts: Date.now(),
+        reason: "QuestTurnIn",
+        accountId: player.accountId || null,
+        characterId: player.characterId || null,
+        playerId: player.id || null,
+        mapId: player.mapId || null,
+        op: "remove",
         itemDeltas: deltas.slice(0, 20),
       });
     }
@@ -524,6 +727,21 @@ function createQuestHandlers({
       changed = handleQuestActionAccept(player, questDef, npcId);
     } else if (action === "turn_in") {
       changed = handleQuestActionTurnIn(player, questDef, npcId, stageId).ok;
+    } else if (action === "rift_progress") {
+      const count = Number.isInteger(msg.count) ? msg.count : 1;
+      const riftId = typeof msg.riftId === "string" ? msg.riftId : null;
+      const state = getQuestState(player, questDef.id, { create: false });
+      const stage = getCurrentQuestStage(questDef, state);
+      if (state && stage) {
+        changed = incrementRiftProgressForPlayer(
+          player,
+          questDef,
+          state,
+          stage,
+          count,
+          riftId
+        );
+      }
     } else if (action === "advance_many") {
       const count = Number.isInteger(msg.count) ? msg.count : 0;
       const state = getQuestState(player, questDef.id, { create: false });

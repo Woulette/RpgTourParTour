@@ -4,6 +4,25 @@ import { adjustGold } from "../../inventory/runtime/goldAuthority.js";
 import { addXpToPlayer } from "../../../entities/player.js";
 import { achievementDefs } from "../defs/index.js";
 import { addChatMessage } from "../../../chat/chat.js";
+import { getNetClient, getNetPlayerId } from "../../../app/session.js";
+
+function useAchievementAuthority() {
+  return typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+}
+
+function sendAchievementClaim(achievementId) {
+  if (!useAchievementAuthority()) return false;
+  const client = getNetClient();
+  const playerId = getNetPlayerId();
+  if (!client || !Number.isInteger(playerId)) return false;
+  if (!achievementId) return false;
+  try {
+    client.sendCmd("CmdAchievementClaim", { playerId, achievementId });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function ensureAchievementContainer(player) {
   if (!player.achievements) player.achievements = {};
@@ -156,6 +175,11 @@ export function claimAchievement(player, achievementId) {
   if (!progress) return { ok: false, reason: "unknown_achievement" };
   if (!progress.unlocked) return { ok: false, reason: "not_unlocked" };
   if (progress.claimed) return { ok: false, reason: "already_claimed" };
+
+  if (useAchievementAuthority()) {
+    sendAchievementClaim(achievementId);
+    return { ok: true, pending: true };
+  }
 
   const container = ensureAchievementContainer(player);
   container[achievementId] = { claimed: true, claimedAt: Date.now() };

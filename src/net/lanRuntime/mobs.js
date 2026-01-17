@@ -63,7 +63,7 @@ export function createMobHandlers(ctx) {
     if (!monster || !Number.isInteger(tileX) || !Number.isInteger(tileY)) return;
     const currentMap = getCurrentMapObj();
     const currentLayer = getCurrentGroundLayer();
-    if (!currentMap || !currentLayer) return;
+    if (!currentMap || !currentLayer || !currentLayer.layer) return;
     const wp = currentMap.tileToWorldXY(
       tileX,
       tileY,
@@ -100,7 +100,7 @@ export function createMobHandlers(ctx) {
 
     const currentMap = getCurrentMapObj();
     const currentLayer = getCurrentGroundLayer();
-    if (!currentMap || !currentLayer) {
+    if (!currentMap || !currentLayer || !currentLayer.layer) {
       if (onComplete) onComplete();
       return;
     }

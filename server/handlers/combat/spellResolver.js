@@ -215,6 +215,14 @@ function createSpellResolver(ctx, helpers) {
     if (!spell) return { ok: false };
     const caster = getCasterInfo(combat, actor);
     if (!caster || !caster.stats) return { ok: false };
+    if (caster.kind === "player") {
+      const player = state.players[caster.playerId];
+      const playerLevel = Number.isFinite(player?.level) ? player.level : 1;
+      const requiredLevel = Number.isFinite(spell.requiredLevel)
+        ? spell.requiredLevel
+        : 1;
+      if (playerLevel < requiredLevel) return { ok: false };
+    }
     const mapInfo = getMapCollision(combat.mapId);
     const occupied = getOccupiedMap(snapshot);
 

@@ -13,11 +13,11 @@
     btnBackSelect,
     btnCreate,
     btnGoCreate,
+    btnGoServers,
     btnPlay,
     btnLanConnect,
     characterListEl,
   } = elements;
-
   function showSelect() {
     if (!state.getActiveAccount()?.name || !state.getActiveAccount()?.password) {
       actions.showLogin();
@@ -35,6 +35,7 @@
     btnBackSelect.hidden = true;
     btnCreate.hidden = true;
     btnGoCreate.hidden = false;
+    btnGoServers.hidden = false;
     btnPlay.hidden = false;
     btnLanConnect.hidden = false;
 
@@ -82,6 +83,7 @@
     btnBackSelect.hidden = true;
     btnCreate.hidden = true;
     btnGoCreate.hidden = false;
+    btnGoServers.hidden = false;
     btnPlay.hidden = false;
     btnLanConnect.hidden = false;
 
@@ -177,10 +179,17 @@
       actionsWrap.appendChild(btnDelete);
       card.appendChild(actionsWrap);
 
-      card.addEventListener("click", () => {
+      const applySelection = (shouldRender) => {
         state.setSelectedCharacterId(c.id);
         btnPlay.disabled = false;
-        renderCharacters();
+        if (shouldRender) {
+          renderCharacters();
+        } else {
+          const cards = characterListEl.querySelectorAll(".character-card");
+          cards.forEach((node) => {
+            node.classList.toggle("is-selected", node === card);
+          });
+        }
         layout.renderCarouselMeta();
         const classId = c.classId || "archer";
         layout.setCarouselIds(layout.buildCarouselIdsForSelect());
@@ -194,13 +203,18 @@
         }
         layout.applyCarouselPositions();
         layout.setPreview(classId, { characterName: c.name || "Joueur" });
+      };
+
+      card.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        applySelection(false);
       });
 
-      card.addEventListener("dblclick", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        state.setSelectedCharacterId(c.id);
-        btnPlay.disabled = false;
+      card.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        applySelection(false);
         actions.startGameWithCharacter(c);
       });
 

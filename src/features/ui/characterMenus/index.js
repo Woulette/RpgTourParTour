@@ -34,6 +34,7 @@ export function initCharacterMenus({ onStartGame }) {
   const serverListEl = document.getElementById("server-list");
 
   const btnGoCreate = document.getElementById("btn-go-create");
+  const btnGoServers = document.getElementById("btn-go-servers");
   const btnLanConnect = document.getElementById("btn-lan-connect");
   const btnPlay = document.getElementById("btn-play");
   const btnBackSelect = document.getElementById("btn-back-select");
@@ -51,7 +52,7 @@ export function initCharacterMenus({ onStartGame }) {
   const loginError = document.getElementById("login-error");
   const btnLoginSubmit = document.getElementById("btn-login-submit");
   const btnLoginToggle = document.getElementById("btn-login-toggle");
-  const btnServersBack = document.getElementById("btn-servers-back");
+  const btnServersLogout = document.getElementById("btn-servers-logout");
   const btnServersContinue = document.getElementById("btn-servers-continue");
 
   if (
@@ -65,6 +66,7 @@ export function initCharacterMenus({ onStartGame }) {
     !classListEl ||
     !serverListEl ||
     !btnGoCreate ||
+    !btnGoServers ||
     !btnLanConnect ||
     !btnPlay ||
     !btnBackSelect ||
@@ -80,7 +82,7 @@ export function initCharacterMenus({ onStartGame }) {
     !loginError ||
     !btnLoginSubmit ||
     !btnLoginToggle ||
-    !btnServersBack ||
+    !btnServersLogout ||
     !btnServersContinue
   ) {
     return null;
@@ -233,14 +235,37 @@ export function initCharacterMenus({ onStartGame }) {
     }
   }
 
+  function removeLocalCharacterEntry(characterId) {
+    if (!characterId) return;
+    const index = characters.findIndex((c) => c && c.id === characterId);
+    if (index >= 0) {
+      characters.splice(index, 1);
+    }
+    if (selectedCharacterId === characterId) {
+      selectedCharacterId = characters[0]?.id || null;
+      if (btnPlay) btnPlay.disabled = !selectedCharacterId;
+    }
+    if (document.body.classList.contains("menu-open")) {
+      if (selectScreen && typeof selectScreen.renderCharacters === "function") {
+        selectScreen.renderCharacters();
+      }
+      if (typeof renderCarouselMeta === "function") {
+        renderCarouselMeta();
+      }
+    }
+  }
+
   function setCharactersFromServer(list, accountName) {
     useServerCharacters = true;
     serverListPending = false;
     serverAccountName = normalizeAccountName(accountName);
+    const normalizedAccount = serverAccountName || null;
     characters.length = 0;
     const items = Array.isArray(list) ? list : [];
+    const serverIds = new Set();
     items.forEach((entry) => {
       if (!entry || !entry.characterId) return;
+      serverIds.add(entry.characterId);
       const character = {
         id: entry.characterId,
         name: entry.name || "Joueur",
@@ -251,6 +276,20 @@ export function initCharacterMenus({ onStartGame }) {
       characters.push(character);
       upsertCharacterMetaForAccount(character);
     });
+    if (normalizedAccount) {
+      try {
+        const localMetas = listCharacterMetas(normalizedAccount);
+        localMetas.forEach((meta) => {
+          if (!meta?.id) return;
+          if (!serverIds.has(meta.id)) {
+            deleteCharacter(meta.id);
+          }
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[menu] failed to sync local character cache:", err);
+      }
+    }
     if (characters.length === 0) {
       createScreen?.showCreate?.();
       return;
@@ -394,6 +433,7 @@ export function initCharacterMenus({ onStartGame }) {
     btnCreate.type = "submit";
 
     actions.appendChild(btnBackSelect);
+    actions.appendChild(btnGoServers);
     actions.appendChild(btnGoCreate);
     actions.appendChild(btnLanConnect);
     actions.appendChild(btnPlay);
@@ -646,15 +686,13 @@ export function initCharacterMenus({ onStartGame }) {
       serversScreen?.showServers?.();
       return;
     }
-    if (!activeAccount?.name || !activeAccount?.password) {
+    const hasToken = !!activeAccount?.sessionToken;
+    if (!activeAccount?.name || (!activeAccount?.password && !hasToken)) {
       loginScreen.showLogin();
       return;
     }
     serverListPending = true;
     const nextAccount = normalizeAccountName(activeAccount?.name);
-    if (!useServerCharacters || nextAccount !== serverAccountName) {
-      clearCharactersList();
-    }
     lan.connectLan(activeAccount, {
       authMode: loginMode,
       url: getSelectedServerUrl(),
@@ -672,6 +710,28 @@ export function initCharacterMenus({ onStartGame }) {
       const exists = characters.some((c) => c && c.id === current.id);
       if (exists) selectedCharacterId = current.id;
     }
+    if (!selectedCharacterId && characters.length > 0) {
+      selectedCharacterId = characters[0]?.id || null;
+    }
+    if (!activeAccount) {
+      const saved = account.loadLanAccount();
+      if (saved?.name) {
+        activeAccount = saved;
+      }
+    }
+    if (activeAccount?.name && useServerCharacters) {
+      connectAccountForListing();
+      selectScreen.showSelect();
+      return;
+    }
+    if (characters.length > 0) {
+      selectScreen.showSelect();
+      return;
+    }
+    if (activeAccount?.name && activeAccount?.password) {
+      serversScreen.showServers();
+      return;
+    }
     loginScreen.showLogin();
   }
 
@@ -679,6 +739,27 @@ export function initCharacterMenus({ onStartGame }) {
     document.body.classList.remove("menu-open");
     document.body.classList.remove("menu-login");
     document.body.classList.remove("menu-servers");
+  }
+
+  function logoutToLogin() {
+    if (lanClient) {
+      const playerId = getNetPlayerId();
+      if (Number.isInteger(playerId) && typeof lanClient.sendCmd === "function") {
+        lanClient.sendCmd("CmdLogout", { playerId });
+      }
+      lanClient.close();
+      lanClient = null;
+    }
+    lanConnected = false;
+    pendingStartCharacter = null;
+    useServerCharacters = false;
+    serverAccountName = null;
+    serverListPending = false;
+    activeAccount = null;
+    account.saveLanAccount(null, { remember: false });
+    clearSelectedCharacter();
+    clearCharactersList();
+    loginScreen.showLogin();
   }
 
   function startGameWithCharacter(chosen, options = {}) {
@@ -872,7 +953,7 @@ export function initCharacterMenus({ onStartGame }) {
       screenServersEl,
       screenSelectEl,
       screenCreateEl,
-      btnServersBack,
+      btnServersLogout,
       btnServersContinue,
       serverListEl,
     },
@@ -881,6 +962,7 @@ export function initCharacterMenus({ onStartGame }) {
       showLogin: () => loginScreen.showLogin(),
       showSelect: () => selectScreen.showSelect(),
       showCreate: () => createScreen.showCreate(),
+      logoutAccount: () => logoutToLogin(),
       connectAccount: () => connectAccountForListing(),
     },
     ensureLayout,
@@ -895,6 +977,7 @@ export function initCharacterMenus({ onStartGame }) {
       btnBackSelect,
       btnCreate,
       btnGoCreate,
+      btnGoServers,
       btnPlay,
       btnLanConnect,
       characterListEl,
@@ -914,9 +997,12 @@ export function initCharacterMenus({ onStartGame }) {
       deleteCharacter: (characterId) => {
         if (lanClient?.sendCmd) {
           lanClient.sendCmd("CmdAccountDeleteCharacter", { characterId });
+          deleteCharacter(characterId);
+          removeLocalCharacterEntry(characterId);
           return;
         }
         deleteCharacter(characterId);
+        removeLocalCharacterEntry(characterId);
       },
       clearSelectedCharacter,
       startGameWithCharacter,
@@ -924,6 +1010,7 @@ export function initCharacterMenus({ onStartGame }) {
   });
 
   btnGoCreate.addEventListener("click", () => createScreen.showCreate());
+  btnGoServers.addEventListener("click", () => serversScreen.showServers());
   btnBackSelect.addEventListener("click", () => selectScreen.showSelect());
   btnLanConnect.addEventListener("click", () => {
     if (lanClient) {

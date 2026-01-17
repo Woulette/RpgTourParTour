@@ -6,6 +6,24 @@ function isCombatLocked(player) {
   return !!player?.scene?.combatState?.enCours;
 }
 
+function sendEquipCmd(command, payload) {
+  if (typeof window === "undefined") return false;
+  if (window.__lanInventoryAuthority !== true) return false;
+  const client = window.__lanClient;
+  const playerId = window.__netPlayerId;
+  if (!client || !Number.isInteger(playerId)) return false;
+  try {
+    client.sendCmd(command, { playerId, ...payload });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sendUseCmd(payload) {
+  return sendEquipCmd("CmdUseItem", payload);
+}
+
 export function renderEquipmentSlots(player, equipSlots) {
   if (!equipSlots || equipSlots.length === 0) return;
   const equipment = player.equipment || {};
@@ -99,6 +117,9 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
     const def = getItemDef(liveSlotData.itemId);
     if (!def) return;
     if (def.category === "consommable") {
+      if (sendUseCmd({ inventorySlotIndex: idx })) {
+        return;
+      }
       const applied = applyConsumableEffect(player, def);
       if (applied) {
         removeItem(player.inventory, liveSlotData.itemId, 1);
@@ -108,6 +129,9 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
     }
     if (def.category !== "equipement") return;
 
+    if (sendEquipCmd("CmdEquipItem", { inventorySlotIndex: idx })) {
+      return;
+    }
     const ok = equipFromInventory(player, player.inventory, idx);
     if (ok) {
       renderInventory();
@@ -197,6 +221,9 @@ export function bindEquipmentSlotEvents(
     if (!player) return;
     if (isCombatLocked(player)) return;
     if (!equipSlot) return;
+    if (sendEquipCmd("CmdUnequipItem", { equipSlot })) {
+      return;
+    }
     const ok = unequipToInventory(player, player.inventory, equipSlot);
     if (ok) {
         renderInventory();

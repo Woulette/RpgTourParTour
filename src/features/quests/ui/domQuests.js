@@ -11,6 +11,7 @@ let domQuestsInitialized = false;
 let unsubscribeQuests = null;
 let unsubscribeQuestsInventory = null;
 let unsubscribePlayerChanged = null;
+let unsubscribePlayerUpdated = null;
 
 export function initDomQuests(player) {
   if (domQuestsInitialized) return;
@@ -434,9 +435,7 @@ export function initDomQuests(player) {
   });
 
   unsubscribeQuests = onStoreEvent("quest:updated", () => {
-    if (document.body.classList.contains("hud-quests-open")) {
-      refreshPanel();
-    }
+    refreshPanel();
   });
 
   unsubscribeQuestsInventory = onStoreEvent("inventory:updated", () => {
@@ -448,6 +447,10 @@ export function initDomQuests(player) {
   unsubscribePlayerChanged = onStoreEvent("player:changed", () => {
     activeItemEl = null;
     selectedQuestId = null;
+    refreshPanel();
+  });
+
+  unsubscribePlayerUpdated = onStoreEvent("player:updated", () => {
     if (document.body.classList.contains("hud-quests-open")) {
       refreshPanel();
     }

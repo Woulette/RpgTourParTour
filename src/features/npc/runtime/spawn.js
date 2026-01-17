@@ -197,35 +197,41 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
   }
 
   // Etablie un listener global une seule fois pour réagir aux mises à jour de quête
-  if (!questMarkerUnsubscribe) {
-    questMarkerUnsubscribe = onStoreEvent("quest:updated", () => {
-      if (!scene || !scene.npcs) return;
-      const byId = new Map(scene.npcs.map((n) => [n.id, n]));
-      const currentMapKey = scene.currentMapKey || mapId;
-      const currentMap = scene.map || map;
-      const currentGroundLayer = scene.groundLayer || groundLayer;
-      const currentMapNpcs = ALL_NPCS.filter(
-        (npc) => npc.mapId === currentMapKey
-      );
-      currentMapNpcs.forEach((def) => {
-        const want = shouldSpawnNpc(def, scene.player);
-        const existing = byId.get(def.id);
-        if (want && !existing) {
-          spawnNpcInstance(scene, currentMap, currentGroundLayer, def);
-        } else if (!want && existing && existing.conditional) {
-          existing.sprite.destroy();
-          if (existing.hoverHighlight) existing.hoverHighlight.destroy();
-          if (existing.questMarker) existing.questMarker.destroy();
-          scene.npcs = scene.npcs.filter((n) => n !== existing);
-        }
-      });
-      refreshNpcQuestMarkers(scene, scene.player);
-    });
+  if (questMarkerUnsubscribe) {
+    questMarkerUnsubscribe();
+    questMarkerUnsubscribe = null;
   }
 
-  if (!inventoryMarkerUnsubscribe) {
-    inventoryMarkerUnsubscribe = onStoreEvent("inventory:updated", () => {
-      refreshNpcQuestMarkers(scene, scene.player);
+  questMarkerUnsubscribe = onStoreEvent("quest:updated", () => {
+    if (!scene || !scene.npcs) return;
+    const byId = new Map(scene.npcs.map((n) => [n.id, n]));
+    const currentMapKey = scene.currentMapKey || mapId;
+    const currentMap = scene.map || map;
+    const currentGroundLayer = scene.groundLayer || groundLayer;
+    const currentMapNpcs = ALL_NPCS.filter(
+      (npc) => npc.mapId === currentMapKey
+    );
+    currentMapNpcs.forEach((def) => {
+      const want = shouldSpawnNpc(def, scene.player);
+      const existing = byId.get(def.id);
+      if (want && !existing) {
+        spawnNpcInstance(scene, currentMap, currentGroundLayer, def);
+      } else if (!want && existing && existing.conditional) {
+        existing.sprite.destroy();
+        if (existing.hoverHighlight) existing.hoverHighlight.destroy();
+        if (existing.questMarker) existing.questMarker.destroy();
+        scene.npcs = scene.npcs.filter((n) => n !== existing);
+      }
     });
+    refreshNpcQuestMarkers(scene, scene.player);
+  });
+
+  if (inventoryMarkerUnsubscribe) {
+    inventoryMarkerUnsubscribe();
+    inventoryMarkerUnsubscribe = null;
   }
+
+  inventoryMarkerUnsubscribe = onStoreEvent("inventory:updated", () => {
+    refreshNpcQuestMarkers(scene, scene.player);
+  });
 }

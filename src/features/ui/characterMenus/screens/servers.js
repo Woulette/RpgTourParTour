@@ -9,7 +9,7 @@
     screenServersEl,
     screenSelectEl,
     screenCreateEl,
-    btnServersBack,
+    btnServersLogout,
     btnServersContinue,
     serverListEl,
   } = elements;
@@ -88,7 +88,15 @@
   }
 
   function attachServersEvents() {
-    btnServersBack.addEventListener("click", () => actions.showLogin());
+    if (btnServersLogout) {
+      btnServersLogout.addEventListener("click", () => {
+        if (typeof actions.logoutAccount === "function") {
+          actions.logoutAccount();
+        } else {
+          actions.showLogin();
+        }
+      });
+    }
     btnServersContinue.addEventListener("click", () => {
       if (!state.getSelectedServerId()) return;
       if (typeof actions.connectAccount === "function") {

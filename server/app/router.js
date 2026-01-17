@@ -106,6 +106,24 @@ function createRouterHandlers(ctx) {
       case "CmdInventoryOp":
         playerHandlers.handleCmdInventoryOp(ws, clientInfo, msg);
         break;
+      case "CmdEquipItem":
+        playerHandlers.handleCmdEquipItem(clientInfo, msg);
+        break;
+      case "CmdUnequipItem":
+        playerHandlers.handleCmdUnequipItem(clientInfo, msg);
+        break;
+      case "CmdUseItem":
+        playerHandlers.handleCmdUseItem(clientInfo, msg);
+        break;
+      case "CmdConsumeItem":
+        playerHandlers.handleCmdConsumeItem(clientInfo, msg);
+        break;
+      case "CmdTrashItem":
+        playerHandlers.handleCmdTrashItem(clientInfo, msg);
+        break;
+      case "CmdTrashRestore":
+        playerHandlers.handleCmdTrashRestore(clientInfo, msg);
+        break;
       case "CmdCraft":
         playerHandlers.handleCmdCraft(ws, clientInfo, msg);
         break;
@@ -187,6 +205,39 @@ function createRouterHandlers(ctx) {
         break;
       case "CmdTradeValidate":
         playerHandlers.handleCmdTradeValidate(clientInfo, msg);
+        break;
+      case "CmdShopBuy":
+        playerHandlers.handleCmdShopBuy(clientInfo, msg);
+        break;
+      case "CmdShopSell":
+        playerHandlers.handleCmdShopSell(clientInfo, msg);
+        break;
+      case "CmdMarketList":
+        playerHandlers.handleCmdMarketList(clientInfo, msg);
+        break;
+      case "CmdMarketMyListings":
+        playerHandlers.handleCmdMarketMyListings(clientInfo, msg);
+        break;
+      case "CmdMarketBalance":
+        playerHandlers.handleCmdMarketBalance(clientInfo, msg);
+        break;
+      case "CmdMarketSell":
+        playerHandlers.handleCmdMarketSell(clientInfo, msg);
+        break;
+      case "CmdMarketBuy":
+        playerHandlers.handleCmdMarketBuy(clientInfo, msg);
+        break;
+      case "CmdMarketCancel":
+        playerHandlers.handleCmdMarketCancel(clientInfo, msg);
+        break;
+      case "CmdMarketWithdraw":
+        playerHandlers.handleCmdMarketWithdraw(clientInfo, msg);
+        break;
+      case "CmdMarketClaimReturn":
+        playerHandlers.handleCmdMarketClaimReturn(clientInfo, msg);
+        break;
+      case "CmdAchievementClaim":
+        playerHandlers.handleCmdAchievementClaim(clientInfo, msg);
         break;
       case "CmdMoveCombat":
         combatHandlers.handleCmdMoveCombat(clientInfo, msg);

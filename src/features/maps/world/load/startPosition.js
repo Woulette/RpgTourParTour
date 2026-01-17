@@ -33,7 +33,76 @@ function findNearestSpawnableTile(scene, map, groundLayer, startX, startY) {
   return { x: startX, y: startY };
 }
 
+function pickEntryTile(scene, map, options) {
+  if (!scene || !map) return null;
+  const entryDir = options?.entryDirection;
+  if (!entryDir) return null;
+  const opposite = {
+    up: "down",
+    down: "up",
+    left: "right",
+    right: "left",
+  }[entryDir];
+  const exits = Array.isArray(scene.worldExits?.[opposite])
+    ? scene.worldExits[opposite]
+    : [];
+  if (exits.length === 0) return null;
+
+  const from = options?.entryFromTile;
+  const fromWorld = options?.entryFromWorld;
+  const hasFromX = Number.isInteger(from?.x);
+  const hasFromY = Number.isInteger(from?.y);
+  const hasFromWorldX = Number.isFinite(fromWorld?.x);
+  const hasFromWorldY = Number.isFinite(fromWorld?.y);
+  const matchX = opposite === "up" || opposite === "down";
+  const groundLayer = scene.groundLayer;
+
+  let best = null;
+  let bestScore = Infinity;
+  const centerX = Math.floor(map.width / 2);
+  const centerY = Math.floor(map.height / 2);
+
+  exits.forEach((tile) => {
+    if (!tile || typeof tile.x !== "number" || typeof tile.y !== "number") return;
+    let score = Infinity;
+    if (
+      (matchX && hasFromWorldX) ||
+      (!matchX && hasFromWorldY)
+    ) {
+      const wp = map.tileToWorldXY(
+        tile.x,
+        tile.y,
+        undefined,
+        undefined,
+        groundLayer
+      );
+      if (wp && Number.isFinite(wp.x) && Number.isFinite(wp.y)) {
+        const centerWx = wp.x + map.tileWidth / 2;
+        const centerWy = wp.y + map.tileHeight / 2;
+        score = matchX
+          ? Math.abs(centerWx - fromWorld.x)
+          : Math.abs(centerWy - fromWorld.y);
+      }
+    } else if (matchX && hasFromX) {
+      score = Math.abs(tile.x - from.x);
+    } else if (!matchX && hasFromY) {
+      score = Math.abs(tile.y - from.y);
+    } else {
+      const dx = tile.x - centerX;
+      const dy = tile.y - centerY;
+      score = dx * dx + dy * dy;
+    }
+    if (score < bestScore) {
+      bestScore = score;
+      best = tile;
+    }
+  });
+
+  return best ? { x: best.x, y: best.y } : null;
+}
+
 export function computeStartPosition(scene, map, mapDef, options = {}) {
+  const entryTile = pickEntryTile(scene, map, options);
   const desiredTile =
     (options?.startTile &&
       typeof options.startTile.x === "number" &&
@@ -44,6 +113,7 @@ export function computeStartPosition(scene, map, mapDef, options = {}) {
       typeof mapDef.dungeonReturnTile.x === "number" &&
       typeof mapDef.dungeonReturnTile.y === "number" &&
       mapDef.dungeonReturnTile) ||
+    entryTile ||
     mapDef.startTile ||
     null;
 

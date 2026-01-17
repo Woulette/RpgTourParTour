@@ -124,25 +124,33 @@ function createPlayerSyncHandlers({
       player.levelState = levelState;
     }
 
-    const equipment = sanitizeEquipment(msg.equipment);
-    if (equipment) {
-      player.equipment = equipment;
-      shouldRecompute = true;
+    if (allowInventorySync) {
+      const equipment = sanitizeEquipment(msg.equipment);
+      if (equipment) {
+        player.equipment = equipment;
+        shouldRecompute = true;
+      }
     }
 
-    const trash = sanitizeJsonPayload(msg.trash, 20000);
-    if (trash) {
-      player.trash = trash;
+    if (allowInventorySync) {
+      const trash = sanitizeJsonPayload(msg.trash, 20000);
+      if (trash) {
+        player.trash = trash;
+      }
     }
 
-    const quests = sanitizeJsonPayload(msg.quests, 80000);
-    if (quests) {
-      player.quests = quests;
+    if (allowInventorySync) {
+      const quests = sanitizeJsonPayload(msg.quests, 80000);
+      if (quests) {
+        player.quests = quests;
+      }
     }
 
-    const achievements = sanitizeJsonPayload(msg.achievements, 60000);
-    if (achievements) {
-      player.achievements = achievements;
+    if (allowInventorySync) {
+      const achievements = sanitizeJsonPayload(msg.achievements, 60000);
+      if (achievements) {
+        player.achievements = achievements;
+      }
     }
 
     const metiers = sanitizeJsonPayload(msg.metiers, 60000);

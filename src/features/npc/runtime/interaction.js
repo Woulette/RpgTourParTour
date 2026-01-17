@@ -1,4 +1,5 @@
 import { openShopPanel } from "../../ui/domShop.js";
+import { openMarketPanel } from "../../ui/domMarket.js";
 import { startNpcDialogFlow } from "./dialogFlow.js";
 import { getNpcMarker } from "../../quests/index.js";
 
@@ -9,6 +10,10 @@ export function startNpcInteraction(scene, player, npc) {
     const marker = typeof npc.id === "string" ? getNpcMarker(player, npc.id) : null;
     if (marker) {
       startNpcDialogFlow(scene, player, npc);
+      return;
+    }
+    if (npc.def?.marketId) {
+      openMarketPanel(scene, player, npc);
       return;
     }
     openShopPanel(scene, player, npc);

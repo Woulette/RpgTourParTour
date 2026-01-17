@@ -102,17 +102,21 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
   const blockedFill = 0.18;
 
   let blockedFromIndex = null;
+  let previewPath = path;
   if (state && state.enCours && state.tour === "joueur" && state.joueur) {
     const { pmLoss } = getTaclePenaltyPreview(scene, state.joueur);
     const basePm = Number.isFinite(state.pmRestants)
       ? state.pmRestants
       : state.joueur?.stats?.pm ?? 0;
+    if (Number.isFinite(basePm)) {
+      previewPath = path.slice(0, Math.max(0, basePm));
+    }
     const effectivePm = Math.max(0, basePm - pmLoss);
     blockedFromIndex = effectivePm;
   }
 
-  for (let i = 0; i < path.length; i += 1) {
-    const step = path[i];
+  for (let i = 0; i < previewPath.length; i += 1) {
+    const step = previewPath[i];
     const wp = map.tileToWorldXY(
       step.x,
       step.y,

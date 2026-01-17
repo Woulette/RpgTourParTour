@@ -20,6 +20,7 @@ export function isUiBlockingOpen() {
     "hud-claim-open",
     "hud-trade-open",
     "shop-open",
+    "market-open",
     "npc-dialog-open",
     "menu-open",
   ];

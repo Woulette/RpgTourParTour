@@ -9,6 +9,7 @@ let currentNpc = null;
 let currentScene = null;
 let currentPlayer = null;
 let currentShop = null;
+let currentShopId = null;
 let currentMode = "buy";
 let unsubInventory = null;
 let unsubPlayer = null;
@@ -86,6 +87,20 @@ function updateGoldDisplay() {
   goldEl.textContent = String(gold);
 }
 
+function sendShopCmd(command, payload) {
+  if (typeof window === "undefined") return false;
+  if (window.__lanInventoryAuthority !== true) return false;
+  const client = window.__lanClient;
+  const playerId = window.__netPlayerId;
+  if (!client || !Number.isInteger(playerId) || !currentShopId) return false;
+  try {
+    client.sendCmd(command, { playerId, shopId: currentShopId, ...payload });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function renderBuyList(listEl) {
   const sells = currentShop?.sells || [];
   if (sells.length === 0) {
@@ -136,6 +151,10 @@ function renderBuyList(listEl) {
       const availableGold = currentPlayer.gold ?? 0;
       if (availableGold < price) {
         setMessage("Pas assez d'or.");
+        return;
+      }
+      if (sendShopCmd("CmdShopBuy", { itemId: entry.itemId, qty: 1 })) {
+        setMessage("");
         return;
       }
       const remaining = addItem(currentPlayer.inventory, entry.itemId, 1);
@@ -220,6 +239,10 @@ function renderSellList(listEl) {
     btn.addEventListener("click", () => {
       if (!currentPlayer || !currentPlayer.inventory) return;
       if (price <= 0) return;
+      if (sendShopCmd("CmdShopSell", { itemId: entry.itemId, qty: 1 })) {
+        setMessage("");
+        return;
+      }
       const removed = removeItem(currentPlayer.inventory, entry.itemId, 1);
       if (removed <= 0) return;
       adjustGold(currentPlayer, price, "shop_sell");
@@ -265,7 +288,8 @@ export function openShopPanel(scene, player, npc) {
   currentScene = scene || null;
   currentNpc = npc || null;
   currentPlayer = player || null;
-  currentShop = npc?.def?.shopId ? shops[npc.def.shopId] : null;
+  currentShopId = npc?.def?.shopId || null;
+  currentShop = currentShopId ? shops[currentShopId] : null;
   currentMode = "buy";
 
   const titleEl = panelEl.querySelector("#shop-title");
