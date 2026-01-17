@@ -154,6 +154,10 @@ body.market-open .market-panel {
   gap: 8px;
 }
 
+.market-filter-group + .market-filter-group {
+  margin-top: 6px;
+}
+
 .market-sell-left {
   display: flex;
   flex-direction: column;
@@ -203,7 +207,7 @@ body.market-open .market-panel {
 
 .market-subfilters {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
 }
 
@@ -211,10 +215,12 @@ body.market-open .market-panel {
   border: 1px solid #2a3d46;
   background: #162128;
   color: #d1e1ea;
-  border-radius: 999px;
-  padding: 4px 10px;
+  border-radius: 8px;
+  padding: 6px 10px;
   cursor: pointer;
   font-size: 12px;
+  text-align: left;
+  width: 100%;
 }
 
 .market-subfilter.active {
@@ -249,6 +255,7 @@ body.market-open .market-panel {
   align-items: center;
   justify-content: flex-end;
   min-width: 160px;
+  padding-top: 2px;
 }
 
 .market-panel.market-mode-buy .market-search-target {

@@ -38,6 +38,7 @@ const EQUIPMENT_FILTERS = [
 ];
 
 const RESOURCE_FILTERS = [
+  { id: "all", label: "Tout" },
   { id: "os", label: "Os" },
   { id: "plume", label: "Plume" },
   { id: "patte", label: "Patte" },
@@ -361,13 +362,21 @@ function updateFilterUi() {
     btn.textContent = filter.label;
     const active =
       (currentCategory === "equipement" && currentSlot === filter.id) ||
-      (currentCategory === "ressource" && currentSubCategory === filter.id);
+      (currentCategory === "ressource" &&
+        (filter.id === "all"
+          ? currentSubCategory === null
+          : currentSubCategory === filter.id));
     btn.classList.toggle("active", active);
     btn.addEventListener("click", () => {
       if (currentCategory === "equipement") {
         currentSlot = currentSlot === filter.id ? null : filter.id;
       } else {
-        currentSubCategory = currentSubCategory === filter.id ? null : filter.id;
+        currentSubCategory =
+          filter.id === "all"
+            ? null
+            : currentSubCategory === filter.id
+              ? null
+              : filter.id;
       }
       currentPage = 1;
       updateFilterUi();
