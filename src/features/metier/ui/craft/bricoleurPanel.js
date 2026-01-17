@@ -359,6 +359,7 @@ function renderInventory(player) {
   inv.slots.forEach((slot) => {
     const cell = document.createElement("div");
     cell.className = "craft-inventory-slot";
+    cell.dataset.itemId = slot?.itemId || "";
     const def = slot?.itemId ? getItemDef(slot.itemId) : null;
     const match =
       filter === "all" ||

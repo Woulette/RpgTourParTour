@@ -97,6 +97,7 @@ function renderInventoryGrid(player) {
     const cell = document.createElement("div");
     cell.className = "craft-inventory-slot trash-slot";
     cell.dataset.index = String(i);
+    cell.dataset.itemId = slot?.itemId || "";
 
     if (slot && slot.itemId) {
       const def = getItemDef(slot.itemId);

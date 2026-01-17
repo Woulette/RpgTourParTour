@@ -23,6 +23,10 @@ let selectedSellQty = 1;
 let selectedSellPrice = "";
 let marketInvFilter = "all";
 let expandedBuyItemId = null;
+let pendingQuery = "";
+let marketItemCardEl = null;
+let marketItemCardDrag = null;
+let marketItemCardDocListener = null;
 let unsubMarket = null;
 let unsubInventory = null;
 let unsubPlayer = null;
@@ -51,6 +55,187 @@ const RESOURCE_FILTERS = [
   { id: "divers", label: "Divers" },
   { id: "special", label: "Special" },
 ];
+
+const MARKET_TAX_PCT = 0.02;
+const formatThousands = (value) =>
+  String(Math.max(0, Math.round(Number(value) || 0))).replace(
+    /\B(?=(\d{3})+(?!\d))/g,
+    " "
+  );
+
+const STAT_LABELS = {
+  vitalite: "Vitalite",
+  agilite: "Agilite",
+  force: "Force",
+  intelligence: "Intelligence",
+  chance: "Chance",
+  sagesse: "Sagesse",
+  pa: "PA",
+  pm: "PM",
+};
+
+const EFFECT_LABELS = {
+  hpPlus: "PV",
+  paPlusCombat: "PA (combat)",
+};
+
+const STAT_CLASS_MAP = {
+  vitalite: "vitalite",
+  agilite: "agilite",
+  force: "force",
+  intelligence: "intel",
+  chance: "chance",
+  sagesse: "sagesse",
+  pa: "pa",
+  pm: "pm",
+};
+
+const EFFECT_CLASS_MAP = {
+  hpPlus: "hp",
+  paPlusCombat: "pa",
+};
+
+function buildDetailLines(def) {
+  const lines = [];
+  if (def?.statsBonus && typeof def.statsBonus === "object") {
+    Object.entries(def.statsBonus).forEach(([key, value]) => {
+      if (!Number.isFinite(value) || value === 0) return;
+      const label = STAT_LABELS[key] || key;
+      const sign = value > 0 ? "+" : "";
+      const cls = STAT_CLASS_MAP[key] || "generic";
+      lines.push({ text: `${sign}${value} ${label}`, cls });
+    });
+  }
+  if (def?.effect && typeof def.effect === "object") {
+    Object.entries(def.effect).forEach(([key, value]) => {
+      if (!Number.isFinite(value) || value === 0) return;
+      const label = EFFECT_LABELS[key] || key;
+      const sign = value > 0 ? "+" : "";
+      const cls = EFFECT_CLASS_MAP[key] || "generic";
+      lines.push({ text: `${sign}${value} ${label}`, cls });
+    });
+  }
+  return lines;
+}
+
+function ensureMarketItemCard() {
+  if (marketItemCardEl) return marketItemCardEl;
+  marketItemCardEl = document.createElement("div");
+  marketItemCardEl.className = "market-item-card";
+  marketItemCardEl.style.display = "none";
+  marketItemCardEl.innerHTML = `
+    <div class="market-item-card-header">
+      <span class="market-item-card-title"></span>
+      <button type="button" class="market-item-card-close" aria-label="Fermer">X</button>
+    </div>
+    <div class="market-item-card-body"></div>
+  `;
+  document.body.appendChild(marketItemCardEl);
+
+  const closeBtn = marketItemCardEl.querySelector(".market-item-card-close");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", hideMarketItemCard);
+  }
+
+  const header = marketItemCardEl.querySelector(".market-item-card-header");
+  if (header) {
+    header.addEventListener("mousedown", (event) => {
+      if (event.button !== 0) return;
+      const rect = marketItemCardEl.getBoundingClientRect();
+      marketItemCardDrag = {
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+      };
+      event.preventDefault();
+    });
+  }
+
+  window.addEventListener("mousemove", (event) => {
+    if (!marketItemCardDrag || !marketItemCardEl) return;
+    const left = Math.max(8, event.clientX - marketItemCardDrag.offsetX);
+    const top = Math.max(8, event.clientY - marketItemCardDrag.offsetY);
+    marketItemCardEl.style.left = `${left}px`;
+    marketItemCardEl.style.top = `${top}px`;
+  });
+  window.addEventListener("mouseup", () => {
+    marketItemCardDrag = null;
+  });
+
+  if (!marketItemCardDocListener) {
+    marketItemCardDocListener = (event) => {
+      if (!marketItemCardEl || marketItemCardEl.style.display === "none") return;
+      const target = event.target;
+      if (marketItemCardEl.contains(target)) return;
+      if (target?.classList?.contains("market-buy-pack-icon")) return;
+      hideMarketItemCard();
+    };
+    document.addEventListener("mousedown", marketItemCardDocListener);
+  }
+
+  return marketItemCardEl;
+}
+
+function showMarketItemCard(def, anchorEl) {
+  if (!def || !anchorEl) return;
+  const card = ensureMarketItemCard();
+  const titleEl = card.querySelector(".market-item-card-title");
+  const bodyEl = card.querySelector(".market-item-card-body");
+  if (titleEl) titleEl.textContent = def.label || def.id;
+
+  const level =
+    typeof def.requiredLevel === "number"
+      ? def.requiredLevel
+      : typeof def.level === "number"
+        ? def.level
+        : 1;
+  const description = String(def.description || "Aucune description.");
+  const bonusInfo = String(def.bonusInfo || "");
+  const lines = buildDetailLines(def);
+  const linesHtml = lines.length
+    ? `<div class="market-item-card-stats">${lines
+        .map(
+          (line) =>
+            `<div class="market-item-card-stat market-item-card-stat-${line.cls}">${line.text}</div>`
+        )
+        .join("")}</div>`
+    : "";
+  const bonusHtml = bonusInfo
+    ? `<div class="market-item-card-bonus">${bonusInfo}</div>`
+    : "";
+
+  if (bodyEl) {
+    bodyEl.innerHTML = `
+      <div class="market-item-card-level">Niveau : ${level}</div>
+      ${linesHtml}
+      <div class="market-item-card-desc">${description}</div>
+      ${bonusHtml}
+    `;
+  }
+
+  card.style.display = "block";
+  card.style.left = "0px";
+  card.style.top = "0px";
+  card.style.visibility = "hidden";
+
+  const rect = anchorEl.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+  const margin = 8;
+  let left = rect.right + margin;
+  if (left + cardRect.width > window.innerWidth - margin) {
+    left = rect.left - cardRect.width - margin;
+  }
+  let top = rect.top - 10;
+  top = Math.max(margin, Math.min(top, window.innerHeight - cardRect.height - margin));
+  card.style.left = `${Math.round(left)}px`;
+  card.style.top = `${Math.round(top)}px`;
+  card.style.visibility = "visible";
+}
+
+function hideMarketItemCard() {
+  if (!marketItemCardEl) return;
+  marketItemCardEl.style.display = "none";
+}
+
 
 function ensurePanelElements() {
   if (panelEl) return panelEl;
@@ -198,7 +383,20 @@ function ensurePanelElements() {
   const searchInput = panelEl.querySelector("#market-search");
   if (searchInput) {
     searchInput.addEventListener("input", () => {
-      currentQuery = searchInput.value || "";
+      pendingQuery = searchInput.value || "";
+      if (!pendingQuery && currentQuery) {
+        currentQuery = "";
+        currentPage = 1;
+        if (currentMode === "buy") {
+          requestListings();
+        } else {
+          renderMarket();
+        }
+      }
+    });
+    searchInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      currentQuery = pendingQuery;
       currentPage = 1;
       if (currentMode === "buy") {
         requestListings();
@@ -281,7 +479,7 @@ function requestBalance() {
 function updateBalanceUi() {
   if (!panelEl) return;
   const balanceEl = panelEl.querySelector("#market-balance-value");
-  if (balanceEl) balanceEl.textContent = String(marketBalance);
+  if (balanceEl) balanceEl.textContent = formatThousands(marketBalance);
 }
 
 function updatePaginationUi() {
@@ -303,6 +501,31 @@ function placeSearchInput() {
   const searchTarget = panelEl.querySelector("#market-search-target");
   const searchGroup = panelEl.querySelector("#market-search-group");
   if (!searchInput || !searchTarget || !searchGroup) return;
+  if (!searchTarget.querySelector(".market-search-label")) {
+    const label = document.createElement("button");
+    label.type = "button";
+    label.className = "market-search-label market-search-btn";
+    label.textContent = "Rechercher";
+    const triggerSearch = () => {
+      pendingQuery = searchInput.value || "";
+      currentQuery = pendingQuery;
+      currentPage = 1;
+      if (currentMode === "buy") {
+        requestListings();
+      } else {
+        renderMarket();
+      }
+      searchInput.focus();
+    };
+    label.addEventListener("click", triggerSearch);
+    label.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        triggerSearch();
+      }
+    });
+    searchTarget.prepend(label);
+  }
   if (searchInput.parentElement !== searchTarget) {
     searchTarget.appendChild(searchInput);
   }
@@ -470,6 +693,7 @@ function renderBuyList(container) {
     icon.className = "market-row-icon";
     if (item.def.icon) icon.src = item.def.icon;
     icon.alt = item.def.label || item.itemId;
+    icon.dataset.itemId = item.itemId;
     headerLeft.appendChild(icon);
 
     const title = document.createElement("div");
@@ -498,13 +722,22 @@ function renderBuyList(container) {
       const packRow = document.createElement("div");
       packRow.className = "market-buy-pack-row";
 
+    const packIcon = document.createElement("img");
+    packIcon.className = "market-buy-pack-icon";
+    if (item.def?.icon) packIcon.src = item.def.icon;
+    packIcon.alt = item.def?.label || item.itemId;
+    packIcon.addEventListener("click", (event) => {
+      event.stopPropagation();
+      showMarketItemCard(item.def, packIcon);
+    });
+
       const qtyEl = document.createElement("div");
       qtyEl.className = "market-buy-pack-qty";
       qtyEl.textContent = `x${value}`;
 
       const priceEl = document.createElement("div");
       priceEl.className = "market-buy-pack-price";
-      priceEl.textContent = `${entry.unitPrice} or`;
+      priceEl.textContent = `${formatThousands(entry.unitPrice)} or`;
 
       const btn = document.createElement("button");
       btn.type = "button";
@@ -518,6 +751,7 @@ function renderBuyList(container) {
         });
       });
 
+      packRow.appendChild(packIcon);
       packRow.appendChild(qtyEl);
       packRow.appendChild(priceEl);
       packRow.appendChild(btn);
@@ -563,6 +797,7 @@ function renderMineList(container) {
       icon.className = "market-row-icon";
       if (def.icon) icon.src = def.icon;
       icon.alt = def.label || entry.itemId;
+      icon.dataset.itemId = entry.itemId;
       left.appendChild(icon);
 
       const info = document.createElement("div");
@@ -573,7 +808,7 @@ function renderMineList(container) {
       meta.className = "market-row-meta";
       const remainingMs = Math.max(0, entry.expiresAt - Date.now());
       const days = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
-      meta.textContent = `x${entry.qty} - ${entry.unitPrice} or/u - ${days}j`;
+      meta.textContent = `x${formatThousands(entry.qty)} - ${formatThousands(entry.unitPrice)} or/u - ${days}j`;
       info.appendChild(title);
       info.appendChild(meta);
       left.appendChild(info);
@@ -620,6 +855,7 @@ function renderMineList(container) {
     icon.className = "market-row-icon";
     if (def.icon) icon.src = def.icon;
     icon.alt = def.label || entry.itemId;
+    icon.dataset.itemId = entry.item_id || entry.itemId;
     left.appendChild(icon);
 
     const info = document.createElement("div");
@@ -628,7 +864,7 @@ function renderMineList(container) {
     title.textContent = def.label || entry.itemId;
     const meta = document.createElement("div");
     meta.className = "market-row-meta";
-    meta.textContent = `x${entry.qty}`;
+      meta.textContent = `x${formatThousands(entry.qty)}`;
     info.appendChild(title);
     info.appendChild(meta);
     left.appendChild(info);
@@ -702,6 +938,7 @@ function renderSellLeftPanel() {
     icon.className = "market-row-icon";
     if (def?.icon) icon.src = def.icon;
     icon.alt = def?.label || selectedEntry.itemId;
+    icon.dataset.itemId = selectedEntry.itemId;
     info.appendChild(icon);
 
     const title = document.createElement("div");
@@ -750,17 +987,46 @@ function renderSellLeftPanel() {
   const priceRow = document.createElement("div");
   priceRow.className = "market-sell-price";
   const priceInput = document.createElement("input");
-  priceInput.type = "number";
-  priceInput.min = "1";
-  priceInput.step = "1";
+  priceInput.type = "text";
+  priceInput.inputMode = "numeric";
+  priceInput.autocomplete = "off";
+  priceInput.spellcheck = false;
   priceInput.placeholder = "Prix par unite";
-  priceInput.value = selectedSellPrice;
+  priceInput.value = selectedSellPrice ? formatThousands(selectedSellPrice) : "";
   priceInput.disabled = !hasSelection;
+  const taxRow = document.createElement("div");
+  taxRow.className = "market-sell-tax";
+  const taxLabel = document.createElement("div");
+  taxLabel.className = "market-sell-tax-label";
+  taxLabel.textContent = "Taxe :";
+  const taxValue = document.createElement("div");
+  taxValue.className = "market-sell-tax-value";
+  const updateTax = () => {
+    if (!hasSelection) {
+      taxValue.textContent = "-";
+      return;
+    }
+    const unitPrice = Math.max(0, Math.round(Number(selectedSellPrice) || 0));
+    const total = unitPrice * selectedSellQty;
+    if (!total) {
+      taxValue.textContent = "-";
+      return;
+    }
+    const tax = Math.max(0, Math.floor(total * MARKET_TAX_PCT));
+    taxValue.textContent = `${formatThousands(tax)} or`;
+  };
   priceInput.addEventListener("input", () => {
-    selectedSellPrice = priceInput.value;
+    const raw = String(priceInput.value || "").replace(/\D/g, "");
+    selectedSellPrice = raw;
+    priceInput.value = raw ? formatThousands(raw) : "";
+    updateTax();
   });
   priceRow.appendChild(priceInput);
   left.appendChild(priceRow);
+  taxRow.appendChild(taxLabel);
+  taxRow.appendChild(taxValue);
+  left.appendChild(taxRow);
+  updateTax();
 
   const sellBtn = document.createElement("button");
   sellBtn.type = "button";
@@ -792,6 +1058,7 @@ function buildMarketSlot(slotData, isSelected, onSelect) {
   if (slotData) {
     const def = getItemDef(slotData.itemId);
     slot.classList.add("filled");
+    slot.dataset.itemId = slotData.itemId;
     if (isSelected) slot.classList.add("market-slot-selected");
     if (def && def.icon) {
       const icon = document.createElement("div");
@@ -834,7 +1101,7 @@ function renderMarketInventory() {
     typeof currentPlayer?.gold === "number" && !Number.isNaN(currentPlayer?.gold)
       ? currentPlayer.gold
       : 0;
-  goldEl.textContent = String(goldValue);
+  goldEl.textContent = formatThousands(goldValue);
 
   const inv = currentPlayer?.inventory;
   if (!inv || !Array.isArray(inv.slots)) {
@@ -965,6 +1232,7 @@ export function openMarketPanel(scene, player, npc) {
   selectedSellPrice = "";
   marketInvFilter = "all";
   expandedBuyItemId = null;
+  pendingQuery = "";
 
   const tabs = panelEl.querySelectorAll(".market-tab");
   tabs.forEach((btn) => {
@@ -1006,6 +1274,7 @@ export function openMarketPanel(scene, player, npc) {
 export function closeMarketPanel() {
   document.body.classList.remove("market-open");
   detachMarketEvents();
+  hideMarketItemCard();
   if (typeof window !== "undefined" && window.__marketCloseRequest === closeMarketPanel) {
     window.__marketCloseRequest = null;
   }

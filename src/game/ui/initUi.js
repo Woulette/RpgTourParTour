@@ -25,6 +25,7 @@ import { initDomFriends } from "../../features/ui/domFriends.js";
 import { initDomFriendInvite } from "../../features/ui/domFriendInvite.js";
 import { initDomFriendActions } from "../../features/ui/domFriendActions.js";
 import { initDomTrade } from "../../features/ui/domTrade.js";
+import { initItemTooltip } from "../../features/ui/itemTooltip.js";
 
 export function setupHudAndCameras(scene, map, mapLayers, startX, startY, mapDef, grid) {
   const { hudY, uiElements } = createHud(scene);
@@ -90,4 +91,5 @@ export function initDomUi(scene, player) {
   initDomFriendActions();
   initDomTrade();
   initDomChat(player);
+  initItemTooltip();
 }

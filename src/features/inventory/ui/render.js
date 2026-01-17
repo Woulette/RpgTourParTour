@@ -32,6 +32,7 @@ export function renderEquipmentSlots(player, equipSlots) {
     const equipSlot = slotEl.getAttribute("data-equip");
     slotEl.innerHTML = "";
     slotEl.classList.remove("filled");
+    slotEl.dataset.itemId = "";
 
     if (!equipSlot) return;
 
@@ -42,6 +43,7 @@ export function renderEquipmentSlots(player, equipSlots) {
     if (!def) return;
 
     slotEl.classList.add("filled");
+    slotEl.dataset.itemId = def.id || entry.itemId;
 
     if (def.icon) {
       const icon = document.createElement("div");
@@ -69,6 +71,7 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
   if (slotData) {
     const def = getItemDef(slotData.itemId);
     slot.classList.add("filled");
+    slot.dataset.itemId = slotData.itemId;
 
     if (def && def.icon) {
       const icon = document.createElement("div");
@@ -91,6 +94,7 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
     }
   } else {
     slot.classList.add("empty");
+    slot.dataset.itemId = "";
   }
 
   slot.addEventListener("click", () => {

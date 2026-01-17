@@ -1,0 +1,82 @@
+.item-tooltip {
+  position: fixed;
+  z-index: 9999;
+  max-width: 240px;
+  padding: 10px 12px;
+  background: rgba(18, 18, 18, 0.95);
+  color: #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  display: none;
+}
+
+.item-tooltip-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.item-tooltip-level {
+  font-size: 12px;
+  color: #cfcfcf;
+  margin-bottom: 6px;
+}
+
+.item-tooltip-stats {
+  margin-bottom: 6px;
+}
+
+.item-tooltip-stat {
+  font-size: 12px;
+}
+
+.item-tooltip-stat-force {
+  color: #ffb347;
+}
+
+.item-tooltip-stat-intel {
+  color: #ff5252;
+}
+
+.item-tooltip-stat-agilite {
+  color: #7dff7a;
+}
+
+.item-tooltip-stat-chance {
+  color: #7fd0ff;
+}
+
+.item-tooltip-stat-vitalite,
+.item-tooltip-stat-hp {
+  color: #e56fa1;
+}
+
+.item-tooltip-stat-sagesse {
+  color: #8b6ad6;
+}
+
+.item-tooltip-stat-pa {
+  color: #ffd93b;
+}
+
+.item-tooltip-stat-pm {
+  color: #6bffb8;
+}
+
+.item-tooltip-stat-generic {
+  color: #e0e0e0;
+}
+
+.item-tooltip-desc {
+  font-size: 12px;
+  color: #e5e5e5;
+  line-height: 1.3;
+}
+
+.item-tooltip-bonus {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #d8d8d8;
+  line-height: 1.3;
+}
