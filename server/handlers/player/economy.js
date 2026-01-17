@@ -29,6 +29,7 @@ function createEconomyHandlers({ state, persistPlayerState, helpers, sync, MAX_G
     });
 
     sendPlayerSync(ws, player, "gold");
+    return nextGold - beforeGold;
   }
 
   return {

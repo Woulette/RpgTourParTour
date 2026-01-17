@@ -167,6 +167,9 @@ function createPlayerHandlers(ctx) {
     send: ctx.send,
     getNextEventId: ctx.getNextEventId,
     accountStore: ctx.accountStore,
+    getItemDefs: ctx.getItemDefs,
+    applyInventoryOpFromServer: inventory.applyInventoryOpFromServer,
+    applyGoldOpFromServer: economy.applyGoldOpFromServer,
   });
 
   const achievements = createAchievementHandlers({

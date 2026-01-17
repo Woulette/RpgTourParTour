@@ -22,6 +22,7 @@ let selectedSellItemId = null;
 let selectedSellQty = 1;
 let selectedSellPrice = "";
 let marketInvFilter = "all";
+let expandedBuyItemId = null;
 let unsubMarket = null;
 let unsubInventory = null;
 let unsubPlayer = null;
@@ -409,66 +410,113 @@ function renderBuyList(container) {
     return;
   }
 
+  const qtyValues = [1, 10, 100];
+  const grouped = new Map();
+
   listings.forEach((entry) => {
     const def = getItemDef(entry.itemId);
     if (!def) return;
-    const row = document.createElement("div");
-    row.className = "market-row";
+    const qty = Number(entry.qty) || 0;
+    if (!qtyValues.includes(qty)) return;
+    const current = grouped.get(entry.itemId) || {
+      itemId: entry.itemId,
+      def,
+      packs: new Map(),
+    };
+    const existing = current.packs.get(qty);
+    if (!existing || entry.unitPrice < existing.unitPrice) {
+      current.packs.set(qty, entry);
+    }
+    grouped.set(entry.itemId, current);
+  });
 
-    const left = document.createElement("div");
-    left.className = "market-row-left";
+  const items = Array.from(grouped.values());
+  if (!items.length) {
+    container.innerHTML = `<div class="market-empty">Aucune offre.</div>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const availableQtys = qtyValues.filter((value) => item.packs.has(value));
+    if (!availableQtys.length) return;
+
+    const row = document.createElement("div");
+    row.className = "market-row market-row-buy market-buy-item";
+    const isExpanded = expandedBuyItemId === item.itemId;
+    row.classList.toggle("expanded", isExpanded);
+
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = "market-buy-header";
+    header.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+    header.addEventListener("click", () => {
+      expandedBuyItemId = expandedBuyItemId === item.itemId ? null : item.itemId;
+      renderMarket();
+    });
+
+    const headerLeft = document.createElement("div");
+    headerLeft.className = "market-buy-header-left";
 
     const icon = document.createElement("img");
     icon.className = "market-row-icon";
-    if (def.icon) icon.src = def.icon;
-    icon.alt = def.label || entry.itemId;
-    left.appendChild(icon);
+    if (item.def.icon) icon.src = item.def.icon;
+    icon.alt = item.def.label || item.itemId;
+    headerLeft.appendChild(icon);
 
-    const info = document.createElement("div");
-    info.className = "market-row-info";
     const title = document.createElement("div");
-    title.textContent = def.label || entry.itemId;
-    const meta = document.createElement("div");
-    meta.className = "market-row-meta";
-    meta.textContent = `${entry.unitPrice} or/u`;
-    info.appendChild(title);
-    info.appendChild(meta);
-    left.appendChild(info);
+    title.className = "market-buy-name";
+    title.textContent = item.def.label || item.itemId;
+    headerLeft.appendChild(title);
 
-    const right = document.createElement("div");
-    right.className = "market-row-right";
+    const headerRight = document.createElement("div");
+    headerRight.className = "market-buy-header-right";
 
-    const qtyInput = document.createElement("input");
-    qtyInput.type = "number";
-    qtyInput.min = "1";
-    qtyInput.max = String(entry.qty);
-    qtyInput.value = "1";
-    qtyInput.className = "market-row-input";
+    const levelEl = document.createElement("div");
+    levelEl.className = "market-buy-header-level";
+    const levelValue =
+      typeof item.def?.requiredLevel === "number" ? item.def.requiredLevel : 1;
+    levelEl.textContent = `NIV ${levelValue}`;
+    headerRight.appendChild(levelEl);
 
-    const totalEl = document.createElement("div");
-    totalEl.className = "market-row-total";
-    const updateTotal = () => {
-      const qty = Math.max(1, Math.min(entry.qty, Math.round(Number(qtyInput.value) || 1)));
-      totalEl.textContent = `${qty * entry.unitPrice} or`;
-    };
-    qtyInput.addEventListener("input", updateTotal);
-    updateTotal();
+    header.appendChild(headerLeft);
+    header.appendChild(headerRight);
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "market-row-action";
-    btn.textContent = "Acheter";
-    btn.addEventListener("click", () => {
-      const qty = Math.max(1, Math.min(entry.qty, Math.round(Number(qtyInput.value) || 1)));
-      sendMarketCmd("CmdMarketBuy", { itemId: entry.itemId, unitPrice: entry.unitPrice, qty });
+    const packs = document.createElement("div");
+    packs.className = "market-buy-pack-list";
+    availableQtys.forEach((value) => {
+      const entry = item.packs.get(value);
+      if (!entry) return;
+      const packRow = document.createElement("div");
+      packRow.className = "market-buy-pack-row";
+
+      const qtyEl = document.createElement("div");
+      qtyEl.className = "market-buy-pack-qty";
+      qtyEl.textContent = `x${value}`;
+
+      const priceEl = document.createElement("div");
+      priceEl.className = "market-buy-pack-price";
+      priceEl.textContent = `${entry.unitPrice} or`;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "market-row-action market-buy-pack-btn";
+      btn.textContent = "Acheter";
+      btn.addEventListener("click", () => {
+        sendMarketCmd("CmdMarketBuy", {
+          itemId: entry.itemId,
+          unitPrice: entry.unitPrice,
+          qty: value,
+        });
+      });
+
+      packRow.appendChild(qtyEl);
+      packRow.appendChild(priceEl);
+      packRow.appendChild(btn);
+      packs.appendChild(packRow);
     });
 
-    right.appendChild(qtyInput);
-    right.appendChild(totalEl);
-    right.appendChild(btn);
-
-    row.appendChild(left);
-    row.appendChild(right);
+    row.appendChild(header);
+    row.appendChild(packs);
     container.appendChild(row);
   });
 }
@@ -907,6 +955,7 @@ export function openMarketPanel(scene, player, npc) {
   selectedSellQty = 1;
   selectedSellPrice = "";
   marketInvFilter = "all";
+  expandedBuyItemId = null;
 
   const tabs = panelEl.querySelectorAll(".market-tab");
   tabs.forEach((btn) => {

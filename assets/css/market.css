@@ -447,6 +447,99 @@ body.market-open .market-panel {
   border: 1px solid rgba(88, 120, 140, 0.35);
 }
 
+.market-row-buy {
+  background: rgba(10, 18, 24, 0.78);
+  border-color: rgba(110, 150, 170, 0.4);
+}
+
+.market-buy-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.market-buy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.market-buy-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.market-buy-name {
+  font-weight: 600;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.market-buy-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.market-buy-header-level {
+  border: 1px solid rgba(88, 120, 140, 0.45);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #9fc0d1;
+  font-weight: 700;
+}
+
+.market-buy-pack-list {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.market-buy-item.expanded .market-buy-pack-list {
+  display: flex;
+}
+
+.market-buy-pack-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(8, 16, 20, 0.45);
+  border: 1px solid rgba(88, 120, 140, 0.3);
+}
+
+.market-buy-pack-qty {
+  width: 42px;
+  font-weight: 700;
+}
+
+.market-buy-pack-price {
+  margin-left: auto;
+  font-size: 12px;
+  color: #9fe6c7;
+  min-width: 90px;
+  text-align: right;
+}
+
+.market-buy-pack-btn {
+  padding: 4px 10px;
+}
+
 .market-row-left {
   display: flex;
   align-items: center;
@@ -456,11 +549,15 @@ body.market-open .market-panel {
 }
 
 .market-row-icon {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   object-fit: cover;
-  background: rgba(0, 0, 0, 0.2);
+  background: radial-gradient(circle at 30% 30%, rgba(80, 120, 120, 0.35), rgba(10, 18, 22, 0.9));
+  border: 1px solid rgba(88, 120, 140, 0.5);
+  box-shadow:
+    inset 0 0 10px rgba(0, 0, 0, 0.6),
+    0 0 10px rgba(0, 0, 0, 0.25);
 }
 
 .market-row-info {
@@ -469,6 +566,12 @@ body.market-open .market-panel {
   gap: 4px;
   font-size: 14px;
   min-width: 0;
+}
+
+.market-row-info > div:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .market-row-meta {
