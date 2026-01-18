@@ -27,6 +27,14 @@ let pendingQuery = "";
 let marketItemCardEl = null;
 let marketItemCardDrag = null;
 let marketItemCardDocListener = null;
+let buyConfirmState = null;
+let buyConfirmListenerReady = false;
+let sellEnterListenerReady = false;
+let lastSellAction = null;
+let lastSellBtnEl = null;
+const lastConfirmedPrices = new Map();
+let buyConfirmModalEl = null;
+let lastConfirmedAction = null;
 let unsubMarket = null;
 let unsubInventory = null;
 let unsubPlayer = null;
@@ -234,6 +242,125 @@ function showMarketItemCard(def, anchorEl) {
 function hideMarketItemCard() {
   if (!marketItemCardEl) return;
   marketItemCardEl.style.display = "none";
+}
+
+function ensureBuyConfirmModal() {
+  if (buyConfirmModalEl) return buyConfirmModalEl;
+  buyConfirmModalEl = document.createElement("div");
+  buyConfirmModalEl.className = "market-buy-confirm-modal";
+  buyConfirmModalEl.style.display = "none";
+  buyConfirmModalEl.innerHTML = `
+    <div class="market-buy-confirm-card" role="dialog" aria-modal="true">
+      <div class="market-buy-confirm-title">Voulez-vous acheter ?</div>
+      <div class="market-buy-confirm-actions">
+        <button type="button" class="market-buy-confirm-no">Non</button>
+        <button type="button" class="market-buy-confirm-yes">Oui</button>
+      </div>
+      <div class="market-buy-confirm-price"></div>
+    </div>
+  `;
+  document.body.appendChild(buyConfirmModalEl);
+
+  buyConfirmModalEl.addEventListener("mousedown", (event) => {
+    if (event.target === buyConfirmModalEl) {
+      buyConfirmModalEl.style.display = "none";
+      buyConfirmState = null;
+    }
+  });
+
+  const noBtn = buyConfirmModalEl.querySelector(".market-buy-confirm-no");
+  if (noBtn) {
+    noBtn.addEventListener("click", () => {
+      buyConfirmModalEl.style.display = "none";
+      buyConfirmState = null;
+    });
+  }
+
+  const yesBtn = buyConfirmModalEl.querySelector(".market-buy-confirm-yes");
+  if (yesBtn) {
+    yesBtn.addEventListener("click", () => {
+      if (buyConfirmState?.confirm) buyConfirmState.confirm();
+    });
+  }
+
+  return buyConfirmModalEl;
+}
+
+function openBuyConfirmModal({ qty, unitPrice, onConfirm }) {
+  const modal = ensureBuyConfirmModal();
+  const priceEl = modal.querySelector(".market-buy-confirm-price");
+  if (priceEl) {
+    priceEl.textContent = `${formatThousands(unitPrice)} or`;
+  }
+  buyConfirmState = {
+    confirm: () => {
+      modal.style.display = "none";
+      buyConfirmState = null;
+      onConfirm();
+    },
+  };
+  modal.style.display = "flex";
+  const yesBtn = modal.querySelector(".market-buy-confirm-yes");
+  if (yesBtn && typeof yesBtn.focus === "function") {
+    yesBtn.focus();
+  }
+}
+
+function getBestEntryForPack(itemId, qty) {
+  if (!itemId || !Number.isFinite(qty)) return null;
+  let best = null;
+  listings.forEach((entry) => {
+    if (entry.itemId !== itemId) return;
+    if (entry.qty !== qty) return;
+    if (!best || entry.unitPrice < best.unitPrice) {
+      best = entry;
+    }
+  });
+  return best;
+}
+
+function ensureBuyConfirmListener() {
+  if (buyConfirmListenerReady || typeof document === "undefined") return;
+  buyConfirmListenerReady = true;
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    if (!buyConfirmState) return;
+    event.preventDefault();
+    buyConfirmState.confirm();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    if (buyConfirmState) return;
+    if (!lastConfirmedAction) return;
+    const active = document.activeElement;
+    if (active && active.tagName === "INPUT") return;
+    const { itemId, qty, unitPrice } = lastConfirmedAction;
+    const best = getBestEntryForPack(itemId, qty);
+    if (!best) return;
+    event.preventDefault();
+    if (best.unitPrice === unitPrice) {
+      sendMarketCmd("CmdMarketBuy", { itemId, unitPrice, qty });
+      return;
+    }
+    openBuyConfirmModal({
+      qty,
+      unitPrice: best.unitPrice,
+      onConfirm: () => {
+        const confirmKey = `${itemId}:${qty}`;
+        lastConfirmedPrices.set(confirmKey, best.unitPrice);
+        lastConfirmedAction = {
+          itemId,
+          qty,
+          unitPrice: best.unitPrice,
+        };
+        sendMarketCmd("CmdMarketBuy", {
+          itemId,
+          unitPrice: best.unitPrice,
+          qty,
+        });
+      },
+    });
+  });
 }
 
 
@@ -627,6 +754,33 @@ function collectInventoryItems() {
     .filter((entry) => entry.def && entry.def.category !== "quete");
 }
 
+function getSelectedSellEntry() {
+  if (!selectedSellItemId) return null;
+  const items = collectInventoryItems();
+  return items.find((entry) => entry.itemId === selectedSellItemId) || null;
+}
+
+function attemptSellSelected() {
+  const selectedEntry = getSelectedSellEntry();
+  if (!selectedEntry) return false;
+  const unitPrice = Math.max(0, Math.round(Number(selectedSellPrice) || 0));
+  if (!unitPrice) {
+    showToast({ title: "HDV", text: "Prix invalide." });
+    return false;
+  }
+  sendMarketCmd("CmdMarketSell", {
+    itemId: selectedEntry.itemId,
+    qty: selectedSellQty,
+    unitPrice,
+  });
+  lastSellAction = {
+    itemId: selectedEntry.itemId,
+    qty: selectedSellQty,
+    unitPrice,
+  };
+  return true;
+}
+
 function applyInventoryFilters(items) {
   return items.filter((entry) => {
     const def = entry.def;
@@ -642,6 +796,8 @@ function renderBuyList(container) {
     return;
   }
 
+  ensureBuyConfirmListener();
+
   const qtyValues = [1, 10, 100];
   const grouped = new Map();
 
@@ -649,16 +805,19 @@ function renderBuyList(container) {
     const def = getItemDef(entry.itemId);
     if (!def) return;
     const qty = Number(entry.qty) || 0;
-    if (!qtyValues.includes(qty)) return;
+    if (qty <= 0) return;
     const current = grouped.get(entry.itemId) || {
       itemId: entry.itemId,
       def,
       packs: new Map(),
     };
-    const existing = current.packs.get(qty);
-    if (!existing || entry.unitPrice < existing.unitPrice) {
-      current.packs.set(qty, entry);
-    }
+    qtyValues.forEach((value) => {
+      if (qty !== value) return;
+      const existing = current.packs.get(value);
+      if (!existing || entry.unitPrice < existing.unitPrice) {
+        current.packs.set(value, entry);
+      }
+    });
     grouped.set(entry.itemId, current);
   });
 
@@ -719,6 +878,7 @@ function renderBuyList(container) {
     availableQtys.forEach((value) => {
       const entry = item.packs.get(value);
       if (!entry) return;
+      const confirmKey = `${entry.itemId}:${value}`;
       const packRow = document.createElement("div");
       packRow.className = "market-buy-pack-row";
 
@@ -744,10 +904,36 @@ function renderBuyList(container) {
       btn.className = "market-row-action market-buy-pack-btn";
       btn.textContent = "Acheter";
       btn.addEventListener("click", () => {
-        sendMarketCmd("CmdMarketBuy", {
-          itemId: entry.itemId,
-          unitPrice: entry.unitPrice,
+        const lastPrice = lastConfirmedPrices.get(confirmKey);
+        if (lastPrice === entry.unitPrice) {
+          sendMarketCmd("CmdMarketBuy", {
+            itemId: entry.itemId,
+            unitPrice: entry.unitPrice,
+            qty: value,
+          });
+          lastConfirmedAction = {
+            itemId: entry.itemId,
+            qty: value,
+            unitPrice: entry.unitPrice,
+          };
+          return;
+        }
+        openBuyConfirmModal({
           qty: value,
+          unitPrice: entry.unitPrice,
+          onConfirm: () => {
+            lastConfirmedPrices.set(confirmKey, entry.unitPrice);
+            lastConfirmedAction = {
+              itemId: entry.itemId,
+              qty: value,
+              unitPrice: entry.unitPrice,
+            };
+            sendMarketCmd("CmdMarketBuy", {
+              itemId: entry.itemId,
+              unitPrice: entry.unitPrice,
+              qty: value,
+            });
+          },
         });
       });
 
@@ -808,7 +994,7 @@ function renderMineList(container) {
       meta.className = "market-row-meta";
       const remainingMs = Math.max(0, entry.expiresAt - Date.now());
       const days = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
-      meta.textContent = `x${formatThousands(entry.qty)} - ${formatThousands(entry.unitPrice)} or/u - ${days}j`;
+      meta.textContent = `x${formatThousands(entry.qty)} - ${formatThousands(entry.unitPrice)} or/lot - ${days}j`;
       info.appendChild(title);
       info.appendChild(meta);
       left.appendChild(info);
@@ -907,8 +1093,7 @@ function renderSellLeftPanel() {
     return;
   }
 
-  const items = collectInventoryItems();
-  const selectedEntry = items.find((entry) => entry.itemId === selectedSellItemId) || null;
+  const selectedEntry = getSelectedSellEntry();
 
   left.innerHTML = "";
   const hasSelection = !!selectedEntry;
@@ -991,7 +1176,7 @@ function renderSellLeftPanel() {
   priceInput.inputMode = "numeric";
   priceInput.autocomplete = "off";
   priceInput.spellcheck = false;
-  priceInput.placeholder = "Prix par unite";
+  priceInput.placeholder = "Prix du lot";
   priceInput.value = selectedSellPrice ? formatThousands(selectedSellPrice) : "";
   priceInput.disabled = !hasSelection;
   const taxRow = document.createElement("div");
@@ -1007,12 +1192,11 @@ function renderSellLeftPanel() {
       return;
     }
     const unitPrice = Math.max(0, Math.round(Number(selectedSellPrice) || 0));
-    const total = unitPrice * selectedSellQty;
-    if (!total) {
+    if (!unitPrice) {
       taxValue.textContent = "-";
       return;
     }
-    const tax = Math.max(0, Math.floor(total * MARKET_TAX_PCT));
+    const tax = Math.max(0, Math.floor(unitPrice * MARKET_TAX_PCT));
     taxValue.textContent = `${formatThousands(tax)} or`;
   };
   priceInput.addEventListener("input", () => {
@@ -1020,6 +1204,12 @@ function renderSellLeftPanel() {
     selectedSellPrice = raw;
     priceInput.value = raw ? formatThousands(raw) : "";
     updateTax();
+  });
+  priceInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.stopPropagation();
+    event.preventDefault();
+    attemptSellSelected();
   });
   priceRow.appendChild(priceInput);
   left.appendChild(priceRow);
@@ -1033,19 +1223,12 @@ function renderSellLeftPanel() {
   sellBtn.className = "market-row-action";
   sellBtn.textContent = "Mettre en vente";
   sellBtn.disabled = !hasSelection;
+  lastSellBtnEl = sellBtn;
   sellBtn.addEventListener("click", () => {
-    if (!hasSelection) return;
-    const unitPrice = Math.max(0, Math.round(Number(selectedSellPrice) || 0));
-    if (!unitPrice) {
-      showToast({ title: "HDV", text: "Prix invalide." });
-      return;
+    const didSell = attemptSellSelected();
+    if (didSell && typeof sellBtn.focus === "function") {
+      sellBtn.focus();
     }
-    sendMarketCmd("CmdMarketSell", {
-      itemId: selectedEntry.itemId,
-      qty: selectedSellQty,
-      unitPrice,
-    });
-    selectedSellPrice = "";
   });
   left.appendChild(sellBtn);
 }
@@ -1166,8 +1349,31 @@ function renderMarket() {
   updatePaginationUi();
 }
 
+function ensureSellEnterListener() {
+  if (sellEnterListenerReady || typeof document === "undefined") return;
+  sellEnterListenerReady = true;
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    if (!document.body.classList.contains("market-open")) return;
+    if (currentMode !== "sell") return;
+    if (buyConfirmState) return;
+    const active = document.activeElement;
+    if (active && active.tagName === "INPUT") {
+      if (!active.closest(".market-sell-price")) return;
+    }
+    const didSell = attemptSellSelected();
+    if (didSell) {
+      event.preventDefault();
+      if (lastSellBtnEl && typeof lastSellBtnEl.focus === "function") {
+        lastSellBtnEl.focus();
+      }
+    }
+  });
+}
+
 function attachMarketEvents() {
   if (unsubMarket) return;
+  ensureSellEnterListener();
   unsubMarket = [
     onStoreEvent("market:list", (payload) => {
       listings = Array.isArray(payload?.listings) ? payload.listings : [];

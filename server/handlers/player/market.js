@@ -113,7 +113,7 @@ function createMarketHandlers({
   function groupListings(listings) {
     const grouped = new Map();
     listings.forEach((entry) => {
-      const key = `${entry.itemId}|${entry.unitPrice}`;
+      const key = `${entry.itemId}|${entry.unitPrice}|${entry.qty}|${entry.listingId}`;
       const current = grouped.get(key);
       if (!current) {
         grouped.set(key, {
@@ -125,7 +125,6 @@ function createMarketHandlers({
         });
         return;
       }
-      current.qty += entry.qty;
       if (Number.isFinite(entry.createdAt) && entry.createdAt < current.createdAt) {
         current.createdAt = entry.createdAt;
       }
@@ -221,7 +220,7 @@ function createMarketHandlers({
       return;
     }
 
-    const total = unitPrice * qty;
+    const total = unitPrice;
     if (!Number.isFinite(total) || total <= 0 || total > MAX_TOTAL_PRICE) {
       emitNotice(clientInfo.id, "Prix total invalide.", "error");
       return;
@@ -301,21 +300,23 @@ function createMarketHandlers({
     const candidates = listingId
       ? allListings.filter((entry) => entry.listingId === listingId)
       : allListings.filter(
-          (entry) => entry.itemId === itemId && entry.unitPrice === unitPrice
+          (entry) =>
+            entry.itemId === itemId &&
+            entry.unitPrice === unitPrice &&
+            entry.qty === qty
         );
     if (!candidates.length) {
       emitNotice(clientInfo.id, "Offre introuvable.", "error");
       return;
     }
 
-    const totalAvailable = candidates.reduce((acc, entry) => acc + entry.qty, 0);
-    if (qty > totalAvailable) {
-      emitNotice(clientInfo.id, "Stock insuffisant.", "error");
+    const pick = candidates.slice().sort((a, b) => a.createdAt - b.createdAt)[0];
+    if (listingId && pick.qty !== qty) {
+      emitNotice(clientInfo.id, "Lot indisponible.", "error");
       return;
     }
-
-    const priceUnit = listingId ? candidates[0].unitPrice : unitPrice;
-    const total = priceUnit * qty;
+    const priceUnit = pick.unitPrice;
+    const total = priceUnit;
     if (!Number.isFinite(total) || total <= 0 || total > MAX_TOTAL_PRICE) {
       emitNotice(clientInfo.id, "Prix total invalide.", "error");
       return;
@@ -327,7 +328,7 @@ function createMarketHandlers({
     }
 
     const inv = ensurePlayerInventory(player);
-    const boughtItemId = listingId ? candidates[0].itemId : itemId;
+    const boughtItemId = pick.itemId;
     const added = addItemToInventory(inv, boughtItemId, qty);
     if (added < qty) {
       if (added > 0) removeItemFromInventory(inv, boughtItemId, added);
@@ -337,22 +338,10 @@ function createMarketHandlers({
 
     player.gold = Math.max(0, currentGold - total);
 
-    const sorted = candidates.slice().sort((a, b) => a.createdAt - b.createdAt);
-    let remaining = qty;
-    sorted.forEach((entry) => {
-      if (remaining <= 0) return;
-      const take = Math.min(remaining, entry.qty);
-      const nextQty = entry.qty - take;
-      if (nextQty > 0) {
-        marketStore.updateListingQty(entry.listingId, nextQty);
-      } else {
-        marketStore.deleteListing(entry.listingId);
-      }
-      if (entry.sellerAccountId) {
-        marketStore.addBalance(entry.sellerAccountId, take * entry.unitPrice);
-      }
-      remaining -= take;
-    });
+    marketStore.deleteListing(pick.listingId);
+    if (pick.sellerAccountId) {
+      marketStore.addBalance(pick.sellerAccountId, pick.unitPrice);
+    }
 
     logAntiDup({
       ts: Date.now(),
@@ -375,7 +364,7 @@ function createMarketHandlers({
       sendPlayerSync(target.ws, player, "market_buy");
     }
 
-    const sellers = new Set(sorted.map((entry) => entry.sellerAccountId).filter(Boolean));
+    const sellers = new Set([pick.sellerAccountId].filter(Boolean));
     sellers.forEach((accountId) => {
       const seller = Object.values(state.players).find(
         (p) => p && p.accountId === accountId && p.connected !== false
