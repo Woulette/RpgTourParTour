@@ -109,6 +109,12 @@ body.market-open .market-panel {
   cursor: pointer;
 }
 
+.market-balance #market-withdraw-max {
+  padding: 6px 8px;
+  min-width: 48px;
+  text-align: center;
+}
+
 .market-close {
   border: 1px solid var(--wood-edge);
   background: linear-gradient(180deg, #4a2d1b, #3a2416);
@@ -833,11 +839,20 @@ body.market-open .market-panel {
 .market-buy-confirm-yes {
   flex: 1;
   border: 1px solid rgba(140, 95, 60, 0.7);
-  background: linear-gradient(180deg, #4a2d1b, #3a2416);
   color: #f3e6d7;
   border-radius: 8px;
   padding: 6px 10px;
   cursor: pointer;
+}
+
+.market-buy-confirm-yes {
+  border-color: rgba(70, 140, 90, 0.8);
+  background: linear-gradient(180deg, #2f6b42, #1f4a2e);
+}
+
+.market-buy-confirm-no {
+  border-color: rgba(160, 70, 60, 0.8);
+  background: linear-gradient(180deg, #7a2d2b, #4a1c1a);
 }
 
 .market-buy-confirm-price {

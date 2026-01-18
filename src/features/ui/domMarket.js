@@ -401,6 +401,7 @@ function ensurePanelElements() {
           <div class="market-balance">
             Solde HDV : <span id="market-balance-value">0</span>
             <input id="market-withdraw-input" type="number" min="1" step="1" placeholder="Montant" />
+            <button id="market-withdraw-max" type="button">Max</button>
             <button id="market-withdraw-btn" type="button">Retirer</button>
           </div>
         </div>
@@ -483,9 +484,30 @@ function ensurePanelElements() {
 
   const withdrawBtn = panelEl.querySelector("#market-withdraw-btn");
   const withdrawInput = panelEl.querySelector("#market-withdraw-input");
+  const withdrawMaxBtn = panelEl.querySelector("#market-withdraw-max");
   if (withdrawBtn && withdrawInput) {
+    const clampWithdrawInput = () => {
+      const max = Math.max(0, Math.round(Number(marketBalance) || 0));
+      const raw = Math.max(0, Math.round(Number(withdrawInput.value) || 0));
+      if (raw > max && max > 0) {
+        withdrawInput.value = String(max);
+        return;
+      }
+      withdrawInput.value = raw ? String(raw) : "";
+    };
+    withdrawInput.addEventListener("input", clampWithdrawInput);
+    withdrawInput.addEventListener("blur", clampWithdrawInput);
+    if (withdrawMaxBtn) {
+      withdrawMaxBtn.addEventListener("click", () => {
+        const max = Math.max(0, Math.round(Number(marketBalance) || 0));
+        withdrawInput.value = max ? String(max) : "";
+        withdrawInput.focus();
+      });
+    }
     withdrawBtn.addEventListener("click", () => {
-      const amount = Math.max(0, Math.round(Number(withdrawInput.value)));
+      const max = Math.max(0, Math.round(Number(marketBalance) || 0));
+      let amount = Math.max(0, Math.round(Number(withdrawInput.value)));
+      if (max && amount > max) amount = max;
       if (!amount) return;
       if (!sendMarketCmd("CmdMarketWithdraw", { amount })) return;
       withdrawInput.value = "";
