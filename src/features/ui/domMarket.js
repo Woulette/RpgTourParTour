@@ -32,6 +32,8 @@ let buyConfirmListenerReady = false;
 let sellEnterListenerReady = false;
 let lastSellAction = null;
 let lastSellBtnEl = null;
+let shouldFocusSellPrice = false;
+let suppressAutoBuyOnce = false;
 const lastConfirmedPrices = new Map();
 let buyConfirmModalEl = null;
 let lastConfirmedAction = null;
@@ -296,6 +298,13 @@ function openBuyConfirmModal({ qty, unitPrice, onConfirm }) {
     confirm: () => {
       modal.style.display = "none";
       buyConfirmState = null;
+      if (document.activeElement && typeof document.activeElement.blur === "function") {
+        document.activeElement.blur();
+      }
+      suppressAutoBuyOnce = true;
+      setTimeout(() => {
+        suppressAutoBuyOnce = false;
+      }, 0);
       onConfirm();
     },
   };
@@ -325,6 +334,7 @@ function ensureBuyConfirmListener() {
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
     if (!buyConfirmState) return;
+    if (event.repeat) return;
     event.preventDefault();
     buyConfirmState.confirm();
   });
@@ -332,8 +342,13 @@ function ensureBuyConfirmListener() {
     if (event.key !== "Enter") return;
     if (buyConfirmState) return;
     if (!lastConfirmedAction) return;
+    if (!document.body.classList.contains("market-open")) return;
+    if (currentMode !== "buy") return;
+    if (suppressAutoBuyOnce) return;
     const active = document.activeElement;
-    if (active && active.tagName === "INPUT") return;
+    if (active && active.tagName === "INPUT") {
+      if (active.id === "market-search") return;
+    }
     const { itemId, qty, unitPrice } = lastConfirmedAction;
     const best = getBestEntryForPack(itemId, qty);
     if (!best) return;
@@ -778,6 +793,7 @@ function attemptSellSelected() {
     qty: selectedSellQty,
     unitPrice,
   };
+  shouldFocusSellPrice = true;
   return true;
 }
 
@@ -1231,6 +1247,15 @@ function renderSellLeftPanel() {
     }
   });
   left.appendChild(sellBtn);
+
+  if (hasSelection && shouldFocusSellPrice) {
+    shouldFocusSellPrice = false;
+    setTimeout(() => {
+      if (typeof priceInput.focus === "function") {
+        priceInput.focus();
+      }
+    }, 0);
+  }
 }
 
 function buildMarketSlot(slotData, isSelected, onSelect) {
@@ -1359,7 +1384,8 @@ function ensureSellEnterListener() {
     if (buyConfirmState) return;
     const active = document.activeElement;
     if (active && active.tagName === "INPUT") {
-      if (!active.closest(".market-sell-price")) return;
+      if (active.id === "market-withdraw-input") return;
+      if (active.id === "market-search") return;
     }
     const didSell = attemptSellSelected();
     if (didSell) {
