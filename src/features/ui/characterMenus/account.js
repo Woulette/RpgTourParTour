@@ -37,25 +37,37 @@ export function createAccountHelpers({
 
   function loadLanAccount() {
     if (typeof window === "undefined") return null;
-    const savedName = localStorage.getItem("lanAccountName") || "";
-    const savedToken = localStorage.getItem("lanSessionToken") || "";
-    return {
-      name: savedName,
-      password: "",
-      sessionToken: savedToken || null,
-    };
+    try {
+      const savedName = localStorage.getItem("lanAccountName") || "";
+      const savedToken = localStorage.getItem("lanSessionToken") || "";
+      return {
+        name: savedName,
+        password: "",
+        sessionToken: savedToken || null,
+      };
+    } catch (err) {
+      return {
+        name: "",
+        password: "",
+        sessionToken: null,
+      };
+    }
   }
 
   function saveLanAccount(account, { remember } = {}) {
     if (typeof window === "undefined") return;
-    if (!account || remember === false) {
-      localStorage.removeItem("lanAccountName");
-      localStorage.removeItem("lanSessionToken");
-      return;
-    }
-    localStorage.setItem("lanAccountName", account.name || "");
-    if (account.sessionToken) {
-      localStorage.setItem("lanSessionToken", account.sessionToken);
+    try {
+      if (!account || remember === false) {
+        localStorage.removeItem("lanAccountName");
+        localStorage.removeItem("lanSessionToken");
+        return;
+      }
+      localStorage.setItem("lanAccountName", account.name || "");
+      if (account.sessionToken) {
+        localStorage.setItem("lanSessionToken", account.sessionToken);
+      }
+    } catch (err) {
+      // ignore storage failures (private mode, blocked storage)
     }
   }
 

@@ -667,7 +667,7 @@ function isValidPersistPosition(mapId, x, y) {
 }
 
 function persistPlayerStateNow(player) {
-  if (!characterStore || !player) return;
+    if (!characterStore || !player || player.__deleted) return;
   const entry = buildCharacterEntryFromPlayer(player);
   if (!entry) return;
   if (!isValidPersistPosition(entry.mapId, entry.posX, entry.posY)) {
@@ -698,7 +698,7 @@ function persistPlayerStateNow(player) {
 }
 
 function persistPlayerState(player, { immediate = false } = {}) {
-  if (!player) return;
+    if (!player || player.__deleted) return;
   const key = Number.isInteger(player.id) ? player.id : player.characterId || null;
   if (immediate || key === null) {
     if (key !== null) {
@@ -1111,11 +1111,11 @@ function tickPlayerRegen() {
 }
 
 function persistAllPlayers() {
-  Object.values(state.players).forEach((player) => {
-    if (!player) return;
-    persistPlayerState(player);
-  });
-}
+    Object.values(state.players).forEach((player) => {
+      if (!player || player.__deleted) return;
+      persistPlayerState(player);
+    });
+  }
 
 const getNextEventId = () => nextEventId++;
 const getNextPlayerId = () => nextPlayerId++;

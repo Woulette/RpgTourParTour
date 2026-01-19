@@ -5,7 +5,6 @@ import { initCharacterMenus } from "./features/ui/characterMenus/index.js";
 import { closeAllHudPanels } from "./features/ui/domPanelClose.js";
 import { createSessionSwitch } from "./app/sessionSwitch.js";
 import {
-  getSelectedCharacter,
   setSelectedCharacter,
   setUiApi,
   getUiApi,
@@ -73,7 +72,6 @@ const sessionSwitch = createSessionSwitch({
   },
   closeAllHudPanels,
   setSelectedCharacter,
-  getSelectedCharacter,
   getPlayer,
   onEnterMenu: () => {
     document.body.classList.remove("game-running");
@@ -82,7 +80,7 @@ const sessionSwitch = createSessionSwitch({
     if (client && typeof client.sendCmd === "function") {
       const playerId = getNetPlayerId();
       if (Number.isInteger(playerId)) {
-        client.sendCmd("CmdLogout", { playerId });
+        client.sendCmd("CmdLogout", { playerId, revokeSession: false });
       }
     }
     if (client && typeof client.close === "function") {
@@ -97,22 +95,43 @@ const sessionSwitch = createSessionSwitch({
 
 const returnMenuBtn = document.getElementById("ui-return-menu");
 if (returnMenuBtn) {
-  returnMenuBtn.addEventListener("click", () => {
-    const uiApi = getUiApi();
-    if (typeof uiApi?.openMenu === "function") {
-      uiApi.openMenu();
-      return;
+  const canOpenMenu = () => {
+    const player = getPlayer();
+    const scene =
+      player?.scene || (typeof window !== "undefined" ? window.__scene : null);
+    if (scene?.combatState?.enCours || scene?.prepState?.actif) {
+      if (typeof window !== "undefined") {
+        window.alert("Impossible d'ouvrir le menu pendant un combat.");
+      }
+      return false;
     }
-    sessionSwitch.openMenu();
+    return true;
+  };
+  returnMenuBtn.addEventListener("click", () => {
+    if (!canOpenMenu()) return;
+    if (menus && typeof menus.openMenu === "function") {
+      menus.openMenu();
+    }
   });
 }
 
 const menus = initCharacterMenus({
   onStartGame: (character) => sessionSwitch.startGame(character),
+  onEnterMenu: () => sessionSwitch.openMenu(),
 });
 setUiApi({
   openMenu: () => {
-    sessionSwitch.openMenu();
-    if (menus && typeof menus.openMenu === "function") menus.openMenu();
+    const player = getPlayer();
+    const scene =
+      player?.scene || (typeof window !== "undefined" ? window.__scene : null);
+    if (scene?.combatState?.enCours || scene?.prepState?.actif) {
+      if (typeof window !== "undefined") {
+        window.alert("Impossible d'ouvrir le menu pendant un combat.");
+      }
+      return;
+    }
+    if (menus && typeof menus.openMenu === "function") {
+      menus.openMenu();
+    }
   },
 });

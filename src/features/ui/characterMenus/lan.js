@@ -5,6 +5,7 @@ export function createLanHelpers({
   accountHelpers,
   authMessages,
   sessionFns,
+  setConnecting,
   getCharacters,
   getSelectedCharacterId,
   setSelectedCharacterId,
@@ -30,7 +31,11 @@ export function createLanHelpers({
     btnLanConnect.textContent = label;
   }
 
-  function connectLan(account, { authMode, url, requestCharacters } = {}) {
+  function connectLan(
+    account,
+    { authMode, url, requestCharacters, character } = {}
+  ) {
+    if (typeof setConnecting === "function") setConnecting(true);
     const host =
       typeof window !== "undefined" && window.location
         ? window.location.hostname
@@ -49,6 +54,7 @@ export function createLanHelpers({
       url || (typeof getServerUrl === "function" ? getServerUrl() : null) || defaultUrl;
     if (!serverUrl) {
       setLanButtonLabel("Compte");
+      if (typeof setConnecting === "function") setConnecting(false);
       return;
     }
     const existing = getLanClient();
@@ -60,22 +66,28 @@ export function createLanHelpers({
     const hasToken = !!account?.sessionToken;
     if (!account || !account.name || (!account.password && !hasToken)) {
       setLanButtonLabel("Compte");
+      if (typeof setConnecting === "function") setConnecting(false);
       return;
     }
     let selected = null;
     if (requestCharacters !== true) {
-      const characters = getCharacters();
-      selected =
-        characters.find((c) => c && c.id === getSelectedCharacterId()) ||
-        sessionFns.getSessionSelectedCharacter?.() ||
-        characters[0] ||
-        null;
+      if (character && character.id) {
+        selected = character;
+      } else {
+        const characters = getCharacters();
+        selected =
+          characters.find((c) => c && c.id === getSelectedCharacterId()) ||
+          sessionFns.getSessionSelectedCharacter?.() ||
+          characters[0] ||
+          null;
+      }
       if (selected?.id && !getSelectedCharacterId()) {
         setSelectedCharacterId(selected.id);
       }
       if (!selected || !selected.id) {
         setLoginError("Cree un personnage avant de te connecter.");
         setLanButtonLabel("Compte");
+        if (typeof setConnecting === "function") setConnecting(false);
         return;
       }
     }
@@ -102,6 +114,7 @@ export function createLanHelpers({
         if (msg?.t === "EvAccountCharacters") {
           setLanConnected(true);
           setActiveAccount(account);
+          if (typeof setConnecting === "function") setConnecting(false);
           if (msg.sessionToken && typeof window !== "undefined") {
             account.sessionToken = msg.sessionToken;
           }
@@ -109,6 +122,36 @@ export function createLanHelpers({
           setLoginError("");
           if (typeof onAccountCharacters === "function") {
             onAccountCharacters(msg.characters || []);
+          }
+          const combatEntry = Array.isArray(msg.characters)
+            ? msg.characters.find((entry) => entry && entry.inCombat === true)
+            : null;
+          if (typeof window !== "undefined" && window.localStorage) {
+            try {
+              if (combatEntry) {
+                window.localStorage.setItem("andemia_combat_reconnect", "1");
+              } else {
+                window.localStorage.removeItem("andemia_combat_reconnect");
+              }
+            } catch (err) {
+              // ignore storage failures (private mode, blocked storage)
+            }
+          }
+          if (combatEntry && !getPendingStartCharacter()) {
+            const targetId = combatEntry.characterId || combatEntry.id || null;
+            if (targetId) {
+              const characters = getCharacters();
+              const localMatch = characters.find((c) => c && c.id === targetId) || {
+                id: targetId,
+                name: combatEntry.name || "Joueur",
+                classId: combatEntry.classId || "archer",
+                level: combatEntry.level ?? 1,
+              };
+              setSelectedCharacterId(localMatch.id);
+              setPendingStartCharacter(localMatch);
+              onStartGameWithCharacter(localMatch);
+              return;
+            }
           }
           setLanButtonLabel("Compte: OK");
           return;
@@ -133,6 +176,7 @@ export function createLanHelpers({
           sessionFns.setNetIsHost(!!msg.isHost);
           setLanConnected(true);
           setActiveAccount(account);
+          if (typeof setConnecting === "function") setConnecting(false);
           if (msg.sessionToken && typeof window !== "undefined") {
             account.sessionToken = msg.sessionToken;
           }
@@ -153,8 +197,9 @@ export function createLanHelpers({
           setLanButtonLabel("Compte: KO");
           setLanConnected(false);
           setPendingStartCharacter(null);
+          if (typeof setConnecting === "function") setConnecting(false);
           const reason = msg?.reason || "unknown";
-          if (typeof onAuthRefused === "function") onAuthRefused();
+          if (typeof onAuthRefused === "function") onAuthRefused(reason);
           setLoginError(authMessages[reason] || `Connexion refusee: ${reason}`);
         }
       },
@@ -164,10 +209,12 @@ export function createLanHelpers({
         sessionFns.setNetIsHost(false);
         setLanConnected(false);
         setPendingStartCharacter(null);
+        if (typeof setConnecting === "function") setConnecting(false);
         if (typeof window !== "undefined") {
           window.__lanLastEvent = null;
           window.__lanClient = null;
         }
+        setLanClient(null);
         setLanButtonLabel("Compte");
       },
     });

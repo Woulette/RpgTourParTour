@@ -85,6 +85,7 @@
 
     renderServers();
     btnServersContinue.disabled = !state.getSelectedServerId();
+    // Pas d'auto-connexion: on laisse l'utilisateur valider le serveur.
   }
 
   function attachServersEvents() {

@@ -65,6 +65,20 @@ export function createLanRouter(ctx) {
     }, 200);
   };
 
+  const isSceneReadyForNet = () => {
+    if (!scene) return false;
+    const sys = scene.sys || null;
+    const game = sys?.game || null;
+    const cache = game?.cache || null;
+    const isActive =
+      typeof sys?.isActive === "function"
+        ? sys.isActive()
+        : typeof scene.scene?.isActive === "function"
+          ? scene.scene.isActive()
+          : false;
+    return !!(cache && isActive);
+  };
+
   const applyCombatEvent = (msg) => {
     if (msg.t === "EvCombatMoveStart") {
       combat.handleCombatMoveStart(msg);
@@ -191,6 +205,7 @@ export function createLanRouter(ctx) {
   };
 
   const scheduleMapRetry = (key, msg, handler) => {
+    if (!isSceneReadyForNet()) return;
     const timerKey = `__lanPending${key}Timer`;
     const dataKey = `__lanPending${key}`;
     scene[dataKey] = msg;
@@ -210,6 +225,7 @@ export function createLanRouter(ctx) {
   };
 
   const handleMapMonsters = (msg) => {
+    if (!isSceneReadyForNet()) return;
     if (scene?.combatState?.enCours || scene?.prepState?.actif) {
       scene.__lanMobsRefreshNeeded = true;
       scene.__lanPendingMapMonsters = msg;
@@ -234,6 +250,7 @@ export function createLanRouter(ctx) {
   }
 
   const handleMapResources = (msg) => {
+    if (!isSceneReadyForNet()) return;
     if (!isMapReady()) {
       scheduleMapRetry("MapResources", msg, handleMapResources);
       return;
@@ -245,8 +262,13 @@ export function createLanRouter(ctx) {
   };
 
   const handleMapPlayers = (msg) => {
+    if (!isSceneReadyForNet()) return;
     if (scene?.combatState?.enCours || scene?.prepState?.actif) {
       scene.__lanPendingMapPlayers = msg;
+      return;
+    }
+    if (!isMapReady()) {
+      scheduleMapRetry("MapPlayers", msg, handleMapPlayers);
       return;
     }
     players.handleMapPlayers(msg);
@@ -326,7 +348,9 @@ export function createLanRouter(ctx) {
     if (entry.inventory) player.inventory = entry.inventory;
     if (entry.trash) player.trash = entry.trash;
     if (entry.equipment) player.equipment = entry.equipment;
-    if (entry.quests) player.quests = entry.quests;
+      if ("quests" in entry) {
+        player.quests = entry.quests || {};
+      }
     if (entry.achievements) player.achievements = entry.achievements;
     if (entry.metiers) player.metiers = entry.metiers;
     if (entry.spellParchments) player.spellParchments = entry.spellParchments;
@@ -397,7 +421,7 @@ export function createLanRouter(ctx) {
     emitStoreEvent("player:updated", player);
     emitStoreEvent("inventory:updated", { container: player.inventory });
     emitStoreEvent("equipment:updated", { slot: null });
-    if (entry.quests) {
+    if ("quests" in entry) {
       emitStoreEvent("quest:updated", { questId: null, state: null });
     }
     if (entry.achievements) {
@@ -439,35 +463,58 @@ export function createLanRouter(ctx) {
       if (player && Number.isInteger(msg.playerId)) {
         player.netId = msg.playerId;
       }
+      const characterSnapshot = msg.characterSnapshot || null;
       const snapshot = msg.snapshot || null;
       const playersSnapshot = snapshot?.players || [];
       if (player && Number.isInteger(msg.playerId)) {
-        const localEntry = playersSnapshot.find((p) => Number(p?.id) === msg.playerId) || null;
-        if (localEntry && player.stats) {
-          applyServerPlayerSnapshot(localEntry);
-          const hpMax = Number.isFinite(localEntry.hpMax)
-            ? localEntry.hpMax
-            : Number.isFinite(localEntry.hp)
-              ? localEntry.hp
-              : null;
-          if (Number.isFinite(hpMax)) {
-            const hp = Number.isFinite(localEntry.hp) ? localEntry.hp : hpMax;
-            player.stats.hpMax = hpMax;
-            player.stats.hp = Math.min(hp, hpMax);
-            if (typeof player.updateHudHp === "function") {
-              player.updateHudHp(player.stats.hp, player.stats.hpMax);
+        const localEntry = characterSnapshot
+          ? {
+              displayName: characterSnapshot.name || null,
+              classId: characterSnapshot.classId || null,
+              level: Number.isFinite(characterSnapshot.level) ? characterSnapshot.level : null,
+              baseStats: characterSnapshot.baseStats || null,
+              levelState: characterSnapshot.levelState || null,
+              inventory: characterSnapshot.inventory || null,
+              trash: characterSnapshot.trash || null,
+              equipment: characterSnapshot.equipment || null,
+              quests: characterSnapshot.quests ?? {},
+              achievements: characterSnapshot.achievements ?? {},
+              metiers: characterSnapshot.metiers ?? {},
+              spellParchments: characterSnapshot.spellParchments ?? {},
+              gold: Number.isFinite(characterSnapshot.gold) ? characterSnapshot.gold : null,
+              honorPoints: Number.isFinite(characterSnapshot.honorPoints)
+                ? characterSnapshot.honorPoints
+                : null,
+              hp: Number.isFinite(characterSnapshot.stats?.hp)
+                ? characterSnapshot.stats.hp
+                : null,
+              hpMax: Number.isFinite(characterSnapshot.stats?.hpMax)
+                ? characterSnapshot.stats.hpMax
+                : null,
+              mapId: characterSnapshot.mapKey || null,
+              x: Number.isFinite(characterSnapshot.tileX) ? characterSnapshot.tileX : null,
+              y: Number.isFinite(characterSnapshot.tileY) ? characterSnapshot.tileY : null,
             }
-          }
+          : playersSnapshot.find((p) => Number(p?.id) === msg.playerId) || null;
+        if (localEntry) {
+          applyServerPlayerSnapshot(localEntry);
         }
-        if (localEntry?.mapId) {
+        const targetMapId = localEntry?.mapId || null;
+        if (targetMapId) {
           const currentMap = getCurrentMapKey();
-          const mapDef = maps[localEntry.mapId] || null;
-          if (mapDef && currentMap !== localEntry.mapId) {
+          const mapDef = maps[targetMapId] || null;
+          if (mapDef && currentMap !== targetMapId) {
             const startTile =
               Number.isInteger(localEntry.x) && Number.isInteger(localEntry.y)
                 ? { x: localEntry.x, y: localEntry.y }
                 : null;
-            loadMapLikeMain(scene, mapDef, startTile ? { startTile } : undefined);
+            if (isSceneReadyForNet()) {
+              loadMapLikeMain(
+                scene,
+                mapDef,
+                startTile ? { startTile } : undefined
+              );
+            }
           }
         }
       }

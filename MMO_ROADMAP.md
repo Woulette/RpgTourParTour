@@ -4,7 +4,6 @@
 - (Termine)
 
 ## Phase 2 - MMO jouable
-- Marche simple (listings, achat, annulation, taxes)
 - Outils admin (kick/ban, give item, inspect)
 - Audit events gameplay (trade, drop, quest turn-in)
 - Tests anti-cheat rapides (rate-limits + invalid quest actions)

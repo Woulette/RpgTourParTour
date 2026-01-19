@@ -1,4 +1,4 @@
-# Checklist MMO Beta
+﻿# Checklist MMO Beta
 
 ## Systèmes Core (Indispensable)
 - Serveur autoritaire : déplacement, combat, loot, échange, craft, inventaire.
@@ -10,7 +10,6 @@
 
 ## Économie & Social (MVP)
 - Échanges sécurisés (pas de duplication / pas de perte, rollback safe).
-- Marché basique (listing + achat direct) ou PNJ achat/vente.
 - Chat : global + map + groupe + privé.
 - Amis + invitations de groupe (accept/decline, sync des membres).
 
@@ -37,3 +36,8 @@
 - Combat : tacle, cooldowns, LOS, sorts invalides.
 - Transitions de map : chaque bordure et portail.
 - Persistance : relog restaure inventaire/position/quêtes.
+
+## TerminÇ¸
+- Marché¸ basique (listing + achat direct) ou PNJ achat/vente.
+- Craft / inventaire / loot gÇ¸rÇ¸s cÇïtÇ¸ serveur.
+

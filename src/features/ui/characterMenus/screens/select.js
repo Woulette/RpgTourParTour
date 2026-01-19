@@ -19,7 +19,9 @@
     characterListEl,
   } = elements;
   function showSelect() {
-    if (!state.getActiveAccount()?.name || !state.getActiveAccount()?.password) {
+    const account = state.getActiveAccount();
+    const hasToken = !!account?.sessionToken;
+    if (!account?.name || (!account?.password && !hasToken)) {
       actions.showLogin();
       return;
     }
@@ -65,7 +67,9 @@
   }
 
   function refreshSelectAfterCharactersChanged() {
-    if (!state.getActiveAccount()?.name || !state.getActiveAccount()?.password) {
+    const account = state.getActiveAccount();
+    const hasToken = !!account?.sessionToken;
+    if (!account?.name || (!account?.password && !hasToken)) {
       actions.showLogin();
       return;
     }

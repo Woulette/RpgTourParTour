@@ -406,7 +406,7 @@ export const maps = {
     worldPos: { x: -2, y: -1 },
     jsonPath: "assets/maps/MapAndemiaNouvelleVersion4.json",
     tilesets: [...tilesetNew, tourMairieTileset],
-    groundLayerName: "Calque de Tuiles 1",
+    groundLayerName: "ground_playable",
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,

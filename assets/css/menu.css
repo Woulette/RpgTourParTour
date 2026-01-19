@@ -14,6 +14,10 @@ body.menu-open .menu-overlay {
   display: block;
 }
 
+body.menu-choice-open .menu-overlay {
+  display: block;
+}
+
 body.menu-login .menu-overlay,
 body.menu-servers .menu-overlay {
   background:
@@ -564,6 +568,152 @@ body.menu-open #combat-result-overlay {
 
 .menu-panel.menu-v2 .menu-btn:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+.menu-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 6, 0.62);
+  z-index: 999;
+}
+
+.menu-loading-overlay[hidden] {
+  display: none;
+}
+
+.menu-choice-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 6, 0.6);
+  z-index: 1000;
+}
+
+.menu-choice-overlay[hidden] {
+  display: none;
+}
+
+.menu-choice-card {
+  min-width: 320px;
+  max-width: 420px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid #5c3f2b;
+  background: #2b1d13;
+  color: #f2e5d2;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+body.menu-choice-in-game .menu-overlay {
+  background: transparent;
+  pointer-events: none;
+}
+
+body.menu-choice-in-game .menu-panel {
+  display: none;
+}
+
+body.menu-choice-in-game .menu-choice-overlay {
+  background: transparent;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 54px 16px 0 0;
+  pointer-events: none;
+}
+
+body.menu-choice-in-game .menu-choice-card {
+  min-width: 190px;
+  max-width: 220px;
+  padding: 12px 14px;
+  text-align: left;
+  pointer-events: auto;
+}
+
+body.menu-choice-in-game .menu-choice-title {
+  font-size: 13px;
+  text-align: left;
+}
+
+body.menu-choice-in-game .menu-choice-text {
+  font-size: 12px;
+  text-align: left;
+}
+
+body.menu-choice-in-game .menu-choice-actions .menu-btn {
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.menu-choice-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.menu-choice-text {
+  margin: 0 0 12px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.menu-choice-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.menu-choice-card .menu-btn {
+  width: 100%;
+  border: 1px solid #5c3f2b;
+  background: #f2e5d2;
+  color: #2b1d13;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.menu-choice-card .menu-btn.menu-btn-secondary {
+  background: rgba(242, 229, 210, 0.12);
+  color: #f2e5d2;
+}
+
+.menu-choice-card .menu-btn.menu-btn-primary {
+  background: rgba(251, 191, 36, 0.95);
+  color: #2b1d13;
+}
+
+.menu-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid #5c3f2b;
+  background: #2b1d13;
+  color: #f2e5d2;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.menu-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #c9b39a;
+  border-top-color: transparent;
+  animation: menu-spin 0.9s linear infinite;
+}
+
+@keyframes menu-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .menu-panel.menu-v2 .menu-btn-primary {

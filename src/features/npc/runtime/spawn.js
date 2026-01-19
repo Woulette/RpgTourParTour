@@ -56,6 +56,18 @@ function shouldSpawnNpc(def, player) {
 }
 
 function spawnNpcInstance(scene, map, groundLayer, def) {
+  if (
+    !scene ||
+    !map ||
+    !groundLayer ||
+    typeof map.tileToWorldXY !== "function" ||
+    !Number.isFinite(map.tileWidth) ||
+    !Number.isFinite(map.tileHeight) ||
+    !groundLayer.layer ||
+    !Number.isFinite(groundLayer.layer.baseTileWidth)
+  ) {
+    return null;
+  }
   const { tileX, tileY } = def;
   const worldPos = map.tileToWorldXY(
     tileX,
@@ -202,12 +214,43 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
     questMarkerUnsubscribe = null;
   }
 
+  const isMapReadyForNpcs = (targetMap, targetLayer) =>
+    !!(
+      targetMap &&
+      targetLayer &&
+      typeof targetMap.tileToWorldXY === "function" &&
+      Number.isFinite(targetMap.tileWidth) &&
+      Number.isFinite(targetMap.tileHeight) &&
+      targetLayer.layer &&
+      Number.isFinite(targetLayer.layer.baseTileWidth)
+    );
+
+  const scheduleNpcRefresh = () => {
+    if (!scene) return;
+    if (scene.__npcQuestRefreshTimer) return;
+    const run = () => {
+      scene.__npcQuestRefreshTimer = null;
+      if (!scene) return;
+      if (!isMapReadyForNpcs(scene.map, scene.groundLayer)) return;
+      refreshNpcQuestMarkers(scene, scene.player);
+    };
+    if (scene?.time?.delayedCall) {
+      scene.__npcQuestRefreshTimer = scene.time.delayedCall(200, run);
+    } else {
+      scene.__npcQuestRefreshTimer = setTimeout(run, 200);
+    }
+  };
+
   questMarkerUnsubscribe = onStoreEvent("quest:updated", () => {
     if (!scene || !scene.npcs) return;
     const byId = new Map(scene.npcs.map((n) => [n.id, n]));
     const currentMapKey = scene.currentMapKey || mapId;
     const currentMap = scene.map || map;
     const currentGroundLayer = scene.groundLayer || groundLayer;
+    if (!isMapReadyForNpcs(currentMap, currentGroundLayer)) {
+      scheduleNpcRefresh();
+      return;
+    }
     const currentMapNpcs = ALL_NPCS.filter(
       (npc) => npc.mapId === currentMapKey
     );
@@ -232,6 +275,10 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
   }
 
   inventoryMarkerUnsubscribe = onStoreEvent("inventory:updated", () => {
+    if (!isMapReadyForNpcs(scene?.map, scene?.groundLayer)) {
+      scheduleNpcRefresh();
+      return;
+    }
     refreshNpcQuestMarkers(scene, scene.player);
   });
 }

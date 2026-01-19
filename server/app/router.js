@@ -158,9 +158,25 @@ function createRouterHandlers(ctx) {
         playerHandlers.handleCmdGroupDisband(clientInfo, msg);
         break;
       case "CmdLogout":
-        if (typeof revokeSessionToken === "function") {
+        if (typeof revokeSessionToken === "function" && msg?.revokeSession !== false) {
           const token = typeof msg.sessionToken === "string" ? msg.sessionToken : null;
           revokeSessionToken(token);
+        }
+        if (Number.isInteger(msg?.playerId) && msg.playerId === clientInfo.id) {
+          const player = state.players[clientInfo.id];
+          if (player) {
+            player.connected = false;
+            player.__disconnectedByLogout = true;
+            persistPlayerState(player, { immediate: true });
+            if (typeof playerHandlers.handlePlayerDisconnect === "function") {
+              playerHandlers.handlePlayerDisconnect(clientInfo.id);
+            }
+            broadcast({
+              t: "EvPlayerLeft",
+              mapId: player?.mapId || null,
+              playerId: clientInfo.id,
+            });
+          }
         }
         ws.close();
         break;
@@ -352,19 +368,33 @@ function createRouterHandlers(ctx) {
     const clientInfo = clients.get(ws);
     if (!clientInfo) return;
     const player = state.players[clientInfo.id];
+    let shouldBroadcastLeft = true;
     if (player) {
-      player.connected = false;
-      persistPlayerState(player, { immediate: true });
-    }
-    if (typeof playerHandlers.handlePlayerDisconnect === "function") {
-      playerHandlers.handlePlayerDisconnect(clientInfo.id);
+      if (player.__deleted) {
+        if (typeof playerHandlers.handlePlayerDisconnect === "function") {
+          playerHandlers.handlePlayerDisconnect(clientInfo.id);
+        }
+        delete state.players[clientInfo.id];
+        player.__deleted = false;
+      } else if (player.__disconnectedByLogout) {
+        player.__disconnectedByLogout = false;
+        shouldBroadcastLeft = false;
+      } else {
+        player.connected = false;
+        persistPlayerState(player, { immediate: true });
+        if (typeof playerHandlers.handlePlayerDisconnect === "function") {
+          playerHandlers.handlePlayerDisconnect(clientInfo.id);
+        }
+      }
     }
     clients.delete(ws);
-    broadcast({
-      t: "EvPlayerLeft",
-      mapId: player?.mapId || null,
-      playerId: clientInfo.id,
-    });
+    if (shouldBroadcastLeft) {
+      broadcast({
+        t: "EvPlayerLeft",
+        mapId: player?.mapId || null,
+        playerId: clientInfo.id,
+      });
+    }
     if (clientInfo.id === getHostId()) {
       const next = clients.values().next().value || null;
       setHostId(next ? next.id : null);

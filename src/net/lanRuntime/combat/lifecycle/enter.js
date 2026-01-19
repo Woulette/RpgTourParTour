@@ -20,6 +20,14 @@ export function createCombatEnterHandlers({
   const { buildLanActorsOrder, shouldApplyCombatEvent } = helpers;
   const { syncCombatPlayerAllies } = prepHandlers;
   const { startCombatSync, sendCombatState } = syncHandlers;
+  const setCombatReconnectFlag = (value) => {
+    if (typeof window === "undefined" || !window.localStorage) return;
+    if (value) {
+      window.localStorage.setItem("andemia_combat_reconnect", "1");
+    } else {
+      window.localStorage.removeItem("andemia_combat_reconnect");
+    }
+  };
 
   const applyCombatCreated = (entry) => {
     if (!entry || !Number.isInteger(entry.combatId)) return;
@@ -51,6 +59,7 @@ export function createCombatEnterHandlers({
       if (Number.isInteger(entry.aiDriverId)) {
         scene.__lanCombatAiDriverId = entry.aiDriverId;
       }
+      setCombatReconnectFlag(true);
     }
 
     const currentMap = getCurrentMapKey();
@@ -96,6 +105,7 @@ export function createCombatEnterHandlers({
       if (Number.isInteger(entry.aiDriverId)) {
         scene.__lanCombatAiDriverId = entry.aiDriverId;
       }
+      setCombatReconnectFlag(true);
     }
 
     const currentMap = getCurrentMapKey();

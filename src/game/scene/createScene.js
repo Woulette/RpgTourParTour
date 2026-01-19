@@ -2,7 +2,6 @@ import { defaultMapKey, maps } from "../../features/maps/index.js";
 import { rebuildDebugGrid, initWorldExitsForScene } from "../../features/maps/world.js";
 import { createMapExits } from "../../features/maps/exits.js";
 import { onAfterMapLoaded } from "../../features/dungeons/hooks.js";
-import { loadCharacterSnapshot } from "../../save/index.js";
 import { getSelectedCharacter } from "../../app/session.js";
 import { buildInitialMap } from "./sceneMap.js";
 import { setupPlayerForScene } from "./scenePlayer.js";
@@ -14,15 +13,9 @@ import { initLanRuntime } from "../../net/lanRuntime.js";
 
 export function createMainScene(scene) {
   const selected = getSelectedCharacter() || null;
-  const snapshot = selected?.id ? loadCharacterSnapshot(selected.id) : null;
-  const requestedMapKey = snapshot?.mapKey || defaultMapKey;
+  const snapshot = null;
+  const requestedMapKey = defaultMapKey;
   const mapDef = maps[requestedMapKey] || maps[defaultMapKey];
-
-  if (selected && snapshot) {
-    if (snapshot.name) selected.name = snapshot.name;
-    if (snapshot.classId) selected.classId = snapshot.classId;
-    if (Number.isFinite(snapshot.level)) selected.level = snapshot.level;
-  }
 
   const mapState = buildInitialMap(scene, mapDef, snapshot);
 

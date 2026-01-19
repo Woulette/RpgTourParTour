@@ -216,7 +216,53 @@ function createAuthHandlers({
       classId: entry.classId || "archer",
       level: Number.isInteger(entry.level) ? entry.level : 1,
       updatedAt: Number.isFinite(entry.updatedAt) ? entry.updatedAt : null,
+      inCombat: Object.values(state.players).some(
+        (p) => p && p.characterId === entry.characterId && p.inCombat === true
+      ),
     }));
+  }
+
+  function buildCharacterSnapshot(player) {
+    if (!player) return null;
+    const hp = Number.isFinite(player.hp)
+      ? player.hp
+      : Number.isFinite(player.stats?.hp)
+        ? player.stats.hp
+        : null;
+    const hpMax = Number.isFinite(player.hpMax)
+      ? player.hpMax
+      : Number.isFinite(player.stats?.hpMax)
+        ? player.stats.hpMax
+        : null;
+    const level = Number.isInteger(player.level)
+      ? player.level
+      : Number.isFinite(player.levelState?.niveau)
+        ? Math.round(player.levelState.niveau)
+        : 1;
+    return {
+      id: player.characterId || null,
+      name: player.displayName || "Joueur",
+      classId: player.classId || "archer",
+      level,
+      mapKey: player.mapId || null,
+      tileX: Number.isFinite(player.x) ? Math.round(player.x) : null,
+      tileY: Number.isFinite(player.y) ? Math.round(player.y) : null,
+      gold: Number.isFinite(player.gold) ? player.gold : 0,
+      honorPoints: Number.isFinite(player.honorPoints) ? player.honorPoints : 0,
+      levelState: player.levelState || null,
+      baseStats: player.baseStats || null,
+      inventory: player.inventory || null,
+      trash: player.trash || null,
+      equipment: player.equipment || null,
+      quests: player.quests || null,
+      achievements: player.achievements || null,
+      metiers: player.metiers || null,
+      spellParchments: player.spellParchments || null,
+      stats: {
+        hp,
+        hpMax,
+      },
+    };
   }
 
   function sendAccountCharacters(ws, accountId) {
@@ -320,6 +366,7 @@ function createAuthHandlers({
         protocolVersion: PROTOCOL_VERSION,
         dataHash: GAME_DATA_VERSION,
         sessionToken: nextSessionToken,
+        characterSnapshot: buildCharacterSnapshot(existingPlayer),
         snapshot: snapshotForClient(),
       });
 
@@ -530,6 +577,7 @@ function createAuthHandlers({
       protocolVersion: PROTOCOL_VERSION,
       dataHash: GAME_DATA_VERSION,
       sessionToken: nextSessionToken,
+      characterSnapshot: buildCharacterSnapshot(player),
       snapshot: snapshotForClient(),
     });
 
@@ -584,6 +632,7 @@ function createAuthHandlers({
     let accountId = null;
 
     const hasCredentials = !!(accountName && accountPassword);
+    const wantsExplicitAuth = hasCredentials && authMode !== "invalid";
     const now = Date.now();
     const ipKey = ws?._socket?.remoteAddress || "unknown";
     const accountKey = normalizeAccountName(accountName);
@@ -609,7 +658,7 @@ function createAuthHandlers({
       ws.close();
       return;
     }
-    if (hasSession) {
+    if (hasSession && !wantsExplicitAuth) {
       accountId = sessionAccountId;
       registerSuccess(ipBucket, now);
       registerSuccess(accountBucket, now);
@@ -863,12 +912,28 @@ function createAuthHandlers({
       send(ws, { t: "EvAccountDeleteFailed", reason: "character_owned" });
       return;
     }
-    const online = Object.values(state.players).some(
+    const onlinePlayers = Object.values(state.players).filter(
       (p) => p && p.characterId === characterId && p.connected !== false
     );
-    if (online) {
-      send(ws, { t: "EvAccountDeleteFailed", reason: "character_in_use" });
-      return;
+    if (onlinePlayers.length > 0) {
+      onlinePlayers.forEach((player) => {
+        player.__deleted = true;
+        let closed = false;
+        for (const [clientWs, info] of clients.entries()) {
+          if (info && info.id === player.id) {
+            try {
+              clientWs.close();
+            } catch {
+              // ignore close errors
+            }
+            closed = true;
+            break;
+          }
+        }
+        if (!closed) {
+          delete state.players[player.id];
+        }
+      });
     }
     const ok = characterStore.deleteCharacter(characterId);
     if (!ok) {

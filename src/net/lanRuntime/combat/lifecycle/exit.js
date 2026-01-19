@@ -17,6 +17,10 @@ export function createCombatExitHandlers({ ctx, helpers, syncHandlers }) {
   } = ctx;
   const { shouldApplyCombatEvent } = helpers;
   const { stopCombatSync } = syncHandlers;
+  const clearCombatReconnectFlag = () => {
+    if (typeof window === "undefined" || !window.localStorage) return;
+    window.localStorage.removeItem("andemia_combat_reconnect");
+  };
 
   const applyCombatEnded = (entry) => {
     if (!entry || !Number.isInteger(entry.combatId)) return;
@@ -59,6 +63,9 @@ export function createCombatExitHandlers({ ctx, helpers, syncHandlers }) {
         player._blockedTile = null;
       }
       stopCombatSync();
+    }
+    if (localId && participantIds.includes(localId)) {
+      clearCombatReconnectFlag();
     }
     if (shouldEndLocal && scene.combatState) {
       if (typeof entry.issue === "string" && entry.issue) {

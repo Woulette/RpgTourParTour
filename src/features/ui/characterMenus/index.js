@@ -1,10 +1,5 @@
-import { classes } from "../../../config/classes.js";
+﻿import { classes } from "../../../config/classes.js";
 import { on as onStore } from "../../../state/store.js";
-import {
-  deleteCharacter,
-  listCharacterMetas,
-  upsertCharacterMeta,
-} from "../../../save/index.js";
 import {
   clearSelectedCharacter,
   getSelectedCharacter as getSessionSelectedCharacter,
@@ -16,12 +11,16 @@ import {
 } from "../../../app/session.js";
 import { AUTH_MESSAGES, createAccountHelpers } from "./account.js";
 import { createLanHelpers } from "./lan.js";
+import { CLASS_ORDER, CAROUSEL_ORDER, CLASS_UI } from "./classUi.js";
+import { createCarousel } from "./carousel.js";
+import { createMenuState } from "./menuState.js";
+import { createMenuActions } from "./menuActions.js";
 import { createLoginScreen } from "./screens/login.js";
 import { createCreateScreen } from "./screens/create.js";
 import { createSelectScreen } from "./screens/select.js";
 import { createServersScreen } from "./screens/servers.js";
 
-export function initCharacterMenus({ onStartGame }) {
+export function initCharacterMenus({ onStartGame, onEnterMenu }) {
   const overlayEl = document.getElementById("menu-overlay");
   const panelEl = overlayEl ? overlayEl.querySelector(".menu-panel") : null;
   const screenLoginEl = document.getElementById("menu-screen-login");
@@ -88,8 +87,106 @@ export function initCharacterMenus({ onStartGame }) {
     return null;
   }
 
-  const CLASS_ORDER = ["archer", "tank", "mage", "eryon"];
-  const CAROUSEL_ORDER = ["archer", "tank", "mage", "eryon"];
+  const loadingOverlay = document.createElement("div");
+  loadingOverlay.className = "menu-loading-overlay";
+  loadingOverlay.hidden = true;
+  loadingOverlay.innerHTML = `
+    <div class="menu-loading-card">
+      <div class="menu-loading-spinner"></div>
+      <div class="menu-loading-text">Chargement...</div>
+    </div>
+  `;
+  overlayEl.appendChild(loadingOverlay);
+  const loadingTextEl = loadingOverlay.querySelector(".menu-loading-text");
+  let pendingLoadingLabel = "Chargement...";
+
+  const choiceOverlay = document.createElement("div");
+  choiceOverlay.className = "menu-choice-overlay";
+  choiceOverlay.hidden = true;
+  choiceOverlay.innerHTML = `
+    <div class="menu-choice-card">
+      <div class="menu-choice-title">Menu du compte</div>
+      <p class="menu-choice-text">
+        Que veux-tu faire ?
+      </p>
+      <div class="menu-choice-actions">
+        <button type="button" class="menu-btn menu-btn-primary" data-action="select">
+          Selection personnage
+        </button>
+        <button type="button" class="menu-btn menu-btn-secondary" data-action="servers">
+          Serveurs
+        </button>
+        <button type="button" class="menu-btn menu-btn-secondary" data-action="logout">
+          Deconnexion
+        </button>
+        <button type="button" class="menu-btn" data-action="close">
+          Retour au jeu
+        </button>
+      </div>
+    </div>
+  `;
+  overlayEl.appendChild(choiceOverlay);
+  const choiceSelectBtn = choiceOverlay.querySelector("[data-action='select']");
+  const choiceServersBtn = choiceOverlay.querySelector("[data-action='servers']");
+  const choiceLogoutBtn = choiceOverlay.querySelector("[data-action='logout']");
+  const choiceCloseBtn = choiceOverlay.querySelector("[data-action='close']");
+
+  function setLoadingLabel(label) {
+    pendingLoadingLabel = label || "Chargement...";
+    if (loadingTextEl) loadingTextEl.textContent = pendingLoadingLabel;
+  }
+
+  function setMenuLoading(isLoading) {
+    loadingOverlay.hidden = !isLoading;
+    document.body.classList.toggle("menu-loading", !!isLoading);
+    if (isLoading && loadingTextEl) {
+      loadingTextEl.textContent = pendingLoadingLabel;
+    }
+    const buttons = [
+      btnServersContinue,
+      btnPlay,
+      btnCreate,
+      btnGoCreate,
+      btnGoServers,
+      btnLanConnect,
+      btnBackSelect,
+    ];
+    buttons.forEach((button) => {
+      if (!button) return;
+      if (isLoading) {
+        button.dataset.wasDisabled = button.disabled ? "1" : "0";
+        button.disabled = true;
+        return;
+      }
+      if (button.dataset.wasDisabled) {
+        button.disabled = button.dataset.wasDisabled === "1";
+        delete button.dataset.wasDisabled;
+      }
+    });
+  }
+
+  function showChoiceOverlay({ inGame = false } = {}) {
+    screenLoginEl.hidden = true;
+    screenServersEl.hidden = true;
+    screenSelectEl.hidden = true;
+    screenCreateEl.hidden = true;
+    choiceOverlay.hidden = false;
+    document.body.classList.add("menu-choice-open");
+    if (inGame) {
+      document.body.classList.add("menu-choice-in-game");
+    } else {
+      document.body.classList.remove("menu-choice-in-game");
+    }
+    document.body.classList.remove("menu-login");
+    document.body.classList.remove("menu-servers");
+  }
+
+  function hideChoiceOverlay() {
+    choiceOverlay.hidden = true;
+    document.body.classList.remove("menu-choice-open");
+    document.body.classList.remove("menu-choice-in-game");
+  }
+
   const host =
     typeof window !== "undefined" && window.location
       ? window.location.hostname
@@ -115,190 +212,28 @@ export function initCharacterMenus({ onStartGame }) {
       region: "Local",
     },
   ];
-  const classUi = {
-    archer: {
-      title: "Archer",
-      desc: "Dâ‚¬Ã·gâ‚¬Â«ts â‚¬Ëœ distance, mobilitâ‚¬Ã·.",
-      bullets: ["Attaques â‚¬Ëœ distance", "Bon repositionnement", "Jeu safe"],
-      previewImage: "assets/animations/animation archer/rotations/south.png",
-      selectable: true,
-    },
-    tank: {
-      title: "Tank",
-      desc: "Dâ‚¬Ã·gâ‚¬Â«ts au corps â‚¬Ëœ corps, encaisse et contrâ‚¬â€¹le.",
-      bullets: ["Corps â‚¬Ëœ corps", "Trâ‚¬â€”s râ‚¬Ã·sistant", "Contrâ‚¬â€¹le de zone"],
-      previewImage: "assets/animations/animation tank/rotations/south.png",
-      selectable: true,
-    },
-    mage: {
-      title: "Animiste",
-      desc: "Magie spirituelle : soutien, capture et invocation.",
-      bullets: ["Magie & altâ‚¬Ã·rations", "Capture d'essence", "Invocation capturâ‚¬Ã·e"],
-      previewImage: "assets/animations/animations-Animiste/rotations/south.png",
-      selectable: true,
-    },
-    eryon: {
-      title: "Eryon",
-      desc: "Nouvelle classe en test.",
-      bullets: ["Mobilitâ‚¬Ã·", "Dâ‚¬Ã·gâ‚¬Â«ts", "Style Eryon"],
-      previewImage: "assets/animations/animations-Eryon/rotations/south.png",
-      selectable: true,
-    },
+  const classUi = CLASS_UI;
+
+  const menuState = createMenuState({
+    classes,
+    classUi,
+    classOrder: CLASS_ORDER,
+    carouselOrder: CAROUSEL_ORDER,
+  });
+  menuState.setSelectedServerId(SERVERS[0]?.id || null);
+
+  const screens = {
+    login: null,
+    servers: null,
+    select: null,
+    create: null,
   };
 
-  const getAvailableClassIds = () => CLASS_ORDER.filter((id) => classes[id]);
-  const getCarouselClassIds = () => CAROUSEL_ORDER.filter((id) => classes[id]);
-
-  const getDefaultCreateClassId = () => {
-    const ids = getAvailableClassIds();
-    const firstPlayable =
-      ids.find((id) => classUi[id]?.selectable !== false) || null;
-    return firstPlayable || ids[0] || "archer";
-  };
-
-  const characters = [];
-  let selectedCharacterId = null;
-  let selectedClassId = null;
-  let lanClient = null;
-  let lanConnected = false;
-  let pendingStartCharacter = null;
-  let resyncTimer = null;
-  let loginMode = "login";
-  let activeAccount = null;
-  let selectedServerId = SERVERS[0]?.id || null;
   let createScreen;
   let selectScreen;
   let loginScreen;
   let serversScreen;
-  let useServerCharacters = false;
-  let serverAccountName = null;
-  let serverListPending = false;
-  let carouselOrder = getCarouselClassIds();
-  let carouselIds = getCarouselClassIds();
-  const carouselSlotByClassId = new Map();
-  const carouselSlotByKey = new Map();
-
-  function normalizeAccountName(name) {
-    return String(name || "").trim().toLowerCase();
-  }
-
-  function reloadCharactersForAccount(accountName) {
-    if (useServerCharacters) {
-      return;
-    }
-    characters.length = 0;
-    let metas = [];
-    try {
-      metas = listCharacterMetas(accountName);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[menu] failed to load saved characters:", err);
-    }
-    metas.forEach((m) => {
-      if (!m || !m.id) return;
-      characters.push({
-        id: m.id,
-        name: m.name || "Joueur",
-        classId: m.classId || "archer",
-        level: m.level ?? 1,
-        accountName: m.accountName || null,
-      });
-    });
-    if (selectedCharacterId) {
-      const stillExists = characters.some((c) => c && c.id === selectedCharacterId);
-      if (!stillExists) {
-        selectedCharacterId = null;
-        if (btnPlay) btnPlay.disabled = true;
-      }
-    }
-    if (document.body.classList.contains("menu-open")) {
-      if (selectScreen && typeof selectScreen.renderCharacters === "function") {
-        selectScreen.renderCharacters();
-      }
-      if (typeof renderCarouselMeta === "function") {
-        renderCarouselMeta();
-      }
-    }
-  }
-
-  function clearCharactersList() {
-    characters.length = 0;
-    selectedCharacterId = null;
-    if (btnPlay) btnPlay.disabled = true;
-    if (document.body.classList.contains("menu-open")) {
-      if (selectScreen && typeof selectScreen.renderCharacters === "function") {
-        selectScreen.renderCharacters();
-      }
-      if (typeof renderCarouselMeta === "function") {
-        renderCarouselMeta();
-      }
-    }
-  }
-
-  function removeLocalCharacterEntry(characterId) {
-    if (!characterId) return;
-    const index = characters.findIndex((c) => c && c.id === characterId);
-    if (index >= 0) {
-      characters.splice(index, 1);
-    }
-    if (selectedCharacterId === characterId) {
-      selectedCharacterId = characters[0]?.id || null;
-      if (btnPlay) btnPlay.disabled = !selectedCharacterId;
-    }
-    if (document.body.classList.contains("menu-open")) {
-      if (selectScreen && typeof selectScreen.renderCharacters === "function") {
-        selectScreen.renderCharacters();
-      }
-      if (typeof renderCarouselMeta === "function") {
-        renderCarouselMeta();
-      }
-    }
-  }
-
-  function setCharactersFromServer(list, accountName) {
-    useServerCharacters = true;
-    serverListPending = false;
-    serverAccountName = normalizeAccountName(accountName);
-    const normalizedAccount = serverAccountName || null;
-    characters.length = 0;
-    const items = Array.isArray(list) ? list : [];
-    const serverIds = new Set();
-    items.forEach((entry) => {
-      if (!entry || !entry.characterId) return;
-      serverIds.add(entry.characterId);
-      const character = {
-        id: entry.characterId,
-        name: entry.name || "Joueur",
-        classId: entry.classId || "archer",
-        level: entry.level ?? 1,
-        accountName: accountName || null,
-      };
-      characters.push(character);
-      upsertCharacterMetaForAccount(character);
-    });
-    if (normalizedAccount) {
-      try {
-        const localMetas = listCharacterMetas(normalizedAccount);
-        localMetas.forEach((meta) => {
-          if (!meta?.id) return;
-          if (!serverIds.has(meta.id)) {
-            deleteCharacter(meta.id);
-          }
-        });
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("[menu] failed to sync local character cache:", err);
-      }
-    }
-    if (characters.length === 0) {
-      createScreen?.showCreate?.();
-      return;
-    }
-    const fallback = characters[0];
-    selectedCharacterId = fallback?.id || null;
-    btnPlay.disabled = !selectedCharacterId;
-    selectScreen?.showSelect?.();
-  }
+  let lan = null;
 
   const account = createAccountHelpers({
     elements: {
@@ -311,14 +246,29 @@ export function initCharacterMenus({ onStartGame }) {
       btnLoginSubmit,
       btnLoginToggle,
     },
-    getLoginMode: () => loginMode,
+    getLoginMode: () => menuState.getLoginMode(),
     setLoginMode: (mode) => {
-      loginMode = mode;
+      menuState.setLoginMode(mode);
     },
-    getActiveAccount: () => activeAccount,
+    getActiveAccount: () => menuState.getActiveAccount(),
   });
 
-  const lan = createLanHelpers({
+  const menuActions = createMenuActions({
+    state: menuState,
+    getLan: () => lan,
+    screens,
+    account,
+    getSelectedServerUrl,
+    getNetPlayerId,
+    clearSelectedCharacter,
+    onStartGame,
+    closeMenu,
+    btnPlay,
+  });
+
+  const { connection } = menuActions;
+
+  lan = createLanHelpers({
     elements: { btnLanConnect, loginRemember },
     accountHelpers: account,
     authMessages: AUTH_MESSAGES,
@@ -329,38 +279,58 @@ export function initCharacterMenus({ onStartGame }) {
       pushNetEvent,
       getSessionSelectedCharacter,
     },
-    getCharacters: () => characters,
-    getSelectedCharacterId: () => selectedCharacterId,
-    setSelectedCharacterId: (id) => {
-      selectedCharacterId = id;
+    setConnecting: (value) => {
+      connection.setConnecting(value);
+      setMenuLoading(!!value);
     },
-    getLanClient: () => lanClient,
+    getCharacters: () => menuState.getCharacters(),
+    getSelectedCharacterId: () => menuState.getSelectedCharacterId(),
+    setSelectedCharacterId: (id) => {
+      menuState.setSelectedCharacterId(id);
+    },
+    getLanClient: () => connection.getLanClient(),
     setLanClient: (client) => {
-      lanClient = client;
+      connection.setLanClient(client);
     },
     setLanConnected: (value) => {
-      lanConnected = value;
+      connection.setLanConnected(value);
     },
     setPendingStartCharacter: (value) => {
-      pendingStartCharacter = value;
+      connection.setPendingStartCharacter(value);
     },
-    getPendingStartCharacter: () => pendingStartCharacter,
+    getPendingStartCharacter: () => connection.getPendingStartCharacter(),
     setActiveAccount: (value) => {
-      activeAccount = value;
-      if (useServerCharacters) {
-        clearCharactersList();
-        return;
-      }
-      const name = normalizeAccountName(activeAccount?.name);
-      reloadCharactersForAccount(name || null);
+      menuState.setActiveAccount(value);
+      menuState.clearCharactersList();
     },
-    onShowSelect: () => selectScreen.showSelect(),
+    onShowSelect: () => screens.select?.showSelect?.(),
     getServerUrl: () => getSelectedServerUrl(),
-    onAuthRefused: () => loginScreen.showLogin(),
+    onAuthRefused: (reason) => {
+      screens.login?.showLogin?.();
+      account.setLoginError(
+        AUTH_MESSAGES[reason] || `Connexion refusee: ${reason || "unknown"}`
+      );
+    },
     onStartGameWithCharacter: (character, options) =>
-      startGameWithCharacter(character, options),
+      menuActions.startGameWithCharacter(character, options),
     onAccountCharacters: (list) => {
-      setCharactersFromServer(list, normalizeAccountName(activeAccount?.name));
+      menuState.setCharactersFromServer(
+        list,
+        menuState.normalizeAccountName(menuState.getActiveAccount()?.name)
+      );
+      if (menuState.getCharacters().length === 0) {
+        screens.create?.showCreate?.();
+      } else {
+        screens.select?.showSelect?.();
+      }
+      const pendingDelete = connection.getPendingDeleteCharacterId();
+      const client = connection.getLanClient();
+      if (pendingDelete && client?.sendCmd) {
+        connection.setPendingDeleteCharacterId(null);
+        client.sendCmd("CmdAccountDeleteCharacter", {
+          characterId: pendingDelete,
+        });
+      }
     },
     onAccountCreateFailed: (reason) => {
       const message =
@@ -382,10 +352,36 @@ export function initCharacterMenus({ onStartGame }) {
     },
   });
 
-  // Mapping index -> position class (comme ton dessin : centre, haut, gauche, droite)
-  const POS_CLASSES = ["pos-center", "pos-top", "pos-left", "pos-right"];
-
   const isCreateMode = () => !screenCreateEl.hidden;
+
+  const carousel = createCarousel({
+    overlayEl,
+    classUi,
+    classes,
+    getCharacters: () => menuState.getCharacters(),
+    getSelectedCharacterId: () => menuState.getSelectedCharacterId(),
+    setSelectedCharacterId: (id) => {
+      menuState.setSelectedCharacterId(id);
+    },
+    getSelectedClassId: () => menuState.getSelectedClassId(),
+    setSelectedClassId: (id) => {
+      menuState.setSelectedClassId(id);
+    },
+    isCreateMode,
+    onSelectCharacter: () => {
+      if (selectScreen?.renderCharacters) selectScreen.renderCharacters();
+    },
+    onCreateClassChange: () => {
+      if (createScreen?.renderClasses) createScreen.renderClasses();
+      if (createScreen?.syncCreateButton) createScreen.syncCreateButton();
+    },
+    onStartCharacter: (character) => menuActions.startGameWithCharacter(character),
+    setPlayEnabled: (value) => {
+      if (btnPlay) btnPlay.disabled = !value;
+    },
+    initialIds: menuState.getCarouselClassIds(),
+    initialOrder: menuState.getCarouselClassIds(),
+  });
 
   function ensureLayout() {
     if (panelEl.classList.contains("menu-v2")) return;
@@ -452,286 +448,33 @@ export function initCharacterMenus({ onStartGame }) {
       panelEl.appendChild(footer);
     }
 
-    ensureCarousel(carouselIds);
-    applyCarouselPositions();
-  }
-
-  function ensureCarousel(ids) {
-    const container = overlayEl.querySelector("#menu-preview-carousel");
-    if (!container) return;
-    const nextIds = Array.isArray(ids) ? ids.filter(Boolean) : [];
-    const key = nextIds.join("|");
-    if (container.dataset.carouselKey === key) return;
-    container.dataset.carouselKey = key;
-
-    container.innerHTML = "";
-    carouselSlotByClassId.clear();
-    carouselSlotByKey.clear();
-
-    nextIds.forEach((classId) => {
-      const carouselKey = classId;
-      const character =
-        characters.find((c) => c && c.id === carouselKey) || null;
-      const resolvedClassId = character?.classId || carouselKey;
-      const ui = classUi[resolvedClassId] || {};
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "menu-class-slot";
-      btn.dataset.classId = resolvedClassId;
-      btn.dataset.carouselKey = carouselKey;
-
-      if (character?.id) {
-        btn.dataset.characterId = character.id;
-        btn.setAttribute(
-          "aria-label",
-          `${character.name || "Joueur"} - ${ui.title || resolvedClassId}`
-        );
-      } else {
-        btn.setAttribute("aria-label", ui.title || resolvedClassId);
-      }
-
-      if (ui.selectable === false) btn.classList.add("is-disabled");
-
-      const img = document.createElement("img");
-      img.alt = ui.title || resolvedClassId;
-      img.draggable = false;
-      img.src = ui.previewImage ? encodeURI(ui.previewImage) : "";
-      btn.appendChild(img);
-
-      const label = document.createElement("div");
-      label.className = "menu-class-slot-label";
-      label.textContent = ui.title || resolvedClassId;
-      btn.appendChild(label);
-
-      const sub = document.createElement("div");
-      sub.className = "menu-class-slot-sub";
-      if (character) {
-        const lvl = character.level ?? 1;
-        sub.textContent = `${character.name || "Joueur"} - Niv. ${lvl}`;
-      }
-      btn.appendChild(sub);
-
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        rotateCarouselTo(carouselKey);
-
-        if (isCreateMode() && classUi[resolvedClassId]?.selectable !== false) {
-          selectedClassId = resolvedClassId;
-          createScreen.renderClasses();
-          createScreen.syncCreateButton();
-          return;
-        }
-
-        if (!isCreateMode()) {
-          const candidate =
-            (character && character.id && character) ||
-            characters.find((c) => c && c.classId === resolvedClassId) ||
-            null;
-          if (candidate && candidate.id) {
-            selectedCharacterId = candidate.id;
-            btnPlay.disabled = false;
-            selectScreen.renderCharacters();
-            renderCarouselMeta();
-            setPreview(candidate.classId || resolvedClassId || "archer", {
-              characterName: candidate.name || "Joueur",
-            });
-          }
-        }
-      });
-
-      btn.addEventListener("dblclick", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (isCreateMode()) return;
-        if (!character || !character.id) return;
-        selectedCharacterId = character.id;
-        btnPlay.disabled = false;
-        startGameWithCharacter(character);
-      });
-
-      carouselSlotByClassId.set(resolvedClassId, btn);
-      carouselSlotByKey.set(carouselKey, btn);
-      container.appendChild(btn);
-    });
-  }
-
-  function applyCarouselPositions() {
-    const idsForPos = carouselOrder.slice(0, POS_CLASSES.length);
-
-    // Hide all by default
-    carouselSlotByKey.forEach((el) => {
-      el.hidden = true;
-      POS_CLASSES.forEach((cls) => el.classList.remove(cls));
-    });
-
-    idsForPos.forEach((id, index) => {
-      const el = carouselSlotByKey.get(id) || carouselSlotByClassId.get(id);
-      if (!el) return;
-      el.hidden = false;
-      el.classList.add(POS_CLASSES[index]);
-    });
-  }
-
-  function rotateCarouselTo(key) {
-    if (!key) return;
-    const idx = carouselOrder.indexOf(key);
-    if (idx < 0) return;
-
-    const candidate = characters.find((c) => c && c.id === key) || null;
-
-    if (idx === 0) {
-      if (candidate && candidate.id) {
-        selectedCharacterId = candidate.id;
-        btnPlay.disabled = false;
-        selectScreen.renderCharacters();
-        setPreview(candidate.classId || "archer", {
-          characterName: candidate.name || "Joueur",
-        });
-        renderCarouselMeta();
-        return;
-      }
-      setPreview(key);
-      renderCarouselMeta();
-      return;
-    }
-
-    carouselOrder = [...carouselOrder.slice(idx), ...carouselOrder.slice(0, idx)];
-    applyCarouselPositions();
-
-    if (candidate && candidate.id) {
-      selectedCharacterId = candidate.id;
-      btnPlay.disabled = false;
-      selectScreen.renderCharacters();
-      setPreview(candidate.classId || "archer", {
-        characterName: candidate.name || "Joueur",
-      });
-      renderCarouselMeta();
-      return;
-    }
-
-    setPreview(key);
-    renderCarouselMeta();
-  }
-
-  function buildCarouselIdsForSelect() {
-    // En selection, on veut pouvoir afficher plusieurs persos de la meme classe.
-    // On construit un carousel de 4 vignettes max : [selectionne] + 3 autres.
-    const ids = characters.map((c) => c && c.id).filter(Boolean);
-    const selectedFirst =
-      selectedCharacterId && ids.includes(selectedCharacterId);
-    const ordered = selectedFirst
-      ? [selectedCharacterId, ...ids.filter((id) => id !== selectedCharacterId)]
-      : ids;
-    return ordered.slice(0, POS_CLASSES.length);
-  }
-
-  function setPreview(classId, { characterName = null } = {}) {
-    const ui = classUi[classId] || null;
-    const title = overlayEl.querySelector("#menu-preview-title");
-    const desc = overlayEl.querySelector("#menu-preview-desc");
-    const bullets = overlayEl.querySelector("#menu-preview-bullets");
-
-    const fallbackTitle = classes[classId]?.label || classId || "-";
-    const finalTitle =
-      characterName && characterName.length > 0
-        ? `${characterName} Å¸?" ${ui?.title || fallbackTitle}`
-        : ui?.title || fallbackTitle;
-
-    if (title) title.textContent = finalTitle;
-    if (desc) desc.textContent = ui?.desc || "";
-    if (bullets) {
-      bullets.innerHTML = "";
-      const lines = Array.isArray(ui?.bullets) ? ui.bullets : [];
-      lines.forEach((line) => {
-        const li = document.createElement("li");
-        li.textContent = line;
-        bullets.appendChild(li);
-      });
-    }
+    carousel.ensureCarousel(carousel.getCarouselIds());
+    carousel.applyCarouselPositions();
   }
 
   function getSelectedServerUrl() {
-    const server = SERVERS.find((s) => s && s.id === selectedServerId) || null;
+    const server =
+      SERVERS.find((s) => s && s.id === menuState.getSelectedServerId()) || null;
     return server?.url || null;
   }
 
-  function getSelectedCharacter() {
-    return characters.find((c) => c && c.id === selectedCharacterId) || null;
-  }
-
-  function upsertCharacterMetaForAccount(character) {
-    upsertCharacterMeta(character, activeAccount?.name || null);
-  }
-
-  function renderCarouselMeta() {
-    carouselSlotByKey.forEach((btn, key) => {
-      const sub = btn.querySelector(".menu-class-slot-sub");
-      if (!sub) return;
-      const char = characters.find((c) => c && c.id === key) || null;
-      if (!char) {
-        sub.textContent = "";
-        return;
-      }
-      sub.textContent = `${char.name || "Joueur"} - Niv. ${char.level ?? 1}`;
-    });
-
-    if (isCreateMode()) return;
-  }
-
   function connectAccountForListing() {
-    if (!getSelectedServerUrl()) {
-      serversScreen?.showServers?.();
-      return;
-    }
-    const hasToken = !!activeAccount?.sessionToken;
-    if (!activeAccount?.name || (!activeAccount?.password && !hasToken)) {
-      loginScreen.showLogin();
-      return;
-    }
-    serverListPending = true;
-    const nextAccount = normalizeAccountName(activeAccount?.name);
-    lan.connectLan(activeAccount, {
-      authMode: loginMode,
-      url: getSelectedServerUrl(),
-      requestCharacters: true,
-    });
+    setLoadingLabel("Chargement des personnages...");
+    menuState.clearCharactersList();
+    menuActions.connectAccountForListing();
   }
-
-  // Hydrate depuis la sauvegarde locale (persistant entre rechargements).
-  reloadCharactersForAccount(null);
 
   function openMenu() {
-    document.body.classList.add("menu-open");
     const current = getSessionSelectedCharacter() || null;
     if (current && current.id) {
-      const exists = characters.some((c) => c && c.id === current.id);
-      if (exists) selectedCharacterId = current.id;
-    }
-    if (!selectedCharacterId && characters.length > 0) {
-      selectedCharacterId = characters[0]?.id || null;
-    }
-    if (!activeAccount) {
-      const saved = account.loadLanAccount();
-      if (saved?.name) {
-        activeAccount = saved;
+      if (!choiceOverlay.hidden) {
+        hideChoiceOverlay();
+        return;
       }
-    }
-    if (activeAccount?.name && useServerCharacters) {
-      connectAccountForListing();
-      selectScreen.showSelect();
+      showChoiceOverlay({ inGame: true });
       return;
     }
-    if (characters.length > 0) {
-      selectScreen.showSelect();
-      return;
-    }
-    if (activeAccount?.name && activeAccount?.password) {
-      serversScreen.showServers();
-      return;
-    }
+    document.body.classList.add("menu-open");
     loginScreen.showLogin();
   }
 
@@ -739,149 +482,37 @@ export function initCharacterMenus({ onStartGame }) {
     document.body.classList.remove("menu-open");
     document.body.classList.remove("menu-login");
     document.body.classList.remove("menu-servers");
+    hideChoiceOverlay();
   }
 
   function logoutToLogin() {
-    if (lanClient) {
-      const playerId = getNetPlayerId();
-      if (Number.isInteger(playerId) && typeof lanClient.sendCmd === "function") {
-        lanClient.sendCmd("CmdLogout", { playerId });
-      }
-      lanClient.close();
-      lanClient = null;
-    }
-    lanConnected = false;
-    pendingStartCharacter = null;
-    useServerCharacters = false;
-    serverAccountName = null;
-    serverListPending = false;
-    activeAccount = null;
-    account.saveLanAccount(null, { remember: false });
-    clearSelectedCharacter();
-    clearCharactersList();
-    loginScreen.showLogin();
+    menuActions.logoutToLogin();
   }
 
   function startGameWithCharacter(chosen, options = {}) {
-    if (!chosen) return;
-    if (!getSelectedServerUrl()) {
-      serversScreen.showServers();
-      return;
-    }
-    const netPlayerId = getNetPlayerId();
-    if (!options.skipLan && lanConnected && !Number.isInteger(netPlayerId)) {
-      pendingStartCharacter = chosen;
-      if (lanClient?.sendCmd) {
-        lanClient.sendCmd("CmdAccountSelectCharacter", {
-          characterId: chosen.id,
-          inventoryAuthority: true,
-        });
-      }
-      return;
-    }
-    if (!options.skipLan && !lanConnected) {
-      pendingStartCharacter = chosen;
-      if (activeAccount?.name && activeAccount?.password) {
-        lan.connectLan(activeAccount, {
-          authMode: loginMode,
-          url: getSelectedServerUrl(),
-        });
-      } else {
-        loginScreen.showLogin();
-      }
-      return;
-    }
-    upsertCharacterMetaForAccount(chosen);
-    closeMenu();
-    if (typeof onStartGame === "function") onStartGame(chosen);
-    if (lanConnected && lanClient?.sendCmd) {
-      if (resyncTimer) {
-        clearTimeout(resyncTimer);
-        resyncTimer = null;
-      }
-      let attempts = 0;
-      const maxAttempts = 20;
-      const tryResync = () => {
-        attempts += 1;
-        const playerId = getNetPlayerId();
-        const scene = typeof window !== "undefined" ? window.__scene : null;
-        const mapReady = !!(scene?.map && scene?.groundLayer?.layer);
-        if (Number.isInteger(playerId) && mapReady) {
-          lanClient.sendCmd("CmdMapResync", {
-            playerId,
-            mapId: scene.currentMapKey || scene.currentMapDef?.key || null,
-          });
-          lanClient.sendCmd("CmdCombatResync", {
-            playerId,
-          });
-          if (typeof window !== "undefined") {
-            window.__lanLastResyncSentAt = Date.now();
-            window.__lanLastResyncPlayerId = playerId ?? null;
-          }
-          resyncTimer = null;
-          return;
-        }
-        if (attempts < maxAttempts) {
-          resyncTimer = setTimeout(tryResync, 200);
-        } else {
-          resyncTimer = null;
-        }
-      };
-      resyncTimer = setTimeout(tryResync, 200);
-    }
+    setLoadingLabel("Connexion au monde...");
+    menuActions.startGameWithCharacter(chosen, options);
   }
 
-  const state = {
-    getActiveAccount: () => activeAccount,
-    setActiveAccount: (value) => {
-      activeAccount = value;
-      if (useServerCharacters) {
-        clearCharactersList();
-        return;
-      }
-      const name = normalizeAccountName(activeAccount?.name);
-      reloadCharactersForAccount(name || null);
-    },
-    getLoginMode: () => loginMode,
-    getCharactersLength: () => characters.length,
-    getServers: () => SERVERS,
-    getSelectedServerId: () => selectedServerId,
-    setSelectedServerId: (value) => {
-      selectedServerId = value;
-    },
-    getSelectedServerUrl: () => getSelectedServerUrl(),
-    getCharacters: () => characters,
-    getSelectedCharacterId: () => selectedCharacterId,
-    setSelectedCharacterId: (value) => {
-      selectedCharacterId = value;
-    },
-    getSelectedClassId: () => selectedClassId,
-    setSelectedClassId: (value) => {
-      selectedClassId = value;
-    },
-    getSelectedCharacter: () => getSelectedCharacter(),
-    getSessionSelectedCharacter,
-    getAvailableClassIds,
-  };
-
+  const state = menuState;
+  state.getServers = () => SERVERS;
+  state.getSelectedServerUrl = () => getSelectedServerUrl();
+  state.getCharactersLength = () => state.getCharacters().length;
+  state.getSessionSelectedCharacter = getSessionSelectedCharacter;
   const layout = {
     ensureLayout,
-    getDefaultCreateClassId,
-    getCarouselClassIds,
-    ensureCarousel,
-    applyCarouselPositions,
-    setPreview,
-    renderCarouselMeta,
-    rotateCarouselTo,
-    buildCarouselIdsForSelect,
-    setCarouselIds: (ids) => {
-      carouselIds = ids;
-    },
-    getCarouselIds: () => carouselIds,
-    setCarouselOrder: (order) => {
-      carouselOrder = order;
-    },
-    getCarouselOrder: () => carouselOrder,
+    getDefaultCreateClassId: menuState.getDefaultCreateClassId,
+    getCarouselClassIds: menuState.getCarouselClassIds,
+    ensureCarousel: carousel.ensureCarousel,
+    applyCarouselPositions: carousel.applyCarouselPositions,
+    setPreview: carousel.setPreview,
+    renderCarouselMeta: carousel.renderCarouselMeta,
+    rotateCarouselTo: carousel.rotateCarouselTo,
+    buildCarouselIdsForSelect: carousel.buildCarouselIdsForSelect,
+    setCarouselIds: carousel.setCarouselIds,
+    getCarouselIds: carousel.getCarouselIds,
+    setCarouselOrder: carousel.setCarouselOrder,
+    getCarouselOrder: carousel.getCarouselOrder,
   };
 
   loginScreen = createLoginScreen({
@@ -936,10 +567,10 @@ export function initCharacterMenus({ onStartGame }) {
     actions: {
       showLogin: () => loginScreen.showLogin(),
       showSelect: () => selectScreen.showSelect(),
-      upsertCharacterMeta: (character) => upsertCharacterMetaForAccount(character),
       createCharacter: ({ name, classId }) => {
-        if (!lanClient || !lanClient.sendCmd) return;
-        lanClient.sendCmd("CmdAccountCreateCharacter", {
+        const client = connection.getLanClient();
+        if (!client || !client.sendCmd) return;
+        client.sendCmd("CmdAccountCreateCharacter", {
           name,
           classId,
         });
@@ -962,8 +593,8 @@ export function initCharacterMenus({ onStartGame }) {
       showLogin: () => loginScreen.showLogin(),
       showSelect: () => selectScreen.showSelect(),
       showCreate: () => createScreen.showCreate(),
-      logoutAccount: () => logoutToLogin(),
-      connectAccount: () => connectAccountForListing(),
+      logoutAccount: () => menuActions.logoutToLogin(),
+      connectAccount: () => menuActions.connectAccountForListing(),
     },
     ensureLayout,
   });
@@ -995,17 +626,39 @@ export function initCharacterMenus({ onStartGame }) {
       showLogin: () => loginScreen.showLogin(),
       showCreate: () => createScreen.showCreate(),
       deleteCharacter: (characterId) => {
-        if (lanClient?.sendCmd) {
-          lanClient.sendCmd("CmdAccountDeleteCharacter", { characterId });
-          deleteCharacter(characterId);
-          removeLocalCharacterEntry(characterId);
+        const client = connection.getLanClient();
+        if (client?.sendCmd) {
+          client.sendCmd("CmdAccountDeleteCharacter", { characterId });
           return;
         }
-        deleteCharacter(characterId);
-        removeLocalCharacterEntry(characterId);
+        const activeAccount = menuState.getActiveAccount();
+        if (activeAccount?.name) {
+          connection.setPendingDeleteCharacterId(characterId);
+          lan.connectLan(activeAccount, {
+            authMode: menuState.getLoginMode(),
+            url: getSelectedServerUrl(),
+            requestCharacters: true,
+          });
+          return;
+        }
+        loginScreen.showLogin();
       },
       clearSelectedCharacter,
-      startGameWithCharacter,
+      startGameWithCharacter: menuActions.startGameWithCharacter,
+    },
+  });
+
+  screens.login = loginScreen;
+  screens.servers = serversScreen;
+  screens.select = selectScreen;
+  screens.create = createScreen;
+
+  menuState.setUiHooks({
+    onRenderCharacters: () => selectScreen?.renderCharacters?.(),
+    onRenderCarouselMeta: () => carousel.renderCarouselMeta(),
+    onShowCreate: () => createScreen?.showCreate?.(),
+    onUpdatePlayEnabled: (enabled) => {
+      if (btnPlay) btnPlay.disabled = !enabled;
     },
   });
 
@@ -1013,16 +666,7 @@ export function initCharacterMenus({ onStartGame }) {
   btnGoServers.addEventListener("click", () => serversScreen.showServers());
   btnBackSelect.addEventListener("click", () => selectScreen.showSelect());
   btnLanConnect.addEventListener("click", () => {
-    if (lanClient) {
-      const playerId = getNetPlayerId();
-      if (Number.isInteger(playerId) && typeof lanClient.sendCmd === "function") {
-        lanClient.sendCmd("CmdLogout", { playerId });
-      }
-      lanClient.close();
-      lanClient = null;
-    }
-    lanConnected = false;
-    loginScreen.showLogin();
+    menuActions.logoutToLogin();
   });
 
   loginScreen.attachLoginEvents();
@@ -1030,8 +674,55 @@ export function initCharacterMenus({ onStartGame }) {
   createScreen.attachCreateEvents();
   serversScreen.attachServersEvents();
 
+  if (choiceSelectBtn) {
+    choiceSelectBtn.addEventListener("click", () => {
+      hideChoiceOverlay();
+      if (typeof onEnterMenu === "function") onEnterMenu();
+      const activeAccount =
+        menuState.getActiveAccount() || account.loadLanAccount();
+      if (activeAccount?.name) {
+        menuState.setActiveAccount(activeAccount);
+        connectAccountForListing();
+        return;
+      }
+      loginScreen.showLogin();
+    });
+  }
+
+  if (choiceServersBtn) {
+    choiceServersBtn.addEventListener("click", () => {
+      hideChoiceOverlay();
+      if (typeof onEnterMenu === "function") onEnterMenu();
+      const activeAccount =
+        menuState.getActiveAccount() || account.loadLanAccount();
+      if (activeAccount?.name) {
+        menuState.setActiveAccount(activeAccount);
+        serversScreen.showServers();
+        return;
+      }
+      loginScreen.showLogin();
+    });
+  }
+
+  if (choiceLogoutBtn) {
+    choiceLogoutBtn.addEventListener("click", () => {
+      hideChoiceOverlay();
+      if (typeof onEnterMenu === "function") onEnterMenu();
+      menuActions.logoutToLogin();
+    });
+  }
+
+  if (choiceCloseBtn) {
+    choiceCloseBtn.addEventListener("click", () => {
+      hideChoiceOverlay();
+      closeMenu();
+    });
+  }
+
   btnPlay.addEventListener("click", () => {
-    const chosen = characters.find((c) => c.id === selectedCharacterId);
+    const chosen = menuState
+      .getCharacters()
+      .find((c) => c.id === menuState.getSelectedCharacterId());
     if (!chosen) return;
     startGameWithCharacter(chosen);
   });
@@ -1042,19 +733,17 @@ export function initCharacterMenus({ onStartGame }) {
     if (!levelAfter || !Number.isFinite(levelAfter)) return;
 
     const current = getSessionSelectedCharacter() || null;
-    const id = current?.id ?? selectedCharacterId;
+    const id = current?.id ?? menuState.getSelectedCharacterId();
     if (!id) return;
 
-    const char = characters.find((c) => c && c.id === id) || null;
+    const char = menuState.getCharacters().find((c) => c && c.id === id) || null;
     if (!char) return;
 
     char.level = levelAfter;
     if (current && current.id === id) current.level = levelAfter;
-    upsertCharacterMetaForAccount(char);
-
     if (document.body.classList.contains("menu-open")) {
       selectScreen.renderCharacters();
-      renderCarouselMeta();
+      carousel.renderCarouselMeta();
     }
   });
 
@@ -1063,6 +752,14 @@ export function initCharacterMenus({ onStartGame }) {
   return {
     openMenu,
     closeMenu,
-    getCharacters: () => characters.slice(),
+    getCharacters: () => menuState.getCharacters().slice(),
   };
 }
+
+
+
+
+
+
+
+

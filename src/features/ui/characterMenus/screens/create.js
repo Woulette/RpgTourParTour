@@ -65,13 +65,15 @@
       !!state.getSelectedClassId() &&
       classUi[state.getSelectedClassId()]?.selectable !== false;
 
-    btnCreate.disabled = false;
+    btnCreate.disabled = !canCreate;
     btnCreate.classList.toggle("is-disabled", !canCreate);
     btnCreate.setAttribute("aria-disabled", String(!canCreate));
   }
 
   function showCreate() {
-    if (!state.getActiveAccount()?.name || !state.getActiveAccount()?.password) {
+    const account = state.getActiveAccount();
+    const hasToken = !!account?.sessionToken;
+    if (!account?.name || (!account?.password && !hasToken)) {
       actions.showLogin();
       return;
     }
@@ -130,7 +132,11 @@
     }
 
     const rawName = String(inputName.value || "").trim();
-    if (rawName.length === 0) {
+    const canCreate =
+      rawName.length > 0 &&
+      !!state.getSelectedClassId() &&
+      classUi[state.getSelectedClassId()]?.selectable !== false;
+    if (!canCreate) {
       flashInvalidName();
       syncCreateButton();
       return;
