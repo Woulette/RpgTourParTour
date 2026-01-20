@@ -191,7 +191,7 @@ export const resourceItems = {
     subCategory: "plante",
     stackable: true,
     maxStack: 9999,
-    icon: "assets/metier/alchimiste/ressources/Ortie.png",
+    icon: "assets/metier/Alchimiste/Ressources/Ortie.png",
   },
   plante_sauge: {
     id: "plante_sauge",

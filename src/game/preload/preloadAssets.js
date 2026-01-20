@@ -113,7 +113,7 @@ export function preloadAssets(scene) {
   );
   scene.load.image("Boutique", "assets/tileset/Boutique.png");
   scene.load.image("puits", "assets/tileset/Puits.png");
-  scene.load.image("Poubelle", "assets/Sprite/utilitaire/Poubelle.png");
+  scene.load.image("Poubelle", "assets/Sprite/Utilitaire/Poubelle.png");
   scene.load.image(
     "combat_join",
     "assets/Sprite/Utilitaire/PortailDeCombatEnGroupe.png"
@@ -144,7 +144,7 @@ export function preloadAssets(scene) {
   );
 
   // Ressources alchimiste (ortie)
-  scene.load.image("herb_ortie", "assets/metier/alchimiste/ressources/Ortie.png");
+  scene.load.image("herb_ortie", "assets/metier/Alchimiste/Ressources/Ortie.png");
   scene.load.image(
     "herb_ortie_stump",
     "assets/metier/Alchimiste/Ressources/SoucheOrtie.png"
