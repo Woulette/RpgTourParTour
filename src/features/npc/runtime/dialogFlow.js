@@ -1,4 +1,4 @@
-import { openNpcDialog } from "../../ui/domNpcDialog.js";
+import { forceCloseNpcDialog, openNpcDialog } from "../../ui/domNpcDialog.js";
 import {
   getQuestContextForNpc,
   getOfferableQuestsForNpc,
@@ -15,14 +15,82 @@ import {
   tryTurnInStage,
   getTurnInNpcId,
 } from "../../quests/runtime/objectives.js";
-import { removeItem } from "../../inventory/runtime/inventoryCore.js";
+import { removeItem } from "../../inventory/runtime/inventoryAuthority.js";
 import { enterDungeon } from "../../../features/dungeons/runtime.js";
 import { addChatMessage } from "../../../chat/chat.js";
 import { startPrep } from "../../combat/runtime/prep.js";
 import { createMonster } from "../../../entities/monster.js";
 import { isTileBlocked } from "../../../collision/collisionGrid.js";
+import { isUiBlockingOpen } from "../../ui/uiBlock.js";
+import { getNetClient, getNetPlayerId } from "../../../app/session.js";
+import { emit as emitStoreEvent } from "../../../state/store.js";
 
 const DUNGEON_KEY_ITEM_ID = "clef_aluineeks";
+
+function useQuestAuthority() {
+  return typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+}
+
+function sendQuestAction(action, questId, stageId, npcId, extra = null) {
+  if (!useQuestAuthority()) return;
+  const client = getNetClient();
+  const playerId = getNetPlayerId();
+  if (!client || !Number.isInteger(playerId)) return;
+  if (!questId || !action) return;
+  const payload = {
+    playerId,
+    action,
+    questId,
+    stageId: stageId || null,
+    npcId: npcId || null,
+  };
+  if (extra && typeof extra === "object") {
+    Object.assign(payload, extra);
+  }
+  client.sendCmd("CmdQuestAction", payload);
+}
+
+function sendConsumeItem(itemId, qty = 1) {
+  if (!useQuestAuthority()) return false;
+  const client = getNetClient();
+  const playerId = getNetPlayerId();
+  if (!client || !Number.isInteger(playerId)) return false;
+  if (!itemId) return false;
+  client.sendCmd("CmdConsumeItem", { playerId, itemId, qty });
+  return true;
+}
+
+function logQuestDebug(...args) {
+  if (typeof window === "undefined") return;
+  if (window.__lanDebugQuest !== true) return;
+  // eslint-disable-next-line no-console
+  console.log("[QuestDebug]", ...args);
+}
+
+function resetUiAfterQuest(scene) {
+  try {
+    forceCloseNpcDialog();
+  } catch {
+    // ignore close errors
+  }
+  if (typeof window !== "undefined") {
+    window.__uiPointerBlock = false;
+  }
+  if (scene?.input) {
+    scene.input.enabled = true;
+    if (scene.input.manager) {
+      scene.input.manager.enabled = true;
+    }
+  }
+  if (typeof document !== "undefined") {
+    const blocker = document.getElementById("ui-input-blocker");
+    const shouldBlock = isUiBlockingOpen();
+    document.body.classList.toggle("ui-blocking-open", shouldBlock);
+    if (blocker) {
+      blocker.setAttribute("aria-hidden", shouldBlock ? "false" : "true");
+    }
+  }
+}
 
 function openDialogSequence(npc, player, screens, onDone) {
   const list = Array.isArray(screens) ? screens : [];
@@ -119,7 +187,23 @@ function openOfferDialog(npc, player, questDef) {
     offerDialogDef || { text: "Je te confie une mission.", choice: "J'accepte" };
 
   openDialog(npc, player, { ...baseOffer, questOffer: true }, () => {
-    acceptQuest(player, questDef.id);
+    sendQuestAction("accept", questDef.id, offerStage?.id, npc.id);
+    if (useQuestAuthority()) {
+      const state = getQuestState(player, questDef.id);
+      if (state && state.state === QUEST_STATES.NOT_STARTED) {
+        state.state = QUEST_STATES.IN_PROGRESS;
+        state.stageIndex = 0;
+        state.progress = {
+          currentCount: 0,
+          crafted: {},
+          kills: {},
+          applied: false,
+        };
+        emitStoreEvent("quest:updated", { questId: questDef.id, state });
+      }
+    } else {
+      acceptQuest(player, questDef.id);
+    }
   });
 }
 
@@ -273,6 +357,13 @@ export function startNpcDialogFlow(scene, player, npc) {
 
   if (questContext) {
     const { quest, state, stage, offerable, turnInReady } = questContext;
+    logQuestDebug("npc", npc.id, "questContext", {
+      questId: quest?.id || null,
+      state: state?.state || null,
+      stageId: stage?.id || null,
+      offerable,
+      turnInReady,
+    });
 
     const objectiveType = stage?.objective?.type;
     const dialogState =
@@ -301,6 +392,11 @@ export function startNpcDialogFlow(scene, player, npc) {
         () => {
           const result = tryTurnInStage(scene, player, quest.id, quest, state, stage);
           if (!result.ok) return;
+          sendQuestAction("turn_in", quest.id, stage?.id, npc.id);
+          if (useQuestAuthority()) {
+            resetUiAfterQuest(scene);
+            return;
+          }
           advanceQuestStage(player, quest.id, { scene });
 
           const nextState = getQuestState(player, quest.id, { emit: false });
@@ -336,6 +432,11 @@ export function startNpcDialogFlow(scene, player, npc) {
                 followStage
               );
               if (!turnIn.ok) return;
+              sendQuestAction("turn_in", quest.id, followStage?.id, npc.id);
+              if (useQuestAuthority()) {
+                resetUiAfterQuest(scene);
+                return;
+              }
               advanceQuestStage(player, quest.id, { scene });
             }
           );
@@ -379,8 +480,13 @@ export function startNpcDialogFlow(scene, player, npc) {
       openMultiNpcSequence(player, screens, () => {
         const questDef = quest;
         const remaining = questDef.stages.length - (state.stageIndex || 0);
-        for (let i = 0; i < remaining; i += 1) {
-          advanceQuestStage(player, quest.id, { scene });
+        sendQuestAction("advance_many", quest.id, stage?.id, npc.id, {
+          count: remaining,
+        });
+        if (!useQuestAuthority()) {
+          for (let i = 0; i < remaining; i += 1) {
+            advanceQuestStage(player, quest.id, { scene });
+          }
         }
       });
       return;
@@ -414,7 +520,23 @@ export function startNpcDialogFlow(scene, player, npc) {
       const base = dialogDef || { text: "Salut, tu veux aider ?", choice: "J'accepte" };
       dialogData = { ...base, questOffer: true };
       onDone = () => {
-        acceptQuest(player, quest.id);
+        sendQuestAction("accept", quest.id, stage?.id, npc.id);
+        if (useQuestAuthority()) {
+          const state = getQuestState(player, quest.id);
+          if (state && state.state === QUEST_STATES.NOT_STARTED) {
+            state.state = QUEST_STATES.IN_PROGRESS;
+            state.stageIndex = 0;
+            state.progress = {
+              currentCount: 0,
+              crafted: {},
+              kills: {},
+              applied: false,
+            };
+            emitStoreEvent("quest:updated", { questId: quest.id, state });
+          }
+        } else {
+          acceptQuest(player, quest.id);
+        }
       };
     } else if (state.state === QUEST_STATES.IN_PROGRESS && turnInReady) {
       const base = dialogDef || {
@@ -463,12 +585,30 @@ export function startNpcDialogFlow(scene, player, npc) {
             return;
           }
         }
+        logQuestDebug("turnIn", quest.id, stage?.id, "before");
         const result = tryTurnInStage(scene, player, quest.id, quest, state, stage);
+        logQuestDebug("turnIn", quest.id, stage?.id, "result", result);
         if (!result.ok) return;
+        sendQuestAction("turn_in", quest.id, stage?.id, npc.id);
+        if (useQuestAuthority()) {
+          resetUiAfterQuest(scene);
+          return;
+        }
         advanceQuestStage(player, quest.id, { scene });
+        logQuestDebug("advanceQuestStage", quest.id, stage?.id, "after");
+        if (quest.id === "andemia_intro_2" && stage?.id === "bring_corbeau_parts") {
+          resetUiAfterQuest(scene);
+          if (scene && typeof scene.__rebindMoveInput === "function") {
+            scene.__rebindMoveInput();
+          }
+        }
 
         const nextState = getQuestState(player, quest.id, { emit: false });
         const nextStage = getCurrentQuestStage(quest, nextState);
+        logQuestDebug("nextStage", quest.id, {
+          state: nextState?.state || null,
+          stageId: nextStage?.id || null,
+        });
         if (
           quest.id === "keeper_north_explosion_1" &&
           stage?.id === "return_to_maire_north" &&
@@ -477,6 +617,7 @@ export function startNpcDialogFlow(scene, player, npc) {
           spawnOmbreTitan(scene, npc, player);
         }
         const offersAfter = getOfferableQuestsForNpc(player, npc.id);
+        logQuestDebug("offersAfter", quest.id, offersAfter.map((o) => o.id));
         if (
           nextState.state === QUEST_STATES.IN_PROGRESS &&
           nextStage &&
@@ -597,6 +738,11 @@ export function startNpcDialogFlow(scene, player, npc) {
             closeOnChoice: true,
             closeOnChoice2: true,
             onChoice: () => {
+              if (useQuestAuthority()) {
+                sendConsumeItem(DUNGEON_KEY_ITEM_ID, 1);
+                enterDungeon(scene, "aluineeks");
+                return;
+              }
               const removed = removeItem(player.inventory, DUNGEON_KEY_ITEM_ID, 1);
               if (removed > 0) {
                 addChatMessage(
@@ -644,6 +790,11 @@ export function startNpcDialogFlow(scene, player, npc) {
               if (typeof onDone === "function") onDone();
             },
             onChoice2: () => {
+              if (useQuestAuthority()) {
+                sendConsumeItem(DUNGEON_KEY_ITEM_ID, 1);
+                enterDungeon(scene, "aluineeks");
+                return;
+              }
               const removed = removeItem(player.inventory, DUNGEON_KEY_ITEM_ID, 1);
               if (removed > 0) {
                 addChatMessage(
@@ -683,6 +834,11 @@ export function startNpcDialogFlow(scene, player, npc) {
       onChoice: () => {
         if (!hasKey) {
           if (typeof onDone === "function") onDone();
+          return;
+        }
+        if (useQuestAuthority()) {
+          sendConsumeItem(DUNGEON_KEY_ITEM_ID, 1);
+          enterDungeon(scene, "aluineeks");
           return;
         }
         const removed = removeItem(player.inventory, DUNGEON_KEY_ITEM_ID, 1);

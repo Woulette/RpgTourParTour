@@ -1,4 +1,4 @@
-import { removeItem } from "../../inventory/runtime/inventoryCore.js";
+import { removeItem } from "../../inventory/runtime/inventoryAuthority.js";
 
 export function getTurnInNpcId(stage) {
   return stage?.turnInNpcId || stage?.npcId || stage?.objective?.npcId || null;
@@ -114,6 +114,9 @@ export function tryTurnInStage(scene, player, questId, questDef, state, stage) {
     return { ok: false };
   }
 
+  const useAuthority =
+    typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+
   const objective = stage.objective;
   if (!objective || !objective.type) return { ok: false };
 
@@ -138,7 +141,7 @@ export function tryTurnInStage(scene, player, questId, questDef, state, stage) {
       return { ok: false, reason: "missing_items", missing: required - current };
     }
 
-    const consume = objective.consume !== false;
+    const consume = objective.consume !== false && !useAuthority;
     if (consume) {
       const removed = removeItem(player.inventory, objective.itemId, required);
       if (removed < required) {
@@ -169,7 +172,7 @@ export function tryTurnInStage(scene, player, questId, questDef, state, stage) {
       return { ok: false, reason: "missing_items" };
     }
 
-    const consume = objective.consume !== false;
+    const consume = objective.consume !== false && !useAuthority;
     if (consume) {
       for (const it of items) {
         if (!it || !it.itemId) continue;

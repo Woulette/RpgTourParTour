@@ -170,12 +170,29 @@ function applyDepthRules(scene, sprite) {
     return;
   }
   if (sprite.isUnderPlayer) {
-    const playerDepth = scene?.player?.depth ?? sortY;
+    const playerDepth = getMaxPlayerDepth(scene) ?? sortY;
     // Force strictly below the player, even if spawned after the player
     sprite.setDepth(Math.min(playerDepth, sortY) - 1);
     return;
   }
   sprite.setDepth(sortY);
+}
+
+function getMaxPlayerDepth(scene) {
+  let maxDepth = null;
+  const local = scene?.player;
+  if (local && typeof local.y === "number") {
+    maxDepth = typeof local.depth === "number" ? local.depth : local.y;
+  }
+  const remotes = scene?.__lanRemotePlayers;
+  if (remotes && typeof remotes.forEach === "function") {
+    remotes.forEach((remote) => {
+      if (!remote || typeof remote.y !== "number") return;
+      const depth = typeof remote.depth === "number" ? remote.depth : remote.y;
+      maxDepth = maxDepth === null ? depth : Math.max(maxDepth, depth);
+    });
+  }
+  return maxDepth;
 }
 
 export function refreshObjectLayerDepths(scene, storeName = "staticTrees") {
@@ -188,6 +205,12 @@ export function recalcDepths(scene) {
   if (!scene) return;
   if (scene.player?.setDepth) {
     scene.player.setDepth(scene.player.y);
+  }
+  const remotes = scene.__lanRemotePlayers;
+  if (remotes && typeof remotes.forEach === "function") {
+    remotes.forEach((remote) => {
+      if (remote?.setDepth) remote.setDepth(remote.y);
+    });
   }
   refreshObjectLayerDepths(scene, "staticDecor");
   refreshObjectLayerDepths(scene, "staticTrees");

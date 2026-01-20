@@ -1,6 +1,7 @@
 import { shops } from "../../shops/catalog.js";
-import { getItemDef, addItem, removeItem } from "../inventory/runtime/inventoryCore.js";
-import { on as onStoreEvent, updatePlayer } from "../../state/store.js";
+import { getItemDef, addItem, removeItem } from "../inventory/runtime/inventoryAuthority.js";
+import { on as onStoreEvent } from "../../state/store.js";
+import { adjustGold } from "../inventory/runtime/goldAuthority.js";
 import { startNpcDialogFlow } from "../npc/runtime/dialogFlow.js";
 
 let panelEl = null;
@@ -8,6 +9,7 @@ let currentNpc = null;
 let currentScene = null;
 let currentPlayer = null;
 let currentShop = null;
+let currentShopId = null;
 let currentMode = "buy";
 let unsubInventory = null;
 let unsubPlayer = null;
@@ -85,6 +87,20 @@ function updateGoldDisplay() {
   goldEl.textContent = String(gold);
 }
 
+function sendShopCmd(command, payload) {
+  if (typeof window === "undefined") return false;
+  if (window.__lanInventoryAuthority !== true) return false;
+  const client = window.__lanClient;
+  const playerId = window.__netPlayerId;
+  if (!client || !Number.isInteger(playerId) || !currentShopId) return false;
+  try {
+    client.sendCmd(command, { playerId, shopId: currentShopId, ...payload });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function renderBuyList(listEl) {
   const sells = currentShop?.sells || [];
   if (sells.length === 0) {
@@ -137,14 +153,16 @@ function renderBuyList(listEl) {
         setMessage("Pas assez d'or.");
         return;
       }
+      if (sendShopCmd("CmdShopBuy", { itemId: entry.itemId, qty: 1 })) {
+        setMessage("");
+        return;
+      }
       const remaining = addItem(currentPlayer.inventory, entry.itemId, 1);
       if (remaining > 0) {
         setMessage("Inventaire plein.");
         return;
       }
-      updatePlayer((p) => {
-        p.gold = Math.max(0, (p.gold ?? 0) - price);
-      });
+      adjustGold(currentPlayer, -price, "shop_buy");
       setMessage("");
       renderShop();
     });
@@ -221,11 +239,13 @@ function renderSellList(listEl) {
     btn.addEventListener("click", () => {
       if (!currentPlayer || !currentPlayer.inventory) return;
       if (price <= 0) return;
+      if (sendShopCmd("CmdShopSell", { itemId: entry.itemId, qty: 1 })) {
+        setMessage("");
+        return;
+      }
       const removed = removeItem(currentPlayer.inventory, entry.itemId, 1);
       if (removed <= 0) return;
-      updatePlayer((p) => {
-        p.gold = (p.gold ?? 0) + price;
-      });
+      adjustGold(currentPlayer, price, "shop_sell");
       setMessage("");
       renderShop();
     });
@@ -268,7 +288,8 @@ export function openShopPanel(scene, player, npc) {
   currentScene = scene || null;
   currentNpc = npc || null;
   currentPlayer = player || null;
-  currentShop = npc?.def?.shopId ? shops[npc.def.shopId] : null;
+  currentShopId = npc?.def?.shopId || null;
+  currentShop = currentShopId ? shops[currentShopId] : null;
   currentMode = "buy";
 
   const titleEl = panelEl.querySelector("#shop-title");

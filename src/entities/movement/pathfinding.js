@@ -162,6 +162,12 @@ export function findPathForPlayer(
 
       // On ne traverse pas les obstacles
       if (isBlocked(nx, ny)) continue;
+      // Pas de "corner cutting" en diagonale
+      if (dx !== 0 && dy !== 0) {
+        const sideBlocked =
+          isBlocked(x + dx, y) || isBlocked(x, y + dy);
+        if (sideBlocked) continue;
+      }
 
       visited.add(key);
 

@@ -18,6 +18,7 @@ import { movePlayerAlongPath } from "./movement/runtime.js";
 import { isTileBlocked } from "../collision/collisionGrid.js";
 import { on as onStoreEvent } from "../state/store.js";
 import { isUiBlockingOpen } from "../features/ui/uiBlock.js";
+import { getNetClient, getNetPlayerId } from "../app/session.js";
 
 /**
  * Cre une fonction worldToTile "calibre" qui compense
@@ -25,6 +26,9 @@ import { isUiBlockingOpen } from "../features/ui/uiBlock.js";
  * sur la carte isomtrique.
  */
 function createCalibratedWorldToTile(map, groundLayer) {
+  if (!map || !groundLayer || typeof groundLayer.worldToTileXY !== "function") {
+    return () => null;
+  }
   const testTileX = 0;
   const testTileY = 0;
 
@@ -290,27 +294,32 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    const limited = limitPathForCombat(scene, player, path);
-    if (!limited || !limited.path || limited.path.length === 0) {
-      updateCombatPreview(scene, map, groundLayer, null);
-      return;
-    }
-    if (limited.path.length !== path.length) {
-      updateCombatPreview(scene, map, groundLayer, null);
-      return;
-    }
+      const limited = limitPathForCombat(scene, player, path);
+      if (!limited || !limited.path || limited.path.length === 0) {
+        updateCombatPreview(scene, map, groundLayer, null);
+        return;
+      }
 
-    updateCombatPreview(scene, map, groundLayer, limited.path);
-  });
+      updateCombatPreview(scene, map, groundLayer, path);
+    });
+
+  if (scene?.input?.off && scene.__moveClickHandler) {
+    scene.input.off("pointerdown", scene.__moveClickHandler);
+  }
 
   // --- Clic pour dplacer ou lancer un sort ---
-  scene.input.on("pointerdown", (pointer) => {
+  const pointerDownHandler = (pointer) => {
     if (window.__uiPointerBlock) {
+      return;
+    }
+    if (window.__tradeLockMovement) {
       return;
     }
     if (isUiBlockingOpen()) {
       return;
     }
+    const netClient = getNetClient();
+    const netPlayerId = getNetPlayerId();
 
     const activeSpell = getActiveSpell(player);
     const bandWidthRight = 30;
@@ -341,8 +350,16 @@ function createCalibratedWorldToTile(map, groundLayer) {
     // En combat : tant que ce n'est pas au tour du joueur, aucune action (ni dplacement, ni cast).
     // Mais la slection/prvisualisation du sort reste possible via le HUD / touches.
     const stateForTurn = scene.combatState;
-    if (stateForTurn && stateForTurn.enCours && stateForTurn.tour !== "joueur") {
-      return;
+    if (stateForTurn && stateForTurn.enCours) {
+      if (stateForTurn.tour !== "joueur") {
+        return;
+      }
+      if (
+        Number.isInteger(stateForTurn.activePlayerId) &&
+        getNetPlayerId() !== stateForTurn.activePlayerId
+      ) {
+        return;
+      }
     }
 
     // En combat : pas d'action pendant un dcplacement (sinon on peut dcpasser PM/PA).
@@ -354,15 +371,8 @@ function createCalibratedWorldToTile(map, groundLayer) {
       return;
     }
 
-    // Stop mouvement en cours
-    if (player.currentMoveTween) {
-      player.currentMoveTween.stop();
-      player.currentMoveTween = null;
-      player.isMoving = false;
-    }
-
     // Resynchronise la tuile courante a partir de la position actuelle
-    updatePlayerTilePosition(player, worldToTile);
+    updatePlayerTilePosition(player, worldToTile, map, groundLayer);
 
     // Si on clique sur un monstre, on utilise sa tuile
     // plutt que la tuile "derrire" dtecte par le clic.
@@ -407,11 +417,13 @@ function createCalibratedWorldToTile(map, groundLayer) {
 
     if (!isValidTile(map, tileX, tileY)) return;
 
+
+    const state = scene.combatState;
+    const inCombat = state && state.enCours;
+
     // Collision logique : si la tuile est bloque, on vise la tuile libre la plus proche
     // (sauf si un sort est actif en combat : on veut pouvoir cibler un monstre).
     if (isTileBlocked(scene, tileX, tileY)) {
-      const inCombat =
-        scene.combatState && scene.combatState.enCours;
       if (!(inCombat && activeSpell)) {
         const allowDiagonal = !inCombat;
         const nearest = findNearestReachableTile(
@@ -431,10 +443,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
       }
     }
 
-    const state = scene.combatState;
-
     // Intention de sortie de map (hors combat uniquement).
-    const inCombat = state && state.enCours;
     if (!inCombat) {
       const clickedInRightBand = pointer.x >= GAME_WIDTH - bandWidthRight;
       const clickedInLeftBand = pointer.x <= bandWidthLeft;
@@ -597,7 +606,7 @@ function createCalibratedWorldToTile(map, groundLayer) {
     if (player.currentTileX === tileX && player.currentTileY === tileY) return;
 
     // Chemin brut : diagonales autorises hors combat, interdites en combat
-    const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
+    const allowDiagonal = !inCombat;
 
     let path = findPathForPlayer(
       scene,
@@ -610,24 +619,137 @@ function createCalibratedWorldToTile(map, groundLayer) {
     );
 
     if (!path || path.length === 0) {
-      // Si on n'a aucun chemin, on ne dclenche rien (ni combat, ni sortie).
-      return;
+      // En LAN : on laisse le serveur valider (le path client peut etre stale).
+      if (netClient && netPlayerId && !inCombat && !(scene.prepState && scene.prepState.actif)) {
+        path = [];
+      } else {
+        // Si on n'a aucun chemin, on ne dclenche rien (ni combat, ni sortie).
+        return;
+      }
     }
+
 
     let moveCost = 0;
 
     // Si on est en combat, on laisse le module de combat dcider
     // si le dplacement est autoris et a quel cot en PM.
-    if (state && state.enCours) {
-      if (path.length > (state.pmRestants ?? 0)) {
+      if (state && state.enCours) {
+        if (path.length > (state.pmRestants ?? 0)) {
+          return;
+        }
+        const limited = limitPathForCombat(scene, player, path);
+        if (!limited || !limited.path || limited.path.length === 0) {
+          return;
+        }
+        path = limited.path;
+        moveCost = limited.moveCost;
+        const lastStep = path[path.length - 1];
+        if (lastStep && Number.isInteger(lastStep.x) && Number.isInteger(lastStep.y)) {
+          tileX = lastStep.x;
+          tileY = lastStep.y;
+        }
+      }
+
+      if (scene.prepState && scene.prepState.actif && netClient && netPlayerId) {
+        if (scene.prepState) {
+          scene.prepState.__lanManualPlacement = { x: tileX, y: tileY };
+        }
+        netClient.sendCmd("CmdCombatPlacement", {
+          playerId: netPlayerId,
+          combatId: scene.__lanCombatId ?? null,
+          mapId: scene.currentMapKey || scene.currentMapDef?.key || null,
+          tileX,
+          tileY,
+          classId: typeof player?.classId === "string" ? player.classId : null,
+          displayName:
+            typeof player?.displayName === "string" ? player.displayName : null,
+        });
+        movePlayerAlongPathWithCombat(
+          scene,
+          player,
+          map,
+          groundLayer,
+          path,
+          0
+        );
         return;
       }
-      const limited = limitPathForCombat(scene, player, path);
-      if (!limited || !limited.path || limited.path.length === 0) {
+
+    if (netClient && netPlayerId) {
+      if (state && state.enCours && state.joueur === player) {
+        applyTaclePenalty(scene, player);
+      }
+      const now = Date.now();
+      const lastAt = player.__lanLastCmdAt || 0;
+      if (now - lastAt < 150) {
         return;
       }
-      path = limited.path;
-      moveCost = limited.moveCost;
+      const lastTarget = player.__lanLastTarget || null;
+      if (lastTarget && lastTarget.x === tileX && lastTarget.y === tileY) {
+        return;
+      }
+      player.__lanLastCmdAt = now;
+      player.__lanLastTarget = { x: tileX, y: tileY };
+      if (player.currentMoveTween) {
+        player.currentMoveTween.stop();
+        player.currentMoveTween = null;
+        player.isMoving = false;
+        if (player.anims && player.anims.currentAnim) {
+          player.anims.stop();
+          const animPrefix = player.animPrefix || "player";
+          const idleKey = `${animPrefix}_idle_${player.lastDirection || "south-east"}`;
+          if (scene.textures?.exists && scene.textures.exists(idleKey)) {
+            player.setTexture(idleKey);
+          } else {
+            player.setTexture(player.baseTextureKey || animPrefix);
+          }
+        }
+      }
+      const safePath = path.map((step) => ({ x: step.x, y: step.y }));
+      const inCombatMove =
+        (state && state.enCours) || (scene.prepState && scene.prepState.actif);
+      if (inCombatMove) {
+        player.__lanCombatMoveSeq = (player.__lanCombatMoveSeq || 0) + 1;
+        netClient.sendCmd("CmdMoveCombat", {
+          playerId: netPlayerId,
+          combatId: scene.__lanCombatId ?? null,
+          mapId: scene.currentMapKey || scene.currentMapDef?.key || null,
+          seq: player.__lanCombatMoveSeq,
+          path: safePath,
+          toX: tileX,
+          toY: tileY,
+          moveCost,
+        });
+      } else {
+        player.__lanMoveSeq = (player.__lanMoveSeq || 0) + 1;
+        netClient.sendCmd("CmdMove", {
+          playerId: netPlayerId,
+          seq: player.__lanMoveSeq,
+          fromX: player.currentTileX,
+          fromY: player.currentTileY,
+          path: safePath,
+          toX: tileX,
+          toY: tileY,
+          debug: typeof window !== "undefined" && window.__lanDebugMoves === true,
+        });
+      }
+      return;
+    }
+
+    if (player.currentMoveTween) {
+      player.currentMoveTween.stop();
+      player.currentMoveTween = null;
+      player.isMoving = false;
+      if (player.anims && player.anims.currentAnim) {
+        player.anims.stop();
+        const animPrefix = player.animPrefix || "player";
+        const idleKey = `${animPrefix}_idle_${player.lastDirection || "south-east"}`;
+        if (scene.textures?.exists && scene.textures.exists(idleKey)) {
+          player.setTexture(idleKey);
+        } else {
+          player.setTexture(player.baseTextureKey || animPrefix);
+        }
+      }
     }
 
     movePlayerAlongPathWithCombat(
@@ -638,15 +760,57 @@ function createCalibratedWorldToTile(map, groundLayer) {
       path,
       moveCost
     );
-  });
+  };
+
+  if (scene?.input?.on) {
+    scene.__moveClickHandler = pointerDownHandler;
+    scene.input.on("pointerdown", pointerDownHandler);
+  }
 }
 
-function updatePlayerTilePosition(player, worldToTile) {
+function updatePlayerTilePosition(player, worldToTile, map, groundLayer) {
   const t = worldToTile(player.x, player.y);
   if (!t) return;
+  if (!map || !groundLayer || typeof map.tileToWorldXY !== "function") {
+    player.currentTileX = t.x;
+    player.currentTileY = t.y;
+    return;
+  }
 
-  player.currentTileX = t.x;
-  player.currentTileY = t.y;
+  const candidates = [];
+  for (let dy = -1; dy <= 1; dy += 1) {
+    for (let dx = -1; dx <= 1; dx += 1) {
+      const cx = t.x + dx;
+      const cy = t.y + dy;
+      if (!isValidTile(map, cx, cy)) continue;
+      candidates.push({ x: cx, y: cy });
+    }
+  }
+  if (candidates.length === 0) {
+    player.currentTileX = t.x;
+    player.currentTileY = t.y;
+    return;
+  }
+
+  let best = candidates[0];
+  let bestDist = Infinity;
+  const halfW = map.tileWidth / 2;
+  const halfH = map.tileHeight / 2;
+  candidates.forEach((c) => {
+    const wp = map.tileToWorldXY(c.x, c.y, undefined, undefined, groundLayer);
+    const centerX = wp.x + halfW;
+    const centerY = wp.y + halfH;
+    const dx = player.x - centerX;
+    const dy = player.y - centerY;
+    const dist2 = dx * dx + dy * dy;
+    if (dist2 < bestDist) {
+      bestDist = dist2;
+      best = c;
+    }
+  });
+
+  player.currentTileX = best.x;
+  player.currentTileY = best.y;
 }
 
 // Wrapper autour du mouvement runtime : excute le dplacement puis,
@@ -686,6 +850,26 @@ function movePlayerAlongPathWithCombat(
       maybeStartPendingCombat(scene, player, map, groundLayer);
     }
   );
+}
+
+// Mouvement venant du reseau : on reutilise le flux standard pour garder
+// les triggers (combat, sorties de map) identiques au solo.
+export function movePlayerAlongPathNetwork(scene, player, map, groundLayer, path) {
+  if (!path || path.length === 0) return;
+  movePlayerAlongPathWithCombat(scene, player, map, groundLayer, path, 0);
+}
+
+export function movePlayerAlongPathNetworkCombat(
+  scene,
+  player,
+  map,
+  groundLayer,
+  path,
+  moveCost
+) {
+  if (!path || path.length === 0) return;
+  const cost = Number.isFinite(moveCost) ? moveCost : 0;
+  movePlayerAlongPath(scene, player, map, groundLayer, path, cost);
 }
 
 // Si une cible de combat est en attente et que le joueur est sur sa case

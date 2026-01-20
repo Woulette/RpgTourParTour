@@ -1,5 +1,6 @@
 import { buildMap } from "../../loader.js";
 import { rebuildCollisionGridFromMap } from "../collision.js";
+import { unblockTile } from "../../../../collision/collisionGrid.js";
 import { rebuildDebugGrid } from "../debugGrid.js";
 import { spawnObjectLayerTrees } from "../decor.js";
 import { setupWorkstations } from "../../../metier/workstations.js";
@@ -80,6 +81,12 @@ export function buildSceneMap(scene, mapDef) {
   applyCustomLayerDepths(scene);
 
   rebuildCollisionGridFromMap(scene, map, scene.groundLayer);
+  if (Array.isArray(mapDef.unblockTiles)) {
+    mapDef.unblockTiles.forEach((tile) => {
+      if (!tile || !Number.isFinite(tile.x) || !Number.isFinite(tile.y)) return;
+      unblockTile(scene, Math.round(tile.x), Math.round(tile.y));
+    });
+  }
   spawnObjectLayerTrees(scene, map, "trees", "staticTrees");
   spawnObjectLayerTrees(scene, map, "decor", "staticDecor");
   setupWorkstations(scene, map, scene.groundLayer, mapDef);

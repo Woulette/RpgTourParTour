@@ -9,6 +9,10 @@ function cloneJson(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function normalizeAccountName(name) {
+  return String(name || "").trim().toLowerCase();
+}
+
 function ensureCharacterEntry(saveFile, characterId) {
   if (!saveFile.characters) saveFile.characters = {};
   if (!saveFile.characters[characterId]) {
@@ -17,10 +21,11 @@ function ensureCharacterEntry(saveFile, characterId) {
   return saveFile.characters[characterId];
 }
 
-export function listCharacterMetas() {
+export function listCharacterMetas(accountName) {
   const saveFile = loadSaveFile();
   const entries = Object.values(saveFile.characters || {});
-  const metas = entries
+  const normalizedAccount = normalizeAccountName(accountName);
+  const allMetas = entries
     .map((e) => e?.meta)
     .filter(Boolean)
     .map((m) => ({
@@ -29,11 +34,22 @@ export function listCharacterMetas() {
       classId: m.classId || "archer",
       level: m.level ?? 1,
       updatedAt: m.updatedAt ?? 0,
+      accountName: m.accountName || null,
     }));
+  if (!normalizedAccount) {
+    return allMetas.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  }
+  const byAccount = allMetas.filter(
+    (m) => normalizeAccountName(m.accountName) === normalizedAccount
+  );
+  if (byAccount.length > 0) {
+    return byAccount.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  }
+  const legacy = allMetas.filter((m) => !normalizeAccountName(m.accountName));
+  return legacy.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
   // Most recent first
-  metas.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  return metas;
+  // (sorting done above)
 }
 
 export function deleteCharacter(characterId) {
@@ -44,16 +60,20 @@ export function deleteCharacter(characterId) {
   return writeSaveFile(saveFile);
 }
 
-export function upsertCharacterMeta(character) {
+export function upsertCharacterMeta(character, accountNameOverride) {
   if (!character || !character.id) return false;
   const saveFile = loadSaveFile();
   const entry = ensureCharacterEntry(saveFile, character.id);
+  const accountName =
+    normalizeAccountName(accountNameOverride) ||
+    normalizeAccountName(character.accountName);
   entry.meta = {
     id: character.id,
     name: character.name || "Joueur",
     classId: character.classId || "archer",
     level: character.level ?? 1,
     updatedAt: Date.now(),
+    accountName: accountName || null,
   };
   return writeSaveFile(saveFile);
 }

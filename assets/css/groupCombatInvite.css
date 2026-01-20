@@ -1,0 +1,82 @@
+.group-combat-invite {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 10, 14, 0.45);
+  z-index: 2000;
+}
+
+.group-combat-invite.is-open {
+  display: flex;
+}
+
+.group-combat-card {
+  min-width: 320px;
+  max-width: 420px;
+  padding: 20px 24px 18px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(20, 28, 36, 0.98), rgba(10, 16, 22, 0.98));
+  border: 1px solid rgba(234, 179, 8, 0.55);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  color: #f5f5f5;
+  position: relative;
+}
+
+.group-combat-title {
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #facc15;
+  margin-bottom: 10px;
+}
+
+.group-combat-text {
+  font-size: 14px;
+  color: #d6d6d6;
+  margin-bottom: 12px;
+}
+
+.group-combat-timer {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 16px;
+}
+
+.group-combat-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.group-combat-join {
+  border: none;
+  background: linear-gradient(120deg, #facc15, #f59e0b);
+  color: #1b1b1b;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.group-combat-join:hover {
+  filter: brightness(1.05);
+}
+
+.group-combat-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(220, 38, 38, 0.7);
+  background: rgba(20, 20, 20, 0.6);
+  color: #f87171;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.group-combat-close:hover {
+  background: rgba(40, 10, 10, 0.8);
+}

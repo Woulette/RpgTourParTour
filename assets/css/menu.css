@@ -14,6 +14,17 @@ body.menu-open .menu-overlay {
   display: block;
 }
 
+body.menu-choice-open .menu-overlay {
+  display: block;
+}
+
+body.menu-login .menu-overlay,
+body.menu-servers .menu-overlay {
+  background:
+    radial-gradient(1200px 680px at 45% 25%, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.82)),
+    url("../menu/ServeurAndemia.png") center / cover no-repeat;
+}
+
 /* Cache l'UI de jeu quand le menu est ouvert */
 body.menu-open #hud-root,
 body.menu-open #quest-tracker,
@@ -63,6 +74,7 @@ body.menu-open #combat-result-overlay {
   box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
   overflow: hidden;
   backdrop-filter: blur(6px);
+  position: relative;
 }
 
 .menu-panel.menu-v2 .menu-center {
@@ -239,6 +251,14 @@ body.menu-open #combat-result-overlay {
   padding: 14px 14px;
 }
 
+.menu-panel.menu-v2 #menu-screen-select {
+  padding-bottom: 68px;
+}
+
+.menu-panel.menu-v2 #btn-go-servers {
+  margin-right: auto;
+}
+
 .menu-panel.menu-v2 .menu-screen-title {
   margin: 0 0 10px;
   font-size: 14px;
@@ -246,6 +266,60 @@ body.menu-open #combat-result-overlay {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: rgba(251, 191, 36, 0.95);
+}
+
+.menu-panel.menu-v2 .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-panel.menu-v2 .login-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.menu-panel.menu-v2 .login-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(5, 10, 18, 0.7);
+  color: rgba(248, 250, 252, 0.95);
+  font-size: 13px;
+  outline: none;
+}
+
+.menu-panel.menu-v2 .login-input:focus {
+  border-color: rgba(251, 191, 36, 0.85);
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.18);
+}
+
+.menu-panel.menu-v2 .login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(203, 213, 225, 0.92);
+}
+
+.menu-panel.menu-v2 .login-error {
+  min-height: 18px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.menu-panel.menu-v2 .login-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .menu-panel.menu-v2 .menu-details {
@@ -496,6 +570,152 @@ body.menu-open #combat-result-overlay {
   transform: translateY(-1px);
 }
 
+.menu-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 6, 0.62);
+  z-index: 999;
+}
+
+.menu-loading-overlay[hidden] {
+  display: none;
+}
+
+.menu-choice-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 6, 0.6);
+  z-index: 1000;
+}
+
+.menu-choice-overlay[hidden] {
+  display: none;
+}
+
+.menu-choice-card {
+  min-width: 320px;
+  max-width: 420px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid #5c3f2b;
+  background: #2b1d13;
+  color: #f2e5d2;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+body.menu-choice-in-game .menu-overlay {
+  background: transparent;
+  pointer-events: none;
+}
+
+body.menu-choice-in-game .menu-panel {
+  display: none;
+}
+
+body.menu-choice-in-game .menu-choice-overlay {
+  background: transparent;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 54px 16px 0 0;
+  pointer-events: none;
+}
+
+body.menu-choice-in-game .menu-choice-card {
+  min-width: 190px;
+  max-width: 220px;
+  padding: 12px 14px;
+  text-align: left;
+  pointer-events: auto;
+}
+
+body.menu-choice-in-game .menu-choice-title {
+  font-size: 13px;
+  text-align: left;
+}
+
+body.menu-choice-in-game .menu-choice-text {
+  font-size: 12px;
+  text-align: left;
+}
+
+body.menu-choice-in-game .menu-choice-actions .menu-btn {
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.menu-choice-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.menu-choice-text {
+  margin: 0 0 12px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.menu-choice-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.menu-choice-card .menu-btn {
+  width: 100%;
+  border: 1px solid #5c3f2b;
+  background: #f2e5d2;
+  color: #2b1d13;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.menu-choice-card .menu-btn.menu-btn-secondary {
+  background: rgba(242, 229, 210, 0.12);
+  color: #f2e5d2;
+}
+
+.menu-choice-card .menu-btn.menu-btn-primary {
+  background: rgba(251, 191, 36, 0.95);
+  color: #2b1d13;
+}
+
+.menu-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid #5c3f2b;
+  background: #2b1d13;
+  color: #f2e5d2;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.menu-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #c9b39a;
+  border-top-color: transparent;
+  animation: menu-spin 0.9s linear infinite;
+}
+
+@keyframes menu-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .menu-panel.menu-v2 .menu-btn-primary {
   background: rgba(251, 191, 36, 0.95);
   color: #0b1220;
@@ -548,4 +768,205 @@ body.game-running .ui-return-menu {
   .menu-panel.menu-v2 .character-list {
     max-height: none;
   }
+}
+
+/* Login plein ecran */
+body.menu-login .menu-panel.menu-v2 {
+  padding: clamp(24px, 4vw, 64px);
+}
+
+body.menu-login .menu-panel.menu-v2 .menu-main {
+  grid-template-columns: 1fr;
+  place-items: center;
+}
+
+body.menu-login .menu-panel.menu-v2 .menu-center,
+body.menu-login .menu-panel.menu-v2 .menu-right,
+body.menu-login .menu-panel.menu-v2 .menu-footer {
+  display: none;
+}
+
+body.menu-login .menu-panel.menu-v2 .menu-left {
+  width: min(520px, 92vw);
+  margin: 0 auto;
+}
+
+body.menu-login .menu-panel.menu-v2 .menu-screen {
+  padding: 24px;
+}
+
+/* Serveurs plein ecran */
+body.menu-servers .menu-panel.menu-v2 {
+  padding: clamp(24px, 4vw, 64px);
+}
+
+body.menu-servers .menu-panel.menu-v2 .menu-main {
+  grid-template-columns: 1fr;
+  place-items: center;
+}
+
+body.menu-servers .menu-panel.menu-v2 .menu-center,
+body.menu-servers .menu-panel.menu-v2 .menu-right,
+body.menu-servers .menu-panel.menu-v2 .menu-footer {
+  display: none;
+}
+
+body.menu-servers .menu-panel.menu-v2 .menu-left {
+  width: min(620px, 92vw);
+  margin: 0 auto;
+}
+
+.menu-panel.menu-v2 .server-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+  max-height: 60vh;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.menu-panel.menu-v2 .server-card {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  background:
+    linear-gradient(120deg, rgba(16, 24, 36, 0.55), rgba(16, 24, 36, 0.12)),
+    url("../menu/CarteServeur1.png") center / cover no-repeat;
+  padding: 14px 14px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 230px;
+  min-height: 330px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 120ms ease, transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.menu-panel.menu-v2 .server-card:hover {
+  border-color: rgba(129, 140, 248, 0.85);
+  background:
+    linear-gradient(120deg, rgba(16, 24, 36, 0.45), rgba(16, 24, 36, 0.08)),
+    url("../menu/CarteServeur1.png") center / cover no-repeat;
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(129, 140, 248, 0.25),
+    inset 0 0 0 1px rgba(129, 140, 248, 0.35);
+}
+
+.menu-panel.menu-v2 .server-card.is-selected {
+  border-color: rgba(251, 191, 36, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.35),
+    0 0 24px rgba(251, 191, 36, 0.35),
+    inset 0 0 0 1px rgba(251, 191, 36, 0.45);
+}
+
+.menu-panel.menu-v2 .server-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.menu-panel.menu-v2 .server-name {
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(8, 12, 18, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.menu-panel.menu-v2 .server-status {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.5);
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.menu-panel.menu-v2 .server-status[data-status="online"] {
+  border-color: rgba(34, 197, 94, 0.5);
+  color: rgba(134, 239, 172, 0.95);
+}
+
+.menu-panel.menu-v2 .server-status[data-status="offline"] {
+  border-color: rgba(248, 113, 113, 0.6);
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.menu-panel.menu-v2 .server-meta {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.85);
+  opacity: 0.9;
+  display: none;
+}
+
+.menu-panel.menu-v2 .server-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+}
+
+.menu-panel.menu-v2 .server-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.35);
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+.menu-panel.menu-v2 .server-stat-label {
+  font-size:9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-panel.menu-v2 .server-stat-value {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(226, 232, 240, 0.95);
+  line-height: 1.1;
+}
+
+.menu-panel.menu-v2 .server-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.menu-panel.menu-v2 .server-actions .menu-btn:first-child {
+  margin-right: auto;
+}
+
+.menu-panel.menu-v2 .server-card.is-selected .server-stat {
+  border-color: rgba(251, 191, 36, 0.35);
 }

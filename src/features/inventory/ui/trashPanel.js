@@ -1,4 +1,8 @@
-import { getItemDef, addItemToLastSlot } from "../runtime/inventoryCore.js";
+import {
+  getItemDef,
+  addItemToLastSlot,
+  removeItem,
+} from "../runtime/inventoryAuthority.js";
 import {
   addItemToTrash,
   canAddItemToTrash,
@@ -10,6 +14,20 @@ import { emit as emitStoreEvent } from "../../../state/store.js";
 
 let panelEl = null;
 let isOpen = false;
+
+function sendTrashCmd(command, payload) {
+  if (typeof window === "undefined") return false;
+  if (window.__lanInventoryAuthority !== true) return false;
+  const client = window.__lanClient;
+  const playerId = window.__netPlayerId;
+  if (!client || !Number.isInteger(playerId)) return false;
+  try {
+    client.sendCmd(command, { playerId, ...payload });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function formatRemaining(ms) {
   if (ms <= 0) return "expire";
@@ -79,6 +97,7 @@ function renderInventoryGrid(player) {
     const cell = document.createElement("div");
     cell.className = "craft-inventory-slot trash-slot";
     cell.dataset.index = String(i);
+    cell.dataset.itemId = slot?.itemId || "";
 
     if (slot && slot.itemId) {
       const def = getItemDef(slot.itemId);
@@ -100,8 +119,15 @@ function renderInventoryGrid(player) {
         if (!canAddItemToTrash(trash, slot.itemId, slot.qty ?? 1)) {
           return;
         }
-        inv.slots[i] = null;
-        emitStoreEvent("inventory:updated", { container: inv });
+        if (
+          sendTrashCmd("CmdTrashItem", {
+            inventorySlotIndex: i,
+            qty: slot.qty ?? 1,
+          })
+        ) {
+          return;
+        }
+        removeItem(inv, slot.itemId, slot.qty ?? 1);
         addItemToTrash(trash, slot.itemId, slot.qty ?? 1);
         renderTrashGrid(player);
         renderInventoryGrid(player);
@@ -149,6 +175,9 @@ function renderTrashGrid(player) {
       cell.addEventListener("click", () => {
         const inv = player?.inventory;
         if (!inv) return;
+        if (sendTrashCmd("CmdTrashRestore", { trashSlotIndex: i })) {
+          return;
+        }
         const movedSlot = removeTrashSlot(trash, i);
         if (!movedSlot) return;
         const remainingQty = addItemToLastSlot(

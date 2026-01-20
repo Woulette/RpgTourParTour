@@ -1,9 +1,27 @@
-import { getItemDef, removeItem } from "../runtime/inventoryCore.js";
+import { getItemDef, removeItem } from "../runtime/inventoryAuthority.js";
 import { equipFromInventory, unequipToInventory } from "../runtime/equipmentCore.js";
 import { applyConsumableEffect } from "./consumables.js";
 
 function isCombatLocked(player) {
   return !!player?.scene?.combatState?.enCours;
+}
+
+function sendEquipCmd(command, payload) {
+  if (typeof window === "undefined") return false;
+  if (window.__lanInventoryAuthority !== true) return false;
+  const client = window.__lanClient;
+  const playerId = window.__netPlayerId;
+  if (!client || !Number.isInteger(playerId)) return false;
+  try {
+    client.sendCmd(command, { playerId, ...payload });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sendUseCmd(payload) {
+  return sendEquipCmd("CmdUseItem", payload);
 }
 
 export function renderEquipmentSlots(player, equipSlots) {
@@ -14,6 +32,7 @@ export function renderEquipmentSlots(player, equipSlots) {
     const equipSlot = slotEl.getAttribute("data-equip");
     slotEl.innerHTML = "";
     slotEl.classList.remove("filled");
+    slotEl.dataset.itemId = "";
 
     if (!equipSlot) return;
 
@@ -24,6 +43,7 @@ export function renderEquipmentSlots(player, equipSlots) {
     if (!def) return;
 
     slotEl.classList.add("filled");
+    slotEl.dataset.itemId = def.id || entry.itemId;
 
     if (def.icon) {
       const icon = document.createElement("div");
@@ -51,6 +71,7 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
   if (slotData) {
     const def = getItemDef(slotData.itemId);
     slot.classList.add("filled");
+    slot.dataset.itemId = slotData.itemId;
 
     if (def && def.icon) {
       const icon = document.createElement("div");
@@ -73,6 +94,7 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
     }
   } else {
     slot.classList.add("empty");
+    slot.dataset.itemId = "";
   }
 
   slot.addEventListener("click", () => {
@@ -99,6 +121,9 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
     const def = getItemDef(liveSlotData.itemId);
     if (!def) return;
     if (def.category === "consommable") {
+      if (sendUseCmd({ inventorySlotIndex: idx })) {
+        return;
+      }
       const applied = applyConsumableEffect(player, def);
       if (applied) {
         removeItem(player.inventory, liveSlotData.itemId, 1);
@@ -108,6 +133,9 @@ function buildInventorySlot(slotData, entryIndex, getPlayer, helpers, renderInve
     }
     if (def.category !== "equipement") return;
 
+    if (sendEquipCmd("CmdEquipItem", { inventorySlotIndex: idx })) {
+      return;
+    }
     const ok = equipFromInventory(player, player.inventory, idx);
     if (ok) {
       renderInventory();
@@ -197,6 +225,9 @@ export function bindEquipmentSlotEvents(
     if (!player) return;
     if (isCombatLocked(player)) return;
     if (!equipSlot) return;
+    if (sendEquipCmd("CmdUnequipItem", { equipSlot })) {
+      return;
+    }
     const ok = unequipToInventory(player, player.inventory, equipSlot);
     if (ok) {
         renderInventory();

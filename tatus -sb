@@ -1,0 +1,50 @@
+warning: in the working copy of 'MMO_ROADMAP.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/handlers/combat/ai.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/handlers/combat/spellResolver.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/handlers/players.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/handlers/resources.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/index.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/entities/playerMovement.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/combat/runtime/runtime/end.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/inventory/runtime/inventoryAuthority.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/maps/world/wells.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/metier/alchimiste/plants.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/metier/bucheron/trees.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/metier/ui/craft/alchimistePanel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/metier/ui/craft/bijoutierPanel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/metier/ui/craft/bricoleurPanel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/metier/ui/craft/bucheronPanel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/metier/ui/craft/cordonnierPanel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/metier/ui/craft/tailleurPanel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/npc/runtime/dialogFlow.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/features/quests/runtime/objectives.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/net/lanClient.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/net/lanRuntime/combat/lifecycle/exit.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/net/lanRuntime/persistence.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/net/lanRuntime/resources.js', LF will be replaced by CRLF the next time Git touches it
+ MMO_ROADMAP.md                                     |   12 [32m+[m[31m-[m
+ server/handlers/combat/ai.js                       |  422 [32m+[m[31m---[m
+ server/handlers/combat/spellResolver.js            |  918 [32m+[m[31m-------[m
+ server/handlers/players.js                         | 2336 [32m+[m[31m-------------------[m
+ server/handlers/resources.js                       |   71 [32m+[m
+ server/index.js                                    |  273 [32m+[m[31m--[m
+ src/entities/playerMovement.js                     |    2 [32m+[m[31m-[m
+ src/features/combat/runtime/runtime/end.js         |   64 [32m+[m[31m-[m
+ .../inventory/runtime/inventoryAuthority.js        |    4 [32m+[m
+ src/features/maps/world/wells.js                   |    4 [32m+[m[31m-[m
+ src/features/metier/alchimiste/plants.js           |    9 [32m+[m[31m-[m
+ src/features/metier/bucheron/trees.js              |    9 [32m+[m[31m-[m
+ src/features/metier/ui/craft/alchimistePanel.js    |   32 [32m+[m[31m-[m
+ src/features/metier/ui/craft/bijoutierPanel.js     |   32 [32m+[m[31m-[m
+ src/features/metier/ui/craft/bricoleurPanel.js     |   32 [32m+[m[31m-[m
+ src/features/metier/ui/craft/bucheronPanel.js      |   32 [32m+[m[31m-[m
+ src/features/metier/ui/craft/cordonnierPanel.js    |   32 [32m+[m[31m-[m
+ src/features/metier/ui/craft/tailleurPanel.js      |   32 [32m+[m[31m-[m
+ src/features/npc/runtime/dialogFlow.js             |   32 [32m+[m
+ src/features/quests/runtime/objectives.js          |    7 [32m+[m[31m-[m
+ src/features/ui/characterMenus.js                  | 1142 [31m----------[m
+ src/net/lanClient.js                               |   19 [32m+[m
+ src/net/lanRuntime/combat/lifecycle/exit.js        |   10 [32m+[m
+ src/net/lanRuntime/persistence.js                  |   29 [32m+[m[31m-[m
+ src/net/lanRuntime/resources.js                    |   10 [32m+[m[31m-[m
+ 25 files changed, 567 insertions(+), 4998 deletions(-)

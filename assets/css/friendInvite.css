@@ -1,0 +1,74 @@
+.friend-invite {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 10, 14, 0.45);
+  z-index: 1900;
+}
+
+.friend-invite.is-open {
+  display: flex;
+}
+
+.friend-invite-card {
+  min-width: 300px;
+  max-width: 420px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: rgba(15, 23, 32, 0.95);
+  border: 1px solid rgba(74, 163, 255, 0.6);
+  color: #f8fafc;
+  position: relative;
+}
+
+.friend-invite-title {
+  color: #7cc0ff;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.friend-invite-text {
+  font-size: 13px;
+  margin-bottom: 12px;
+  color: #d1d5db;
+}
+
+.friend-invite-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.friend-invite-btn {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(30, 41, 59, 0.9);
+  color: #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.friend-invite-btn.primary {
+  background: linear-gradient(120deg, #7cc0ff, #4aa3ff);
+  color: #0f1a26;
+  border: none;
+}
+
+.friend-invite-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(220, 38, 38, 0.7);
+  background: rgba(20, 20, 20, 0.6);
+  color: #f87171;
+  cursor: pointer;
+  line-height: 1;
+}

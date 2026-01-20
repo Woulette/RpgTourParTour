@@ -17,6 +17,15 @@ import { initQuestTracker } from "../../features/quests/ui/domQuestTracker.js";
 import { initDomChat } from "../../features/ui/domChat.js";
 import { initDomRewardPops } from "../../features/ui/domRewardPops.js";
 import { initDomRifts } from "../../features/ui/domRifts.js";
+import { initDomGroupCombatInvite } from "../../features/ui/domGroupCombatInvite.js";
+import { initDomPlayerContextMenu } from "../../features/ui/domPlayerContextMenu.js";
+import { initDomGroupInvite } from "../../features/ui/domGroupInvite.js";
+import { initDomGroupPanel } from "../../features/ui/domGroupPanel.js";
+import { initDomFriends } from "../../features/ui/domFriends.js";
+import { initDomFriendInvite } from "../../features/ui/domFriendInvite.js";
+import { initDomFriendActions } from "../../features/ui/domFriendActions.js";
+import { initDomTrade } from "../../features/ui/domTrade.js";
+import { initItemTooltip } from "../../features/ui/itemTooltip.js";
 
 export function setupHudAndCameras(scene, map, mapLayers, startX, startY, mapDef, grid) {
   const { hudY, uiElements } = createHud(scene);
@@ -73,5 +82,14 @@ export function initDomUi(scene, player) {
   initDomPanelClose();
   initQuestTracker(player);
   initDomRifts();
+  initDomGroupCombatInvite();
+  initDomPlayerContextMenu(scene);
+  initDomGroupInvite();
+  initDomGroupPanel();
+  initDomFriends();
+  initDomFriendInvite();
+  initDomFriendActions();
+  initDomTrade();
   initDomChat(player);
+  initItemTooltip();
 }

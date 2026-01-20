@@ -43,16 +43,43 @@ const craftTableAlchimisteTileset = {
 const maisonVillage1Tileset = {
   name: "MaisonVillage1",
   imageKey: "MaisonVillage1",
-  imagePath: "assets/MesDecor/MaisonVillage1.png",
+  imagePath: "assets/Sprite/Maison/MaisonVillage1.png",
   frameWidth: 200,
   frameHeight: 200,
+  autoTileOffset: true,
+};
+
+const maisonVillage2Tileset = {
+  name: "MaisonVillage2",
+  imageKey: "MaisonVillage2",
+  imagePath: "assets/Sprite/Maison/MaisonVillage2.png",
+  frameWidth: 557,
+  frameHeight: 409,
+  autoTileOffset: true,
+};
+
+const maisonVillage3Tileset = {
+  name: "MaisonVillage3",
+  imageKey: "MaisonVillage3",
+  imagePath: "assets/Sprite/Maison/MaisonVillage3.png",
+  frameWidth: 200,
+  frameHeight: 200,
+  autoTileOffset: true,
+};
+
+const maisonVillage4Tileset = {
+  name: "MaisonVillage4",
+  imageKey: "MaisonVillage4",
+  imagePath: "assets/Sprite/Maison/MaisonVillage4.png",
+  frameWidth: 493,
+  frameHeight: 391,
   autoTileOffset: true,
 };
 
 const taverneTileset = {
   name: "Taverne",
   imageKey: "Taverne",
-  imagePath: "assets/MesDecor/Taverne.png",
+  imagePath: "assets/Sprite/Maison/Taverne.png",
   frameWidth: 200,
   frameHeight: 200,
   autoTileOffset: true,
@@ -70,7 +97,7 @@ const troncArbreDecoTileset = {
 const tourMairieTileset = {
   name: "TourMairie",
   imageKey: "TourMairie",
-  imagePath: "assets/MesDecor/TourMairie.png",
+  imagePath: "assets/Sprite/Maison/TourMairie.png",
   frameWidth: 500,
   frameHeight: 500,
   autoTileOffset: true,
@@ -79,9 +106,54 @@ const tourMairieTileset = {
 const maisonAlchimisteTileset = {
   name: "MaisonAlchimiste",
   imageKey: "MaisonAlchimiste",
-  imagePath: "assets/MesDecor/MaisonAlchimiste.png",
+  imagePath: "assets/Sprite/Maison/MaisonAlchimiste.png",
   frameWidth: 400,
   frameHeight: 400,
+  autoTileOffset: true,
+};
+
+const erableTileset = {
+  name: "Erable",
+  imageKey: "Erable",
+  imagePath: "assets/Sprite/ArbreDecor/Erable.png",
+  frameWidth: 192,
+  frameHeight: 192,
+  autoTileOffset: true,
+};
+
+const sapinTileset = {
+  name: "Sapin",
+  imageKey: "Sapin",
+  imagePath: "assets/Sprite/ArbreDecor/Sapin.png",
+  frameWidth: 96,
+  frameHeight: 200,
+  autoTileOffset: true,
+};
+
+const fontaineCoeurTileset = {
+  name: "FontaineCoeur",
+  imageKey: "FontaineCoeur",
+  imagePath: "assets/Sprite/DecorMap/FontaineCoeur.png",
+  frameWidth: 128,
+  frameHeight: 128,
+  autoTileOffset: true,
+};
+
+const pileDeBoisTileset = {
+  name: "PileDeBois",
+  imageKey: "PileDeBois",
+  imagePath: "assets/Sprite/DecorMap/PileDeBois.png",
+  frameWidth: 96,
+  frameHeight: 128,
+  autoTileOffset: true,
+};
+
+const pillierRubisTileset = {
+  name: "PillierRubis",
+  imageKey: "PillierRubis",
+  imagePath: "assets/Sprite/DecorMap/PillierRubis.png",
+  frameWidth: 64,
+  frameHeight: 119,
   autoTileOffset: true,
 };
 
@@ -325,6 +397,7 @@ export const maps = {
       { tileX: 15, tileY: 9 },
       { tileX: 21, tileY: 16 },
     ],
+    unblockTiles: [{ x: 16, y: 27 }],
     exitBounds: null,
   },
   MapAndemiaNouvelleVersion4: {
@@ -333,7 +406,7 @@ export const maps = {
     worldPos: { x: -2, y: -1 },
     jsonPath: "assets/maps/MapAndemiaNouvelleVersion4.json",
     tilesets: [...tilesetNew, tourMairieTileset],
-    groundLayerName: "Calque de Tuiles 1",
+    groundLayerName: "ground_playable",
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
     spawnDefaults: true,
@@ -363,7 +436,13 @@ export const maps = {
     // Au-dessus de MapAndemiaNouvelleVersion4 (-2,-1).
     worldPos: { x:-2, y: -2 },
     jsonPath: "assets/maps/MapAndemiaNouvelleVersion7.json",
-    tilesets: [...tilesetNew],
+    tilesets: [
+      ...tilesetNew,
+      tourMairieTileset,
+      maisonVillage2Tileset,
+      maisonVillage3Tileset,
+      maisonVillage4Tileset,
+    ],
     groundLayerName: "Calque de Tuiles 1",
     debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
     cameraOffsets: { x: 0, y: 43 },
@@ -393,11 +472,50 @@ export const maps = {
     workstations: [
       {
         id: "boutique",
-        tileX: 10,
-        tileY: 18,
+        tileX: 19,
+        tileY: 16,
+        offsetX: -28,
+        offsetY: 5,
         textureKey: "Boutique",
       },
     ],
+    exitBounds: null,
+  },
+  MapAndemiaNouvelleVersion13: {
+    key: "MapAndemiaNouvelleVersion13",
+    // A gauche de MapAndemiaNouvelleVersion7 (-2,-2).
+    worldPos: { x: -3, y: -2 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion13.json",
+    tilesets: [
+      ...tilesetNew,
+      maisonVillage4Tileset,
+      sapinTileset,
+    ],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemiaNouvelleVersion12: {
+    key: "MapAndemiaNouvelleVersion12",
+    // Au-dessus de MapAndemiaNouvelleVersion13 (-3,-2).
+    worldPos: { x: -3, y: -3 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion12.json",
+    tilesets: [
+      ...tilesetNew,
+      erableTileset,
+      pillierRubisTileset,
+      sapinTileset,
+    ],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
+    treePositions: [],
     exitBounds: null,
   },
     MapAndemiaNouvelleVersion10: {
@@ -461,7 +579,31 @@ export const maps = {
       // A droite de MapAndemiaNouvelleVersion10 (-2,-3).
       worldPos: { x: -1, y: -3 },
       jsonPath: "assets/maps/MapAndemiaNouvelleVersion11.json",
-      tilesets: [...tilesetNew],
+      tilesets: [
+        ...tilesetNew,
+        erableTileset,
+        pillierRubisTileset,
+      ],
+      groundLayerName: "Calque de Tuiles 1",
+      debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+      cameraOffsets: { x: 0, y: 43 },
+      spawnDefaults: true,
+      monsterSpawns: [],
+      treePositions: [],
+      exitBounds: null,
+    },
+    MapAndemiaNouvelleVersion15: {
+      key: "MapAndemiaNouvelleVersion15",
+      // A droite de MapAndemiaNouvelleVersion11 (-1,-3).
+      worldPos: { x: 0, y: -3 },
+      jsonPath: "assets/maps/MapAndemiaNouvelleVersion15.json",
+      tilesets: [
+        ...tilesetNew,
+        erableTileset,
+        pillierRubisTileset,
+        sapinTileset,
+        fontaineCoeurTileset,
+      ],
       groundLayerName: "Calque de Tuiles 1",
       debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
       cameraOffsets: { x: 0, y: 43 },
@@ -673,6 +815,20 @@ export const maps = {
         offsetFromCenter: { x: 4, y: 6 },
       },
     ],
+    treePositions: [],
+    exitBounds: null,
+  },
+  MapAndemiaNouvelleVersion14: {
+    key: "MapAndemiaNouvelleVersion14",
+    // Au-dessus de MapAndemiaNouvelleVersion9 (1,-1).
+    worldPos: { x: 1, y: -2 },
+    jsonPath: "assets/maps/MapAndemiaNouvelleVersion14.json",
+    tilesets: [...tilesetNew],
+    groundLayerName: "Calque de Tuiles 1",
+    debugGridLayerNames: ["Calque de Tuiles 1", "Calque de Tuiles 2"],
+    cameraOffsets: { x: 0, y: 43 },
+    spawnDefaults: true,
+    monsterSpawns: [],
     treePositions: [],
     exitBounds: null,
   },

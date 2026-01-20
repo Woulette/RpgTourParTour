@@ -34,6 +34,10 @@ function closeNpcDialog() {
   currentDialog = null;
 }
 
+export function forceCloseNpcDialog() {
+  closeNpcDialog();
+}
+
 export function openNpcDialog(npc, player, dialogData) {
   const els = getElements();
   if (!els) return;

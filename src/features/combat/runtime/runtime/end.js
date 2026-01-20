@@ -24,6 +24,8 @@ import { restoreWorldMonsterFromSnapshot } from "./snapshots.js";
 import { joinPartsWrapped } from "./utils.js";
 import { setHarvestablesVisible } from "../../../maps/world/harvestables.js";
 import { clearCombatAuras } from "../auras.js";
+import { getNetClient, getNetPlayerId } from "../../../../app/session.js";
+import { adjustGold } from "../../../inventory/runtime/goldAuthority.js";
 
 export function endCombat(scene) {
   if (!scene.combatState) return;
@@ -31,13 +33,52 @@ export function endCombat(scene) {
   const state = scene.combatState;
   state.enCours = false;
 
+  const client = getNetClient();
+  const playerId = getNetPlayerId();
+  const combatId = scene.__lanCombatId;
+  if (client && playerId && Number.isInteger(combatId)) {
+    const mapId = scene.currentMapKey || scene.currentMapDef?.key || null;
+    client.sendCmd("CmdCombatEnd", {
+      playerId,
+      combatId,
+      mapId,
+    });
+  }
+  scene.__lanCombatId = null;
+  scene.__lanCombatStartSent = false;
+  if (typeof scene?.__lanWorldMobsHidden !== "undefined") {
+    scene.__lanWorldMobsHidden = false;
+  }
+  if (
+    scene.__lanRemotePlayersData &&
+    combatId !== null &&
+    Number.isInteger(combatId)
+  ) {
+    scene.__lanRemotePlayersData.forEach((data, id) => {
+      if (!data || !Number.isInteger(id)) return;
+      if (data.combatId === combatId) {
+        scene.__lanRemotePlayersData.set(id, {
+          ...data,
+          inCombat: false,
+          combatId: null,
+        });
+      }
+    });
+  }
+
   clearAllSummons(scene);
   clearAllCombatAllies(scene);
   cleanupCombatChallenge(scene);
 
   if (state.joueur) {
     state.joueur.statusEffects = [];
+    state.joueur.hasAliveSummon = false;
   }
+  state.summonActing = false;
+  state.activeSummonId = null;
+  state.actors = [];
+  scene.__lanCombatActorsCache = null;
+  scene.combatSummons = [];
 
   const cam = scene.cameras && scene.cameras.main;
   if (cam && cam.fadeOut && cam.fadeIn) {
@@ -92,33 +133,52 @@ export function endCombat(scene) {
   let niveauxGagnes = 0;
   let pointsCaracGagnes = 0;
   let pvMaxGagnes = 0;
+  const useAuthority =
+    typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+  const serverLoot = Array.isArray(state.serverLoot) ? state.serverLoot : null;
 
   if (issue === "victoire") {
-    xpGagne = state.xpGagne || 0;
-    goldGagne = state.goldGagne || 0;
+    const serverXp = Number.isFinite(state.serverXp) ? state.serverXp : null;
+    const serverGold = Number.isFinite(state.serverGold) ? state.serverGold : null;
+    if (useAuthority) {
+      xpGagne = serverXp ?? 0;
+      goldGagne = serverGold ?? 0;
+    } else {
+      xpGagne = state.xpGagne || 0;
+      goldGagne = state.goldGagne || 0;
+    }
 
     const { ok: challengeOk, xpBonusPct, dropBonusPct } =
       getChallengeBonusesIfSuccessful(scene, { issue });
 
-    if (challengeOk && xpGagne > 0) {
+    if (!useAuthority && challengeOk && xpGagne > 0) {
       xpGagne = Math.round(xpGagne * (1 + xpBonusPct));
     }
 
-    const prospectionValue =
-      typeof player?.stats?.prospection === "number" &&
-      Number.isFinite(player.stats.prospection)
-        ? player.stats.prospection
-        : 100;
-    const prospectionMult = Math.max(0, prospectionValue) / 100;
-    const dropMult = prospectionMult * (1 + (challengeOk ? dropBonusPct : 0));
-    const lootRolls = rollLootFromSources(
-      state.lootSources || [],
-      dropMult,
-      player
-    );
-    lootGagne = applyLootToPlayerInventory(player, lootRolls);
+    if (useAuthority && serverLoot) {
+      lootGagne = serverLoot;
+    } else {
+      const prospectionValue =
+        typeof player?.stats?.prospection === "number" &&
+        Number.isFinite(player.stats.prospection)
+          ? player.stats.prospection
+          : 100;
+      const prospectionMult = Math.max(0, prospectionValue) / 100;
+      const dropMult = prospectionMult * (1 + (challengeOk ? dropBonusPct : 0));
+      const lootRolls = rollLootFromSources(
+        state.lootSources || [],
+        dropMult,
+        player
+      );
+      lootGagne = applyLootToPlayerInventory(player, lootRolls);
+    }
+    if (useAuthority && state) {
+      state.serverLoot = null;
+      state.serverXp = null;
+      state.serverGold = null;
+    }
 
-    if (player && typeof addXpToPlayer === "function" && xpGagne > 0) {
+    if (!useAuthority && player && typeof addXpToPlayer === "function" && xpGagne > 0) {
       addXpToPlayer(player, xpGagne);
       const levelAfter = player?.levelState?.niveau ?? levelBefore;
       const pointsAfter = player?.levelState?.pointsCaracLibres ?? pointsBefore;
@@ -126,12 +186,15 @@ export function endCombat(scene) {
       pointsCaracGagnes = Math.max(0, pointsAfter - pointsBefore);
       pvMaxGagnes = niveauxGagnes * 5;
     }
-    if (player && typeof goldGagne === "number" && goldGagne > 0) {
-      const currentGold =
-        typeof player.gold === "number" && !Number.isNaN(player.gold)
-          ? player.gold
-          : 0;
-      player.gold = currentGold + goldGagne;
+    if (useAuthority && player) {
+      const levelAfter = player?.levelState?.niveau ?? levelBefore;
+      const pointsAfter = player?.levelState?.pointsCaracLibres ?? pointsBefore;
+      niveauxGagnes = Math.max(0, levelAfter - levelBefore);
+      pointsCaracGagnes = Math.max(0, pointsAfter - pointsBefore);
+      pvMaxGagnes = niveauxGagnes * 5;
+    }
+    if (!useAuthority && player && typeof goldGagne === "number" && goldGagne > 0) {
+      adjustGold(player, goldGagne, "combat_reward");
     }
 
     if (
@@ -239,6 +302,32 @@ export function endCombat(scene) {
     scene.hiddenWorldMonsters = null;
   }
 
+  if (scene.monsters && Array.isArray(scene.monsters)) {
+    scene.monsters.forEach((m) => {
+      if (!m || m.destroyed) return;
+      if (m.isCombatOnly) return;
+      if (m.setVisible) m.setVisible(true);
+      if (m.setInteractive) {
+        m.setInteractive({ useHandCursor: true });
+      }
+    });
+  }
+
+  if (scene.hiddenWorldPlayers && Array.isArray(scene.hiddenWorldPlayers)) {
+    scene.hiddenWorldPlayers.forEach((p) => {
+      if (!p || p.destroyed) return;
+      if (p.setVisible) p.setVisible(true);
+      if (p.setInteractive) {
+        p.setInteractive({
+          useHandCursor: true,
+          pixelPerfect: true,
+          alphaTolerance: 1,
+        });
+      }
+    });
+    scene.hiddenWorldPlayers = null;
+  }
+
   if (scene.clearDamagePreview) {
     scene.clearDamagePreview();
   }
@@ -276,6 +365,77 @@ export function endCombat(scene) {
   }
 
   scene.combatState = null;
+  if (scene?.__lanPendingMapMonsters && typeof scene.__lanApplyMapMonsters === "function") {
+    const pending = scene.__lanPendingMapMonsters;
+    scene.__lanPendingMapMonsters = null;
+    scene.__lanApplyMapMonsters(pending);
+  }
+  if (scene?.__lanPendingMapPlayers && typeof scene.__lanApplyMapPlayers === "function") {
+    const pending = scene.__lanPendingMapPlayers;
+    scene.__lanPendingMapPlayers = null;
+    scene.__lanApplyMapPlayers(pending);
+  }
+  if (typeof scene.__lanRefreshRemoteSprites === "function") {
+    scene.__lanRefreshRemoteSprites();
+  }
+  const mapId = scene.currentMapKey || scene.currentMapDef?.key || null;
+  if (client && playerId && mapId) {
+    if (
+      Number.isInteger(player?.currentTileX) &&
+      Number.isInteger(player?.currentTileY)
+    ) {
+      client.sendCmd("CmdMapChange", {
+        playerId,
+        mapId,
+        tileX: player.currentTileX,
+        tileY: player.currentTileY,
+      });
+    }
+    client.sendCmd("CmdRequestMapMonsters", { playerId, mapId });
+    client.sendCmd("CmdRequestMapPlayers", { playerId, mapId });
+    const retry = () => {
+      if (scene?.combatState?.enCours || scene?.prepState?.actif) return;
+      const currentMap = scene.currentMapKey || scene.currentMapDef?.key || null;
+      if (!currentMap || currentMap !== mapId) return;
+      client.sendCmd("CmdRequestMapMonsters", { playerId, mapId });
+      client.sendCmd("CmdRequestMapPlayers", { playerId, mapId });
+    };
+    if (scene?.time && typeof scene.time.delayedCall === "function") {
+      scene.time.delayedCall(350, retry);
+    } else {
+      setTimeout(retry, 350);
+    }
+    const forceResync = () => {
+      if (scene?.combatState?.enCours || scene?.prepState?.actif) return;
+      const currentMap = scene.currentMapKey || scene.currentMapDef?.key || null;
+      if (!currentMap || currentMap !== mapId) return;
+      const monsters = Array.isArray(scene.monsters) ? scene.monsters : [];
+      const visibleWorld = monsters.filter(
+        (m) => m && !m.isCombatOnly && m.visible !== false
+      );
+      if (visibleWorld.length === 0 && typeof scene.__lanClearWorldMonsters === "function") {
+        scene.__lanClearWorldMonsters();
+      }
+      if (typeof scene.__lanRequestMapMonsters === "function") {
+        scene.__lanRequestMapMonsters();
+      } else if (client && playerId) {
+        client.sendCmd("CmdRequestMapMonsters", { playerId, mapId });
+      }
+      if (typeof scene.__lanRequestMapPlayers === "function") {
+        scene.__lanRequestMapPlayers();
+      } else if (client && playerId) {
+        client.sendCmd("CmdRequestMapPlayers", { playerId, mapId });
+      }
+      if (typeof scene.__lanRefreshRemoteSprites === "function") {
+        scene.__lanRefreshRemoteSprites();
+      }
+    };
+    if (scene?.time && typeof scene.time.delayedCall === "function") {
+      scene.time.delayedCall(900, forceResync);
+    } else {
+      setTimeout(forceResync, 900);
+    }
+  }
 
   if (scene?.pendingQuestAfterDuel) {
     const { questId, monsterId } = scene.pendingQuestAfterDuel;

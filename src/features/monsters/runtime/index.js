@@ -410,23 +410,21 @@ export function processPendingRespawnsForCurrentMap(scene) {
   setRespawnsForMap(scene, mapKey, remaining);
 }
 
-// Place les monstres declares dans la definition de la map (mapDef.monsterSpawns).
-// Chaque map fournit sa propre liste : pas de partage implicite entre maps.
-export function spawnInitialMonsters(
-  scene,
+export function buildInitialMonsterEntries(
   map,
   groundLayer,
   centerTileX,
   centerTileY,
   mapDef
 ) {
-  scene.monsters = scene.monsters || [];
+  const entries = [];
+  if (!mapDef || !mapDef.spawnDefaults) return entries;
 
   const spawnDefs =
     (mapDef && Array.isArray(mapDef.monsterSpawns) && mapDef.monsterSpawns) ||
     [];
 
-  if (spawnDefs.length === 0) return;
+  if (spawnDefs.length === 0) return entries;
 
   let nextGroupId = 1;
 
@@ -455,14 +453,6 @@ export function spawnInitialMonsters(
     ) {
       return;
     }
-
-    const worldPos = map.tileToWorldXY(
-      tileX,
-      tileY,
-      undefined,
-      undefined,
-      groundLayer
-    );
 
     const pool = Array.isArray(spawn.groupPool) ? spawn.groupPool.filter(Boolean) : [];
 
@@ -494,21 +484,7 @@ export function spawnInitialMonsters(
       if (pool.length > 0) return Phaser.Utils.Array.GetRandom(pool);
       return "corbeau";
     })();
-    const def = monsters[type] || null;
-    const offX =
-      def && def.render && typeof def.render.offsetX === "number"
-        ? def.render.offsetX
-        : 0;
-    const offY =
-      def && def.render && typeof def.render.offsetY === "number"
-        ? def.render.offsetY
-        : 0;
 
-    const x = worldPos.x + map.tileWidth / 2 + offX;
-    const y = worldPos.y + map.tileHeight + offY;
-
-    const monster = createMonster(scene, x, y, type);
-    // Taille de groupe aleatoire 1..4 pour le combat
     const sizeMin =
       typeof spawn.groupSizeMin === "number" && spawn.groupSizeMin > 0
         ? Math.round(spawn.groupSizeMin)
@@ -519,12 +495,13 @@ export function spawnInitialMonsters(
         : typeof spawn.groupSize === "number" && spawn.groupSize > 0
           ? Math.round(spawn.groupSize)
           : 4;
+
     const desiredGroupSize = Phaser.Math.Between(
       Math.min(sizeMin, sizeMax),
       Math.max(sizeMin, sizeMax)
     );
-    monster.groupSize = Math.max(1, desiredGroupSize);
-    // Niveaux individuels aleatoires pour les membres du groupe
+
+    let groupMonsterIds = null;
     if (Array.isArray(groupMonsterIdsFromCounts) && groupMonsterIdsFromCounts.length > 0) {
       // Shuffle for randomness, then force leader's id to match the displayed sprite.
       const shuffled = Phaser.Utils.Array.Shuffle(groupMonsterIdsFromCounts.slice());
@@ -534,17 +511,16 @@ export function spawnInitialMonsters(
         shuffled[0] = shuffled[idx];
         shuffled[idx] = tmp;
       }
-      monster.groupMonsterIds = shuffled;
-      monster.groupSize = shuffled.length;
+      groupMonsterIds = shuffled;
     } else if (pool.length > 0) {
-      const groupMonsterIds = Array.from(
-        { length: monster.groupSize },
+      groupMonsterIds = Array.from(
+        { length: Math.max(1, desiredGroupSize) },
         () => Phaser.Utils.Array.GetRandom(pool)
       );
       groupMonsterIds[0] = type; // leader = sprite monde
 
-      // Optionnel : force un minimum de mixitAae si possible (au moins 2 types diffAaerents).
-      if (spawn.forceMixedGroup === true && monster.groupSize > 1) {
+      // Optionnel : force un minimum de mixite si possible (au moins 2 types differents).
+      if (spawn.forceMixedGroup === true && groupMonsterIds.length > 1) {
         const hasDistinct = new Set(groupMonsterIds).size > 1;
         if (!hasDistinct && pool.length > 1) {
           const alternatives = pool.filter((id) => id !== type);
@@ -553,37 +529,157 @@ export function spawnInitialMonsters(
           }
         }
       }
-
-      monster.groupMonsterIds = groupMonsterIds;
     } else {
-      monster.groupMonsterIds = Array.from({ length: monster.groupSize }, () => type);
+      groupMonsterIds = Array.from(
+        { length: Math.max(1, desiredGroupSize) },
+        () => type
+      );
     }
 
-    monster.groupLevels = monster.groupMonsterIds.map((id) => rollMonsterLevel(id));
+    const groupLevels = groupMonsterIds.map((id) => rollMonsterLevel(id));
+    const level = groupLevels[0];
 
-    if (pool.length > 0) {
-      monster.respawnTemplate = {
-        groupPool: pool.slice(),
-        groupSizeMin: sizeMin,
-        groupSizeMax: sizeMax,
-        forceMixedGroup: spawn.forceMixedGroup === true,
-      };
-    }
-    // Le leader herite du premier niveau
-    monster.level = monster.groupLevels[0];
-    syncMonsterStatsToDisplayedLevel(monster);
-    monster.groupLevelTotal = monster.groupLevels.reduce(
-      (sum, lvl) => sum + lvl,
-      0
-    );
-    monster.tileX = tileX;
-    monster.tileY = tileY;
-    monster.groupId = nextGroupId;
-    monster.spawnMapKey = mapDef?.key || scene.currentMapKey || null;
-    scene.monsters.push(monster);
-    startMonsterRoaming(scene, map, groundLayer, monster);
+    const entry = {
+      monsterId: type,
+      tileX,
+      tileY,
+      groupId: nextGroupId,
+      groupSize: Math.max(1, groupMonsterIds.length),
+      groupMonsterIds,
+      groupLevels,
+      groupLevelTotal: groupLevels.reduce((sum, lvl) => sum + lvl, 0),
+      level,
+      respawnTemplate:
+        pool.length > 0
+          ? {
+              groupPool: pool.slice(),
+              groupSizeMin: sizeMin,
+              groupSizeMax: sizeMax,
+              forceMixedGroup: spawn.forceMixedGroup === true,
+            }
+          : null,
+    };
+
+    entries.push(entry);
     nextGroupId += 1;
   });
+
+  return entries;
+}
+
+export function spawnMonstersFromEntries(
+  scene,
+  map,
+  groundLayer,
+  entries,
+  { disableRoam = false } = {}
+) {
+  if (!scene || !map || !groundLayer) return;
+  if (!Array.isArray(entries) || entries.length === 0) return;
+
+  scene.monsters = scene.monsters || [];
+
+  entries.forEach((entry) => {
+    if (!entry || !entry.monsterId) return;
+    const tileX = entry.tileX;
+    const tileY = entry.tileY;
+    if (
+      typeof tileX !== "number" ||
+      typeof tileY !== "number" ||
+      tileX < 0 ||
+      tileY < 0 ||
+      tileX >= map.width ||
+      tileY >= map.height
+    ) {
+      return;
+    }
+
+    const def = monsters[entry.monsterId] || null;
+    if (!def) return;
+    const offX =
+      def && def.render && typeof def.render.offsetX === "number"
+        ? def.render.offsetX
+        : 0;
+    const offY =
+      def && def.render && typeof def.render.offsetY === "number"
+        ? def.render.offsetY
+        : 0;
+
+    const wp = map.tileToWorldXY(
+      tileX,
+      tileY,
+      undefined,
+      undefined,
+      groundLayer
+    );
+    if (!wp) return;
+
+    const x = wp.x + map.tileWidth / 2 + offX;
+    const y = wp.y + map.tileHeight + offY;
+
+    const monster = createMonster(scene, x, y, entry.monsterId, entry.level ?? null);
+    monster.tileX = tileX;
+    monster.tileY = tileY;
+    if (Number.isInteger(entry.entityId)) {
+      monster.entityId = entry.entityId;
+    }
+    monster.spawnMapKey = entry.spawnMapKey || scene.currentMapKey || null;
+    monster.groupId = entry.groupId ?? null;
+    if (typeof entry.groupSize === "number") {
+      monster.groupSize = entry.groupSize;
+    }
+    if (Array.isArray(entry.groupMonsterIds)) {
+      monster.groupMonsterIds = entry.groupMonsterIds.slice();
+      if (!monster.groupSize || monster.groupSize <= 0) {
+        monster.groupSize = monster.groupMonsterIds.length;
+      }
+    }
+    if (Array.isArray(entry.groupLevels) && entry.groupLevels.length > 0) {
+      monster.groupLevels = entry.groupLevels.slice();
+      monster.level = entry.groupLevels[0];
+      syncMonsterStatsToDisplayedLevel(monster);
+      monster.groupLevelTotal = entry.groupLevelTotal ?? monster.groupLevels.reduce((s, v) => s + v, 0);
+    } else if (typeof entry.level === "number") {
+      monster.level = entry.level;
+      syncMonsterStatsToDisplayedLevel(monster);
+      monster.groupLevelTotal = entry.groupLevelTotal ?? null;
+    }
+
+    if (entry.respawnTemplate && typeof entry.respawnTemplate === "object") {
+      const tpl = entry.respawnTemplate;
+      monster.respawnTemplate = {
+        groupPool: Array.isArray(tpl.groupPool) ? tpl.groupPool.slice() : [],
+        groupSizeMin: tpl.groupSizeMin ?? null,
+        groupSizeMax: tpl.groupSizeMax ?? null,
+        forceMixedGroup: tpl.forceMixedGroup === true,
+      };
+    }
+
+    scene.monsters.push(monster);
+    if (!disableRoam) {
+      startMonsterRoaming(scene, map, groundLayer, monster);
+    }
+  });
+}
+
+// Place les monstres declares dans la definition de la map (mapDef.monsterSpawns).
+// Chaque map fournit sa propre liste : pas de partage implicite entre maps.
+export function spawnInitialMonsters(
+  scene,
+  map,
+  groundLayer,
+  centerTileX,
+  centerTileY,
+  mapDef
+) {
+  const entries = buildInitialMonsterEntries(
+    map,
+    groundLayer,
+    centerTileX,
+    centerTileY,
+    mapDef
+  );
+  spawnMonstersFromEntries(scene, map, groundLayer, entries);
 }
 
 // Cherche un monstre exactement sur une tuile donnee
@@ -677,6 +773,11 @@ function pickRoamPath(scene, map, monster) {
   const stepCount = Phaser.Math.Between(1, 4);
   const lastIdx = Math.min(stepCount, path.length - 1);
   return path.slice(1, lastIdx + 1);
+}
+
+export function planMonsterRoamPath(scene, map, monster) {
+  if (!scene || !map || !monster) return null;
+  return pickRoamPath(scene, map, monster);
 }
 
 function pickRandomTargetTile(scene, map, monster, start, maxRange) {

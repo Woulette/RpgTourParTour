@@ -56,6 +56,18 @@ function shouldSpawnNpc(def, player) {
 }
 
 function spawnNpcInstance(scene, map, groundLayer, def) {
+  if (
+    !scene ||
+    !map ||
+    !groundLayer ||
+    typeof map.tileToWorldXY !== "function" ||
+    !Number.isFinite(map.tileWidth) ||
+    !Number.isFinite(map.tileHeight) ||
+    !groundLayer.layer ||
+    !Number.isFinite(groundLayer.layer.baseTileWidth)
+  ) {
+    return null;
+  }
   const { tileX, tileY } = def;
   const worldPos = map.tileToWorldXY(
     tileX,
@@ -135,25 +147,36 @@ function refreshNpcQuestMarkers(scene, player) {
   scene.npcs.forEach((npcInstance) => {
     if (!npcInstance) return;
 
-    // Détruit l'ancien marqueur éventuel
-    if (npcInstance.questMarker && npcInstance.questMarker.destroy) {
-      npcInstance.questMarker.destroy();
-      npcInstance.questMarker = null;
-    }
-
     const npcId = npcInstance.id;
     let markerTexture = null;
     const markerSymbol = getNpcMarker(player, npcId);
     if (markerSymbol === "!") markerTexture = "quest_exclamation";
     else if (markerSymbol === "?") markerTexture = "quest_question";
 
-    if (!markerTexture) return;
+    if (!markerTexture) {
+      if (npcInstance.questMarker && npcInstance.questMarker.destroy) {
+        npcInstance.questMarker.destroy();
+        npcInstance.questMarker = null;
+      }
+      return;
+    }
 
     const sprite = npcInstance.sprite;
-    if (!sprite) return;
+    if (!sprite || !sprite.active || !sprite.scene) return;
 
     const margin = 0;
-    const markerY = sprite.y - sprite.displayHeight - margin;
+    let markerY = null;
+    try {
+      markerY = sprite.y - sprite.displayHeight - margin;
+    } catch {
+      return;
+    }
+
+    if (npcInstance.questMarker && npcInstance.questMarker.destroy) {
+      npcInstance.questMarker.destroy();
+      npcInstance.questMarker = null;
+    }
+
     const marker = scene.add.image(sprite.x, markerY, markerTexture);
     marker.setOrigin(0.5, 1);
     marker.setDepth(Math.max((sprite.depth || 0) + 2, 100010));
@@ -179,37 +202,83 @@ export function spawnNpcsForMap(scene, map, groundLayer, mapId) {
 
   // Met à jour les marqueurs une première fois pour cette map
   refreshNpcQuestMarkers(scene, scene.player);
+  if (scene?.time?.delayedCall) {
+    scene.time.delayedCall(200, () => {
+      refreshNpcQuestMarkers(scene, scene.player);
+    });
+  }
 
   // Etablie un listener global une seule fois pour réagir aux mises à jour de quête
-  if (!questMarkerUnsubscribe) {
-    questMarkerUnsubscribe = onStoreEvent("quest:updated", () => {
-      if (!scene || !scene.npcs) return;
-      const byId = new Map(scene.npcs.map((n) => [n.id, n]));
-      const currentMapKey = scene.currentMapKey || mapId;
-      const currentMap = scene.map || map;
-      const currentGroundLayer = scene.groundLayer || groundLayer;
-      const currentMapNpcs = ALL_NPCS.filter(
-        (npc) => npc.mapId === currentMapKey
-      );
-      currentMapNpcs.forEach((def) => {
-        const want = shouldSpawnNpc(def, scene.player);
-        const existing = byId.get(def.id);
-        if (want && !existing) {
-          spawnNpcInstance(scene, currentMap, currentGroundLayer, def);
-        } else if (!want && existing && existing.conditional) {
-          existing.sprite.destroy();
-          if (existing.hoverHighlight) existing.hoverHighlight.destroy();
-          if (existing.questMarker) existing.questMarker.destroy();
-          scene.npcs = scene.npcs.filter((n) => n !== existing);
-        }
-      });
-      refreshNpcQuestMarkers(scene, scene.player);
-    });
+  if (questMarkerUnsubscribe) {
+    questMarkerUnsubscribe();
+    questMarkerUnsubscribe = null;
   }
 
-  if (!inventoryMarkerUnsubscribe) {
-    inventoryMarkerUnsubscribe = onStoreEvent("inventory:updated", () => {
+  const isMapReadyForNpcs = (targetMap, targetLayer) =>
+    !!(
+      targetMap &&
+      targetLayer &&
+      typeof targetMap.tileToWorldXY === "function" &&
+      Number.isFinite(targetMap.tileWidth) &&
+      Number.isFinite(targetMap.tileHeight) &&
+      targetLayer.layer &&
+      Number.isFinite(targetLayer.layer.baseTileWidth)
+    );
+
+  const scheduleNpcRefresh = () => {
+    if (!scene) return;
+    if (scene.__npcQuestRefreshTimer) return;
+    const run = () => {
+      scene.__npcQuestRefreshTimer = null;
+      if (!scene) return;
+      if (!isMapReadyForNpcs(scene.map, scene.groundLayer)) return;
       refreshNpcQuestMarkers(scene, scene.player);
+    };
+    if (scene?.time?.delayedCall) {
+      scene.__npcQuestRefreshTimer = scene.time.delayedCall(200, run);
+    } else {
+      scene.__npcQuestRefreshTimer = setTimeout(run, 200);
+    }
+  };
+
+  questMarkerUnsubscribe = onStoreEvent("quest:updated", () => {
+    if (!scene || !scene.npcs) return;
+    const byId = new Map(scene.npcs.map((n) => [n.id, n]));
+    const currentMapKey = scene.currentMapKey || mapId;
+    const currentMap = scene.map || map;
+    const currentGroundLayer = scene.groundLayer || groundLayer;
+    if (!isMapReadyForNpcs(currentMap, currentGroundLayer)) {
+      scheduleNpcRefresh();
+      return;
+    }
+    const currentMapNpcs = ALL_NPCS.filter(
+      (npc) => npc.mapId === currentMapKey
+    );
+    currentMapNpcs.forEach((def) => {
+      const want = shouldSpawnNpc(def, scene.player);
+      const existing = byId.get(def.id);
+      if (want && !existing) {
+        spawnNpcInstance(scene, currentMap, currentGroundLayer, def);
+      } else if (!want && existing && existing.conditional) {
+        existing.sprite.destroy();
+        if (existing.hoverHighlight) existing.hoverHighlight.destroy();
+        if (existing.questMarker) existing.questMarker.destroy();
+        scene.npcs = scene.npcs.filter((n) => n !== existing);
+      }
     });
+    refreshNpcQuestMarkers(scene, scene.player);
+  });
+
+  if (inventoryMarkerUnsubscribe) {
+    inventoryMarkerUnsubscribe();
+    inventoryMarkerUnsubscribe = null;
   }
+
+  inventoryMarkerUnsubscribe = onStoreEvent("inventory:updated", () => {
+    if (!isMapReadyForNpcs(scene?.map, scene?.groundLayer)) {
+      scheduleNpcRefresh();
+      return;
+    }
+    refreshNpcQuestMarkers(scene, scene.player);
+  });
 }

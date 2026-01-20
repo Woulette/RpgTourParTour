@@ -1,14 +1,15 @@
 import { BACKGROUND_COLOR, GAME_HEIGHT, GAME_WIDTH } from "./config/constants.js";
 import { preloadAssets } from "./game/preload/preloadAssets.js";
 import { createMainScene } from "./game/scene/createScene.js";
-import { initCharacterMenus } from "./features/ui/characterMenus.js";
+import { initCharacterMenus } from "./features/ui/characterMenus/index.js";
 import { closeAllHudPanels } from "./features/ui/domPanelClose.js";
 import { createSessionSwitch } from "./app/sessionSwitch.js";
 import {
-  getSelectedCharacter,
   setSelectedCharacter,
   setUiApi,
   getUiApi,
+  getNetClient,
+  getNetPlayerId,
 } from "./app/session.js";
 import { getPlayer } from "./state/store.js";
 import { updateCombatAuras } from "./features/combat/runtime/auras.js";
@@ -23,6 +24,9 @@ class MainScene extends Phaser.Scene {
   }
 
   create() {
+    if (typeof window !== "undefined") {
+      window.__scene = this;
+    }
     createMainScene(this);
   }
 
@@ -62,14 +66,26 @@ const sessionSwitch = createSessionSwitch({
   destroyGame,
   createGame: () => {
     gameInstance = new Phaser.Game(config);
+    if (typeof window !== "undefined") {
+      window.__game = gameInstance;
+    }
   },
   closeAllHudPanels,
   setSelectedCharacter,
-  getSelectedCharacter,
   getPlayer,
   onEnterMenu: () => {
     document.body.classList.remove("game-running");
     document.body.classList.add("menu-open");
+    const client = getNetClient();
+    if (client && typeof client.sendCmd === "function") {
+      const playerId = getNetPlayerId();
+      if (Number.isInteger(playerId)) {
+        client.sendCmd("CmdLogout", { playerId, revokeSession: false });
+      }
+    }
+    if (client && typeof client.close === "function") {
+      client.close();
+    }
   },
   onEnterGame: () => {
     document.body.classList.add("game-running");
@@ -79,22 +95,43 @@ const sessionSwitch = createSessionSwitch({
 
 const returnMenuBtn = document.getElementById("ui-return-menu");
 if (returnMenuBtn) {
-  returnMenuBtn.addEventListener("click", () => {
-    const uiApi = getUiApi();
-    if (typeof uiApi?.openMenu === "function") {
-      uiApi.openMenu();
-      return;
+  const canOpenMenu = () => {
+    const player = getPlayer();
+    const scene =
+      player?.scene || (typeof window !== "undefined" ? window.__scene : null);
+    if (scene?.combatState?.enCours || scene?.prepState?.actif) {
+      if (typeof window !== "undefined") {
+        window.alert("Impossible d'ouvrir le menu pendant un combat.");
+      }
+      return false;
     }
-    sessionSwitch.openMenu();
+    return true;
+  };
+  returnMenuBtn.addEventListener("click", () => {
+    if (!canOpenMenu()) return;
+    if (menus && typeof menus.openMenu === "function") {
+      menus.openMenu();
+    }
   });
 }
 
 const menus = initCharacterMenus({
   onStartGame: (character) => sessionSwitch.startGame(character),
+  onEnterMenu: () => sessionSwitch.openMenu(),
 });
 setUiApi({
   openMenu: () => {
-    sessionSwitch.openMenu();
-    if (menus && typeof menus.openMenu === "function") menus.openMenu();
+    const player = getPlayer();
+    const scene =
+      player?.scene || (typeof window !== "undefined" ? window.__scene : null);
+    if (scene?.combatState?.enCours || scene?.prepState?.actif) {
+      if (typeof window !== "undefined") {
+        window.alert("Impossible d'ouvrir le menu pendant un combat.");
+      }
+      return;
+    }
+    if (menus && typeof menus.openMenu === "function") {
+      menus.openMenu();
+    }
   },
 });

@@ -1,13 +1,15 @@
 import { ensureTailleurState, addTailleurXp } from "../../tailleur/state.js";
 import { tailleurRecipes } from "../../tailleur/recipes.js";
-import { removeItem, addItem, getItemDef } from "../../../inventory/runtime/inventoryCore.js";
-import { emit as emitStoreEvent } from "../../../state/store.js";
+import { removeItem, addItem, getItemDef } from "../../../inventory/runtime/inventoryAuthority.js";
+import { emit as emitStoreEvent, on as onStoreEvent } from "../../../state/store.js";
+import { getNetClient, getNetPlayerId } from "../../../../app/session.js";
 
 let panelEl = null;
 let isOpen = false;
 let lastCrafted = null;
 let activeRecipePreview = null;
 let xpRenderRequested = false;
+let craftUnsub = null;
 
 function labelForStatKey(key) {
   switch (key) {
@@ -221,6 +223,7 @@ function renderInventory(player) {
   inv.slots.forEach((slot) => {
     const cell = document.createElement("div");
     cell.className = "craft-inventory-slot";
+    cell.dataset.itemId = slot?.itemId || "";
     const def = slot?.itemId ? getItemDef(slot.itemId) : null;
     const match =
       filter === "all" ||
@@ -757,6 +760,20 @@ export function openTailleurCraftPanel(scene, player) {
         return;
       }
       if (btn.disabled) return;
+      const useAuthority =
+        typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+      if (useAuthority) {
+        const netClient = getNetClient();
+        const playerId = getNetPlayerId();
+        if (netClient && Number.isInteger(playerId)) {
+          netClient.sendCmd("CmdCraft", {
+            playerId,
+            metierId: "tailleur",
+            recipeId: activeRecipe.id,
+          });
+        }
+        return;
+      }
       const inv = player?.inventory;
       const countItem = (id) =>
         inv?.slots?.reduce(
@@ -790,6 +807,16 @@ export function openTailleurCraftPanel(scene, player) {
     };
   }
 
+  if (!craftUnsub) {
+    craftUnsub = onStoreEvent("craft:completed", (payload) => {
+      if (!payload || payload.metierId !== "tailleur") return;
+      lastCrafted = { itemId: payload.itemId, qty: payload.qty };
+      renderInventory(player);
+      renderXpHeader(player);
+      refreshRecipes();
+    });
+  }
+
   panelEl.classList.add("open");
   isOpen = true;
 }
@@ -798,4 +825,8 @@ export function closeTailleurCraftPanel() {
   if (!panelEl) return;
   panelEl.classList.remove("open");
   isOpen = false;
+  if (craftUnsub) {
+    craftUnsub();
+    craftUnsub = null;
+  }
 }

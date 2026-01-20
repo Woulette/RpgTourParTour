@@ -57,6 +57,7 @@ export function createCombatState(player, monster) {
     // Ordre de tour multi-acteurs (joueur + monstres)
     actors: null,
     actorIndex: 0,
+    turnOrderFrozen: false,
 
     // suivi des sorts lances par tour (joueur)
     castsThisTurn: {},
@@ -64,10 +65,39 @@ export function createCombatState(player, monster) {
   };
 }
 
+function getActorKey(actor) {
+  const ent = actor?.entity;
+  if (!ent) return "z:0";
+  if (actor.kind === "joueur") {
+    const id =
+      Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : 0;
+    return `p:${id}`;
+  }
+  if (ent.isCombatAlly) {
+    const id =
+      Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : 0;
+    return `a:${id}`;
+  }
+  if (Number.isInteger(ent.entityId)) return `m:${ent.entityId}`;
+  if (typeof ent.monsterId === "string") return `m:${ent.monsterId}`;
+  return "m:0";
+}
+
+function isActorAlive(actor) {
+  const ent = actor?.entity;
+  const stats = ent?.stats;
+  if (!stats) return false;
+  const hp = typeof stats.hp === "number" ? stats.hp : stats.hpMax ?? 0;
+  return hp > 0;
+}
+
 // Construit l'ordre de tour (joueur + allies + monstres)\r\n// en alternant les camps avec tri d'initiative interne.
 export function buildTurnOrder(scene) {
   const state = scene.combatState;
   if (!state || !state.enCours) return;
+  if (state.turnOrderFrozen && Array.isArray(state.actors) && state.actors.length > 0) {
+    return;
+  }
 
   const player = state.joueur;
   const monsters =
@@ -90,16 +120,23 @@ export function buildTurnOrder(scene) {
     playerActors.push({ kind: "joueur", entity: player });
   }
   allies.forEach((ally) => {
-    playerActors.push({ kind: "monstre", entity: ally });
+    playerActors.push({ kind: "joueur", entity: ally });
   });
   monsters.forEach((m) => {
     monsterActors.push({ kind: "monstre", entity: m });
   });
 
   const getInit = (actor) => actor.entity?.stats?.initiative ?? 0;
+  const compareActors = (a, b) => {
+    const initDiff = getInit(b) - getInit(a);
+    if (initDiff !== 0) return initDiff;
+    const keyA = getActorKey(a);
+    const keyB = getActorKey(b);
+    return keyA.localeCompare(keyB);
+  };
 
-  playerActors.sort((a, b) => getInit(b) - getInit(a));
-  monsterActors.sort((a, b) => getInit(b) - getInit(a));
+  playerActors.sort(compareActors);
+  monsterActors.sort(compareActors);
 
   if (!playerActors.length && !monsterActors.length) {
     state.actors = null;
@@ -113,7 +150,9 @@ export function buildTurnOrder(scene) {
     const mInit = getInit(monsterActors[0]);
     if (mInit > pInit) firstSide = "monstre";
     else if (mInit === pInit) {
-      firstSide = Math.random() < 0.5 ? "joueur" : "monstre";
+      const combatSeed =
+        Number.isInteger(state.combatId) ? state.combatId : 0;
+      firstSide = combatSeed % 2 === 0 ? "joueur" : "monstre";
     }
   } else if (!playerActors.length) {
     firstSide = "monstre";
@@ -163,6 +202,7 @@ export function buildTurnOrder(scene) {
 
   state.actors = actors;
   state.actorIndex = 0;
+  state.turnOrderFrozen = true;
 
   const current = actors[0];
   if (current.kind === "joueur") {
@@ -229,14 +269,67 @@ export function rebuildTurnOrderKeepCurrent(scene) {
   const currentTour = state.tour;
   const currentPa = state.paRestants;
   const currentPm = state.pmRestants;
+  const previousIndex =
+    Number.isInteger(state.actorIndex) ? state.actorIndex : 0;
 
-  buildTurnOrder(scene);
+  if (!Array.isArray(state.actors) || state.actors.length === 0) {
+    buildTurnOrder(scene);
+    return;
+  }
 
-  if (!state.actors || !currentActor) return;
-  const idx = state.actors.findIndex((a) => a && a.entity === currentActor);
-  if (idx < 0) return;
+  const kept = state.actors.filter((actor) => actor && isActorAlive(actor));
+  const seen = new Set(kept.map((actor) => getActorKey(actor)));
 
-  state.actorIndex = idx;
+  const candidates = [];
+  if (state.joueur) {
+    candidates.push({ kind: "joueur", entity: state.joueur });
+  }
+  if (Array.isArray(scene.combatAllies)) {
+    scene.combatAllies
+      .filter((s) => s && s.isCombatAlly)
+      .forEach((ally) => {
+        candidates.push({ kind: "joueur", entity: ally });
+      });
+  }
+  const monsters =
+    Array.isArray(scene.combatMonsters) && scene.combatMonsters.length > 0
+      ? scene.combatMonsters
+      : state.monstre
+        ? [state.monstre]
+        : [];
+  monsters.forEach((m) => {
+    if (!m) return;
+    candidates.push({ kind: "monstre", entity: m });
+  });
+
+  candidates.forEach((actor) => {
+    const key = getActorKey(actor);
+    if (!seen.has(key) && isActorAlive(actor)) {
+      seen.add(key);
+      kept.push(actor);
+    }
+  });
+
+  state.actors = kept;
+  if (!kept.length) {
+    state.actorIndex = 0;
+    return;
+  }
+
+  let nextIndex = kept.findIndex((a) => a && a.entity === currentActor);
+  if (nextIndex < 0) {
+    let loops = 0;
+    nextIndex = previousIndex % kept.length;
+    while (loops < kept.length && !isActorAlive(kept[nextIndex])) {
+      nextIndex = (nextIndex + 1) % kept.length;
+      loops += 1;
+    }
+    if (loops >= kept.length) {
+      nextIndex = 0;
+    }
+  }
+
+  state.actorIndex = nextIndex;
   if (currentTour === "joueur") {
     state.tour = "joueur";
     state.monstre = null;

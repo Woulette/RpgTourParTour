@@ -9,8 +9,28 @@ import {
 import { openRiftModal } from "../../ui/domRifts.js";
 import { maps } from "../index.js";
 import { isUiBlockingOpen } from "../../ui/uiBlock.js";
+import { getNetClient, getNetPlayerId } from "../../../app/session.js";
 
 const QUEST_ID = "keeper_north_explosion_1";
+
+function useQuestAuthority() {
+  return typeof window !== "undefined" && window.__lanInventoryAuthority === true;
+}
+
+function sendRiftProgress(riftId) {
+  if (!useQuestAuthority()) return false;
+  const client = getNetClient();
+  const playerId = getNetPlayerId();
+  if (!client || !Number.isInteger(playerId)) return false;
+  client.sendCmd("CmdQuestAction", {
+    playerId,
+    action: "rift_progress",
+    questId: QUEST_ID,
+    riftId: riftId || null,
+    count: 1,
+  });
+  return true;
+}
 
 function getRiftTexture(scene, key) {
   if (!scene?.textures?.exists) return null;
@@ -52,6 +72,7 @@ function markRiftClosed(scene, riftId) {
   if (state.progress.closedRifts[riftId]) return;
 
   state.progress.closedRifts[riftId] = true;
+  sendRiftProgress(riftId);
   incrementRiftProgress(scene, player, QUEST_ID, 1);
 }
 

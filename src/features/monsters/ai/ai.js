@@ -1,4 +1,5 @@
 import { passerTour } from "../../combat/runtime/state.js";
+import { getNetClient, getNetIsHost, getNetPlayerId } from "../../../app/session.js";
 import { runTurn as runCorbeauTurn } from "../../combat/ai/corbeau.js";
 import { runTurn as runAluineeksTurn } from "../../combat/ai/aluineeks.js";
 import { runTurn as runGoushTurn } from "../../combat/ai/goush.js";
@@ -41,6 +42,13 @@ const AI_HANDLERS = {
 export function runMonsterTurn(scene) {
   const state = scene.combatState;
   if (!state || !state.enCours) return;
+  if (getNetClient() && scene.__lanCombatId) {
+    const localId = getNetPlayerId();
+    const driverId = Number.isInteger(scene.__lanCombatAiDriverId)
+      ? scene.__lanCombatAiDriverId
+      : null;
+    if (driverId ? localId !== driverId : !getNetIsHost()) return;
+  }
 
   const monster = state.monstre;
   const player = state.joueur;
@@ -95,8 +103,14 @@ export function runMonsterTurn(scene) {
     });
     if (aliveAllies.length === 0) return player;
 
-    const mx = monster.tileX ?? 0;
-    const my = monster.tileY ?? 0;
+    const mx =
+      typeof monster.currentTileX === "number"
+        ? monster.currentTileX
+        : monster.tileX ?? 0;
+    const my =
+      typeof monster.currentTileY === "number"
+        ? monster.currentTileY
+        : monster.tileY ?? 0;
     const pTx =
       typeof player.currentTileX === "number" ? player.currentTileX : player.tileX ?? 0;
     const pTy =
@@ -106,8 +120,10 @@ export function runMonsterTurn(scene) {
     let bestSummon = null;
     let bestDist = Infinity;
     aliveAllies.forEach((s) => {
-      const sx = s.tileX ?? 0;
-      const sy = s.tileY ?? 0;
+      const sx =
+        typeof s.currentTileX === "number" ? s.currentTileX : s.tileX ?? 0;
+      const sy =
+        typeof s.currentTileY === "number" ? s.currentTileY : s.tileY ?? 0;
       const ds = Math.abs(sx - mx) + Math.abs(sy - my);
       if (ds < bestDist) {
         bestDist = ds;
@@ -146,6 +162,20 @@ export function runMonsterTurn(scene) {
     if (!state.enCours) return;
 
     const newTurn = passerTour(scene);
+    const netClient = getNetClient();
+    const netPlayerId = getNetPlayerId();
+    if (
+      newTurn === "joueur" &&
+      netClient &&
+      netPlayerId &&
+      scene.__lanCombatId
+    ) {
+      netClient.sendCmd("CmdEndTurnCombat", {
+        playerId: netPlayerId,
+        combatId: scene.__lanCombatId,
+        actorType: "monster",
+      });
+    }
 
     // Si le prochain acteur est encore un monstre (ex: C3 -> C4),
     // on enchaîne immédiatement son tour.

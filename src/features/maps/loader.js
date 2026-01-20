@@ -12,6 +12,15 @@ export function preloadMap(scene, mapDef) {
   });
 }
 
+const PIXEL_ART_KEYS = new Set([
+  "MaisonVillage1",
+  "MaisonVillage2",
+  "MaisonVillage3",
+  "MaisonVillage4",
+  "MaisonAlchimiste",
+  "TourMairie",
+]);
+
 export function buildMap(scene, mapDef) {
   const map = scene.make.tilemap({ key: mapDef.key });
 
@@ -19,6 +28,19 @@ export function buildMap(scene, mapDef) {
   const tilesets = map.tilesets.map((tsData) => {
     const def = mapDef.tilesets.find((ts) => ts.name === tsData.name);
     const textureKey = def ? def.imageKey : tsData.name;
+
+    // Force sharp filtering for large house sprites while keeping the rest smooth.
+    if (
+      scene &&
+      scene.textures &&
+      scene.textures.exists(textureKey) &&
+      PIXEL_ART_KEYS.has(textureKey)
+    ) {
+      const texture = scene.textures.get(textureKey);
+      if (texture && texture.setFilter && Phaser?.Textures?.FilterMode) {
+        texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      }
+    }
 
     // Safety: if a tileset texture isn't loaded (missing PNG), create a small
     // placeholder texture so the map can still load.

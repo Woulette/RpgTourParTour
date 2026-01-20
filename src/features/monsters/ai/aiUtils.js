@@ -5,6 +5,7 @@ import {
 } from "../runtime/animations.js";
 import { blockTile, isTileBlocked, unblockTile } from "../../../collision/collisionGrid.js";
 import { applyTaclePenalty } from "../../combat/runtime/tacle.js";
+import { getNetClient, getNetIsHost, getNetPlayerId } from "../../../app/session.js";
 
 export function delay(scene, ms, fn) {
   const duration = Math.max(0, ms | 0);
@@ -108,6 +109,32 @@ export function moveMonsterAlongPath(
     stopMonsterMoveAnimation(monster);
     if (typeof onDone === "function") onDone();
     return;
+  }
+
+  if (scene?.__lanCombatId && monster) {
+    const client = getNetClient();
+    const playerId = getNetPlayerId();
+    const driverId = Number.isInteger(scene.__lanCombatAiDriverId)
+      ? scene.__lanCombatAiDriverId
+      : null;
+    const isDriver = driverId ? playerId === driverId : getNetIsHost();
+    if (client && playerId && isDriver) {
+      const seq = (monster.__lanCombatMoveSeq || 0) + 1;
+      monster.__lanCombatMoveSeq = seq;
+      monster.__lanCombatLastMoveSeq = seq;
+      const networkPath = queue.map((step) => ({ x: step.x, y: step.y }));
+      const combatIndex = Array.isArray(scene.combatMonsters)
+        ? scene.combatMonsters.indexOf(monster)
+        : -1;
+      client.sendCmd("CmdCombatMonsterMoveStart", {
+        playerId,
+        combatId: scene.__lanCombatId,
+        entityId: Number.isInteger(monster.entityId) ? monster.entityId : null,
+        combatIndex: combatIndex >= 0 ? combatIndex : null,
+        seq,
+        path: networkPath,
+      });
+    }
   }
 
   const stepNext = () => {

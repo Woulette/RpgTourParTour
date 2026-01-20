@@ -1,4 +1,4 @@
-import { addItem } from "../../inventory/runtime/inventoryCore.js";
+import { addItem } from "../../inventory/runtime/inventoryAuthority.js";
 
 export const alchimiste_marchand_4 = {
   id: "alchimiste_marchand_4",

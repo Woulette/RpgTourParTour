@@ -5,7 +5,7 @@
 
 import { classes } from "../../config/classes.js";
 import { getXpTotalForLevel } from "../../core/level.js";
-import { getPlayer, on as onStoreEvent } from "../../state/store.js";
+import { emit as emitStoreEvent, getPlayer, on as onStoreEvent } from "../../state/store.js";
 import { mountUiInputBlocker } from "./uiBlock.js";
 
 let uiInputGuardMounted = false;
@@ -19,7 +19,7 @@ function mountUiInputGuard() {
     if (!target || !target.closest) return;
 
     const inUi = target.closest(
-      "#hud-root, .craft-panel, .shop-panel, .npc-dialog-panel, #combat-result-overlay, #levelup-overlay, .menu-panel"
+      "#hud-root, .craft-panel, .shop-panel, .market-panel, .npc-dialog-panel, #combat-result-overlay, #levelup-overlay, .menu-panel"
     );
     if (!inUi) return;
 
@@ -131,6 +131,7 @@ function mountHudDockMenu() {
 
   const ids = [
     "hud-metiers-button",
+    "hud-friends-button",
     "hud-quests-button",
     "hud-map-button",
     "hud-inventory-button",
@@ -309,6 +310,7 @@ function initStatControls(getActivePlayer) {
 
   const updateAll = (player) => {
     mettreAJourStatsPanel(player);
+    emitStoreEvent("player:updated", player);
   };
 
   // Boutons +/-

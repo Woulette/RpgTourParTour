@@ -1,7 +1,7 @@
 import { spells } from "../../../config/spells.js";
 import { getSpellCritChancePct } from "../../combat/spells/utils/damage.js";
 import { monsters as monsterDefs } from "../../../content/monsters/index.js";
-import { removeItem } from "../../inventory/runtime/inventoryCore.js";
+import { removeItem } from "../../inventory/runtime/inventoryAuthority.js";
 import {
   QUEST_STATES,
   getCurrentQuestStage,

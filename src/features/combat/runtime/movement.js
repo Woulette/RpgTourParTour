@@ -1,3 +1,4 @@
+import { getNetPlayerId } from "../../../app/session.js";
 import { getTaclePenaltyPreview } from "./tacle.js";
 
 // Logique de déplacement en combat et preview du chemin.
@@ -14,18 +15,26 @@ export function limitPathForCombat(scene, player, path) {
   if (state.tour !== "joueur") {
     return null;
   }
+  if (
+    Number.isInteger(state.activePlayerId) &&
+    getNetPlayerId() !== state.activePlayerId
+  ) {
+    return null;
+  }
 
   if (!path || path.length === 0) {
     return null;
   }
 
-  if (state.pmRestants <= 0) {
+  const { pmLoss } = getTaclePenaltyPreview(scene, player);
+  const effectivePm = Math.max(0, (state.pmRestants ?? 0) - pmLoss);
+  if (effectivePm <= 0) {
     return null;
   }
 
   let limitedPath = path;
-  if (path.length > state.pmRestants) {
-    limitedPath = path.slice(0, state.pmRestants);
+  if (path.length > effectivePm) {
+    limitedPath = path.slice(0, effectivePm);
   }
 
   const moveCost = limitedPath.length;
@@ -74,6 +83,12 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
   if (!state || !state.enCours || state.tour !== "joueur") {
     return;
   }
+  if (
+    Number.isInteger(state.activePlayerId) &&
+    getNetPlayerId() !== state.activePlayerId
+  ) {
+    return;
+  }
 
   if (!path || path.length === 0) {
     return;
@@ -87,14 +102,21 @@ export function updateCombatPreview(scene, map, groundLayer, path) {
   const blockedFill = 0.18;
 
   let blockedFromIndex = null;
+  let previewPath = path;
   if (state && state.enCours && state.tour === "joueur" && state.joueur) {
     const { pmLoss } = getTaclePenaltyPreview(scene, state.joueur);
-    const effectivePm = Math.max(0, (state.pmRestants ?? 0) - pmLoss);
+    const basePm = Number.isFinite(state.pmRestants)
+      ? state.pmRestants
+      : state.joueur?.stats?.pm ?? 0;
+    if (Number.isFinite(basePm)) {
+      previewPath = path.slice(0, Math.max(0, basePm));
+    }
+    const effectivePm = Math.max(0, basePm - pmLoss);
     blockedFromIndex = effectivePm;
   }
 
-  for (let i = 0; i < path.length; i += 1) {
-    const step = path[i];
+  for (let i = 0; i < previewPath.length; i += 1) {
+    const step = previewPath[i];
     const wp = map.tileToWorldXY(
       step.x,
       step.y,

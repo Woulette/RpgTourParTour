@@ -12,6 +12,7 @@ import { getActiveSpell } from "../spells/core/activeSpell.js";
 import { tryCastActiveSpellAtTile } from "../spells/core/cast.js";
 import { updateSpellRangePreview, clearSpellRangePreview } from "../spells/core/preview.js";
 import { initDomCombatChallenge } from "./domCombatChallenge.js";
+import { getNetClient, getNetPlayerId } from "../../../app/session.js";
 
 export function initDomCombat(scene) {
   const endTurnBtn = document.getElementById("combat-end-turn-button");
@@ -64,6 +65,9 @@ export function initDomCombat(scene) {
 
   const getActorName = (actor) => {
     if (!actor) return "-";
+    if (actor?.entity?.isCombatAlly) {
+      return actor.entity.displayName || actor.entity.label || "Allie";
+    }
     if (actor.kind === "joueur") return "Joueur";
     if (actor.kind === "invocation") {
       const id = actor.entity?.monsterId || "";
@@ -299,20 +303,113 @@ export function initDomCombat(scene) {
       summonActors.every((sa) => actors.some((a) => a && a.entity === sa.entity));
 
     if (summonActors.length > 0 && !alreadyListed) {
-      const playerIdx = actors.findIndex((a) => a && a.kind === "joueur");
-      const insertAt = playerIdx >= 0 ? playerIdx + 1 : 0;
-      renderActors = [
-        ...actors.slice(0, insertAt),
-        ...summonActors,
-        ...actors.slice(insertAt),
-      ];
-
-      if (insertAt <= renderActiveIndex) renderActiveIndex += summonActors.length;
-      if (state?.summonActing) renderActiveIndex = insertAt;
+      const injected = [];
+      actors.forEach((actor) => {
+        injected.push(actor);
+        if (actor?.kind !== "joueur") return;
+        summonActors
+          .filter((s) => s?.entity?.owner === actor.entity)
+          .forEach((s) => injected.push(s));
+      });
+      renderActors = injected;
+      const activeActor = actors[renderActiveIndex];
+      const mappedIndex = renderActors.findIndex((a) => a === activeActor);
+      if (mappedIndex >= 0) renderActiveIndex = mappedIndex;
+      if (state?.summonActing && Number.isInteger(state.activeSummonId)) {
+        const summonIdx = renderActors.findIndex(
+          (a) => a?.kind === "invocation" && a.entity?.id === state.activeSummonId
+        );
+        if (summonIdx >= 0) renderActiveIndex = summonIdx;
+      }
     }
 
     if (state?.summonActing && state.monstre) {
       const idx = renderActors.findIndex((a) => a && a.entity === state.monstre);
+      if (idx >= 0) {
+        renderActiveIndex = idx;
+      }
+    }
+
+    if (scene.__lanCombatId && Array.isArray(renderActors) && renderActors.length) {
+      let idx = -1;
+      if (Number.isInteger(state.activePlayerId)) {
+        idx = renderActors.findIndex((a) => {
+          if (!a || a.kind !== "joueur") return false;
+          const ent = a.entity;
+          const id =
+            Number.isInteger(ent?.netId) ? ent.netId : Number.isInteger(ent?.id) ? ent.id : null;
+          return id === state.activePlayerId;
+        });
+      } else if (Number.isInteger(state.activeMonsterId)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "monstre" && a.entity?.entityId === state.activeMonsterId
+        );
+      } else if (Number.isInteger(state.activeMonsterIndex)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "monstre" && a.entity?.combatIndex === state.activeMonsterIndex
+        );
+      } else if (Number.isInteger(state.activeSummonId)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "invocation" && a.entity?.id === state.activeSummonId
+        );
+      }
+      if (idx >= 0) {
+        renderActiveIndex = idx;
+      }
+    }
+
+    const seenKeys = new Set();
+    const dedupedActors = [];
+    renderActors.forEach((actor, actorIdx) => {
+      if (!actor || !actor.entity) return;
+      const ent = actor.entity;
+      let key = null;
+      if (actor.kind === "joueur") {
+        const id =
+          Number.isInteger(ent.netId) ? ent.netId : Number.isInteger(ent.id) ? ent.id : null;
+        key = id !== null ? `p:${id}` : null;
+      } else if (actor.kind === "invocation") {
+        const id = Number.isInteger(ent.id) ? ent.id : null;
+        key = id !== null ? `s:${id}` : null;
+      } else {
+        const id = Number.isInteger(ent.entityId) ? ent.entityId : null;
+        const idx = Number.isInteger(ent.combatIndex) ? ent.combatIndex : null;
+        const fallback = ent.monsterId || "m";
+        if (id !== null) key = `m:${id}`;
+        else if (idx !== null) key = `m:i:${idx}`;
+        else key = `m:${fallback}`;
+      }
+      if (!key) {
+        key = `u:${actorIdx}`;
+      }
+      if (seenKeys.has(key)) return;
+      seenKeys.add(key);
+      dedupedActors.push(actor);
+    });
+
+    renderActors = dedupedActors;
+    if (renderActiveIndex >= renderActors.length) {
+      renderActiveIndex = Math.max(0, renderActors.length - 1);
+    }
+    if (scene.__lanCombatId && Array.isArray(renderActors) && renderActors.length) {
+      let idx = -1;
+      if (Number.isInteger(state.activePlayerId)) {
+        idx = renderActors.findIndex((a) => {
+          if (!a || a.kind !== "joueur") return false;
+          const ent = a.entity;
+          const id =
+            Number.isInteger(ent?.netId) ? ent.netId : Number.isInteger(ent?.id) ? ent.id : null;
+          return id === state.activePlayerId;
+        });
+      } else if (Number.isInteger(state.activeMonsterId)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "monstre" && a.entity?.entityId === state.activeMonsterId
+        );
+      } else if (Number.isInteger(state.activeMonsterIndex)) {
+        idx = renderActors.findIndex(
+          (a) => a?.kind === "monstre" && a.entity?.combatIndex === state.activeMonsterIndex
+        );
+      }
       if (idx >= 0) {
         renderActiveIndex = idx;
       }
@@ -323,12 +420,14 @@ export function initDomCombat(scene) {
       el.setAttribute("role", "listitem");
       el.className = "combat-turn-actor";
 
-      if (idx === renderActiveIndex) el.className += " is-active";
-      if (!isActorAlive(actor)) el.className += " is-dead";
-      if (actor.kind === "joueur") el.className += " is-player";
-      else if (actor.kind === "invocation") el.className += " is-summon";
-      else if (actor.entity && actor.entity.isCombatAlly) el.className += " is-ally";
-      else el.className += " is-monster";
+    if (idx === renderActiveIndex) el.className += " is-active";
+    if (!isActorAlive(actor)) el.className += " is-dead";
+    if (actor.kind === "joueur") el.className += " is-player";
+    if (actor.kind === "invocation") el.className += " is-summon";
+    if (actor.entity && actor.entity.isCombatAlly) el.className += " is-ally";
+    if (!actor.entity?.isCombatAlly && actor.kind !== "joueur" && actor.kind !== "invocation") {
+      el.className += " is-monster";
+    }
 
       el.title = getActorName(actor);
 
@@ -494,7 +593,34 @@ export function initDomCombat(scene) {
 
     const actors = state.actors;
     if (actors && actors.length) {
-      const idx = typeof state.actorIndex === "number" ? state.actorIndex : 0;
+      let idx = typeof state.actorIndex === "number" ? state.actorIndex : 0;
+      if (scene.__lanCombatId) {
+        if (Number.isInteger(state.activePlayerId)) {
+          const found = actors.findIndex((a) => {
+            if (!a || a.kind !== "joueur") return false;
+            const ent = a.entity;
+            const id =
+              Number.isInteger(ent?.netId) ? ent.netId : Number.isInteger(ent?.id) ? ent.id : null;
+            return id === state.activePlayerId;
+          });
+          if (found >= 0) idx = found;
+        } else if (Number.isInteger(state.activeMonsterId)) {
+          const found = actors.findIndex(
+            (a) => a?.kind === "monstre" && a.entity?.entityId === state.activeMonsterId
+          );
+          if (found >= 0) idx = found;
+        } else if (Number.isInteger(state.activeMonsterIndex)) {
+          const found = actors.findIndex(
+            (a) => a?.kind === "monstre" && a.entity?.combatIndex === state.activeMonsterIndex
+          );
+          if (found >= 0) idx = found;
+        } else if (Number.isInteger(state.activeSummonId)) {
+          const found = actors.findIndex(
+            (a) => a?.kind === "invocation" && a.entity?.id === state.activeSummonId
+          );
+          if (found >= 0) idx = found;
+        }
+      }
       turnLabel.textContent = getActorName(actors[idx]);
     } else {
       turnLabel.textContent = state.tour === "joueur" ? "Joueur" : "Monstre";
@@ -659,12 +785,27 @@ export function initDomCombat(scene) {
     if (scene.combatState.tour !== "joueur") {
       return;
     }
+    if (
+      Number.isInteger(scene.combatState.activePlayerId) &&
+      getNetPlayerId() !== scene.combatState.activePlayerId
+    ) {
+      return;
+    }
 
-    // Passe au prochain acteur dans l'ordre d'initiative
+    const netClient = getNetClient();
+    const netPlayerId = getNetPlayerId();
+    if (netClient && netPlayerId && scene.__lanCombatId) {
+      netClient.sendCmd("CmdEndTurnCombat", {
+        playerId: netPlayerId,
+        combatId: scene.__lanCombatId,
+        actorType: "player",
+      });
+      return;
+    }
+
+    // Solo (ou sans LAN) : on passe le tour localement.
     const newTurn = passerTour(scene);
     if (!newTurn) return;
-
-    // Si c'est un monstre qui joue ensuite, on lance son tour.
     if (newTurn === "monstre") {
       runSummonTurn(scene, () => runMonsterTurn(scene));
     }
@@ -676,6 +817,28 @@ export function initDomCombat(scene) {
       event.stopPropagation();
 
       if (!scene.prepState || !scene.prepState.actif) {
+        return;
+      }
+
+      const netClient = getNetClient();
+      const netPlayerId = getNetPlayerId();
+      if (netClient && netPlayerId && scene.__lanCombatId) {
+        netClient.sendCmd("CmdCombatReady", {
+          playerId: netPlayerId,
+          combatId: scene.__lanCombatId,
+          initiative: Number.isFinite(scene.player?.stats?.initiative)
+            ? Math.round(scene.player.stats.initiative)
+            : null,
+          level: Number.isFinite(scene.player?.levelState?.niveau)
+            ? Math.round(scene.player.levelState.niveau)
+            : null,
+          classId:
+            typeof scene.player?.classId === "string" ? scene.player.classId : null,
+          displayName:
+            typeof scene.player?.displayName === "string"
+              ? scene.player.displayName
+              : null,
+        });
         return;
       }
 

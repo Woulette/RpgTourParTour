@@ -47,6 +47,9 @@ export function getNeighbor(mapDef, direction) {
 // Conversion monde->tuiles "calibrÈe" pour l'isomÈtrique.
 // DupliquÈe depuis playerMovement pour rester locale au module de monde.
 export function createCalibratedWorldToTile(map, groundLayer) {
+  if (!map || !groundLayer || typeof groundLayer.worldToTileXY !== "function") {
+    return () => null;
+  }
   return function worldToTile(worldX, worldY) {
     const raw = groundLayer.worldToTileXY(worldX, worldY, false);
     if (!raw) return null;

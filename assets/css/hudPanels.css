@@ -1,5 +1,5 @@
 /* Styles de base partagés pour les panneaux HUD (inventaire, quêtes, métiers, accomplissements) */
-:is(#hud-inventory-panel, #hud-quests-panel, #hud-metiers-panel, #hud-achievements-panel) {
+:is(#hud-inventory-panel, #hud-quests-panel, #hud-metiers-panel, #hud-achievements-panel, #hud-friends-panel, #hud-trade-panel) {
   position: fixed;
   left: 50%;
   top: 40%;

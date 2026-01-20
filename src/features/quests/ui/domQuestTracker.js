@@ -11,6 +11,7 @@ let trackerInitialized = false;
 let unsubscribeTracker = null;
 let unsubscribeTrackerInventory = null;
 let unsubscribeTrackerPlayer = null;
+let unsubscribeTrackerPlayerUpdated = null;
 
 function pickObjectiveText(stage, state, questDef, player) {
   const objective = stage?.objective;
@@ -201,6 +202,10 @@ export function initQuestTracker(player) {
   });
 
   unsubscribeTrackerPlayer = onStoreEvent("player:changed", () => {
+    render();
+  });
+
+  unsubscribeTrackerPlayerUpdated = onStoreEvent("player:updated", () => {
     render();
   });
 

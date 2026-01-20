@@ -129,7 +129,7 @@ function collectCombatEntities(scene) {
       : [];
   allies.forEach((ally) => {
     if (!ally || seen.has(ally)) return;
-    entries.push({ entity: ally, color: PLAYER_AURA_COLOR, isPlayer: false });
+    entries.push({ entity: ally, color: PLAYER_AURA_COLOR, isPlayer: true });
     seen.add(ally);
   });
 

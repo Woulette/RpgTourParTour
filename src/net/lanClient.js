@@ -1,9 +1,28 @@
 import { DATA_HASH, PROTOCOL_VERSION } from "./protocol.js";
 
+let inventoryOpKey = null;
+
+function makeInventoryOpKey() {
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+export function getInventoryOpKey() {
+  return inventoryOpKey;
+}
+
 export function createLanClient({
   url,
   protocolVersion = PROTOCOL_VERSION,
   dataHash = DATA_HASH,
+  character = null,
+  account = null,
+  authMode = null,
+  requestCharacters = false,
   onEvent,
   onClose,
 } = {}) {
@@ -11,6 +30,7 @@ export function createLanClient({
 
   const ws = new WebSocket(url);
   let cmdId = 0;
+  inventoryOpKey = makeInventoryOpKey();
 
   const sendRaw = (payload) => {
     if (ws.readyState !== WebSocket.OPEN) return;
@@ -19,16 +39,46 @@ export function createLanClient({
 
   const client = {
     sendCmd(type, payload = {}) {
+      if (type === "CmdInventoryOp") {
+        if (!payload || payload.__invKey !== inventoryOpKey) return;
+      }
       cmdId += 1;
-      sendRaw({ t: type, cmdId, ...payload });
+      sendRaw({
+        t: type,
+        cmdId,
+        sessionToken: account?.sessionToken || null,
+        ...payload,
+      });
     },
     close() {
       ws.close();
     },
   };
+  client.__ws = ws;
+  if (typeof window !== "undefined") {
+    window.__lanClient = client;
+    window.__lanInventoryAuthority = true;
+  }
 
   ws.addEventListener("open", () => {
-    sendRaw({ t: "Hello", protocolVersion, dataHash });
+    sendRaw({
+      t: "Hello",
+      protocolVersion,
+      dataHash,
+      sessionToken: account?.sessionToken || null,
+      accountName: account?.name || null,
+      accountPassword: account?.password || null,
+      authMode,
+      inventoryAuthority: true,
+      requestCharacters: requestCharacters === true,
+      characterId: requestCharacters ? null : character?.id || null,
+      characterName: requestCharacters ? null : character?.name || null,
+      classId: requestCharacters ? null : character?.classId || null,
+      level:
+        requestCharacters || !Number.isFinite(character?.level)
+          ? null
+          : Math.round(character.level),
+    });
   });
 
   ws.addEventListener("message", (event) => {

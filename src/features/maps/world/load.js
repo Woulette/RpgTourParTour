@@ -191,6 +191,7 @@ export function maybeHandlePortal(scene) {
   const py = scene.player.currentTileY;
   if (typeof px !== "number" || typeof py !== "number") return;
 
+
   const hit = portals.find(
     (p) =>
       p &&
@@ -279,7 +280,25 @@ export function maybeHandleMapExit(scene) {
   const cam = scene.cameras && scene.cameras.main;
 
   const doChange = () => {
-    loadMapLikeMain(scene, neighbor);
+    const fromWorld = scene.map?.tileToWorldXY(
+      target.x,
+      target.y,
+      undefined,
+      undefined,
+      scene.groundLayer
+    );
+    const entryFromWorld =
+      fromWorld && Number.isFinite(fromWorld.x) && Number.isFinite(fromWorld.y)
+        ? {
+            x: fromWorld.x + scene.map.tileWidth / 2,
+            y: fromWorld.y + scene.map.tileHeight / 2,
+          }
+        : null;
+    loadMapLikeMain(scene, neighbor, {
+      entryDirection: dir,
+      entryFromTile: { x: target.x, y: target.y },
+      entryFromWorld,
+    });
   };
 
   if (scene.time?.delayedCall) {

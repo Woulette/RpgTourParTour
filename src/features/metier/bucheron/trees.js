@@ -3,11 +3,13 @@ import { blockTile, isTileBlocked } from "../../../collision/collisionGrid.js";
 import { findPathForPlayer } from "../../../entities/movement/pathfinding.js";
 import { movePlayerAlongPath } from "../../../entities/movement/runtime.js";
 import { isUiBlockingOpen } from "../../ui/uiBlock.js";
+import { getNetClient, getNetPlayerId } from "../../../app/session.js";
 
 const TREE_TEXTURE_KEY = "tree_chene";
 const TREE_STUMP_TEXTURE_KEY = "tree_chene_stump";
-const CUT_DURATION_MS = 3000;
-const REGROW_DURATION_MS = 30000;
+export const TREE_HARVEST_DURATION_MS = 3000;
+export const TREE_REGROW_DURATION_MS = 30000;
+export const TREE_RESOURCE_KIND = "tree";
 
 function cancelCurrentHarvest(player) {
   if (!player) return;
@@ -89,6 +91,303 @@ function showHarvestFeedback(scene, node, result) {
   }
 }
 
+function applyTreeHarvestedVisual(scene, node) {
+  if (!scene || !node || !node.sprite) return;
+  const treeSprite = node.sprite;
+
+  if (node.hoverHighlight) {
+    node.hoverHighlight.destroy();
+    node.hoverHighlight = null;
+  }
+
+  if (
+    scene.textures &&
+    scene.textures.exists &&
+    scene.textures.exists(TREE_STUMP_TEXTURE_KEY)
+  ) {
+    treeSprite.setTexture(TREE_STUMP_TEXTURE_KEY);
+    treeSprite.setOrigin(0.5, 1);
+    treeSprite.clearTint();
+    treeSprite.setAlpha(1);
+  } else {
+    treeSprite.setTint(0x555555);
+    treeSprite.setAlpha(0.5);
+  }
+}
+
+function applyTreeRespawnVisual(scene, node) {
+  if (!scene || !node || !node.sprite) return;
+  const treeSprite = node.sprite;
+  treeSprite.clearTint();
+  treeSprite.setAlpha(1);
+  if (
+    scene.textures &&
+    scene.textures.exists &&
+    scene.textures.exists(TREE_TEXTURE_KEY)
+  ) {
+    treeSprite.setTexture(TREE_TEXTURE_KEY);
+    treeSprite.setOrigin(0.5, 1);
+  }
+}
+
+export function applyTreeHarvested(scene, player, node, giveReward, reward) {
+  if (!node) return;
+  let result = null;
+  if (giveReward) {
+    node.harvested = false;
+    result = harvestTree(scene, player, node);
+  } else if (reward) {
+    result = {
+      success: true,
+      node,
+      gainedItems: reward.gainedItems || 0,
+      gainedXp: reward.gainedXp || 0,
+    };
+  } else {
+    node.harvested = true;
+  }
+  node.isHarvesting = false;
+  if (result && result.success) {
+    showHarvestFeedback(scene, node, result);
+  }
+  node.harvested = true;
+  applyTreeHarvestedVisual(scene, node);
+}
+
+export function applyTreeRespawn(scene, node) {
+  if (!node) return;
+  node.harvested = false;
+  node.isHarvesting = false;
+  applyTreeRespawnVisual(scene, node);
+}
+
+function buildTreeNode(scene, map, player, entry) {
+  const offsetX = Number.isFinite(entry.offsetX) ? entry.offsetX : 0;
+  const offsetY = Number.isFinite(entry.offsetY) ? entry.offsetY : 0;
+  const tileX = entry.tileX;
+  const tileY = entry.tileY;
+
+  const worldPos = map.tileToWorldXY(tileX, tileY);
+  const x = worldPos.x + map.tileWidth / 2 + offsetX;
+  const y = worldPos.y + map.tileHeight + offsetY;
+
+  const treeSprite = scene.add.sprite(x, y, TREE_TEXTURE_KEY);
+  treeSprite.setOrigin(0.5, 1);
+  treeSprite.setDepth(y);
+
+  const node = {
+    x,
+    y,
+    tileX,
+    tileY,
+    resourceId: entry.resourceId || "chene",
+    amount: 1,
+    harvested: entry.harvested === true,
+    isHarvesting: false,
+    sprite: treeSprite,
+    hoverHighlight: null,
+    entityId: Number.isInteger(entry.entityId) ? entry.entityId : null,
+    kind: TREE_RESOURCE_KIND,
+  };
+
+  treeSprite.setInteractive({ useHandCursor: true });
+
+  treeSprite.on("pointerover", () => {
+    if (node.harvested) return;
+
+    if (!node.hoverHighlight && scene.add) {
+      const overlay = scene.add.sprite(node.x, node.y, TREE_TEXTURE_KEY);
+      overlay.setOrigin(treeSprite.originX, treeSprite.originY);
+      overlay.setBlendMode(Phaser.BlendModes.ADD);
+      overlay.setAlpha(0.3);
+      overlay.setDepth((treeSprite.depth || 0) + 1);
+
+      if (scene.hudCamera) {
+        scene.hudCamera.ignore(overlay);
+      }
+
+      node.hoverHighlight = overlay;
+    }
+  });
+
+  treeSprite.on("pointerout", () => {
+    if (node.hoverHighlight) {
+      node.hoverHighlight.destroy();
+      node.hoverHighlight = null;
+    }
+  });
+
+  treeSprite.on("pointerdown", (pointer, localX, localY, event) => {
+    if (event && event.stopPropagation) {
+      event.stopPropagation();
+    }
+    if (isUiBlockingOpen()) {
+      return;
+    }
+
+    if (scene.combatState && scene.combatState.enCours) {
+      return;
+    }
+    if (scene.prepState && scene.prepState.actif) {
+      return;
+    }
+
+    if (
+      node.harvested ||
+      node.isHarvesting ||
+      player.isHarvestingTree ||
+      player.isHarvestingHerb ||
+      player.isHarvestingWell
+    ) {
+      return;
+    }
+
+    const combatOverlay = document.getElementById("combat-result-overlay");
+    if (combatOverlay && !combatOverlay.classList.contains("combat-result-hidden")) {
+      return;
+    }
+
+    cancelCurrentHarvest(player);
+    player.currentHarvestNode = node;
+    if (player.currentMoveTween) {
+      player.currentMoveTween.stop();
+      player.currentMoveTween = null;
+      player.isMoving = false;
+      player.movePath = [];
+    }
+
+    const maxDistSq = 80 * 80;
+
+    const startCut = () => {
+      if (player.currentHarvestNode !== node) return;
+      node.isHarvesting = true;
+      player.isHarvestingTree = true;
+
+      if (scene.time && scene.time.delayedCall) {
+        const timer = scene.time.delayedCall(TREE_HARVEST_DURATION_MS, () => {
+          if (!scene.scene || !scene.scene.isActive() || node.harvested) {
+            node.isHarvesting = false;
+            player.isHarvestingTree = false;
+            player.currentHarvestTimer = null;
+            player.currentHarvestNode = null;
+            return;
+          }
+
+          if (player.currentHarvestNode !== node) {
+            node.isHarvesting = false;
+            player.isHarvestingTree = false;
+            player.currentHarvestTimer = null;
+            return;
+          }
+
+          const netClient = getNetClient();
+          const playerId = getNetPlayerId();
+          const mapId = scene?.currentMapKey || scene?.currentMapDef?.key || null;
+
+          node.isHarvesting = false;
+          player.isHarvestingTree = false;
+          player.currentHarvestTimer = null;
+          player.currentHarvestNode = null;
+
+          if (netClient && playerId && mapId && Number.isInteger(node.entityId)) {
+            netClient.sendCmd("CmdResourceHarvest", {
+              playerId,
+              mapId,
+              entityId: node.entityId,
+              kind: TREE_RESOURCE_KIND,
+            });
+            return;
+          }
+
+          const result = harvestTree(scene, player, node);
+          if (!result.success) return;
+
+          node.harvested = true;
+          applyTreeHarvestedVisual(scene, node);
+          showHarvestFeedback(scene, node, result);
+
+          if (scene.time && scene.time.delayedCall) {
+            scene.time.delayedCall(TREE_REGROW_DURATION_MS, () => {
+              if (!treeSprite.active) return;
+              applyTreeRespawn(scene, node);
+            });
+          }
+        });
+        player.currentHarvestTimer = timer;
+      }
+    };
+
+    const dx = player.x - node.x;
+    const dy = player.y - node.y;
+    const distSq = dx * dx + dy * dy;
+
+    const isAdjacentNow =
+      typeof player.currentTileX === "number" &&
+      typeof player.currentTileY === "number" &&
+      Math.abs(player.currentTileX - tileX) +
+        Math.abs(player.currentTileY - tileY) ===
+        1;
+
+    if (isAdjacentNow || distSq <= maxDistSq * 0.25) {
+      if (player.currentMoveTween) {
+        player.currentMoveTween.stop();
+        player.currentMoveTween = null;
+        player.isMoving = false;
+      }
+      startCut();
+      return;
+    }
+
+    const targetTile = findAdjacentTileNearNode(scene, map, node, player);
+    if (!targetTile) {
+      return;
+    }
+
+    const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
+    const path = findPathForPlayer(
+      scene,
+      map,
+      player.currentTileX,
+      player.currentTileY,
+      targetTile.x,
+      targetTile.y,
+      allowDiagonal
+    );
+
+    if (!path || path.length === 0) {
+      return;
+    }
+
+    movePlayerAlongPath(
+      scene,
+      player,
+      map,
+      scene.groundLayer || map.layers?.[0],
+      path,
+      0,
+      () => {
+        const isAdjacent =
+          typeof player.currentTileX === "number" &&
+          typeof player.currentTileY === "number" &&
+          Math.abs(player.currentTileX - tileX) +
+            Math.abs(player.currentTileY - tileY) ===
+            1;
+
+        if (isAdjacent) {
+          startCut();
+        }
+      }
+    );
+  });
+
+  if (node.harvested) {
+    applyTreeHarvestedVisual(scene, node);
+  }
+
+  blockTile(scene, tileX, tileY);
+  return node;
+}
+
 function findAdjacentTileNearNode(scene, map, node, player) {
   if (!map) return null;
 
@@ -144,276 +443,37 @@ export function spawnTestTrees(scene, map, player, mapDef) {
     return;
   }
 
+  const entries = positions.map((pos) => ({
+    tileX: pos.tileX,
+    tileY: pos.tileY,
+    offsetX: typeof pos.offsetX === "number" ? pos.offsetX : 0,
+    offsetY: typeof pos.offsetY === "number" ? pos.offsetY : 0,
+    resourceId: typeof pos.resourceId === "string" ? pos.resourceId : "chene",
+    harvested: false,
+  }));
+
+  spawnTreesFromEntries(scene, map, player, entries);
+}
+
+export function spawnTreesFromEntries(scene, map, player, entries) {
+  if (!scene || !map || !player) return [];
   const nodes = [];
-
-  positions.forEach((pos) => {
-    if (typeof pos.tileX !== "number" || typeof pos.tileY !== "number") {
-      return;
-    }
-
-    const offsetX =
-      typeof pos.offsetX === "number" ? pos.offsetX : 0;
-    const offsetY =
-      typeof pos.offsetY === "number" ? pos.offsetY : 0;
-
+  const safeEntries = Array.isArray(entries) ? entries : [];
+  safeEntries.forEach((entry) => {
+    if (!entry) return;
+    if (typeof entry.tileX !== "number" || typeof entry.tileY !== "number") return;
     if (
-      pos.tileX < 0 ||
-      pos.tileY < 0 ||
-      pos.tileX >= map.width ||
-      pos.tileY >= map.height
+      entry.tileX < 0 ||
+      entry.tileY < 0 ||
+      entry.tileX >= map.width ||
+      entry.tileY >= map.height
     ) {
       return;
     }
-
-    const tileX = pos.tileX;
-    const tileY = pos.tileY;
-
-    const worldPos = map.tileToWorldXY(tileX, tileY);
-    const x = worldPos.x + map.tileWidth / 2 + offsetX;
-    const y = worldPos.y + map.tileHeight + offsetY; // base de la tuile, avec un léger offset sprite optionnel
-
-    const treeSprite = scene.add.sprite(x, y, TREE_TEXTURE_KEY);
-    treeSprite.setOrigin(0.5, 1); // pieds de l'arbre sur le sol
-    treeSprite.setDepth(y);
-
-    const node = {
-      x,
-      y,
-      tileX,
-      tileY,
-      resourceId: "chene",
-      amount: 1,
-      harvested: false,
-      isHarvesting: false,
-      sprite: treeSprite,
-      hoverHighlight: null,
-    };
-
-    treeSprite.setInteractive({ useHandCursor: true });
-
-    treeSprite.on("pointerover", () => {
-      if (node.harvested) return;
-
-      // Effet lumineux comme pour les corbeaux :
-      // on dessine un sprite en mode ADD par-dessus l'arbre.
-      if (!node.hoverHighlight && scene.add) {
-        const overlay = scene.add.sprite(node.x, node.y, TREE_TEXTURE_KEY);
-        overlay.setOrigin(treeSprite.originX, treeSprite.originY);
-        overlay.setBlendMode(Phaser.BlendModes.ADD);
-        overlay.setAlpha(0.3);
-        overlay.setDepth((treeSprite.depth || 0) + 1);
-
-        if (scene.hudCamera) {
-          scene.hudCamera.ignore(overlay);
-        }
-
-        node.hoverHighlight = overlay;
-      }
-    });
-
-    treeSprite.on("pointerout", () => {
-      if (node.hoverHighlight) {
-        node.hoverHighlight.destroy();
-        node.hoverHighlight = null;
-      }
-    });
-
-    treeSprite.on("pointerdown", (pointer, localX, localY, event) => {
-      if (event && event.stopPropagation) {
-        event.stopPropagation();
-      }
-      if (isUiBlockingOpen()) {
-        return;
-      }
-
-      // Pas de récolte pendant un combat ou la phase de préparation
-      if (scene.combatState && scene.combatState.enCours) {
-        return;
-      }
-      if (scene.prepState && scene.prepState.actif) {
-        return;
-      }
-
-      // Ne pas lancer une nouvelle coupe si un autre arbre est en cours de récolte
-      if (
-        node.harvested ||
-        node.isHarvesting ||
-        player.isHarvestingTree ||
-        player.isHarvestingHerb ||
-        player.isHarvestingWell
-      ) {
-        return;
-      }
-
-      // Si l'overlay de fin de combat est visible, on ignore le clic (pour éviter les actions fantômes après combat)
-      const combatOverlay = document.getElementById("combat-result-overlay");
-      if (combatOverlay && !combatOverlay.classList.contains("combat-result-hidden")) {
-        return;
-      }
-
-      // Nouvelle cible : annule un éventuel timer en cours
-      cancelCurrentHarvest(player);
-      player.currentHarvestNode = node;
-      // Stoppe un éventuel déplacement en cours pour éviter le jitter
-      if (player.currentMoveTween) {
-        player.currentMoveTween.stop();
-        player.currentMoveTween = null;
-        player.isMoving = false;
-        player.movePath = [];
-      }
-
-      const maxDistSq = 80 * 80;
-
-      const startCut = () => {
-        if (player.currentHarvestNode !== node) return;
-        node.isHarvesting = true;
-        player.isHarvestingTree = true;
-
-        if (scene.time && scene.time.delayedCall) {
-          const timer = scene.time.delayedCall(CUT_DURATION_MS, () => {
-            if (!scene.scene || !scene.scene.isActive() || node.harvested) {
-              node.isHarvesting = false;
-              player.isHarvestingTree = false;
-              player.currentHarvestTimer = null;
-              player.currentHarvestNode = null;
-              return;
-            }
-
-            if (player.currentHarvestNode !== node) {
-              node.isHarvesting = false;
-              player.isHarvestingTree = false;
-              player.currentHarvestTimer = null;
-              return;
-            }
-
-            const result = harvestTree(scene, player, node);
-            node.isHarvesting = false;
-            player.isHarvestingTree = false;
-            player.currentHarvestTimer = null;
-            player.currentHarvestNode = null;
-
-            if (!result.success) return;
-
-            node.harvested = true;
-
-            if (node.hoverHighlight) {
-              node.hoverHighlight.destroy();
-              node.hoverHighlight = null;
-            }
-
-            showHarvestFeedback(scene, node, result);
-
-            // Change visuellement l'arbre en souche si la texture existe,
-            // sinon on garde le visuel "fané".
-            if (
-              scene.textures &&
-              scene.textures.exists &&
-              scene.textures.exists(TREE_STUMP_TEXTURE_KEY)
-            ) {
-              treeSprite.setTexture(TREE_STUMP_TEXTURE_KEY);
-              treeSprite.setOrigin(0.5, 1);
-              treeSprite.clearTint();
-              treeSprite.setAlpha(1);
-            } else {
-              treeSprite.setTint(0x555555);
-              treeSprite.setAlpha(0.5);
-            }
-
-            // Timer de repousse : après un certain temps, l'arbre revient.
-            if (scene.time && scene.time.delayedCall) {
-              scene.time.delayedCall(REGROW_DURATION_MS, () => {
-                if (!treeSprite.active) return;
-
-                node.harvested = false;
-                node.isHarvesting = false;
-
-                treeSprite.clearTint();
-                treeSprite.setAlpha(1);
-
-                if (
-                  scene.textures &&
-                  scene.textures.exists &&
-                  scene.textures.exists(TREE_TEXTURE_KEY)
-                ) {
-                  treeSprite.setTexture(TREE_TEXTURE_KEY);
-                  treeSprite.setOrigin(0.5, 1);
-                }
-              });
-            }
-          });
-          player.currentHarvestTimer = timer;
-        }
-      };
-
-      const dx = player.x - node.x;
-      const dy = player.y - node.y;
-      const distSq = dx * dx + dy * dy;
-
-      const isAdjacentNow =
-        typeof player.currentTileX === "number" &&
-        typeof player.currentTileY === "number" &&
-        Math.abs(player.currentTileX - tileX) +
-          Math.abs(player.currentTileY - tileY) ===
-          1;
-
-      // Déjà à portée (case adjacente) : on commence à couper immédiatement
-      if (isAdjacentNow || distSq <= maxDistSq * 0.25) {
-        if (player.currentMoveTween) {
-          player.currentMoveTween.stop();
-          player.currentMoveTween = null;
-          player.isMoving = false;
-        }
-        startCut();
-        return;
-      }
-
-      const targetTile = findAdjacentTileNearNode(scene, map, node, player);
-      if (!targetTile) {
-        return;
-      }
-
-      const allowDiagonal = !(scene.combatState && scene.combatState.enCours);
-      const path = findPathForPlayer(
-        scene,
-        map,
-        player.currentTileX,
-        player.currentTileY,
-        targetTile.x,
-        targetTile.y,
-        allowDiagonal
-      );
-
-      if (!path || path.length === 0) {
-        return;
-      }
-
-      movePlayerAlongPath(
-        scene,
-        player,
-        map,
-        scene.groundLayer || map.layers?.[0],
-        path,
-        0,
-        () => {
-          const isAdjacent =
-            typeof player.currentTileX === "number" &&
-            typeof player.currentTileY === "number" &&
-            Math.abs(player.currentTileX - tileX) +
-              Math.abs(player.currentTileY - tileY) ===
-              1;
-
-          if (isAdjacent) {
-            startCut();
-          }
-        }
-      );
-    });
-
-    nodes.push(node);
-
-    // Enregistre cette tuile comme bloquée pour le déplacement du joueur
-    blockTile(scene, tileX, tileY);
+    const node = buildTreeNode(scene, map, player, entry);
+    if (node) nodes.push(node);
   });
 
   scene.bucheronNodes = nodes;
+  return nodes;
 }
