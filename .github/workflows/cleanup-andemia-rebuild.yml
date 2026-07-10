@@ -1,0 +1,36 @@
+name: Cleanup Andemia rebuild artifacts
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: andemia-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[cleanup-complete]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove temporary rebuild files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .andemia-reconcile-trigger
+          rm -f .andemia-final-reconcile-20260710-2
+          rm -rf .build .rebuild
+          rm -f .github/workflows/cleanup-andemia-rebuild.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Clean temporary rebuild artifacts [cleanup-complete]"
+          git push origin HEAD:main
