@@ -1,0 +1,61 @@
+name: Improve Andemia team preparation
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: andemia-team-prep
+  cancel-in-progress: false
+
+jobs:
+  improve:
+    if: ${{ !contains(github.event.head_commit.message, '[team-prep]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Add direct pre-battle team selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("const VERSION='2.0.1';", "const VERSION='2.0.2';", 1)
+          marker = "function openPrep(enc){"
+          if marker not in s:
+              raise SystemExit('Preparation function marker missing')
+          helper = r'''function openTeamForPrep(enc){
+  const owned=Object.keys(state.companions);
+  modal('Choisir la formation',`<p style="margin-top:0;color:#a8bfbb">Le héros occupe toujours la première place. Sélectionne jusqu’à trois compagnons, puis valide pour revenir à la préparation.</p><div class="team-grid"><div class="team-card selected"><div class="team-number">1</div><div class="art">${heroArt(state.player.classId)}</div><h3>${esc(state.player.name)}</h3><span class="pill">Héros</span></div>${owned.map(id=>{const d=COMPANIONS[id],c=state.companions[id],pos=state.team.indexOf(id);return`<button class="team-card ${pos>=0?'selected':''}" data-prep-member="${id}">${pos>=0?`<div class="team-number">${pos+2}</div>`:''}<div class="art">${companionArt(id)}</div><h3>${d.name}</h3><span class="pill element-${d.element}">${ELEMENTS[d.element].icon} Niv. ${c.level}</span><p>${pos>=0?'Dans la formation':'Toucher pour ajouter'}</p></button>`}).join('')}</div>`,{wide:true,subtitle:`${1+state.team.length}/4 combattants`,footer:'<button id="prep-team-confirm" class="btn btn-primary">Valider la formation</button>'});
+  $$('[data-prep-member]').forEach(b=>b.onclick=()=>{const id=b.dataset.prepMember,i=state.team.indexOf(id);if(i>=0)state.team.splice(i,1);else if(state.team.length<3)state.team.push(id);else return toast('Trois compagnons maximum.');save(true);openTeamForPrep(enc)});
+  $('#prep-team-confirm').onclick=()=>openPrep(enc);
+}
+'''
+          s = s.replace(marker, helper + marker, 1)
+          old = "$('#prep-team').onclick=()=>openTeam();"
+          new = "$('#prep-team').onclick=()=>openTeamForPrep(enc);"
+          if old not in s:
+              raise SystemExit('Preparation button handler missing')
+          s = s.replace(old, new, 1)
+          p.write_text(s,encoding='utf-8')
+          scripts=re.findall(r'<script>([\s\S]*?)</script>',s)
+          Path('/tmp/andemia.js').write_text(scripts[0],encoding='utf-8')
+          PY
+          node --check /tmp/andemia.js
+          if [ -f sw.js ]; then sed -i 's/andemia-v2.0.1/andemia-v2.0.2/g' sw.js; fi
+          rm -f .github/workflows/andemia-team-prep.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add direct team selection before every battle [team-prep]"
+          git push origin HEAD:main
