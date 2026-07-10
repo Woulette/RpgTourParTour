@@ -1,0 +1,51 @@
+name: Finalize Andemia v2
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finalize-andemia-v2
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[andemia-final]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply final rules and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("speed:Math.max(30,100+(p.level-1)+a.air*.22+e.speed)", "speed:Math.max(30,100+(p.level-1)+e.speed)")
+          s = s.replace(";if(Math.random()<.04)sound('click')", "")
+          p.write_text(s, encoding='utf-8')
+          m = re.search(r'<script>([\s\S]*?)</script>\s*</body>', s)
+          if not m:
+              raise SystemExit('Inline game script not found')
+          Path('/tmp/andemia.js').write_text(m.group(1), encoding='utf-8')
+          if "VERSION='2.0.0'" not in s:
+              raise SystemExit('Andemia v2 marker missing')
+          if "speed:Math.max(30,100+(p.level-1)+e.speed)" not in s:
+              raise SystemExit('Speed rule not applied')
+          PY
+          node --check /tmp/andemia.js
+          rm -f .github/workflows/finalize-andemia-v2.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Finalize Andémia v2 rules and validation [andemia-final]"
+          git push origin HEAD:main
