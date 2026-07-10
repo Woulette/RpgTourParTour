@@ -1,0 +1,162 @@
+name: Package Andemia v2
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: package-andemia-v2
+  cancel-in-progress: false
+
+jobs:
+  package:
+    if: ${{ !contains(github.event.head_commit.message, '[andemia-package]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build clean static package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f index.html
+          grep -q "VERSION='2.0.0'" index.html
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name .git ! -name .github ! -name index.html \
+            -exec rm -rf {} +
+          mkdir -p assets
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          if 'rel="manifest"' not in s:
+              s = s.replace('<title>Andémia — L’Éveil des Éléments</title>', '<title>Andémia — L’Éveil des Éléments</title>\n  <link rel="manifest" href="/manifest.webmanifest">\n  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">')
+          if 'serviceWorker.register' not in s:
+              s = s.replace('</body>', '<script>if(\'serviceWorker\' in navigator){addEventListener(\'load\',()=>navigator.serviceWorker.register(\'/sw.js\').catch(()=>{}));}</script>\n</body>')
+          s = s.replace("speed:Math.max(30,100+(p.level-1)+a.air*.22+e.speed)", "speed:Math.max(30,100+(p.level-1)+e.speed)")
+          s = s.replace(";if(Math.random()<.04)sound('click')", "")
+          p.write_text(s, encoding='utf-8')
+          scripts = re.findall(r'<script>([\s\S]*?)</script>', s)
+          if not scripts:
+              raise SystemExit('Game script missing')
+          Path('/tmp/andemia-main.js').write_text(scripts[0], encoding='utf-8')
+          PY
+          node --check /tmp/andemia-main.js
+          cat > manifest.webmanifest <<'EOF'
+          {
+            "name": "Andémia — L’Éveil des Éléments",
+            "short_name": "Andémia",
+            "description": "RPG 2D mobile au tour par tour dans un monde ouvert élémentaire.",
+            "lang": "fr",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "orientation": "landscape",
+            "background_color": "#081018",
+            "theme_color": "#101d27",
+            "icons": [
+              {"src":"/assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+            ]
+          }
+          EOF
+          sed -i 's/^          //' manifest.webmanifest
+          cat > assets/icon.svg <<'EOF'
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <defs>
+              <radialGradient id="bg"><stop stop-color="#315b66"/><stop offset="1" stop-color="#081018"/></radialGradient>
+              <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff2ad"/><stop offset="1" stop-color="#d58a2c"/></linearGradient>
+            </defs>
+            <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+            <circle cx="256" cy="256" r="175" fill="none" stroke="#77d9c1" stroke-opacity=".55" stroke-width="18"/>
+            <path d="M256 92 391 398h-70l-29-71h-76l-28 71h-69Zm0 112-21 62h41Z" fill="url(#gold)"/>
+            <circle cx="256" cy="66" r="19" fill="#f6c96c"/>
+            <circle cx="109" cy="258" r="15" fill="#ff7757"/><circle cx="403" cy="258" r="15" fill="#5dc8ff"/>
+            <circle cx="180" cy="405" r="15" fill="#8de6bd"/><circle cx="332" cy="405" r="15" fill="#d4a766"/>
+          </svg>
+          EOF
+          sed -i 's/^          //' assets/icon.svg
+          cat > sw.js <<'EOF'
+          const CACHE='andemia-v2.0.0';
+          const CORE=['/','/index.html','/manifest.webmanifest','/assets/icon.svg'];
+          self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
+          self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+          self.addEventListener('fetch',event=>{
+            if(event.request.method!=='GET')return;
+            if(event.request.mode==='navigate'){
+              event.respondWith(fetch(event.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put('/index.html',copy));return r}).catch(()=>caches.match('/index.html')));
+              return;
+            }
+            event.respondWith(caches.match(event.request).then(hit=>hit||fetch(event.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));return r})));
+          });
+          EOF
+          sed -i 's/^          //' sw.js
+          cat > vercel.json <<'EOF'
+          {
+            "cleanUrls": true,
+            "trailingSlash": false,
+            "headers": [
+              {"source":"/(.*)","headers":[
+                {"key":"X-Content-Type-Options","value":"nosniff"},
+                {"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"},
+                {"key":"Permissions-Policy","value":"camera=(), microphone=(), geolocation=()"}
+              ]},
+              {"source":"/sw.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]}
+            ]
+          }
+          EOF
+          sed -i 's/^          //' vercel.json
+          cat > .gitignore <<'EOF'
+          .DS_Store
+          Thumbs.db
+          .vercel/
+          .vscode/
+          .idea/
+          *.log
+          EOF
+          sed -i 's/^          //' .gitignore
+          cat > README.md <<'EOF'
+          # Andémia — L’Éveil des Éléments
+
+          RPG 2D mobile entièrement reconstruit en HTML, CSS et JavaScript natif.
+
+          ## Boucle de jeu
+
+          - Monde ouvert accessible dès le début, avec niveaux conseillés mais sans verrouillage.
+          - Ville de départ Havreclaire, PNJ, soins, cartographie, achat et vente.
+          - Combat au tour par tour piloté par une timeline de vitesse : 200 de vitesse agit deux fois plus souvent que 100.
+          - Contrôle manuel de toute l’équipe ou mode automatique lecture/pause.
+          - Équipe de quatre combattants maximum : héros et jusqu’à trois compagnons.
+          - Compagnons Feu, Eau, Air et Terre obtenus par parchemins d’invocation.
+          - Cinq affinités de personnage : Feu, Eau, Air, Terre et Neutre.
+          - Niveaux général, métier et compagnon ; cinq points d’affinité par niveau général.
+          - Vitesse du héros calculée uniquement avec son niveau général et son équipement.
+          - Métier Aventurier bloqué au niveau 20, puis évolution auprès de Maître Orin en Épéiste, Archer ou Mage.
+          - Inventaire, consommables, butin et équipement complet : arme, coiffe, armure, cape, amulette, ceinture, bottes et deux anneaux.
+          - Quêtes, progression locale, export/import de sauvegarde et PWA installable.
+
+          ## Contrôles
+
+          - Mobile : joystick tactile et bouton Action.
+          - Clavier : flèches ou ZQSD pour se déplacer, E ou espace pour interagir.
+          - Combat : choisir une compétence puis une cible ; le bouton Auto bascule entre lecture et pause.
+
+          ## Déploiement
+
+          Le jeu est un site statique sans dépendance ni compilation. Vercel sert directement `index.html`.
+          EOF
+          sed -i 's/^          //' README.md
+          rm -f .github/workflows/package-andemia-v2.yml
+          rm -f .github/workflows/finalize-andemia-v2.yml
+          rm -f .github/workflows/reconcile-andemia-rebuild.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Package clean Andémia v2 mobile release [andemia-package]"
+          git push origin HEAD:main
