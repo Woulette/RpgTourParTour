@@ -1,0 +1,86 @@
+name: Reconcile Andemia rebuild
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: andemia-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: ${{ !contains(github.event.head_commit.message, '[reconciled]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore validated sources
+        shell: bash
+        run: |
+          set -euxo pipefail
+          bases=(
+            "https://andemia-rebuild-source-20260710.vercel.app"
+            "https://rpg-tour-par-tour.vercel.app"
+          )
+          files=(
+            index.html
+            styles.css
+            manifest.webmanifest
+            vercel.json
+            sw.js
+            README.md
+            assets/icon.svg
+            src/data.js
+            src/state.js
+            src/art.js
+            src/audio.js
+            src/world.js
+            src/combat.js
+            src/ui.js
+            src/main.js
+          )
+          mkdir -p src assets
+          for file in "${files[@]}"; do
+            mkdir -p "$(dirname "$file")"
+            ok=0
+            for base in "${bases[@]}"; do
+              if curl --fail --show-error --silent --location --retry 5 --retry-all-errors --connect-timeout 15 --max-time 90 "$base/$file?build=20260710-final" --output "$file.tmp"; then
+                mv "$file.tmp" "$file"
+                ok=1
+                break
+              fi
+            done
+            test "$ok" -eq 1
+          done
+          cat > .gitignore <<'EOF'
+          .DS_Store
+          Thumbs.db
+          .vscode/
+          .idea/
+          .vercel/
+          *.log
+          EOF
+          sed -i 's/^          //' .gitignore
+          for file in src/*.js sw.js; do node --check "$file"; done
+          node -e "JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8')); JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
+          grep -q "Andémia" index.html
+          grep -q "CombatController" src/combat.js
+          grep -q "WorldRenderer" src/world.js
+          rm -rf .build .rebuild
+          rm -f .github/workflows/assemble-andemia-rebuild.yml
+          rm -f .github/workflows/reconcile-andemia-rebuild.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Rebuild Andémia v2 from scratch [reconciled]"
+          git push origin HEAD:main
