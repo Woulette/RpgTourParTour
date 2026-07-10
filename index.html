@@ -1,1032 +1,333 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>RPG Phaser</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#101d27">
+  <meta name="description" content="Andémia, RPG 2D mobile au tour par tour dans un monde ouvert élémentaire.">
+  <title>Andémia — L’Éveil des Éléments</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000000;
+    :root{
+      color-scheme:dark;--ink:#081018;--night:#101d27;--panel:#132732e8;--panel2:#1b3440ee;--line:#9fd6c533;--cream:#fff5df;--muted:#b9cbc7;--gold:#f6c96c;--teal:#65d8bd;--red:#ff626d;--blue:#5cb7ff;--fire:#ff7757;--water:#5dc8ff;--air:#8de6bd;--earth:#d4a766;--neutral:#d7dce4;--shadow:0 18px 60px #0008;--safe-top:max(10px,env(safe-area-inset-top));--safe-right:max(12px,env(safe-area-inset-right));--safe-bottom:max(10px,env(safe-area-inset-bottom));--safe-left:max(12px,env(safe-area-inset-left));font-family:Inter,ui-rounded,"SF Pro Rounded",system-ui,-apple-system,Segoe UI,sans-serif
     }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body,#app{width:100%;height:100%;margin:0;overflow:hidden;background:#081018;color:var(--cream)}button,input{font:inherit}button{color:inherit}.screen{position:fixed;inset:0}.hidden,[hidden]{display:none!important}.glass{background:linear-gradient(145deg,#19313dec,#10232ddd);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .btn{min-height:48px;padding:0 22px;border:1px solid #ffffff25;border-radius:15px;background:#223b47;color:var(--cream);font-weight:800;letter-spacing:.02em;cursor:pointer;box-shadow:0 8px 20px #0004;transition:.16s transform,.16s filter}.btn:active{transform:translateY(2px) scale(.98)}.btn-primary{background:linear-gradient(180deg,#f2b74e,#cd7928);border-color:#ffdb82;color:#211307;text-shadow:0 1px #fff4}.btn-teal{background:linear-gradient(180deg,#65d8bd,#238d80);border-color:#a8f2dd;color:#071b18}.btn-danger{background:linear-gradient(180deg,#d95c64,#8d2f3c)}.btn-ghost{background:#0e1c25aa}.btn:disabled{opacity:.42;filter:grayscale(.7);cursor:not-allowed}.icon-btn{width:48px;height:48px;border-radius:15px;border:1px solid var(--line);display:grid;place-items:center;background:#11242edb;cursor:pointer}.icon-btn svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    /* Title */
+    #title-screen{display:grid;place-items:center;background:radial-gradient(circle at 50% 12%,#355d68 0,#183542 34%,#0a1922 73%,#071019 100%);isolation:isolate}.title-land{position:absolute;inset:38% -8% -18%;background:linear-gradient(180deg,#183d37,#0a1b1b);clip-path:polygon(0 38%,10% 20%,20% 38%,31% 7%,41% 35%,54% 13%,66% 39%,78% 4%,90% 30%,100% 13%,100% 100%,0 100%);z-index:-2}.title-land:after{content:"";position:absolute;inset:36% 0 0;background:radial-gradient(ellipse at 50% 0,#2f7b63,#153c35 45%,#0b2223 85%)}.stars{position:absolute;inset:0;z-index:-3;background-image:radial-gradient(circle,#fff9 0 1px,transparent 1.5px);background-size:91px 87px;opacity:.38}.title-orb{position:absolute;width:82px;height:82px;border-radius:50%;filter:blur(.2px);box-shadow:0 0 35px currentColor;opacity:.8;animation:float 5s ease-in-out infinite}.title-orb:after{content:"";position:absolute;inset:12px;border:2px solid #fff7;border-radius:50%}.orb-fire{color:var(--fire);background:radial-gradient(circle at 35% 25%,#fff0b7,var(--fire) 42%,#ad332b);left:12%;top:22%}.orb-water{color:var(--water);background:radial-gradient(circle at 35% 25%,#efffff,var(--water) 42%,#2864bd);right:12%;top:18%;animation-delay:-1.2s}.orb-air{color:var(--air);background:radial-gradient(circle at 35% 25%,#f2fff8,var(--air) 42%,#317f68);left:23%;bottom:16%;animation-delay:-2.4s}.orb-earth{color:var(--earth);background:radial-gradient(circle at 35% 25%,#fff1c2,var(--earth) 42%,#79532d);right:23%;bottom:14%;animation-delay:-3.5s}.title-card{width:min(520px,90vw);padding:34px 38px 30px;border-radius:30px;text-align:center;position:relative}.brand-rune{width:86px;height:86px;margin:-78px auto 14px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(145deg,#2e7180,#122d3a);border:2px solid #d5f8ec88;box-shadow:0 15px 45px #0008,0 0 35px #72e1ca33}.brand-rune span{font:700 54px Georgia,serif;background:linear-gradient(#fff6c8,#e5b75d);-webkit-background-clip:text;color:transparent}.eyebrow{margin:0 0 7px;color:#91dccb;font-size:12px;font-weight:900;letter-spacing:.23em}.title-card h1{margin:0;font:800 clamp(46px,8vw,78px) Georgia,serif;letter-spacing:.04em;color:#f8d67e;text-shadow:0 6px 20px #0008}.title-sub{margin:2px 0 18px;color:#d9eee8;font:italic 21px Georgia,serif}.title-copy{max-width:390px;margin:0 auto 23px;color:var(--muted);line-height:1.55}.title-actions{display:grid;gap:10px}.save-summary{min-height:20px;margin:14px 0 0;color:#94aaa8;font-size:12px}.title-settings{position:absolute;right:var(--safe-right);top:var(--safe-top)}@keyframes float{50%{transform:translateY(-15px) rotate(5deg)}}
+    /* World */
+    #world-screen{background:#122d29}#world-canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}.world-vignette{pointer-events:none;position:absolute;inset:0;background:linear-gradient(#03101655,transparent 18%,transparent 72%,#02090cc7),radial-gradient(circle,transparent 42%,#04111670 100%)}.topbar{position:absolute;left:var(--safe-left);right:var(--safe-right);top:var(--safe-top);display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none}.topbar>*{pointer-events:auto}.player-card{width:min(310px,35vw);height:70px;padding:8px 12px;border-radius:20px;display:flex;gap:10px;align-items:center;border:1px solid var(--line);color:inherit;text-align:left;cursor:pointer}.avatar-mini{width:50px;height:50px;flex:0 0 50px;border-radius:17px;display:grid;place-items:center;background:linear-gradient(145deg,#3a7590,#1b3447);font-size:28px;border:1px solid #dff8ff44}.player-info{min-width:0;display:grid;gap:2px}.player-info strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player-info small{font-size:11px;color:var(--muted)}.mini-bars{display:grid;gap:3px}.mini-bar{width:150px;max-width:100%;height:6px;background:#061016;border-radius:99px;overflow:hidden}.mini-bar i{display:block;height:100%;width:100%;border-radius:inherit;transition:.3s width}.mini-bar.hp i{background:linear-gradient(90deg,#df4550,#ff737b)}.mini-bar.mp i{background:linear-gradient(90deg,#317ec9,#62c8ff)}.zone-banner{min-width:205px;padding:10px 22px;border-radius:20px;text-align:center}.zone-banner small{display:block;color:#91bdb5;font-size:9px;letter-spacing:.2em}.zone-banner strong{display:block;font:700 19px Georgia,serif}.zone-banner span{font-size:11px;color:#a6bdb9}.resources{height:52px;padding:0 7px 0 16px;border-radius:18px;display:flex;align-items:center;gap:14px}.coin{display:flex;align-items:center;gap:7px;color:var(--gold);font-weight:900}.coin-dot{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 32% 26%,#fff6b6,#f2b438 54%,#9d5b19);border:2px solid #ffe899}.resources .icon-btn{width:40px;height:40px;border-radius:13px}.quest-pin{position:absolute;left:var(--safe-left);top:94px;width:min(300px,35vw);padding:10px 14px;border-radius:16px;display:flex;gap:10px;align-items:center}.quest-pin b{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:#e8b64a;color:#1c1207}.quest-pin small{display:block;color:#a9c7c1;font-size:9px;letter-spacing:.15em}.quest-pin span span{font-size:12px;font-weight:800}.interaction{position:absolute;left:50%;bottom:118px;translate:-50% 0;padding:10px 15px;border-radius:14px;background:#07131cdd;border:1px solid #b9eadc55;box-shadow:0 8px 25px #0008;font-size:12px;font-weight:800;animation:pulse 1.8s infinite}@keyframes pulse{50%{transform:translateY(-3px)}}.world-nav{position:absolute;left:50%;bottom:var(--safe-bottom);translate:-50% 0;display:flex;padding:7px;border-radius:21px;gap:3px}.world-nav button{width:68px;height:57px;border:0;border-radius:15px;background:transparent;display:grid;place-items:center;color:#b9d0cc;cursor:pointer;font-size:10px;font-weight:800}.world-nav button:hover,.world-nav button:active{background:#ffffff10;color:#fff}.world-nav .nav-icon{font-size:22px;line-height:1}.joystick{position:absolute;left:calc(var(--safe-left) + 20px);bottom:calc(var(--safe-bottom) + 21px);width:112px;height:112px;border-radius:50%;background:#07131b66;border:1px solid #c7ece033;box-shadow:inset 0 0 30px #0006;touch-action:none}.joystick:before{content:"";position:absolute;inset:15px;border-radius:50%;border:1px solid #c7ece022}.joy-knob{position:absolute;width:52px;height:52px;left:30px;top:30px;border-radius:50%;background:linear-gradient(145deg,#7acdb9aa,#234f52dd);border:2px solid #d8fff488;box-shadow:0 8px 20px #0006;transition:.08s}.action-btn{position:absolute;right:calc(var(--safe-right) + 21px);bottom:calc(var(--safe-bottom) + 26px);width:94px;height:94px;border-radius:50%;border:2px solid #ffe7a888;background:radial-gradient(circle at 35% 25%,#ffd978,#c87325 70%);color:#251405;display:grid;place-items:center;align-content:center;font-weight:1000;font-size:11px;box-shadow:0 13px 35px #0008,0 0 28px #eeb74633;cursor:pointer}.action-btn .spark{font-size:30px;line-height:1}.minimap{position:absolute;right:var(--safe-right);top:82px;width:160px;height:96px;border-radius:18px;border:1px solid var(--line);box-shadow:var(--shadow);background:#0c1c22dd}
+    /* Modal */
+    #modal-root{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:#02070bb8;backdrop-filter:blur(7px)}.modal{width:min(940px,94vw);max-height:min(760px,91vh);overflow:hidden;border-radius:28px;display:flex;flex-direction:column}.modal.small{width:min(520px,92vw)}.modal.wide{width:min(1120px,96vw)}.modal-head{min-height:68px;padding:14px 18px 14px 25px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#1b3540}.modal-head h2{margin:0;font:700 25px Georgia,serif}.modal-head p{margin:2px 0 0;color:var(--muted);font-size:12px}.modal-close{width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:#0d1d25;color:#d6e6e2;font-size:25px;cursor:pointer}.modal-body{padding:20px;overflow:auto;overscroll-behavior:contain}.modal-foot{padding:14px 20px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--line);background:#10232c}.section-title{margin:3px 0 12px;color:#9bcfc3;font-size:11px;font-weight:900;letter-spacing:.16em}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px}.card{position:relative;padding:15px;border:1px solid var(--line);border-radius:19px;background:linear-gradient(145deg,#1b3641,#10232c);box-shadow:0 8px 22px #0003}.card.selected{outline:2px solid var(--gold);box-shadow:0 0 25px #f3bd4b35}.card h3{margin:0 0 5px}.card p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;background:#07151c99;border:1px solid #ffffff18;font-size:10px;font-weight:900}.element-fire{color:#ff9c7f}.element-water{color:#8edcff}.element-air{color:#aef0d3}.element-earth{color:#e7c28a}.element-neutral{color:#e1e5eb}.form-row{display:grid;gap:7px;margin-bottom:15px}.form-row label{font-size:11px;font-weight:900;color:#a9c7c1;letter-spacing:.1em}.input{height:50px;border:1px solid #a9d7cb33;border-radius:15px;background:#08171f;color:#fff;padding:0 15px;outline:none}.input:focus{border-color:#71d9c0}.summon-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.summon-card{min-width:0;padding:15px 10px;border:1px solid var(--line);border-radius:21px;background:#0e2029;cursor:pointer;text-align:center;transition:.16s transform,.16s border-color}.summon-card:hover{transform:translateY(-4px);border-color:#fff7}.summon-card .art{height:128px}.summon-card h3{margin:4px 0}.summon-card p{font-size:11px;color:var(--muted);margin:0}.art svg{width:100%;height:100%;overflow:visible}.tabs{display:flex;gap:6px;margin-bottom:15px;overflow:auto}.tab{min-width:max-content;padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:#0c1c24;color:#aac1bd;font-size:11px;font-weight:900;cursor:pointer}.tab.active{background:#2c615d;color:#fff;border-color:#8ee4cf}.two-col{display:grid;grid-template-columns:310px 1fr;gap:18px}.hero-sheet{padding:17px;border-radius:22px;background:linear-gradient(160deg,#1c3b47,#0d2029);border:1px solid var(--line);text-align:center}.hero-sheet .art{height:190px}.xp-row{display:grid;gap:4px;margin:10px 0;text-align:left}.xp-row label{display:flex;justify-content:space-between;font-size:10px;color:#b9cbc7}.bar{height:9px;border-radius:99px;background:#061016;overflow:hidden}.bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#46b19b,#85e4cc)}.bar.job i{background:linear-gradient(90deg,#9b69cf,#d4a8ff)}.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stat-line{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:13px;background:#091820;border:1px solid #ffffff0d}.stat-line small{color:#9fb9b5}.affinity-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.affinity{padding:12px 7px;border-radius:16px;background:#091820;border:1px solid #ffffff12;text-align:center}.affinity b{display:block;font-size:22px}.affinity small{display:block;font-size:10px;margin-bottom:7px}.plus{width:28px;height:28px;border:0;border-radius:9px;background:#2c645c;color:#fff;font-weight:1000;cursor:pointer}.equipment-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.equip-slot{min-height:76px;padding:8px;border-radius:15px;border:1px dashed #a8cfc544;background:#091820;display:grid;place-items:center;text-align:center;cursor:pointer}.equip-slot.filled{border-style:solid;background:#132a33}.equip-slot small{font-size:9px;color:#8ea8a4}.equip-slot b{font-size:11px}.inventory-layout{display:grid;grid-template-columns:220px 1fr;gap:15px}.inventory-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px}.item-card{min-height:86px;padding:11px;border-radius:15px;border:1px solid #ffffff12;background:#0b1b23;text-align:left;cursor:pointer;position:relative}.item-card:hover{border-color:#78d7c0}.item-card .item-icon{font-size:26px}.item-card strong{display:block;font-size:12px;margin-top:4px}.item-card small{color:#92aaa6;font-size:10px}.item-qty{position:absolute;right:8px;top:8px;padding:2px 6px;border-radius:8px;background:#0008;font-size:10px}.rarity-common{color:#d8dfe4}.rarity-uncommon{color:#72db9d}.rarity-rare{color:#69bfff}.rarity-epic{color:#c895ff}.rarity-legendary{color:#ffca69}.detail-pane{padding:15px;border-radius:18px;background:#091920;border:1px solid var(--line);min-height:220px}.detail-pane h3{margin:4px 0}.detail-actions{display:grid;gap:8px;margin-top:14px}.team-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.team-card{padding:12px;border:1px solid var(--line);border-radius:20px;background:#0c1f27;text-align:center;cursor:pointer;position:relative}.team-card.selected{outline:2px solid #f5ca69}.team-card .art{height:145px}.team-number{position:absolute;top:8px;left:8px;width:27px;height:27px;border-radius:9px;background:#f2bd55;color:#251607;display:grid;place-items:center;font-weight:1000}.map-wrap{position:relative;aspect-ratio:1.85;border-radius:22px;overflow:hidden;border:1px solid var(--line);background:#193a35}.map-wrap canvas{width:100%;height:100%}.map-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.quest-list{display:grid;gap:10px}.quest-card{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:14px;border-radius:17px;background:#0b1c24;border:1px solid #ffffff12}.quest-card.complete{border-color:#e9c66a77}.quest-card h3{margin:0 0 4px;font-size:14px}.quest-card p{margin:0;color:#9db4b0;font-size:11px}.progress{height:7px;background:#051017;border-radius:99px;overflow:hidden;margin-top:8px}.progress i{display:block;height:100%;background:#5ed3b6}.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.shop-column{padding:14px;border-radius:19px;background:#0a1b23;border:1px solid var(--line)}.shop-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px;border-radius:13px;background:#122832;margin-bottom:7px}.shop-row small{color:#9eb5b1}.price{color:var(--gold);font-weight:900}.dialog-npc{display:grid;grid-template-columns:160px 1fr;gap:18px;align-items:center}.npc-portrait{height:180px;border-radius:25px;background:radial-gradient(circle at 50% 35%,#3c7180,#10242d);display:grid;place-items:center;font-size:85px}.dialog-text{font:18px/1.55 Georgia,serif;color:#e8eee8}.dialog-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    /* Battle prep */
+    .prep-layout{display:grid;grid-template-columns:1.1fr .9fr;gap:17px}.formation{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.formation-slot{height:170px;border-radius:20px;border:1px dashed #9ecdc044;background:#091a22;display:grid;place-items:center;text-align:center}.formation-slot .art{height:115px;width:100%}.formation-slot small{font-size:10px;color:#9bb1ae}.enemy-preview{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.enemy-preview .card{text-align:center;padding:10px}.enemy-preview .art{height:112px}.danger-note{padding:12px;border-radius:15px;background:#6b342633;border:1px solid #ff967544;color:#ffd0bd;font-size:12px;margin-top:10px}
+    /* Battle */
+    #battle-screen{background:#162c2d;isolation:isolate}.battle-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 78%,#487f5a 0,#28563e 42%,#172f30 73%,#0c1d27 100%);z-index:-3}.battle-bg:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 20%,#f7e1a70b 20.5%,transparent 21%),linear-gradient(245deg,transparent 65%,#9be3cc0b 65.5%,transparent 66%);background-size:120px 120px;opacity:.7}.battle-bg.zone-coast{background:radial-gradient(ellipse at 50% 80%,#d9b875 0,#407e8b 43%,#153c52 76%,#0b1d2c)}.battle-bg.zone-highland{background:radial-gradient(ellipse at 50% 80%,#72936c 0,#3c5962 45%,#1c3141 78%,#0b1724)}.battle-bg.zone-cinder{background:radial-gradient(ellipse at 50% 80%,#75402e 0,#3d2928 46%,#261b24 78%,#0c111b)}.battle-bg.zone-earth{background:radial-gradient(ellipse at 50% 80%,#8c7450 0,#514634 45%,#2f3328 78%,#131b19)}.battle-bg.zone-ruins{background:radial-gradient(ellipse at 50% 80%,#655b88 0,#303653 47%,#171b33 78%,#090d1b)}.battle-horizon{position:absolute;left:-5%;right:-5%;bottom:30%;height:37%;background:linear-gradient(175deg,transparent 0 32%,#0714194d 33% 35%,transparent 36%),repeating-linear-gradient(105deg,#07161a22 0 2px,transparent 2px 78px);clip-path:polygon(0 70%,10% 45%,17% 67%,28% 25%,36% 63%,48% 38%,58% 70%,68% 29%,79% 58%,91% 23%,100% 55%,100% 100%,0 100%);z-index:-2}.battle-top{position:absolute;top:var(--safe-top);left:var(--safe-left);right:var(--safe-right);display:grid;grid-template-columns:190px 1fr 68px;gap:12px;align-items:start}.battle-title{padding:10px 15px;border-radius:17px}.battle-title small{display:block;color:#9fcac0;font-size:9px;letter-spacing:.15em}.battle-title strong{font:700 17px Georgia,serif}.turn-order{height:67px;padding:7px 10px;border-radius:19px;display:flex;align-items:center;justify-content:center;gap:6px;overflow:hidden}.turn-chip{width:45px;height:51px;flex:0 0 45px;border-radius:14px;background:#0c1b24;border:1px solid #ffffff1b;display:grid;place-items:center;text-align:center;font-size:8px;position:relative}.turn-chip.current{outline:2px solid var(--gold);transform:translateY(3px)}.turn-chip .face{font-size:20px}.turn-chip i{position:absolute;right:3px;bottom:2px;font-style:normal;color:#9eb4b0}.battle-speed{height:52px;border-radius:16px;border:1px solid var(--line);font-weight:1000;font-size:17px;cursor:pointer}.battlefield{position:absolute;inset:85px 20px 118px;overflow:hidden}.unit{position:absolute;width:150px;height:190px;translate:-50% -50%;transition:.35s left,.35s top,.18s filter,.18s transform;cursor:pointer}.unit.active{filter:drop-shadow(0 0 14px #ffd36c);transform:translateY(-5px)}.unit.targetable{filter:drop-shadow(0 0 16px #ff6b73);animation:targetPulse .8s infinite}.unit.dead{filter:grayscale(1);opacity:.22;transform:translateY(18px) rotate(8deg)}@keyframes targetPulse{50%{transform:scale(1.05)}}.unit-name{text-align:center;font-size:12px;font-weight:900;text-shadow:0 2px 4px #000}.unit-name small{color:#c3d4d0;font-weight:600}.unit-bars{width:116px;margin:4px auto 0;display:grid;gap:3px}.unit-bar{height:7px;border-radius:99px;background:#050d12;overflow:hidden;border:1px solid #ffffff17}.unit-bar i{display:block;height:100%;width:100%;transition:.3s width}.unit-bar.hp i{background:linear-gradient(90deg,#cf394b,#ff6b72)}.unit-bar.mp i{background:linear-gradient(90deg,#2b79c8,#61c8ff)}.unit .art{height:135px;margin-top:1px;filter:drop-shadow(0 12px 8px #0005)}.skill-float{position:absolute;left:50%;top:-5px;translate:-50% -100%;padding:6px 10px;border-radius:10px;background:#07131ce8;border:1px solid #ffffff26;font-size:11px;font-weight:900;white-space:nowrap;animation:skillFloat .85s both;pointer-events:none}.damage-float{position:absolute;left:50%;top:25%;translate:-50% 0;font-weight:1000;font-size:28px;color:#ff5e68;text-shadow:0 3px 4px #000,0 0 9px #000;animation:damageFloat 1s both;pointer-events:none;z-index:5}.damage-float.heal{color:#69e89f}.damage-float.mana{color:#65c9ff;font-size:20px}.damage-float.crit{color:#ffd15e;font-size:36px}.damage-float.note{color:#e7ecf1;font-size:15px}.unit.attack{animation:attack .38s}.unit.hit{animation:hit .35s}@keyframes damageFloat{0%{opacity:0;transform:translateY(8px) scale(.7)}20%{opacity:1;transform:translateY(0) scale(1.1)}100%{opacity:0;transform:translateY(-58px) scale(.92)}}@keyframes skillFloat{0%{opacity:0;transform:translateY(8px)}20%,70%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-14px)}}@keyframes attack{50%{transform:translateX(var(--attack-x,20px)) scale(1.08)}}@keyframes hit{35%{transform:translateX(-7px);filter:brightness(2) saturate(1.6)}70%{transform:translateX(6px)}}.battle-controls{position:absolute;left:var(--safe-left);right:var(--safe-right);bottom:var(--safe-bottom);height:94px;display:grid;grid-template-columns:82px 1fr 84px;gap:12px;align-items:end}.battle-utility{height:72px;border-radius:20px;border:1px solid var(--line);display:grid;place-items:center;align-content:center;font-weight:900;font-size:10px;cursor:pointer}.battle-utility span:first-child{font-size:26px}.skill-tray{height:92px;border-radius:23px;padding:8px;display:flex;justify-content:center;gap:7px;overflow-x:auto}.skill-btn{position:relative;width:78px;height:76px;flex:0 0 78px;border-radius:17px;border:1px solid #ffffff23;background:linear-gradient(145deg,#21424d,#10242d);color:#fff;cursor:pointer;overflow:hidden}.skill-btn:disabled{filter:grayscale(.8);opacity:.5}.skill-btn.selected{outline:2px solid var(--gold)}.skill-btn .skill-icon{display:block;font-size:27px;line-height:30px}.skill-btn b{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.skill-btn small{font-size:9px;color:#83d0ff}.cooldown{position:absolute;inset:0;background:#061017c9;display:grid;place-items:center;font-size:23px;font-weight:1000}.auto-btn{height:82px;width:82px;border-radius:50%;border:2px solid #93e2ce66;background:radial-gradient(circle at 35% 25%,#4a8c82,#17343d 72%);display:grid;place-items:center;align-content:center;cursor:pointer;box-shadow:0 12px 28px #0007}.auto-btn .auto-icon{font-size:28px;line-height:1}.auto-btn small{font-size:9px;font-weight:1000}.auto-btn.on{background:radial-gradient(circle at 35% 25%,#f0bf58,#a85b22 72%);border-color:#ffe49a}.target-prompt{position:absolute;left:50%;bottom:123px;translate:-50%;padding:8px 14px;border-radius:12px;background:#3a1519e8;border:1px solid #ff8790;color:#ffdfe1;font-size:12px;font-weight:900}.battle-log{position:absolute;left:var(--safe-left);bottom:115px;width:245px;max-height:70px;overflow:hidden;pointer-events:none;color:#d2e1deaa;font-size:9px;line-height:1.4;text-shadow:0 1px 2px #000}.screen-flash{position:absolute;inset:0;background:#fff;pointer-events:none;animation:flash .25s both}@keyframes flash{to{opacity:0}}
+    /* Results */
+    .result-modal{text-align:center;background:radial-gradient(circle at 50% 0,#31594f,#132931 45%,#0d1d25)}.result-emblem{width:88px;height:88px;margin:0 auto 7px;border-radius:50%;display:grid;place-items:center;font-size:45px;background:radial-gradient(circle,#ffe996,#d98a2b 67%,#744017);box-shadow:0 0 40px #ffd56b55}.result-modal h2{font:800 42px Georgia,serif;color:#f8d479;margin:4px 0}.reward-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:16px 0}.reward-pill{padding:9px 14px;border-radius:14px;background:#07171ed0;border:1px solid #ffffff16;font-weight:900}.loot-grid{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.loot{width:100px;padding:9px;border-radius:14px;background:#0b1d25;border:1px solid var(--line)}.loot b{display:block;font-size:11px}.level-banner{margin:12px auto;padding:8px 14px;border-radius:13px;background:#573c1f;border:1px solid #f4cb6f;color:#ffe3a4;font-weight:900;width:max-content;animation:levelGlow 1s infinite alternate}@keyframes levelGlow{to{box-shadow:0 0 24px #ffd46b55}}
+    .toast-root{position:fixed;top:calc(var(--safe-top) + 78px);left:50%;translate:-50%;z-index:80;display:grid;gap:8px;pointer-events:none}.toast{min-width:230px;padding:10px 15px;border-radius:14px;background:#08171fea;border:1px solid #a8d9cd55;box-shadow:0 10px 25px #0008;text-align:center;font-size:12px;font-weight:800;animation:toastIn 2.6s both}@keyframes toastIn{0%{opacity:0;transform:translateY(-10px)}12%,80%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px)}}.transition{position:fixed;inset:0;z-index:100;background:#081018;display:grid;place-items:center;pointer-events:none;opacity:0;transition:.35s opacity}.transition.on{opacity:1}.transition-rune{font:800 70px Georgia;color:#f3cb72;animation:spin 1.5s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.rotate{display:none;position:fixed;inset:0;z-index:200;background:#09151e;place-items:center;text-align:center;padding:30px}.rotate div{max-width:300px}.rotate b{display:block;font-size:22px;margin:14px}.phone{font-size:60px;animation:rotatePhone 2s infinite}@keyframes rotatePhone{50%{transform:rotate(90deg)}}
+    @media(max-width:900px){.title-card{padding:27px 28px 22px}.title-card h1{font-size:55px}.title-copy{font-size:13px}.topbar{gap:6px}.player-card{width:240px}.zone-banner{min-width:170px}.minimap{width:125px;height:75px}.quest-pin{top:82px}.two-col{grid-template-columns:255px 1fr}.summon-grid{gap:8px}.summon-card .art{height:105px}.modal-body{padding:14px}.battlefield{inset:72px 10px 104px}.unit{width:125px;height:160px}.unit .art{height:110px}.battle-controls{height:82px;grid-template-columns:65px 1fr 72px;gap:7px}.skill-tray{height:80px}.skill-btn{width:66px;height:65px;flex-basis:66px}.auto-btn{width:70px;height:70px}.battle-utility{height:65px}.world-nav button{width:59px;height:51px}.joystick{width:96px;height:96px}.joy-knob{width:46px;height:46px;left:25px;top:25px}.action-btn{width:80px;height:80px}.team-card .art{height:115px}}
+    @media(max-height:520px){.title-card{transform:scale(.82)}.title-orb{width:60px;height:60px}.topbar{top:6px}.player-card{height:59px}.avatar-mini{width:42px;height:42px;flex-basis:42px}.zone-banner{padding:7px 15px}.resources{height:45px}.minimap{top:65px}.quest-pin{top:65px}.world-nav{bottom:5px}.joystick{bottom:8px}.action-btn{bottom:13px}.battle-top{top:6px}.battlefield{inset:65px 10px 88px}.battle-controls{bottom:5px}.unit{height:145px}.unit .art{height:97px}.modal{max-height:96vh}.modal-head{min-height:56px;padding:9px 14px}.modal-body{padding:11px}.summon-card .art{height:90px}.summon-card p{display:none}.hero-sheet .art{height:130px}.formation-slot{height:135px}.formation-slot .art{height:88px}.enemy-preview .art{height:85px}}
+    @media(orientation:portrait) and (max-width:700px){.rotate{display:grid}}
   </style>
-  <link rel="stylesheet" href="assets/css/hud.css" />
-  <link rel="stylesheet" href="assets/css/hudPanels.css" />
-  <link rel="stylesheet" href="assets/css/hudInterface.css" />
-  <link rel="stylesheet" href="assets/css/stats.css" />
-  <link rel="stylesheet" href="assets/css/metiers.css" />
-  <link rel="stylesheet" href="assets/css/combat.css" />
-  <link rel="stylesheet" href="assets/css/combatResult.css" />
-  <link rel="stylesheet" href="assets/css/levelUp.css" />
-  <link rel="stylesheet" href="assets/css/combatInspector.css" />
-  <link rel="stylesheet" href="assets/css/spellBook.css" />
-  <link rel="stylesheet" href="assets/css/inventory.css" />
-  <link rel="stylesheet" href="assets/css/map.css" />
-  <link rel="stylesheet" href="assets/css/npcDialog.css" />
-  <link rel="stylesheet" href="assets/css/quests.css" />
-  <link rel="stylesheet" href="assets/css/questTracker.css" />
-  <link rel="stylesheet" href="assets/css/achievements.css" />
-  <link rel="stylesheet" href="assets/css/claimPanel.css" />
-  <link rel="stylesheet" href="assets/css/toasts.css" />
-  <link rel="stylesheet" href="assets/css/chat.css" />
-  <link rel="stylesheet" href="assets/css/menu.css" />
-  <link rel="stylesheet" href="assets/css/rifts.css" />
-  <link rel="stylesheet" href="assets/css/groupCombatInvite.css" />
-  <link rel="stylesheet" href="assets/css/playerContextMenu.css" />
-  <link rel="stylesheet" href="assets/css/groupInvite.css" />
-  <link rel="stylesheet" href="assets/css/groupPanel.css" />
-  <link rel="stylesheet" href="assets/css/friendInvite.css" />
-  <link rel="stylesheet" href="assets/css/friendActions.css" />
-  <link rel="stylesheet" href="assets/css/friends.css" />
-  <link rel="stylesheet" href="assets/css/trade.css" />
 </head>
-<body class="menu-open">
-  <!-- Menus (création / sélection personnage) -->
-  <div id="menu-overlay" class="menu-overlay" aria-label="Menu principal">
-    <div class="menu-panel">
-      <header class="menu-header">
-        <h1 class="menu-title">Andémia</h1>
-      </header>
-
-      <!-- Sélection personnage -->
-      <section id="menu-screen-select" class="menu-screen" aria-label="Sélection du personnage">
-        <h2 class="menu-screen-title">Choisir un personnage</h2>
-        <div id="character-list" class="character-list"></div>
-        <div class="menu-actions">
-          <button id="btn-go-servers" class="menu-btn menu-btn-secondary" type="button">
-            Serveurs
-          </button>
-          <button id="btn-go-create" class="menu-btn menu-btn-secondary" type="button">
-            Créer un personnage
-          </button>
-          <button id="btn-lan-connect" class="menu-btn menu-btn-secondary" type="button">
-            Compte
-          </button>
-          <button id="btn-play" class="menu-btn menu-btn-primary" type="button" disabled>
-            Jouer
-          </button>
-        </div>
-      </section>
-
-      <!-- Connexion / Inscription -->
-      <section id="menu-screen-login" class="menu-screen" aria-label="Connexion" hidden>
-        <h2 class="menu-screen-title">Connexion</h2>
-        <form id="login-form" class="login-form" autocomplete="off">
-          <label class="login-label">
-            Identifiant ou email
-            <input id="login-identifier" class="login-input" type="text" maxlength="64" placeholder="ex: joueur@mail.com" />
-          </label>
-          <label class="login-label">
-            Mot de passe
-            <input id="login-password" class="login-input" type="password" maxlength="64" placeholder="********" />
-          </label>
-          <label id="login-confirm-wrap" class="login-label" hidden>
-            Confirmer le mot de passe
-            <input id="login-password-confirm" class="login-input" type="password" maxlength="64" placeholder="********" />
-          </label>
-          <label class="login-remember">
-            <input id="login-remember" type="checkbox" checked />
-            Se souvenir de moi
-          </label>
-          <div id="login-error" class="login-error" role="status" aria-live="polite"></div>
-          <div class="login-actions">
-            <button id="btn-login-submit" class="menu-btn menu-btn-primary" type="submit">
-              Connexion
-            </button>
-            <button id="btn-login-toggle" class="menu-btn menu-btn-secondary" type="button">
-              Créer un compte
-            </button>
-          </div>
-        </form>
-      </section>
-      <!-- Choix serveur -->
-      <section id="menu-screen-servers" class="menu-screen" aria-label="Choix du serveur" hidden>
-        <h2 class="menu-screen-title">Choisir un serveur</h2>
-        <div id="server-list" class="server-list"></div>
-        <div class="server-actions">
-          <button id="btn-servers-logout" class="menu-btn menu-btn-secondary" type="button">
-            DǸconnexion
-          </button>
-          <button id="btn-servers-continue" class="menu-btn menu-btn-primary" type="button" disabled>
-            Continuer
-          </button>
-        </div>
-      </section>
-
-      <!-- Création personnage -->
-      <section id="menu-screen-create" class="menu-screen" aria-label="Création du personnage" hidden>
-        <h2 class="menu-screen-title">Créer un personnage</h2>
-        <form id="character-create-form" class="create-form" autocomplete="off">
-          <label class="create-label">
-            Nom
-            <input id="character-name" class="create-input" type="text" maxlength="16" placeholder="Ex: Ntmav" />
-          </label>
-
-          <div class="class-picker">
-            <div class="class-picker-title">Classe</div>
-            <div id="class-list" class="class-list"></div>
-          </div>
-
-          <div class="menu-actions">
-            <button id="btn-back-select" class="menu-btn menu-btn-secondary" type="button">
-              Retour
-            </button>
-            <button id="btn-create" class="menu-btn menu-btn-primary" type="submit" disabled>
-              Créer
-            </button>
-          </div>
-        </form>
-      </section>
+<body>
+<div id="app">
+  <section id="title-screen" class="screen">
+    <div class="stars"></div><div class="title-land"></div>
+    <span class="title-orb orb-fire"></span><span class="title-orb orb-water"></span><span class="title-orb orb-air"></span><span class="title-orb orb-earth"></span>
+    <div class="title-card glass">
+      <div class="brand-rune"><span>A</span></div><p class="eyebrow">RPG 2D • MONDE OUVERT</p><h1>ANDÉMIA</h1><p class="title-sub">L’Éveil des Éléments</p>
+      <p class="title-copy">Explore sans barrière, invoque tes compagnons et maîtrise un combat où chaque point de vitesse compte.</p>
+      <div class="title-actions"><button id="continue-btn" class="btn btn-primary">Continuer</button><button id="new-btn" class="btn btn-ghost">Nouvelle aventure</button></div><p id="save-summary" class="save-summary"></p>
     </div>
-  </div>
+    <button id="title-settings" class="icon-btn title-settings" aria-label="Paramètres">⚙</button>
+  </section>
 
-  <!-- Bouton en jeu : retour menu -->
-  <button id="ui-return-menu" class="ui-return-menu" type="button" aria-label="Retour au menu" title="Retour au menu">
-    MENU
-  </button>
+  <section id="world-screen" class="screen hidden">
+    <canvas id="world-canvas"></canvas><div class="world-vignette"></div>
+    <header class="topbar">
+      <button id="player-card" class="player-card glass"><span id="avatar-mini" class="avatar-mini">⚔</span><span class="player-info"><strong id="hud-name">Aventurier</strong><small id="hud-level">Niv. 1 • Aventurier 1</small><span class="mini-bars"><span class="mini-bar hp"><i id="hud-hp"></i></span><span class="mini-bar mp"><i id="hud-mp"></i></span></span></span></button>
+      <div class="zone-banner glass"><small>RÉGION</small><strong id="zone-name">Havreclaire</strong><span id="zone-danger">Zone sûre</span></div>
+      <div class="resources glass"><span class="coin"><i class="coin-dot"></i><b id="hud-gold">0</b></span><button id="settings-btn" class="icon-btn">⚙</button></div>
+    </header>
+    <aside id="quest-pin" class="quest-pin glass"><b>!</b><span><small>OBJECTIF</small><span id="quest-pin-text">Invoquer un compagnon</span></span></aside>
+    <canvas id="minimap" class="minimap" width="320" height="192"></canvas>
+    <div id="interaction" class="interaction hidden">✦ <span id="interaction-text">Interagir</span></div>
+    <div id="joystick" class="joystick"><div id="joy-knob" class="joy-knob"></div></div>
+    <button id="action-btn" class="action-btn"><span class="spark">✦</span><span>ACTION</span></button>
+    <nav class="world-nav glass"><button data-panel="hero"><span class="nav-icon">♙</span><span>Héros</span></button><button data-panel="inventory"><span class="nav-icon">🎒</span><span>Sac</span></button><button data-panel="team"><span class="nav-icon">♟</span><span>Équipe</span></button><button data-panel="map"><span class="nav-icon">🗺</span><span>Carte</span></button><button data-panel="quests"><span class="nav-icon">📜</span><span>Quêtes</span></button></nav>
+  </section>
 
-  <div id="ui-input-blocker" aria-hidden="true"></div>
+  <section id="battle-screen" class="screen hidden">
+    <div id="battle-bg" class="battle-bg"></div><div class="battle-horizon"></div>
+    <header class="battle-top"><div class="battle-title glass"><small id="battle-zone">COMBAT</small><strong id="battle-status">À vous de jouer</strong></div><div id="turn-order" class="turn-order glass"></div><button id="speed-btn" class="battle-speed glass">×1</button></header>
+    <main id="battlefield" class="battlefield"></main><div id="target-prompt" class="target-prompt hidden">Choisis une cible</div><div id="battle-log" class="battle-log"></div>
+    <footer class="battle-controls"><button id="battle-items" class="battle-utility glass"><span>🧪</span><span>OBJETS</span></button><div id="skill-tray" class="skill-tray glass"></div><button id="auto-btn" class="auto-btn"><span class="auto-icon">▶</span><small>AUTO</small></button></footer>
+  </section>
 
-  <div id="quest-tracker" class="quest-tracker" aria-label="Suivi des quetes">
-    <button
-      id="quest-tracker-toggle"
-      class="quest-tracker-toggle"
-      type="button"
-      aria-expanded="false"
-      aria-controls="quest-tracker-list"
-      title="Afficher / masquer les quetes suivies"
-    >
-      <span class="quest-tracker-toggle-icon">›</span>
-    </button>
-    <div class="quest-tracker-inner">
-      <div class="quest-tracker-header">
-        <span class="quest-tracker-title">Quetes</span>
-      </div>
-      <div id="quest-tracker-list" class="quest-tracker-list"></div>
-    </div>
-  </div>
+  <div id="modal-root" class="hidden"></div><div id="toast-root" class="toast-root"></div><div id="transition" class="transition"><div class="transition-rune">◈</div></div>
+  <div class="rotate"><div><div class="phone">📱</div><b>Tourne ton téléphone</b><span>Andémia est conçu pour être joué en mode paysage.</span></div></div>
+</div>
+<script>
+'use strict';
+const VERSION='2.0.0';
+const SAVE_KEY='andemia_v2_save';
+const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>[...p.querySelectorAll(s)];
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)), rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a, choice=a=>a[Math.floor(Math.random()*a.length)];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fmt=n=>Math.floor(n).toLocaleString('fr-FR');
+const deep=o=>JSON.parse(JSON.stringify(o));
+const ELEMENTS={neutral:{name:'Neutre',color:'#d7dce4',icon:'✦'},fire:{name:'Feu',color:'#ff7757',icon:'🔥'},water:{name:'Eau',color:'#5dc8ff',icon:'💧'},air:{name:'Air',color:'#8de6bd',icon:'🍃'},earth:{name:'Terre',color:'#d4a766',icon:'◆'}};
+const ADVANTAGE={fire:'earth',earth:'air',air:'water',water:'fire'};
+const SLOTS={weapon:'Arme',head:'Coiffe',body:'Armure',cape:'Cape',amulet:'Amulette',belt:'Ceinture',boots:'Bottes',ring1:'Anneau gauche',ring2:'Anneau droit'};
+const SKILLS={
+  strike:{name:'Coup franc',icon:'⚔️',mana:0,power:10,element:'neutral',target:'enemy'},
+  pulse:{name:'Onde neutre',icon:'✦',mana:8,power:19,element:'neutral',target:'enemy',cooldown:1},
+  guard:{name:'Garde',icon:'🛡️',mana:5,type:'guard',target:'self',cooldown:2},
+  firstaid:{name:'Premiers soins',icon:'💚',mana:12,type:'heal',power:22,element:'neutral',target:'ally',cooldown:2},
+  flameSlash:{name:'Lame ardente',icon:'🔥',mana:12,power:31,element:'fire',target:'enemy',status:'burn',cooldown:1},
+  stoneWall:{name:'Mur tellurique',icon:'🪨',mana:15,type:'guardAll',element:'earth',target:'allAllies',cooldown:3},
+  tidalCounter:{name:'Contre-marée',icon:'🌊',mana:13,power:25,element:'water',target:'enemy',status:'counter',cooldown:2},
+  galeEdge:{name:'Tranchant du vent',icon:'🌪️',mana:18,power:21,element:'air',target:'allEnemies',cooldown:2},
+  pierce:{name:'Flèche perçante',icon:'🏹',mana:7,power:25,element:'neutral',target:'enemy',pierce:.35},
+  volley:{name:'Volée zéphyr',icon:'🍃',mana:17,power:20,element:'air',target:'allEnemies',cooldown:2},
+  aquaArrow:{name:'Flèche d’écume',icon:'💧',mana:13,power:30,element:'water',target:'enemy',status:'slow',cooldown:1},
+  emberTrap:{name:'Piège braise',icon:'🪤',mana:16,power:24,element:'fire',target:'enemy',status:'burn',cooldown:2},
+  fireball:{name:'Boule de feu',icon:'☄️',mana:16,power:39,element:'fire',target:'enemy',status:'burn',cooldown:1},
+  aquaVeil:{name:'Voile d’eau',icon:'🌊',mana:18,type:'healAll',power:20,element:'water',target:'allAllies',cooldown:3},
+  terraSpike:{name:'Pointe tellurique',icon:'⛰️',mana:15,power:34,element:'earth',target:'enemy',status:'stun',cooldown:2},
+  tempest:{name:'Tempête',icon:'🌪️',mana:24,power:27,element:'air',target:'allEnemies',cooldown:3},
+  pyronClaw:{name:'Griffe braise',icon:'🔥',mana:0,power:13,element:'fire',target:'enemy'},
+  pyronLeap:{name:'Bond volcanique',icon:'☄️',mana:12,power:30,element:'fire',target:'enemy',status:'burn',cooldown:1},
+  pyronRoar:{name:'Rugissement solaire',icon:'🌞',mana:18,power:19,element:'fire',target:'allEnemies',cooldown:2},
+  pyronHeart:{name:'Cœur incandescent',icon:'❤️‍🔥',mana:16,type:'buffAttack',target:'allAllies',cooldown:3},
+  nereaDrop:{name:'Goutte vive',icon:'💧',mana:0,power:12,element:'water',target:'enemy'},
+  nereaWave:{name:'Vague azurée',icon:'🌊',mana:13,power:25,element:'water',target:'allEnemies',cooldown:2},
+  nereaHeal:{name:'Source apaisante',icon:'🫧',mana:15,type:'heal',power:28,element:'water',target:'ally',cooldown:1},
+  nereaMist:{name:'Brume protectrice',icon:'🌫️',mana:18,type:'guardAll',target:'allAllies',cooldown:3},
+  sylphePeck:{name:'Serre légère',icon:'🍃',mana:0,power:12,element:'air',target:'enemy'},
+  sylpheGust:{name:'Rafale',icon:'💨',mana:11,power:27,element:'air',target:'enemy',status:'slow',cooldown:1},
+  sylpheDance:{name:'Danse du zéphyr',icon:'🪽',mana:17,type:'buffSpeed',target:'allAllies',cooldown:3},
+  sylpheStorm:{name:'Cyclone',icon:'🌪️',mana:21,power:23,element:'air',target:'allEnemies',cooldown:2},
+  terraHit:{name:'Poing rocheux',icon:'🪨',mana:0,power:15,element:'earth',target:'enemy'},
+  terraQuake:{name:'Séisme',icon:'⛰️',mana:17,power:24,element:'earth',target:'allEnemies',cooldown:2},
+  terraShell:{name:'Carapace minérale',icon:'🛡️',mana:12,type:'guard',target:'self',cooldown:2},
+  terraRoots:{name:'Racines anciennes',icon:'🌱',mana:18,type:'healAll',power:17,element:'earth',target:'allAllies',cooldown:3},
+  enemyHit:{name:'Attaque',icon:'⚔️',mana:0,power:8,element:'neutral',target:'enemy'},
+  enemyElement:{name:'Éclat élémentaire',icon:'✦',mana:8,power:18,element:'neutral',target:'enemy',cooldown:1},
+  enemyAll:{name:'Onde sauvage',icon:'💥',mana:14,power:15,element:'neutral',target:'allEnemies',cooldown:2},
+  enemyHeal:{name:'Régénération',icon:'💚',mana:12,type:'heal',power:18,target:'ally',cooldown:2}
+};
+const CLASSES={
+  adventurer:{name:'Aventurier',icon:'⚔',color:'#5ca8e8',skills:['strike','pulse','guard','firstaid'],desc:'Polyvalent, encore libre de choisir sa voie.'},
+  swordsman:{name:'Épéiste',icon:'🗡️',color:'#e46b58',skills:['flameSlash','stoneWall','tidalCounter','galeEdge'],desc:'Combattant robuste qui canalise les éléments dans sa lame.'},
+  archer:{name:'Archer',icon:'🏹',color:'#76c59c',skills:['pierce','volley','aquaArrow','emberTrap'],desc:'Rapide et précis, expert des attaques de zone.'},
+  mage:{name:'Mage',icon:'🔮',color:'#a98bea',skills:['fireball','aquaVeil','terraSpike','tempest'],desc:'Maître des quatre éléments et des sorts puissants.'}
+};
+const COMPANIONS={
+  pyron:{name:'Pyron',element:'fire',icon:'🔥',desc:'Félin de braise offensif.',base:{hp:82,mana:42,attack:17,defense:7,speed:107,crit:7},skills:['pyronClaw','pyronLeap','pyronRoar','pyronHeart']},
+  nerea:{name:'Néréa',element:'water',icon:'💧',desc:'Esprit d’eau spécialisé dans les soins.',base:{hp:76,mana:58,attack:13,defense:8,speed:102,crit:5},skills:['nereaDrop','nereaWave','nereaHeal','nereaMist']},
+  sylphe:{name:'Sylphe',element:'air',icon:'🍃',desc:'Créature du vent extrêmement rapide.',base:{hp:69,mana:48,attack:15,defense:6,speed:123,crit:10},skills:['sylphePeck','sylpheGust','sylpheDance','sylpheStorm']},
+  terranox:{name:'Terranox',element:'earth',icon:'◆',desc:'Gardien minéral résistant.',base:{hp:98,mana:39,attack:16,defense:12,speed:88,crit:4},skills:['terraHit','terraQuake','terraShell','terraRoots']}
+};
+const ITEMS={
+  potion:{name:'Potion rouge',icon:'🧪',type:'consumable',rarity:'common',price:28,desc:'Rend 45 PV.',effect:{hp:45}},
+  grandPotion:{name:'Grande potion',icon:'🍷',type:'consumable',rarity:'uncommon',price:80,desc:'Rend 110 PV.',effect:{hp:110}},
+  ether:{name:'Éther bleu',icon:'🧴',type:'consumable',rarity:'uncommon',price:55,desc:'Rend 38 mana.',effect:{mana:38}},
+  scroll:{name:'Parchemin d’invocation',icon:'📜',type:'scroll',rarity:'rare',price:420,desc:'Permet d’invoquer un compagnon élémentaire.'},
+  herb:{name:'Herbe lunaire',icon:'🌿',type:'material',rarity:'common',price:12,desc:'Une plante recherchée par les soigneurs.'},
+  ember:{name:'Braise vivante',icon:'🔸',type:'material',rarity:'uncommon',price:34,desc:'Une braise qui ne s’éteint jamais.'},
+  pearl:{name:'Perle azurée',icon:'🔵',type:'material',rarity:'uncommon',price:36,desc:'Chargée de mana marin.'},
+  feather:{name:'Plume zéphyr',icon:'🪶',type:'material',rarity:'uncommon',price:35,desc:'Plus légère que l’air.'},
+  core:{name:'Cœur tellurique',icon:'🟫',type:'material',rarity:'rare',price:72,desc:'Fragment d’une ancienne sentinelle.'},
+  noviceSword:{name:'Épée du voyageur',icon:'🗡️',type:'equipment',slot:'weapon',rarity:'common',price:70,desc:'Une lame fiable pour prendre la route.',stats:{attack:5}},
+  oakBow:{name:'Arc de chêne',icon:'🏹',type:'equipment',slot:'weapon',rarity:'uncommon',price:150,desc:'Un arc souple et précis.',stats:{attack:7,speed:4,crit:3}},
+  emberBlade:{name:'Lame de braise',icon:'🔥',type:'equipment',slot:'weapon',rarity:'rare',price:420,desc:'Une épée parcourue de veines ardentes.',stats:{attack:14,fire:5,crit:4}},
+  tideStaff:{name:'Bâton des marées',icon:'🔱',type:'equipment',slot:'weapon',rarity:'rare',price:430,desc:'Amplifie les sorts d’eau.',stats:{attack:10,mana:24,water:7}},
+  leatherCap:{name:'Coiffe de pisteur',icon:'🧢',type:'equipment',slot:'head',rarity:'common',price:64,desc:'Protège sans gêner la vision.',stats:{defense:3,hp:8}},
+  galeHood:{name:'Capuche du zéphyr',icon:'🥷',type:'equipment',slot:'head',rarity:'rare',price:390,desc:'Tissée avec des plumes de Sylphe.',stats:{defense:6,speed:10,air:5}},
+  tunic:{name:'Tunique renforcée',icon:'🥋',type:'equipment',slot:'body',rarity:'common',price:90,desc:'Une protection légère.',stats:{defense:5,hp:18}},
+  earthArmor:{name:'Cuirasse tellurique',icon:'🛡️',type:'equipment',slot:'body',rarity:'epic',price:780,desc:'Une armure massive taillée dans la roche vive.',stats:{defense:18,hp:65,earth:8,speed:-6}},
+  greenCape:{name:'Cape des clairières',icon:'🧣',type:'equipment',slot:'cape',rarity:'uncommon',price:135,desc:'Une cape discrète qui accompagne les mouvements.',stats:{defense:2,speed:6}},
+  cinderCape:{name:'Cape cendrée',icon:'🥻',type:'equipment',slot:'cape',rarity:'rare',price:370,desc:'Imprégnée de chaleur volcanique.',stats:{defense:5,fire:7,hp:20}},
+  moonAmulet:{name:'Amulette lunaire',icon:'📿',type:'equipment',slot:'amulet',rarity:'uncommon',price:180,desc:'Apaise le flux de mana.',stats:{mana:20,neutral:4}},
+  prismAmulet:{name:'Prisme ancien',icon:'💎',type:'equipment',slot:'amulet',rarity:'legendary',price:1450,desc:'Résonne avec les cinq affinités.',stats:{fire:5,water:5,air:5,earth:5,neutral:5}},
+  ropeBelt:{name:'Ceinture d’éclaireur',icon:'➰',type:'equipment',slot:'belt',rarity:'common',price:75,desc:'Permet de garder son matériel à portée.',stats:{hp:12,speed:2}},
+  guardianBelt:{name:'Ceinture du gardien',icon:'🏵️',type:'equipment',slot:'belt',rarity:'rare',price:360,desc:'Renforce le corps et l’esprit.',stats:{hp:32,defense:7}},
+  travelBoots:{name:'Bottes de voyage',icon:'🥾',type:'equipment',slot:'boots',rarity:'common',price:80,desc:'Conçues pour les longues routes.',stats:{speed:5}},
+  wingBoots:{name:'Bottes ailées',icon:'🪽',type:'equipment',slot:'boots',rarity:'epic',price:690,desc:'Chaque pas semble défier la gravité.',stats:{speed:20,air:6,dodge:4}},
+  copperRing:{name:'Anneau de cuivre',icon:'💍',type:'equipment',slot:'ring',rarity:'common',price:95,desc:'Une bague simple mais efficace.',stats:{attack:2,hp:8}},
+  flameRing:{name:'Anneau solaire',icon:'💍',type:'equipment',slot:'ring',rarity:'rare',price:410,desc:'Chaud au toucher.',stats:{fire:8,crit:5}},
+  tideRing:{name:'Anneau des marées',icon:'💍',type:'equipment',slot:'ring',rarity:'rare',price:410,desc:'Sa pierre contient une vague miniature.',stats:{water:8,mana:15}},
+  mirrorRing:{name:'Anneau du miroir',icon:'💍',type:'equipment',slot:'ring',rarity:'epic',price:760,desc:'Déforme brièvement la lumière autour du porteur.',stats:{neutral:7,dodge:8,speed:8}}
+};
+const MONSTERS={
+  greenSlime:{name:'Slime mousse',kind:'slime',element:'earth',level:1,base:{hp:48,mana:18,attack:9,defense:4,speed:82},skills:['enemyHit','enemyElement'],xp:22,jobXp:11,gold:[7,14],loot:[['herb',.35],['potion',.12]]},
+  sprout:{name:'Pousse farouche',kind:'sprout',element:'earth',level:3,base:{hp:62,mana:25,attack:12,defense:5,speed:96},skills:['enemyHit','enemyElement'],xp:31,jobXp:15,gold:[10,18],loot:[['herb',.55],['greenCape',.03]]},
+  meadowStag:{name:'Cerf des murmures',kind:'stag',element:'air',level:5,base:{hp:105,mana:31,attack:16,defense:8,speed:113},skills:['enemyHit','enemyAll'],xp:58,jobXp:27,gold:[20,33],loot:[['feather',.28],['galeHood',.025]]},
+  azureCrab:{name:'Crabe azur',kind:'crab',element:'water',level:7,base:{hp:93,mana:23,attack:17,defense:13,speed:78},skills:['enemyHit','enemyElement'],xp:62,jobXp:31,gold:[22,37],loot:[['pearl',.33],['tideRing',.02]]},
+  foamSerpent:{name:'Serpent d’écume',kind:'serpent',element:'water',level:10,base:{hp:132,mana:42,attack:23,defense:10,speed:116},skills:['enemyHit','enemyElement','enemyAll'],xp:91,jobXp:45,gold:[31,52],loot:[['pearl',.5],['tideStaff',.025]]},
+  stormHawk:{name:'Faucon d’orage',kind:'hawk',element:'air',level:12,base:{hp:118,mana:45,attack:25,defense:8,speed:137},skills:['enemyHit','enemyAll'],xp:108,jobXp:54,gold:[36,61],loot:[['feather',.48],['wingBoots',.012]]},
+  windLynx:{name:'Lynx des hauteurs',kind:'lynx',element:'air',level:15,base:{hp:176,mana:51,attack:31,defense:13,speed:145},skills:['enemyHit','enemyElement','enemyAll'],xp:142,jobXp:71,gold:[49,78],loot:[['feather',.58],['galeHood',.04]]},
+  cinderWolf:{name:'Loup cendré',kind:'wolf',element:'fire',level:17,base:{hp:199,mana:48,attack:36,defense:15,speed:132},skills:['enemyHit','enemyElement'],xp:167,jobXp:82,gold:[58,92],loot:[['ember',.52],['cinderCape',.03]]},
+  magmaDrake:{name:'Drake de magma',kind:'drake',element:'fire',level:22,base:{hp:287,mana:67,attack:45,defense:22,speed:111},skills:['enemyHit','enemyElement','enemyAll'],xp:242,jobXp:119,gold:[82,130],loot:[['ember',.72],['emberBlade',.035]]},
+  stoneBoar:{name:'Sanglier granit',kind:'boar',element:'earth',level:25,base:{hp:330,mana:38,attack:48,defense:29,speed:91},skills:['enemyHit','enemyAll'],xp:274,jobXp:136,gold:[91,148],loot:[['core',.42],['guardianBelt',.03]]},
+  ancientGolem:{name:'Golem ancien',kind:'golem',element:'earth',level:30,base:{hp:480,mana:71,attack:56,defense:38,speed:73},skills:['enemyHit','enemyElement','enemyAll'],xp:390,jobXp:194,gold:[130,210],loot:[['core',.68],['earthArmor',.025]]},
+  mirrorEcho:{name:'Écho prismatique',kind:'echo',element:'neutral',level:34,base:{hp:390,mana:98,attack:61,defense:28,speed:128},skills:['enemyHit','enemyElement','enemyHeal'],xp:430,jobXp:215,gold:[145,230],loot:[['mirrorRing',.025],['prismAmulet',.009]]},
+  mirrorKnight:{name:'Chevalier du miroir',kind:'knight',element:'neutral',level:38,base:{hp:590,mana:105,attack:70,defense:43,speed:109},skills:['enemyHit','enemyAll','enemyHeal'],xp:610,jobXp:302,gold:[210,330],loot:[['mirrorRing',.045],['prismAmulet',.018]]}
+};
+const ZONES=[
+  {id:'town',name:'Havreclaire',danger:'Zone sûre',level:'1',x:1350,y:850,w:900,h:720,color:'#5f9d65',dark:'#356947',bg:'meadow'},
+  {id:'meadow',name:'Prairie des Murmures',danger:'Niveaux conseillés 1–7',level:'1–7',x:650,y:350,w:2100,h:1650,color:'#72a95d',dark:'#3e7148',bg:'meadow'},
+  {id:'coast',name:'Côte d’Azur',danger:'Niveaux conseillés 7–13',level:'7–13',x:0,y:0,w:800,h:2600,color:'#d4b871',dark:'#39859a',bg:'coast'},
+  {id:'highland',name:'Hautes-Terres',danger:'Niveaux conseillés 12–18',level:'12–18',x:2600,y:0,w:1600,h:1200,color:'#718b6d',dark:'#485b63',bg:'highland'},
+  {id:'cinder',name:'Terres de Cendre',danger:'Niveaux conseillés 17–25',level:'17–25',x:2600,y:1120,w:1600,h:1480,color:'#744a3b',dark:'#3d2a2d',bg:'cinder'},
+  {id:'earth',name:'Domaine Tellurique',danger:'Niveaux conseillés 24–33',level:'24–33',x:800,y:2000,w:1800,h:600,color:'#8c8055',dark:'#514b35',bg:'earth'},
+  {id:'ruins',name:'Ruines du Miroir',danger:'Niveaux conseillés 33+',level:'33+',x:0,y:2000,w:850,h:600,color:'#665d8b',dark:'#343955',bg:'ruins'}
+];
+const NPCS=[
+  {id:'lyra',name:'Lyra',role:'Invocatrice',emoji:'🧙‍♀️',x:1550,y:1110,text:'Les parchemins ne choisissent pas leur maître au hasard. Je peux t’aider à entendre l’appel d’un nouvel esprit.'},
+  {id:'mira',name:'Mira',role:'Guérisseuse',emoji:'👩‍⚕️',x:1870,y:1115,text:'Même les plus grands aventuriers ont besoin de souffler. Laisse la lumière de Havreclaire soigner ton équipe.'},
+  {id:'boren',name:'Boren',role:'Marchand',emoji:'🧔',x:2050,y:1420,text:'J’achète ce qui encombre ton sac et je vends ce qui peut te sauver la vie. Les affaires sont les affaires !'},
+  {id:'orin',name:'Maître Orin',role:'Maître de classe',emoji:'🧙',x:1540,y:1460,text:'Quand ton métier d’Aventurier atteindra le niveau 20, reviens me voir. Ta véritable voie se révélera.'},
+  {id:'ella',name:'Ella',role:'Cartographe',emoji:'👩‍🔬',x:1815,y:1510,text:'Le monde n’a aucune barrière. Mes cartes indiquent le danger, mais c’est toi qui décides jusqu’où aller.'}
+];
+const ENCOUNTERS=[
+  {id:'m1',x:1100,y:700,zone:'meadow',enemies:['greenSlime','greenSlime']},{id:'m2',x:920,y:1280,zone:'meadow',enemies:['greenSlime','sprout']},{id:'m3',x:2400,y:650,zone:'meadow',enemies:['sprout','sprout','greenSlime']},{id:'m4',x:2450,y:1550,zone:'meadow',enemies:['meadowStag','sprout']},
+  {id:'w1',x:420,y:650,zone:'coast',enemies:['azureCrab','azureCrab']},{id:'w2',x:370,y:1450,zone:'coast',enemies:['foamSerpent','azureCrab']},{id:'w3',x:420,y:2250,zone:'coast',enemies:['foamSerpent','foamSerpent','azureCrab']},
+  {id:'a1',x:3050,y:380,zone:'highland',enemies:['stormHawk','stormHawk']},{id:'a2',x:3650,y:730,zone:'highland',enemies:['windLynx','stormHawk']},{id:'a3',x:2970,y:960,zone:'highland',enemies:['windLynx','windLynx']},
+  {id:'f1',x:2980,y:1450,zone:'cinder',enemies:['cinderWolf','cinderWolf']},{id:'f2',x:3670,y:1770,zone:'cinder',enemies:['magmaDrake','cinderWolf']},{id:'f3',x:3250,y:2320,zone:'cinder',enemies:['magmaDrake','magmaDrake']},
+  {id:'e1',x:2150,y:2250,zone:'earth',enemies:['stoneBoar','stoneBoar']},{id:'e2',x:1350,y:2320,zone:'earth',enemies:['ancientGolem','stoneBoar']},
+  {id:'n1',x:450,y:2230,zone:'ruins',enemies:['mirrorEcho','mirrorEcho']},{id:'n2',x:220,y:2460,zone:'ruins',enemies:['mirrorKnight','mirrorEcho']}
+];
+const QUESTS={
+  summon:{name:'Le premier pacte',desc:'Invoque ton premier compagnon élémentaire.',type:'summon',goal:1,reward:{xp:40,gold:60,potion:2}},
+  meadow:{name:'Sécuriser la prairie',desc:'Remporte 3 combats dans la Prairie des Murmures.',type:'zoneWins',zone:'meadow',goal:3,reward:{xp:110,jobXp:70,gold:120,scroll:1}},
+  explorer:{name:'Sans frontières',desc:'Découvre 4 régions différentes.',type:'discover',goal:4,reward:{xp:180,gold:180,grandPotion:2}},
+  calling:{name:'Trouver sa voie',desc:'Atteins le métier Aventurier 20 puis évolue auprès de Maître Orin.',type:'class',goal:1,reward:{xp:350,gold:350,moonAmulet:1}},
+  guardians:{name:'Les cinq résonances',desc:'Vaincs un groupe dans chaque biome dangereux.',type:'biomeWins',goal:5,reward:{xp:900,gold:1000,prismAmulet:1}}
+};
+const SHOP=['potion','grandPotion','ether','scroll','noviceSword','oakBow','leatherCap','tunic','greenCape','moonAmulet','ropeBelt','travelBoots','copperRing'];
 
-  <div id="combat-inspector" class="combat-inspector compact" aria-label="Détails combat">
-    <div class="combat-inspector-header">
-      <div id="combat-inspector-title" class="combat-inspector-title">-</div>
-      <div class="combat-inspector-actions">
-        <button id="combat-inspector-close" class="combat-inspector-btn" type="button" title="Fermer">×</button>
-      </div>
-    </div>
-    <div id="combat-inspector-body" class="combat-inspector-body"></div>
-  </div>
+function newState(name='Aventurier'){
+  return {version:VERSION,created:Date.now(),player:{name:name.trim().slice(0,16)||'Aventurier',level:1,xp:0,jobLevel:1,jobXp:0,classId:'adventurer',statPoints:5,affinity:{fire:0,water:0,air:0,earth:0,neutral:0},gold:120,hp:90,mana:42,equipment:{weapon:'noviceSword',head:null,body:'tunic',cape:null,amulet:null,belt:null,boots:'travelBoots',ring1:null,ring2:null},inventory:{potion:3,ether:1,scroll:1},pos:{x:1760,y:1320},discovered:['town','meadow']},companions:{},team:[],quests:{summon:{progress:0,claimed:false},meadow:{progress:0,claimed:false},explorer:{progress:2,claimed:false},calling:{progress:0,claimed:false},guardians:{progress:0,claimed:false,zones:[]}},defeated:{},settings:{sound:true,music:true,vibration:true,fast:false},stats:{wins:0,losses:0},flags:{intro:false}};
+}
+let state=null,currentZone=ZONES[0],nearby=null,lastSave=0;
+function normalizeState(s){const base=newState(s?.player?.name);const out=Object.assign(base,s||{});out.player=Object.assign(base.player,s?.player||{});out.player.affinity=Object.assign(base.player.affinity,s?.player?.affinity||{});out.player.equipment=Object.assign(base.player.equipment,s?.player?.equipment||{});out.player.inventory=Object.assign({},s?.player?.inventory||base.player.inventory);out.companions=Object.assign({},s?.companions||{});out.team=Array.isArray(s?.team)?s.team.filter(id=>COMPANIONS[id]).slice(0,3):[];out.quests=Object.assign(base.quests,s?.quests||{});for(const id in base.quests)out.quests[id]=Object.assign(base.quests[id],s?.quests?.[id]||{});out.settings=Object.assign(base.settings,s?.settings||{});out.flags=Object.assign(base.flags,s?.flags||{});out.defeated=Object.assign({},s?.defeated||{});return out}
+function load(){try{const raw=localStorage.getItem(SAVE_KEY);state=raw?normalizeState(JSON.parse(raw)):null}catch(e){state=null}}
+function save(force=false){if(!state)return;if(!force&&Date.now()-lastSave<800)return;lastSave=Date.now();state.version=VERSION;localStorage.setItem(SAVE_KEY,JSON.stringify(state));updateTitle();}
+function updateTitle(){const btn=$('#continue-btn'),sum=$('#save-summary');if(!state){btn.disabled=true;sum.textContent='Aucune sauvegarde locale';return}btn.disabled=false;sum.textContent=`${state.player.name} • Niveau ${state.player.level} • ${CLASSES[state.player.classId].name} ${state.player.jobLevel} • ${fmt(state.player.gold)} or`;}
+function addItem(id,qty=1){state.player.inventory[id]=(state.player.inventory[id]||0)+qty;if(state.player.inventory[id]<=0)delete state.player.inventory[id];save();}
+function equipmentStats(){const out={hp:0,mana:0,attack:0,defense:0,speed:0,crit:0,dodge:0,fire:0,water:0,air:0,earth:0,neutral:0};Object.values(state.player.equipment).forEach(id=>{if(!id)return;const it=ITEMS[id];if(it?.stats)for(const [k,v]of Object.entries(it.stats))out[k]=(out[k]||0)+v});return out}
+function playerStats(fullHeal=false){const p=state.player,e=equipmentStats(),a=p.affinity,cls=p.classId;const mult=cls==='swordsman'?{hp:1.2,atk:1.14,def:1.18,mana:.85}:cls==='archer'?{hp:1,atk:1.12,def:.95,mana:1}:cls==='mage'?{hp:.9,atk:1.05,def:.88,mana:1.42}:{hp:1,atk:1,def:1,mana:1};const s={maxHp:Math.floor((90+(p.level-1)*12+a.earth*2.1+a.neutral*1.2+e.hp)*mult.hp),maxMana:Math.floor((42+(p.level-1)*4+a.water*1.4+a.neutral*.8+e.mana)*mult.mana),attack:Math.floor((14+(p.level-1)*2.2+a.fire*.55+a.neutral*.35+e.attack)*mult.atk),defense:Math.floor((7+(p.level-1)*1.45+a.earth*.5+a.neutral*.28+e.defense)*mult.def),speed:Math.max(30,100+(p.level-1)+a.air*.22+e.speed),crit:5+a.fire*.12+a.air*.08+e.crit,dodge:2+a.air*.16+e.dodge,affinity:{...a}};if(fullHeal){p.hp=s.maxHp;p.mana=s.maxMana}else{p.hp=clamp(p.hp,0,s.maxHp);p.mana=clamp(p.mana,0,s.maxMana)}return s}
+function companionStats(id){const c=state.companions[id],d=COMPANIONS[id],lv=c?.level||1,b=d.base;return{maxHp:Math.floor(b.hp+(lv-1)*10),maxMana:Math.floor(b.mana+(lv-1)*4),attack:Math.floor(b.attack+(lv-1)*2),defense:Math.floor(b.defense+(lv-1)*1.3),speed:b.speed+(lv-1),crit:b.crit+(lv-1)*.08,dodge:3+(d.element==='air'?5:0),affinity:{fire:d.element==='fire'?lv*1.5:0,water:d.element==='water'?lv*1.5:0,air:d.element==='air'?lv*1.5:0,earth:d.element==='earth'?lv*1.5:0,neutral:0}}}
+const xpNeed=l=>Math.floor(70+Math.pow(l,1.55)*36),jobNeed=l=>Math.floor(55+Math.pow(l,1.48)*28),compNeed=l=>Math.floor(55+Math.pow(l,1.5)*31);
+function gainProgress({xp=0,jobXp=0,compXp=0}={}){const levels=[];state.player.xp+=xp;while(state.player.xp>=xpNeed(state.player.level)){state.player.xp-=xpNeed(state.player.level);state.player.level++;state.player.statPoints+=5;levels.push(`Niveau général ${state.player.level}`)}const capped=state.player.classId==='adventurer'&&state.player.jobLevel>=20;if(!capped){state.player.jobXp+=jobXp;while(state.player.jobXp>=jobNeed(state.player.jobLevel)){state.player.jobXp-=jobNeed(state.player.jobLevel);state.player.jobLevel++;levels.push(`${CLASSES[state.player.classId].name} ${state.player.jobLevel}`);if(state.player.classId==='adventurer'&&state.player.jobLevel>=20){state.player.jobLevel=20;state.player.jobXp=0;break}}}for(const id of state.team){const c=state.companions[id];if(!c)continue;c.xp=(c.xp||0)+compXp;while(c.xp>=compNeed(c.level)){c.xp-=compNeed(c.level);c.level++;levels.push(`${COMPANIONS[id].name} niveau ${c.level}`)}}playerStats(true);save(true);return levels}
+function questEvent(type,payload={}){for(const[id,q]of Object.entries(QUESTS)){const st=state.quests[id];if(st.claimed)continue;if(q.type==='summon'&&type==='summon')st.progress=1;if(q.type==='zoneWins'&&type==='win'&&payload.zone===q.zone)st.progress=Math.min(q.goal,(st.progress||0)+1);if(q.type==='discover'&&type==='discover')st.progress=Math.min(q.goal,state.player.discovered.length);if(q.type==='class'&&type==='class')st.progress=1;if(q.type==='biomeWins'&&type==='win'&&payload.zone!=='town'&&payload.zone!=='meadow'){st.zones=st.zones||[];if(!st.zones.includes(payload.zone))st.zones.push(payload.zone);st.progress=Math.min(q.goal,st.zones.length)}}save();updateQuestPin()}
+function claimQuest(id){const q=QUESTS[id],st=state.quests[id];if(st.claimed||st.progress<q.goal)return;st.claimed=true;const r=q.reward||{};state.player.gold+=r.gold||0;for(const[k,v]of Object.entries(r))if(ITEMS[k])addItem(k,v);const levels=gainProgress({xp:r.xp||0,jobXp:r.jobXp||0});toast(`Quête terminée : ${q.name}${levels.length?' • '+levels.join(', '):''}`);openQuests()}
+function updateQuestPin(){if(!state)return;const next=Object.entries(QUESTS).find(([id,q])=>!state.quests[id].claimed);if(!next){$('#quest-pin').classList.add('hidden');return}const[id,q]=next,st=state.quests[id];$('#quest-pin').classList.remove('hidden');$('#quest-pin-text').textContent=st.progress>=q.goal?`Réclamer : ${q.name}`:`${q.name} (${st.progress||0}/${q.goal})`}
+function toast(text){const d=document.createElement('div');d.className='toast';d.textContent=text;$('#toast-root').append(d);setTimeout(()=>d.remove(),2700)}
+function vibrate(p=20){if(state?.settings?.vibration)navigator.vibrate?.(p)}
+let audioCtx=null;function sound(type='click'){if(!state?.settings?.sound)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain(),now=audioCtx.currentTime;const map={click:[420,.05],hit:[110,.12],heal:[520,.2],spell:[310,.2],victory:[660,.35],level:[820,.28],summon:[440,.55]};const[f,d]=map[type]||map.click;o.type=type==='hit'?'square':'sine';o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(type==='victory'?990:Math.max(55,f*.72),now+d);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.11,now+.01);g.gain.exponentialRampToValueAtTime(.0001,now+d);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(now+d+.03)}catch(e){}}
+function transition(fn){const t=$('#transition');t.classList.add('on');setTimeout(()=>{fn();setTimeout(()=>t.classList.remove('on'),180)},320)}
+function showScreen(id){['title-screen','world-screen','battle-screen'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id))}
+function modal(title,body,{small=false,wide=false,subtitle='',footer=''}={}){const root=$('#modal-root');root.innerHTML=`<div class="modal glass ${small?'small':''} ${wide?'wide':''}"><header class="modal-head"><div><h2>${title}</h2>${subtitle?`<p>${subtitle}</p>`:''}</div><button class="modal-close">×</button></header><div class="modal-body">${body}</div>${footer?`<footer class="modal-foot">${footer}</footer>`:''}</div>`;root.classList.remove('hidden');$('.modal-close',root).onclick=closeModal;root.onclick=e=>{if(e.target===root)closeModal()};sound('open');return root}
+function closeModal(){const r=$('#modal-root');r.classList.add('hidden');r.innerHTML='';sound('click')}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
-  <!-- HUD HTML en overlay par-dessus le canvas Phaser -->
-  <div id="hud-root">
-    <!-- Barre HUD en bas de l'écran -->
-    <div id="hud-bar">
-      <!-- Chat (zone fixe, style MMO) -->
-      <section id="hud-chat" class="hud-chat" aria-label="Chat">
-        <header class="hud-chat-header">
-          <div id="hud-chat-tabs" class="hud-chat-tabs" role="tablist" aria-label="Canaux de chat"></div>
-        </header>
-        <div id="chat-messages" class="hud-chat-messages" aria-live="polite"></div>
-        <form id="chat-form" class="hud-chat-form" autocomplete="off">
-          <input
-            id="chat-input"
-            class="hud-chat-input"
-            type="text"
-            maxlength="200"
-            placeholder="Écrire..."
-            aria-label="Saisir un message"
-          />
-        </form>
-      </section>
-      <button class="hud-pill" id="hud-friends-button" aria-label="Ouvrir la liste d'amis">
-        +
-      </button>
-      <button class="hud-pill" id="hud-quests-button" aria-label="Ouvrir les quêtes">
-        QUETES
-      </button>
-      <button class="hud-pill" id="hud-metiers-button" aria-label="Ouvrir les métiers">
-        MÉTIERS
-      </button>
+function heroArt(cls='adventurer'){const c=CLASSES[cls];return `<svg viewBox="0 0 120 125" role="img"><ellipse cx="60" cy="116" rx="34" ry="7" fill="#071019" opacity=".3"/><path d="M42 93 39 112h16l5-20m17 1 5 19H66l-5-20" fill="#263850"/><path d="M39 61c10-9 31-9 41 0l-3 34H42Z" fill="${c.color}"/><path d="M42 65 28 82l8 7 15-18m28-6 13 18-8 6-14-18" fill="#efc197"/><circle cx="60" cy="42" r="19" fill="#efc197"/><path d="M41 43c-3-20 32-28 40-8l-3 14-6-15-8 7-9-10-8 10Z" fill="#4d3528"/><ellipse cx="53" cy="44" rx="2.4" ry="3" fill="#17202b"/><ellipse cx="68" cy="44" rx="2.4" ry="3" fill="#17202b"/><path d="M56 52c3 2 7 2 10 0" stroke="#b57469" stroke-width="2" fill="none" stroke-linecap="round"/><text x="91" y="78" font-size="30" text-anchor="middle">${c.icon}</text></svg>`}
+function companionArt(id){const d=COMPANIONS[id];if(!d)return'';const col=ELEMENTS[d.element].color;const extra=id==='pyron'?'<path d="M52 22c-4-13 9-17 13-5 6-10 17 1 8 9 12 0 11 13 0 13" fill="#ffd45f"/>':id==='nerea'?'<circle cx="31" cy="32" r="6" fill="#c7f7ff" opacity=".8"/><circle cx="92" cy="43" r="4" fill="#e7ffff"/>':id==='sylphe'?'<path d="M33 54 15 28l30 14m41 12 20-27-31 16" fill="#c9f3d9" stroke="#5aa888" stroke-width="2"/>':'<path d="M52 29c-8-15 7-20 12-8 7-10 19-1 10 9" fill="#5aa45e"/>' ;return `<svg viewBox="0 0 120 125"><defs><radialGradient id="g${id}"><stop stop-color="#fff"/><stop offset=".24" stop-color="${col}"/><stop offset="1" stop-color="#263743"/></radialGradient></defs><ellipse cx="60" cy="113" rx="35" ry="7" fill="#071019" opacity=".28"/>${extra}<path d="M29 74c0-27 13-43 31-43s32 17 32 43c0 24-15 35-32 35S29 98 29 74Z" fill="url(#g${id})" stroke="#ffffff33" stroke-width="2"/><path d="M33 78 18 91m69-13 15 13" stroke="${col}" stroke-width="9" stroke-linecap="round"/><ellipse cx="51" cy="68" rx="4" ry="5" fill="#17202b"/><ellipse cx="70" cy="68" rx="4" ry="5" fill="#17202b"/><circle cx="50" cy="66" r="1.2" fill="#fff"/><circle cx="69" cy="66" r="1.2" fill="#fff"/><path d="M55 80c4 3 8 3 12 0" stroke="#33434b" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`}
+function monsterArt(kind,element='neutral'){const col=ELEMENTS[element]?.color||'#d7dce4';const shapes={slime:'M27 80c0-31 14-50 34-50s35 20 35 50c0 20-15 29-35 29S27 100 27 80Z',sprout:'M31 72c0-26 14-42 30-42 19 0 31 18 30 43-1 24-13 35-31 35-19 0-30-13-29-36Z',crab:'M29 75c0-22 13-35 31-35s31 13 31 35-13 31-31 31-31-9-31-31Z',serpent:'M43 109c-20-22 21-25 4-48-12-16 0-35 17-35 22 0 31 25 15 42-12 13-18 18-5 41Z',hawk:'M43 42c9-17 27-17 36 0l-4 48-15 17-16-17Z',lynx:'M30 69c2-28 16-42 31-42 19 0 32 19 30 45-2 24-13 36-31 36-20 0-32-15-30-39Z',wolf:'M29 74c2-28 17-43 32-43 20 0 33 21 30 46-3 23-15 32-31 32-19 0-33-12-31-35Z',drake:'M28 79c0-31 15-50 34-50 22 0 35 22 33 51-2 22-14 29-34 29-19 0-33-9-33-30Z',boar:'M24 79c0-28 17-44 38-44 22 0 36 18 35 45-1 20-15 29-37 29-23 0-36-10-36-30Z',golem:'M31 50 51 27l27 8 16 30-8 37-28 9-28-17Z',echo:'M60 20c23 18 34 39 28 59-5 19-17 30-29 30-16 0-29-13-30-32-2-23 15-42 31-57Z',knight:'M36 37 60 21l25 16-6 29 10 39H31l10-39Z'};let path=shapes[kind]||shapes.slime;let ears=['lynx','wolf'].includes(kind)?`<path d="M35 43 24 19l25 15m37 9 11-24-25 15" fill="${col}" stroke="#21313a" stroke-width="3"/>`:kind==='hawk'?`<path d="M46 58 12 38l19 39 18 8m25-27 34-20-19 39-18 8" fill="${col}" opacity=".8"/>`:kind==='crab'?`<path d="M31 68 13 55 5 70l21 12m63-14 18-13 8 15-21 12" fill="${col}"/><path d="M34 92 18 108m31-10-6 15m31-15 7 15m6-21 17 16" stroke="#24323a" stroke-width="6"/>`:'';return `<svg viewBox="0 0 120 125"><defs><radialGradient id="mg${kind}${element}" cx="35%" cy="25%"><stop stop-color="#fff"/><stop offset=".25" stop-color="${col}"/><stop offset="1" stop-color="#263039"/></radialGradient></defs><ellipse cx="60" cy="115" rx="38" ry="7" fill="#071019" opacity=".3"/>${ears}<path d="${path}" fill="url(#mg${kind}${element})" stroke="#203039" stroke-width="3"/><ellipse cx="51" cy="69" rx="4" ry="5" fill="#151b24"/><ellipse cx="71" cy="69" rx="4" ry="5" fill="#151b24"/><circle cx="50" cy="67" r="1.2" fill="#fff"/><circle cx="70" cy="67" r="1.2" fill="#fff"/><path d="M55 82c4 2 8 2 12 0" stroke="#303942" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`}
+function artForUnit(u){return u.kind==='hero'?heroArt(state.player.classId):u.kind==='companion'?companionArt(u.sourceId):monsterArt(u.art,u.element)}
 
-      <!-- Mini-carte au centre du HUD -->
-      <div id="hud-minimap" aria-label="Mini-carte de la zone"></div>
+function openNewGame(){modal('Nouvelle aventure',`<div class="form-row"><label>NOM DE TON HÉROS</label><input id="new-name" class="input" maxlength="16" value="Aventurier" autocomplete="off"></div><div class="card"><h3>Un monde sans barrière</h3><p>Toutes les régions sont accessibles dès le départ. Les niveaux conseillés sont des avertissements, pas des verrous.</p></div>`,{small:true,subtitle:'Le début d’un nouveau voyage',footer:'<button id="create-game" class="btn btn-primary">Recevoir le parchemin</button>'});$('#create-game').onclick=()=>{state=newState($('#new-name').value);save(true);closeModal();openSummon(true)}}
+function openSummon(first=false){const missing=Object.keys(COMPANIONS).filter(id=>!state.companions[id]);if(!missing.length){toast('Tu as déjà invoqué les quatre compagnons.');return}if((state.player.inventory.scroll||0)<1){toast('Il te faut un parchemin d’invocation.');return}modal(first?'Le parchemin primordial':'Cercle d’invocation',`<p style="text-align:center;color:#b8ccc8;margin-top:0">Le parchemin s’embrase. Choisis la résonance que tu souhaites appeler.</p><div class="summon-grid">${missing.map(id=>{const d=COMPANIONS[id];return`<button class="summon-card" data-summon="${id}"><div class="art">${companionArt(id)}</div><span class="pill element-${d.element}">${ELEMENTS[d.element].icon} ${ELEMENTS[d.element].name}</span><h3>${d.name}</h3><p>${d.desc}</p></button>`}).join('')}</div>`,{wide:true,subtitle:'Un parchemin sera consommé'});$$('[data-summon]').forEach(b=>b.onclick=()=>summonCompanion(b.dataset.summon,first))}
+async function summonCompanion(id,first){addItem('scroll',-1);state.companions[id]={level:1,xp:0,hp:COMPANIONS[id].base.hp,mana:COMPANIONS[id].base.mana};if(!state.team.includes(id)&&state.team.length<3)state.team.push(id);state.flags.intro=true;questEvent('summon');save(true);sound('summon');vibrate([40,40,80]);const d=COMPANIONS[id];modal('Pacte accompli',`<div style="text-align:center"><div class="art" style="height:240px">${companionArt(id)}</div><span class="pill element-${d.element}">${ELEMENTS[d.element].icon} ${ELEMENTS[d.element].name}</span><h2 style="font:700 34px Georgia;margin:8px">${d.name}</h2><p style="color:#b8ccc8">${d.name} répond à ton appel et rejoint ton équipe.</p></div>`,{small:true,footer:`<button id="summon-done" class="btn btn-primary">${first?'Entrer dans Andémia':'Continuer'}</button>`});$('#summon-done').onclick=()=>{closeModal();if(first)enterWorld(true)}}
+function enterWorld(fresh=false){if(!state)return;playerStats(false);transition(()=>{showScreen('world-screen');world.start();refreshHud();if(fresh)toast('Bienvenue à Havreclaire ! Approche-toi des PNJ et utilise Action.');updateQuestPin()})}
+function refreshHud(){if(!state)return;const p=state.player,s=playerStats(false);$('#hud-name').textContent=p.name;$('#hud-level').textContent=`Niv. ${p.level} • ${CLASSES[p.classId].name} ${p.jobLevel}`;$('#hud-gold').textContent=fmt(p.gold);$('#hud-hp').style.width=`${100*p.hp/s.maxHp}%`;$('#hud-mp').style.width=`${100*p.mana/s.maxMana}%`;$('#avatar-mini').textContent=CLASSES[p.classId].icon;save()}
+function openHero(){const p=state.player,s=playerStats(false),e=equipmentStats();modal('Personnage',`<div class="two-col"><section class="hero-sheet"><div class="art">${heroArt(p.classId)}</div><h2 style="margin:0">${esc(p.name)}</h2><span class="pill">${CLASSES[p.classId].icon} ${CLASSES[p.classId].name}</span><div class="xp-row"><label><span>Niveau ${p.level}</span><span>${p.xp}/${xpNeed(p.level)} XP</span></label><div class="bar"><i style="width:${100*p.xp/xpNeed(p.level)}%"></i></div></div><div class="xp-row"><label><span>Métier ${p.jobLevel}${p.classId==='adventurer'&&p.jobLevel>=20?' • BLOQUÉ':''}</span><span>${p.classId==='adventurer'&&p.jobLevel>=20?'Voir Maître Orin':p.jobXp+'/'+jobNeed(p.jobLevel)}</span></label><div class="bar job"><i style="width:${p.classId==='adventurer'&&p.jobLevel>=20?100:100*p.jobXp/jobNeed(p.jobLevel)}%"></i></div></div><div class="stats-grid">${[['PV',`${p.hp}/${s.maxHp}`],['Mana',`${p.mana}/${s.maxMana}`],['Attaque',s.attack],['Défense',s.defense],['Vitesse',Math.floor(s.speed)],['Critique',`${s.crit.toFixed(1)}%`]].map(x=>`<div class="stat-line"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('')}</div></section><section><p class="section-title">AFFINITÉS • ${p.statPoints} POINTS À RÉPARTIR</p><div class="affinity-grid">${Object.keys(ELEMENTS).map(k=>`<div class="affinity element-${k}"><small>${ELEMENTS[k].icon} ${ELEMENTS[k].name}</small><b>${p.affinity[k]}</b><button class="plus" data-stat="${k}" ${p.statPoints<=0?'disabled':''}>+</button></div>`).join('')}</div><p style="font-size:11px;color:#93aaa6">Chaque niveau général donne 5 points. Feu augmente l’offensive ardente, Eau la mana et les soins, Air la vitesse et l’esquive, Terre les PV et la défense, Neutre renforce l’ensemble.</p><p class="section-title" style="margin-top:20px">ÉQUIPEMENT</p><div class="equipment-grid">${Object.entries(SLOTS).map(([slot,name])=>{const id=p.equipment[slot],it=id?ITEMS[id]:null;return`<button class="equip-slot ${it?'filled':''}" data-unequip="${slot}" ${!it?'disabled':''}><span>${it?it.icon:'◇'}</span><small>${name}</small><b class="${it?'rarity-'+it.rarity:''}">${it?it.name:'Vide'}</b></button>`}).join('')}</div><p style="font-size:10px;color:#809995;margin-top:10px">Bonus d’équipement : +${e.hp} PV • +${e.mana} mana • +${e.attack} ATQ • +${e.defense} DEF • ${e.speed>=0?'+':''}${e.speed} VIT</p></section></div>`,{wide:true,subtitle:`Niveau général ${p.level} • niveau de métier ${p.jobLevel}`});$$('[data-stat]').forEach(b=>b.onclick=()=>{if(p.statPoints<1)return;p.affinity[b.dataset.stat]++;p.statPoints--;playerStats(false);save(true);openHero();sound('click')});$$('[data-unequip]').forEach(b=>b.onclick=()=>unequip(b.dataset.unequip))}
+function unequip(slot){const id=state.player.equipment[slot];if(!id)return;state.player.equipment[slot]=null;addItem(id,1);playerStats(false);save(true);openHero()}
+let inventorySelection=null;
+function openInventory(selected=inventorySelection){inventorySelection=selected;const entries=Object.entries(state.player.inventory).filter(([,q])=>q>0);const detail=selected&&ITEMS[selected]?itemDetail(selected):'<div style="text-align:center;color:#829995;padding:50px 10px">Sélectionne un objet.</div>';modal('Inventaire',`<div class="inventory-layout"><aside class="detail-pane" id="item-detail">${detail}</aside><section><p class="section-title">SAC • ${entries.reduce((a,[,q])=>a+q,0)} OBJETS</p><div class="inventory-list">${entries.length?entries.map(([id,q])=>{const it=ITEMS[id];return`<button class="item-card" data-item="${id}"><span class="item-icon">${it.icon}</span><strong class="rarity-${it.rarity}">${it.name}</strong><small>${it.type==='equipment'?SLOTS[it.slot]||'Anneau':it.type==='consumable'?'Consommable':it.type==='scroll'?'Invocation':'Matériau'}</small><span class="item-qty">×${q}</span></button>`}).join(''):'<p>Ton sac est vide.</p>'}</div></section></div>`,{wide:true,subtitle:'Équipe, utilise et organise ton matériel'});$$('[data-item]').forEach(b=>b.onclick=()=>openInventory(b.dataset.item));bindItemActions()}
+function itemDetail(id){const it=ITEMS[id],stats=it.stats?Object.entries(it.stats).map(([k,v])=>`${k.toUpperCase()} ${v>=0?'+':''}${v}`).join(' • '):'';return`<div style="font-size:40px">${it.icon}</div><span class="pill rarity-${it.rarity}">${it.rarity.toUpperCase()}</span><h3 class="rarity-${it.rarity}">${it.name}</h3><p>${it.desc}</p>${stats?`<p style="color:#9fe3cf;font-size:11px">${stats}</p>`:''}<div class="detail-actions">${it.type==='equipment'?'<button id="equip-item" class="btn btn-teal">Équiper</button>':''}${it.type==='consumable'?'<button id="use-item" class="btn btn-teal">Utiliser</button>':''}${it.type==='scroll'?'<button id="summon-item" class="btn btn-primary">Invoquer</button>':''}</div>`}
+function bindItemActions(){const id=inventorySelection,it=ITEMS[id];if(!it)return;$('#equip-item')&&($('#equip-item').onclick=()=>equipItem(id));$('#use-item')&&($('#use-item').onclick=()=>useItem(id));$('#summon-item')&&($('#summon-item').onclick=()=>{closeModal();openSummon(false)})}
+function equipItem(id){const it=ITEMS[id];if(!it||it.type!=='equipment')return;let slot=it.slot;if(slot==='ring')slot=!state.player.equipment.ring1?'ring1':!state.player.equipment.ring2?'ring2':'ring1';const old=state.player.equipment[slot];if(old)addItem(old,1);state.player.equipment[slot]=id;addItem(id,-1);playerStats(false);save(true);sound('click');openInventory(id)}
+function useItem(id,target='hero'){const it=ITEMS[id];if(!it?.effect||(state.player.inventory[id]||0)<1)return;const s=playerStats(false);if(it.effect.hp)state.player.hp=clamp(state.player.hp+it.effect.hp,0,s.maxHp);if(it.effect.mana)state.player.mana=clamp(state.player.mana+it.effect.mana,0,s.maxMana);addItem(id,-1);sound('heal');refreshHud();openInventory(id)}
+function openTeam(){const owned=Object.keys(state.companions);modal('Équipe',`<p style="margin-top:0;color:#a8bfbb">Le héros est toujours présent. Sélectionne jusqu’à trois compagnons ; l’ordre choisi devient leur position de combat.</p><div class="team-grid"><div class="team-card selected"><div class="team-number">1</div><div class="art">${heroArt(state.player.classId)}</div><h3>${esc(state.player.name)}</h3><span class="pill">Héros</span></div>${owned.map(id=>{const d=COMPANIONS[id],c=state.companions[id],pos=state.team.indexOf(id);return`<button class="team-card ${pos>=0?'selected':''}" data-team="${id}">${pos>=0?`<div class="team-number">${pos+2}</div>`:''}<div class="art">${companionArt(id)}</div><h3>${d.name}</h3><span class="pill element-${d.element}">${ELEMENTS[d.element].icon} Niv. ${c.level}</span><p>${d.desc}</p></button>`}).join('')}${owned.length<4?`<div class="team-card" style="opacity:.6"><div class="art" style="display:grid;place-items:center;font-size:55px">📜</div><h3>Compagnon inconnu</h3><p>Utilise un parchemin auprès de Lyra.</p></div>`:''}</div>`,{wide:true,subtitle:`${1+state.team.length}/4 combattants sélectionnés`});$$('[data-team]').forEach(b=>b.onclick=()=>{const id=b.dataset.team,i=state.team.indexOf(id);if(i>=0)state.team.splice(i,1);else if(state.team.length<3)state.team.push(id);else return toast('L’équipe est déjà complète.');save(true);openTeam()})}
+function drawMap(canvas,large=false){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,sx=w/4200,sy=h/2600;ctx.clearRect(0,0,w,h);ctx.fillStyle='#17312f';ctx.fillRect(0,0,w,h);for(const z of ZONES){ctx.fillStyle=z.color;ctx.globalAlpha=.9;ctx.fillRect(z.x*sx,z.y*sy,z.w*sx,z.h*sy);ctx.globalAlpha=1;if(large){ctx.fillStyle='#fff';ctx.font='700 13px system-ui';ctx.textAlign='center';ctx.fillText(z.name,(z.x+z.w/2)*sx,(z.y+z.h/2)*sy);ctx.font='10px system-ui';ctx.fillText(z.level,(z.x+z.w/2)*sx,(z.y+z.h/2)*sy+15)}}ctx.strokeStyle='#dff7eb33';ctx.lineWidth=large?3:1;ctx.strokeRect(0,0,w,h);if(state){ctx.fillStyle='#ffd466';ctx.beginPath();ctx.arc(state.player.pos.x*sx,state.player.pos.y*sy,large?7:4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#241408';ctx.stroke()}}
+function openMap(){modal('Carte du monde',`<div class="map-wrap"><canvas id="large-map" width="1000" height="540"></canvas></div><div class="map-legend">${ZONES.map(z=>`<span class="pill" style="border-color:${z.color};opacity:${state.player.discovered.includes(z.id)?1:.45}">${state.player.discovered.includes(z.id)?'◆':'?'} ${z.name} • ${z.level}</span>`).join('')}</div><p style="font-size:11px;color:#a9bfbb">Toutes les régions sont accessibles dès maintenant. Les niveaux indiquent seulement le danger recommandé.</p>`,{wide:true,subtitle:`${state.player.discovered.length}/${ZONES.length} régions découvertes`});drawMap($('#large-map'),true)}
+function openQuests(){modal('Quêtes',`<div class="quest-list">${Object.entries(QUESTS).map(([id,q])=>{const st=state.quests[id],done=st.progress>=q.goal;return`<div class="quest-card ${done?'complete':''}"><div><h3>${st.claimed?'✓ ':done?'★ ':''}${q.name}</h3><p>${q.desc}</p><div class="progress"><i style="width:${100*Math.min(1,(st.progress||0)/q.goal)}%"></i></div><p style="margin-top:5px">${st.progress||0}/${q.goal} • Récompense : ${q.reward.xp||0} XP, ${q.reward.gold||0} or${q.reward.scroll?' + parchemin':''}</p></div><button class="btn ${done&&!st.claimed?'btn-primary':'btn-ghost'}" data-claim="${id}" ${!done||st.claimed?'disabled':''}>${st.claimed?'Réclamée':done?'Réclamer':'En cours'}</button></div>`}).join('')}</div>`,{wide:true,subtitle:'Les exploits importants de ton aventure'});$$('[data-claim]').forEach(b=>b.onclick=()=>claimQuest(b.dataset.claim))}
+function openSettings(){const s=state?.settings||{sound:true,music:true,vibration:true,fast:false};modal('Paramètres',`<div class="quest-list">${[['sound','Effets sonores'],['music','Ambiance musicale'],['vibration','Vibrations'],['fast','Animations rapides']].map(([k,n])=>`<div class="quest-card"><div><h3>${n}</h3><p>${k==='fast'?'Réduit le temps entre les actions en combat.':'Réglage enregistré sur cet appareil.'}</p></div><button class="btn ${s[k]?'btn-teal':'btn-ghost'}" data-setting="${k}">${s[k]?'ACTIVÉ':'COUPÉ'}</button></div>`).join('')}</div><div style="display:flex;gap:8px;margin-top:15px;flex-wrap:wrap"><button id="export-save" class="btn btn-ghost">Exporter la sauvegarde</button><button id="import-save" class="btn btn-ghost">Importer</button><button id="reset-save" class="btn btn-danger">Effacer la partie</button></div>`,{small:true});$$('[data-setting]').forEach(b=>b.onclick=()=>{if(!state)return;state.settings[b.dataset.setting]=!state.settings[b.dataset.setting];save(true);openSettings()});$('#export-save').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='andemia-sauvegarde.json';a.click();URL.revokeObjectURL(a.href)};$('#import-save').onclick=()=>{const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=async()=>{try{state=normalizeState(JSON.parse(await i.files[0].text()));save(true);toast('Sauvegarde importée.');closeModal();updateTitle()}catch(e){toast('Sauvegarde invalide.')}};i.click()};$('#reset-save').onclick=()=>{if(confirm('Effacer définitivement la sauvegarde locale ?')){localStorage.removeItem(SAVE_KEY);state=null;closeModal();showScreen('title-screen');updateTitle()}}}
+function openShop(){const inv=Object.entries(state.player.inventory).filter(([,q])=>q>0);modal('Échoppe de Boren',`<div class="shop-grid"><section class="shop-column"><p class="section-title">ACHETER • ${fmt(state.player.gold)} OR</p>${SHOP.map(id=>{const it=ITEMS[id];return`<div class="shop-row"><span><b class="rarity-${it.rarity}">${it.icon} ${it.name}</b><small style="display:block">${it.desc}</small></span><button class="btn btn-primary" data-buy="${id}" ${state.player.gold<it.price?'disabled':''}>${it.price} or</button></div>`}).join('')}</section><section class="shop-column"><p class="section-title">VENDRE</p>${inv.length?inv.map(([id,q])=>{const it=ITEMS[id];const price=Math.max(1,Math.floor(it.price*.45));return`<div class="shop-row"><span><b>${it.icon} ${it.name} ×${q}</b><small style="display:block">Prix de reprise</small></span><button class="btn btn-ghost" data-sell="${id}">+${price} or</button></div>`}).join(''):'<p>Ton sac ne contient rien à vendre.</p>'}</section></div>`,{wide:true,subtitle:'Achat et vente d’objets'});$$('[data-buy]').forEach(b=>b.onclick=()=>{const id=b.dataset.buy,it=ITEMS[id];if(state.player.gold<it.price)return;state.player.gold-=it.price;addItem(id,1);sound('click');openShop()});$$('[data-sell]').forEach(b=>b.onclick=()=>{const id=b.dataset.sell,it=ITEMS[id];addItem(id,-1);state.player.gold+=Math.max(1,Math.floor(it.price*.45));save(true);sound('click');openShop()})}
+function openNpc(n){const actions=n.id==='lyra'?'<button data-npc-action="summon" class="btn btn-primary">Utiliser un parchemin</button>':n.id==='mira'?'<button data-npc-action="heal" class="btn btn-teal">Soigner gratuitement</button>':n.id==='boren'?'<button data-npc-action="shop" class="btn btn-primary">Acheter / Vendre</button>':n.id==='orin'?'<button data-npc-action="class" class="btn btn-primary">Choisir ma voie</button>':'<button data-npc-action="map" class="btn btn-teal">Voir la grande carte</button>';modal(`${n.name} — ${n.role}`,`<div class="dialog-npc"><div class="npc-portrait">${n.emoji}</div><div><div class="dialog-text">« ${n.text} »</div><div class="dialog-actions">${actions}</div></div></div>`,{wide:false});const b=$('[data-npc-action]');b.onclick=()=>{const a=b.dataset.npcAction;if(a==='summon'){closeModal();openSummon(false)}if(a==='heal'){playerStats(true);for(const[id,c]of Object.entries(state.companions)){const s=companionStats(id);c.hp=s.maxHp;c.mana=s.maxMana}save(true);sound('heal');toast('Toute l’équipe est soignée.');closeModal();refreshHud()}if(a==='shop'){closeModal();openShop()}if(a==='map'){closeModal();openMap()}if(a==='class')openClassEvolution()}}
+function openClassEvolution(){if(state.player.classId!=='adventurer'){toast(`Ta voie est déjà celle de ${CLASSES[state.player.classId].name}.`);return}if(state.player.jobLevel<20){toast(`Ton métier Aventurier doit atteindre le niveau 20 (${state.player.jobLevel}/20).`);return}modal('L’éveil d’une vocation',`<p style="text-align:center;color:#b7cbc7">Ton expérience d’Aventurier est complète. Choisis une voie définitive ; ton nouveau métier commence au niveau 1.</p><div class="cards">${['swordsman','archer','mage'].map(id=>{const c=CLASSES[id];return`<button class="card" data-class="${id}" style="text-align:center"><div style="font-size:56px">${c.icon}</div><h3 style="color:${c.color}">${c.name}</h3><p>${c.desc}</p><div style="margin-top:8px">${c.skills.map(s=>`<span title="${SKILLS[s].name}">${SKILLS[s].icon}</span>`).join(' ')}</div></button>`}).join('')}</div>`,{wide:true});$$('[data-class]').forEach(b=>b.onclick=()=>{const id=b.dataset.class;state.player.classId=id;state.player.jobLevel=1;state.player.jobXp=0;questEvent('class');playerStats(true);save(true);sound('level');vibrate([60,50,120]);closeModal();toast(`Nouvelle classe : ${CLASSES[id].name} !`);refreshHud()})}
 
-      <!-- Dock HUD unifié (menu + barre sorts/objets) -->
-      <section id="hud-dock" class="hud-dock" aria-label="Menu et actions">
-        <div id="hud-dock-menu" class="hud-dock-menu" aria-label="Raccourcis HUD">
-          <button class="hud-pill" id="hud-map-button" aria-label="Ouvrir la carte du monde">
-            CARTE
-          </button>
-          <button class="hud-pill" id="hud-inventory-button" aria-label="Ouvrir l'inventaire">
-            INV
-          </button>
-          <button class="hud-pill" id="hud-achievements-button" aria-label="Ouvrir les accomplissements">
-            ACCOMP
-          </button>
-          <button class="hud-pill" id="hud-spells-button" aria-label="Ouvrir les sorts">
-            SORTS
-          </button>
-          <button class="hud-pill" id="hud-stats-button" aria-label="Ouvrir les statistiques">
-            STATS
-          </button>
-          <button
-            class="hud-pill hud-combat-watch"
-            id="hud-combat-watch"
-            type="button"
-            aria-label="Voir le combat en cours"
-            aria-pressed="false"
-            title="Voir le combat"
-          >
-            CBT
-            <span id="hud-combat-count" class="hud-combat-count">0</span>
-          </button>
-        </div>
+class World{
+  constructor(){this.canvas=$('#world-canvas');this.ctx=this.canvas.getContext('2d');this.mini=$('#minimap');this.keys={};this.joy={x:0,y:0};this.running=false;this.last=0;this.camera={x:0,y:0};this.decor=this.makeDecor();this.bind()}
+  makeDecor(){let seed=94721;const r=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);const a=[];for(const z of ZONES){const count=z.id==='town'?25:70;for(let i=0;i<count;i++)a.push({zone:z.id,x:z.x+r()*z.w,y:z.y+r()*z.h,t:r(),s:.7+r()*.7})}return a}
+  bind(){addEventListener('keydown',e=>{this.keys[e.key.toLowerCase()]=true;if([' ','e'].includes(e.key.toLowerCase())&&this.running)this.action()});addEventListener('keyup',e=>this.keys[e.key.toLowerCase()]=false);const joy=$('#joystick'),knob=$('#joy-knob');const move=e=>{const r=joy.getBoundingClientRect(),p=e.touches?e.touches[0]:e,dx=p.clientX-(r.left+r.width/2),dy=p.clientY-(r.top+r.height/2),m=Math.min(38,Math.hypot(dx,dy)),ang=Math.atan2(dy,dx);this.joy.x=Math.cos(ang)*(m/38);this.joy.y=Math.sin(ang)*(m/38);knob.style.transform=`translate(${this.joy.x*28}px,${this.joy.y*28}px)`};const end=()=>{this.joy.x=this.joy.y=0;knob.style.transform=''};joy.addEventListener('pointerdown',e=>{joy.setPointerCapture(e.pointerId);move(e)});joy.addEventListener('pointermove',e=>{if(e.buttons)move(e)});joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);$('#action-btn').onclick=()=>this.action()}
+  start(){this.running=true;this.resize();this.last=performance.now();requestAnimationFrame(t=>this.loop(t));addEventListener('resize',()=>this.resize(),{once:true})}
+  stop(){this.running=false}
+  resize(){const d=Math.min(2,devicePixelRatio||1),r=this.canvas.getBoundingClientRect();this.canvas.width=Math.max(1,r.width*d);this.canvas.height=Math.max(1,r.height*d);this.ctx.setTransform(d,0,0,d,0,0);this.view={w:r.width,h:r.height,d}}
+  loop(t){if(!this.running)return;const dt=Math.min(.035,(t-this.last)/1000||0);this.last=t;this.update(dt);this.draw();requestAnimationFrame(x=>this.loop(x))}
+  update(dt){let x=this.joy.x+(this.keys.arrowright||this.keys.d?1:0)-(this.keys.arrowleft||this.keys.q||this.keys.a?1:0),y=this.joy.y+(this.keys.arrowdown||this.keys.s?1:0)-(this.keys.arrowup||this.keys.z||this.keys.w?1:0);const m=Math.hypot(x,y);if(m>1){x/=m;y/=m}if(m>.05){const speed=260;state.player.pos.x=clamp(state.player.pos.x+x*speed*dt,25,4175);state.player.pos.y=clamp(state.player.pos.y+y*speed*dt,25,2575);if(Math.random()<.04)sound('click')}const targetX=state.player.pos.x-this.view.w/2,targetY=state.player.pos.y-this.view.h/2;this.camera.x+=(targetX-this.camera.x)*Math.min(1,dt*6);this.camera.y+=(targetY-this.camera.y)*Math.min(1,dt*6);currentZone=this.zoneAt(state.player.pos.x,state.player.pos.y);if(!state.player.discovered.includes(currentZone.id)){state.player.discovered.push(currentZone.id);questEvent('discover',{zone:currentZone.id});toast(`Région découverte : ${currentZone.name}`)}$('#zone-name').textContent=currentZone.name;$('#zone-danger').textContent=currentZone.danger;this.findNearby();refreshHud()}
+  zoneAt(x,y){return [...ZONES].reverse().find(z=>x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h)||ZONES[1]}
+  findNearby(){let best=null,dist=76;for(const n of NPCS){const d=Math.hypot(n.x-state.player.pos.x,n.y-state.player.pos.y);if(d<dist){best={type:'npc',data:n};dist=d}}for(const e of ENCOUNTERS){if(Date.now()-(state.defeated[e.id]||0)<180000)continue;const d=Math.hypot(e.x-state.player.pos.x,e.y-state.player.pos.y);if(d<dist){best={type:'encounter',data:e};dist=d}}nearby=best;const box=$('#interaction');box.classList.toggle('hidden',!best);if(best)$('#interaction-text').textContent=best.type==='npc'?`Parler à ${best.data.name}`:`Affronter ${MONSTERS[best.data.enemies[0]].name}`}
+  action(){if(!nearby)return toast('Rien à faire ici.');sound('click');if(nearby.type==='npc')openNpc(nearby.data);else openPrep(nearby.data)}
+  sx(x){return x-this.camera.x}sy(y){return y-this.camera.y}
+  draw(){const c=this.ctx,w=this.view.w,h=this.view.h;c.clearRect(0,0,w,h);c.fillStyle='#4d885d';c.fillRect(0,0,w,h);for(const z of ZONES){const x=this.sx(z.x),y=this.sy(z.y);if(x> w||y>h||x+z.w<0||y+z.h<0)continue;const g=c.createLinearGradient(x,y,x,y+z.h);g.addColorStop(0,z.color);g.addColorStop(1,z.dark);c.fillStyle=g;c.fillRect(x,y,z.w,z.h)}this.drawPaths(c);for(const d of this.decor)this.drawDecor(c,d);this.drawTown(c);for(const n of NPCS)this.drawNpc(c,n);for(const e of ENCOUNTERS)if(Date.now()-(state.defeated[e.id]||0)>=180000)this.drawEncounter(c,e);this.drawPlayer(c);drawMap(this.mini,false)}
+  drawPaths(c){c.save();c.translate(-this.camera.x,-this.camera.y);c.strokeStyle='#d7c58d88';c.lineWidth=56;c.lineCap='round';c.beginPath();c.moveTo(1730,1320);c.lineTo(1040,1170);c.lineTo(500,1350);c.moveTo(1840,1290);c.lineTo(2480,900);c.lineTo(3200,600);c.moveTo(1900,1420);c.lineTo(2670,1640);c.lineTo(3400,1850);c.moveTo(1500,1540);c.lineTo(1440,2150);c.lineTo(450,2280);c.stroke();c.strokeStyle='#fff3c522';c.lineWidth=5;c.stroke();c.restore()}
+  drawDecor(c,d){const z=ZONES.find(x=>x.id===d.zone),x=this.sx(d.x),y=this.sy(d.y);if(x<-40||y<-60||x>this.view.w+40||y>this.view.h+60)return;c.save();c.translate(x,y);c.scale(d.s,d.s);if(z.id==='coast'){c.fillStyle=d.t>.5?'#f4dfab':'#4b91a5';c.beginPath();c.arc(0,0,d.t>.5?7:13,0,Math.PI*2);c.fill()}else if(z.id==='cinder'){c.fillStyle=d.t>.55?'#352a2a':'#8b3f31';c.beginPath();c.moveTo(-11,9);c.lineTo(0,-18);c.lineTo(13,9);c.fill()}else if(z.id==='earth'||z.id==='ruins'){c.fillStyle=z.id==='earth'?'#5d5840':'#4f4b70';c.fillRect(-8,-15,16,25);c.fillStyle='#9d9365';c.fillRect(-2,-21,4,8)}else{c.fillStyle='#355c3d';c.fillRect(-3,-2,6,18);c.fillStyle=z.id==='highland'?'#496a58':'#2e7548';c.beginPath();c.arc(0,-8,15,0,Math.PI*2);c.arc(-8,0,11,0,Math.PI*2);c.arc(9,1,12,0,Math.PI*2);c.fill();if(d.t>.75){c.fillStyle='#d6f2c8';c.beginPath();c.arc(-5,-10,3,0,7);c.fill()}}c.restore()}
+  drawTown(c){const buildings=[{x:1460,y:980,w:190,h:125,col:'#8c5d45',roof:'#c57a52',label:'Sanctuaire'},{x:1790,y:980,w:190,h:125,col:'#718b83',roof:'#9cbbb0',label:'Auberge'},{x:1990,y:1280,w:210,h:140,col:'#846847',roof:'#c59b5b',label:'Boutique'},{x:1430,y:1320,w:190,h:145,col:'#6d647d',roof:'#9d83bd',label:'Guilde'}];for(const b of buildings){const x=this.sx(b.x),y=this.sy(b.y);c.fillStyle='#0003';c.fillRect(x+8,y+13,b.w,b.h);c.fillStyle=b.col;c.fillRect(x,y,b.w,b.h);c.fillStyle=b.roof;c.beginPath();c.moveTo(x-18,y+8);c.lineTo(x+b.w/2,y-60);c.lineTo(x+b.w+18,y+8);c.fill();c.fillStyle='#392b24';c.fillRect(x+b.w/2-18,y+b.h-55,36,55);c.fillStyle='#fff0cf';c.font='700 12px system-ui';c.textAlign='center';c.fillText(b.label,x+b.w/2,y+b.h+18)}}
+  drawNpc(c,n){const x=this.sx(n.x),y=this.sy(n.y);if(x<-40||x>this.view.w+40||y<-60||y>this.view.h+60)return;c.fillStyle='#0005';c.beginPath();c.ellipse(x,y+21,22,7,0,0,7);c.fill();c.font='40px serif';c.textAlign='center';c.fillText(n.emoji,x,y+12);c.font='800 11px system-ui';c.fillStyle='#fff';c.strokeStyle='#000';c.lineWidth=4;c.strokeText(n.name,x,y-31);c.fillText(n.name,x,y-31);c.fillStyle='#f6c95f';c.font='1000 16px system-ui';c.fillText('!',x,y-47)}
+  drawEncounter(c,e){const m=MONSTERS[e.enemies[0]],x=this.sx(e.x),y=this.sy(e.y);if(x<-50||x>this.view.w+50||y<-50||y>this.view.h+50)return;const col=ELEMENTS[m.element].color;c.fillStyle='#0004';c.beginPath();c.ellipse(x,y+17,27,8,0,0,7);c.fill();c.fillStyle=col;c.beginPath();c.arc(x,y,22,0,7);c.fill();c.fillStyle='#17202a';c.beginPath();c.arc(x-7,y-3,3,0,7);c.arc(x+7,y-3,3,0,7);c.fill();c.fillStyle='#fff';c.font='800 10px system-ui';c.textAlign='center';c.fillText(`Niv. ${Math.max(...e.enemies.map(id=>MONSTERS[id].level))}`,x,y-29)}
+  drawPlayer(c){const x=this.sx(state.player.pos.x),y=this.sy(state.player.pos.y);c.fillStyle='#0006';c.beginPath();c.ellipse(x,y+26,25,8,0,0,7);c.fill();c.fillStyle=CLASSES[state.player.classId].color;c.beginPath();c.roundRect(x-16,y-9,32,36,10);c.fill();c.fillStyle='#efc197';c.beginPath();c.arc(x,y-18,13,0,7);c.fill();c.fillStyle='#493327';c.beginPath();c.arc(x,y-22,13,Math.PI,Math.PI*2);c.fill();c.font='800 11px system-ui';c.textAlign='center';c.lineWidth=4;c.strokeStyle='#000';c.strokeText(`${state.player.name} Niv.${state.player.level}`,x,y-39);c.fillStyle='#fff';c.fillText(`${state.player.name} Niv.${state.player.level}`,x,y-39);state.team.slice(0,2).forEach((id,i)=>{const a=i?-.6:.6,tx=x-38-i*20,ty=y+25+i*7;c.fillStyle=ELEMENTS[COMPANIONS[id].element].color;c.beginPath();c.arc(tx,ty,11,0,7);c.fill();c.fillStyle='#17202a';c.fillRect(tx-4,ty-2,2,3);c.fillRect(tx+3,ty-2,2,3)})}
+}
+const world=new World();
 
-      <!-- Conteneur barre de sorts + petits slots Sorts/Obj. -->
-      <div id="hud-spell-container">
-        <!-- Barre de sorts du HUD (toujours visible, sorts utilisables surtout en combat) -->
-        <div id="hud-spell-bar" aria-label="Barre de sorts">
-          <!-- Ligne 1 -->
-          <div class="hud-spell-slot" data-slot="1">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="2">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="3">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="4">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="5">
-            <span class="hud-spell-name"></span>
-          </div>
-          <!-- Ligne 2 -->
-          <div class="hud-spell-slot empty" data-slot="6">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="7">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="8">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="9">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="10">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="11">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="12">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="13">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="14">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="15">
-            <span class="hud-spell-name"></span>
-          </div>
-          <div class="hud-spell-slot empty" data-slot="16">
-            <span class="hud-spell-name"></span>
-          </div>
-        </div>
+function openPrep(enc){const zone=ZONES.find(z=>z.id===enc.zone),owned=Object.keys(state.companions);modal('Préparation du combat',`<div class="prep-layout"><section><p class="section-title">TON ÉQUIPE • 4 MAXIMUM</p><div class="formation"><div class="formation-slot"><div><div class="art">${heroArt(state.player.classId)}</div><b>${esc(state.player.name)}</b><small style="display:block">Héros Niv. ${state.player.level}</small></div></div>${[0,1,2].map(i=>{const id=state.team[i];return`<div class="formation-slot">${id?`<div><div class="art">${companionArt(id)}</div><b>${COMPANIONS[id].name}</b><small style="display:block">Niv. ${state.companions[id].level}</small></div>`:'<div><div style="font-size:42px">＋</div><small>Emplacement libre</small></div>'}</div>`}).join('')}</div><p style="font-size:11px;color:#9fb7b2">Modifie la sélection depuis le panneau Équipe. Le héros combat toujours en première position.</p><button id="prep-team" class="btn btn-ghost">Modifier l’équipe</button></section><section><p class="section-title">ADVERSAIRES • ${zone.name}</p><div class="enemy-preview">${enc.enemies.map(id=>{const m=MONSTERS[id];return`<div class="card"><div class="art">${monsterArt(m.kind,m.element)}</div><b>${m.name}</b><small class="element-${m.element}" style="display:block">${ELEMENTS[m.element].icon} Niv. ${m.level}</small></div>`}).join('')}</div><div class="danger-note">⚠ ${zone.danger}. Tu peux combattre ici dès maintenant, à tes risques et périls.</div></section></div>`,{wide:true,subtitle:'Choisis ta formation avant de lancer le combat',footer:'<button class="btn btn-ghost modal-close-alt">Annuler</button><button id="start-battle" class="btn btn-primary">Début du combat</button>'});$('#prep-team').onclick=()=>openTeam();$('.modal-close-alt').onclick=closeModal;$('#start-battle').onclick=()=>{closeModal();battle.start(enc)}}
 
-        <!-- Petits slots verticaux Sorts / Objets (purement visuel pour l'instant) -->
-        <div id="hud-spell-toggle">
-          <div class="hud-spell-toggle-slot hud-spell-toggle-spells">Sorts</div>
-          <div class="hud-spell-toggle-slot hud-spell-toggle-items">Obj.</div>
-        </div>
-      </div>
+class Battle{
+  constructor(){this.active=false;this.auto=false;this.speed=1;this.units=[];this.pending=null;this.logs=[];$('#auto-btn').onclick=()=>this.toggleAuto();$('#speed-btn').onclick=()=>this.cycleSpeed();$('#battle-items').onclick=()=>this.openItems()}
+  makeAllyUnits(){const p=state.player,s=playerStats(false),units=[{id:'hero',sourceId:'hero',kind:'hero',side:'ally',name:p.name,level:p.level,element:'neutral',maxHp:s.maxHp,hp:p.hp,maxMana:s.maxMana,mana:p.mana,attack:s.attack,defense:s.defense,speed:s.speed,crit:s.crit,dodge:s.dodge,affinity:s.affinity,skills:CLASSES[p.classId].skills}];state.team.forEach((id,i)=>{const c=state.companions[id],d=COMPANIONS[id],x=companionStats(id);units.push({id:'c'+i,sourceId:id,kind:'companion',side:'ally',name:d.name,level:c.level,element:d.element,maxHp:x.maxHp,hp:clamp(c.hp??x.maxHp,0,x.maxHp),maxMana:x.maxMana,mana:clamp(c.mana??x.maxMana,0,x.maxMana),attack:x.attack,defense:x.defense,speed:x.speed,crit:x.crit,dodge:x.dodge,affinity:x.affinity,skills:d.skills})});return units}
+  makeEnemyUnits(enc){return enc.enemies.map((id,i)=>{const m=MONSTERS[id],scale=1+(m.level-1)*.035,b=m.base;return{id:'e'+i,sourceId:id,kind:'enemy',art:m.kind,side:'enemy',name:m.name,level:m.level,element:m.element,maxHp:Math.floor(b.hp*scale),hp:Math.floor(b.hp*scale),maxMana:b.mana,mana:b.mana,attack:Math.floor(b.attack*scale),defense:Math.floor(b.defense*scale),speed:b.speed+(m.level-1)*.5,crit:4+m.level*.12,dodge:2+m.level*.06,affinity:{fire:m.element==='fire'?m.level:0,water:m.element==='water'?m.level:0,air:m.element==='air'?m.level:0,earth:m.element==='earth'?m.level:0,neutral:0},skills:m.skills}}
+  async start(enc){this.enc=enc;this.zone=ZONES.find(z=>z.id===enc.zone);this.units=[...this.makeAllyUnits(),...this.makeEnemyUnits(enc)];this.units.forEach((u,i)=>{u.next=1000/u.speed*(.6+i*.045);u.cooldowns={};u.effects={};u.baseSpeed=u.speed});this.active=true;this.auto=false;this.logs=[];world.stop();transition(()=>{showScreen('battle-screen');$('#battle-bg').className=`battle-bg zone-${this.zone.bg}`;$('#battle-zone').textContent=this.zone.name.toUpperCase();$('#auto-btn').classList.remove('on');$('#auto-btn .auto-icon').textContent='▶';this.render();this.loop()})}
+  alive(side){return this.units.filter(u=>u.side===side&&u.hp>0)}
+  async loop(){while(this.active){if(!this.alive('enemy').length)return this.finish(true);if(!this.alive('ally').length)return this.finish(false);const living=this.units.filter(u=>u.hp>0).sort((a,b)=>a.next-b.next),actor=living[0];actor.next+=1000/Math.max(20,actor.speed);this.current=actor;for(const k in actor.cooldowns)actor.cooldowns[k]=Math.max(0,actor.cooldowns[k]-1);if(actor.effects.stun){delete actor.effects.stun;this.log(`${actor.name} est étourdi.`);this.float(actor,'Étourdi','note');this.render();await this.delay(450);continue}if(actor.effects.burn){const dmg=Math.max(2,Math.floor(actor.maxHp*.045));actor.hp=Math.max(0,actor.hp-dmg);actor.effects.burn--;this.float(actor,`-${dmg}`);if(actor.effects.burn<=0)delete actor.effects.burn;this.render();await this.delay(350);if(actor.hp<=0)continue}this.render();$('#battle-status').textContent=actor.side==='ally'?'À vous de jouer':`${actor.name} agit`;let action;if(actor.side==='ally'&&!this.auto)action=await this.waitPlayer(actor);else{await this.delay(380);action=this.ai(actor)}if(!this.active||!action)continue;await this.execute(actor,action.skill,action.target);await this.delay(state.settings.fast?90:260)} }
+  delay(ms){return sleep(ms/this.speed)}
+  waitPlayer(actor){this.renderSkills(actor);return new Promise(resolve=>{this.pending={actor,resolve,skill:null}})}
+  renderSkills(actor){const tray=$('#skill-tray');tray.innerHTML=actor.skills.map(id=>{const s=SKILLS[id],cd=actor.cooldowns[id]||0,disabled=actor.mana<s.mana||cd>0;return`<button class="skill-btn" data-skill="${id}" ${disabled?'disabled':''}><span class="skill-icon">${s.icon}</span><b>${s.name}</b><small>${s.mana?`${s.mana} mana`:'Gratuit'}</small>${cd?`<span class="cooldown">${cd}</span>`:''}</button>`}).join('');$$('[data-skill]',tray).forEach(b=>b.onclick=()=>this.chooseSkill(b.dataset.skill))}
+  chooseSkill(id){if(!this.pending)return;const s=SKILLS[id],a=this.pending.actor;if(a.mana<s.mana||(a.cooldowns[id]||0)>0)return;sound('click');$$('.skill-btn').forEach(x=>x.classList.toggle('selected',x.dataset.skill===id));if(['self','allAllies','allEnemies'].includes(s.target)){const target=s.target==='self'?a:null;return this.resolveAction(id,target)}this.pending.skill=id;$('#target-prompt').classList.remove('hidden');this.renderTargetables(s.target)}
+  renderTargetables(target){$$('.unit').forEach(el=>{const u=this.units.find(x=>x.id===el.dataset.unit);const valid=u&&u.hp>0&&((target==='enemy'&&u.side==='enemy')||(target==='ally'&&u.side==='ally'));el.classList.toggle('targetable',valid)})}
+  unitClick(id){if(!this.pending?.skill)return;const u=this.units.find(x=>x.id===id),s=SKILLS[this.pending.skill];if(!u||u.hp<=0)return;if((s.target==='enemy'&&u.side!=='enemy')||(s.target==='ally'&&u.side!=='ally'))return;this.resolveAction(this.pending.skill,u)}
+  resolveAction(skill,target){const p=this.pending;if(!p)return;this.pending=null;$('#target-prompt').classList.add('hidden');$$('.unit').forEach(x=>x.classList.remove('targetable'));p.resolve({skill,target})}
+  toggleAuto(){this.auto=!this.auto;const b=$('#auto-btn');b.classList.toggle('on',this.auto);b.querySelector('.auto-icon').textContent=this.auto?'Ⅱ':'▶';b.setAttribute('aria-pressed',this.auto);sound('click');if(this.auto&&this.pending){const a=this.ai(this.pending.actor);this.resolveAction(a.skill,a.target)}}
+  cycleSpeed(){this.speed=this.speed===1?1.5:this.speed===1.5?2:1;$('#speed-btn').textContent=`×${this.speed}`;sound('click')}
+  ai(actor){const possible=actor.skills.filter(id=>actor.mana>=SKILLS[id].mana&&(actor.cooldowns[id]||0)<=0);let id=possible[0]||actor.skills[0];const allies=this.alive(actor.side),enemies=this.alive(actor.side==='ally'?'enemy':'ally');const low=allies.filter(x=>x.hp/x.maxHp<.45);const heal=possible.find(x=>['heal','healAll'].includes(SKILLS[x].type));if(low.length&&heal)id=heal;else{id=choice(possible.length?possible:[actor.skills[0]])}const s=SKILLS[id];let target=null;if(s.target==='enemy')target=enemies.sort((a,b)=>a.hp-b.hp)[0];if(s.target==='ally')target=low[0]||allies.sort((a,b)=>a.hp-b.hp)[0];if(s.target==='self')target=actor;return{skill:id,target}}
+  targets(actor,s,target){if(s.target==='allEnemies')return this.alive(actor.side==='ally'?'enemy':'ally');if(s.target==='allAllies')return this.alive(actor.side);return[target||actor].filter(Boolean)}
+  async execute(actor,id,target){const s=SKILLS[id];actor.mana=Math.max(0,actor.mana-s.mana);if(s.cooldown)actor.cooldowns[id]=s.cooldown+1;this.skillLabel(actor,s.name);const el=$(`[data-unit="${actor.id}"]`);el?.classList.add('attack');setTimeout(()=>el?.classList.remove('attack'),380/this.speed);sound(s.type?.includes('heal')?'heal':'spell');await this.delay(210);const targets=this.targets(actor,s,target);if(s.type==='guard'){actor.effects.guard=2;this.float(actor,'Garde','note')}else if(s.type==='guardAll'){targets.forEach(t=>{t.effects.guard=2;this.float(t,'Protégé','note')})}else if(s.type==='buffSpeed'){targets.forEach(t=>{t.effects.speed=3;t.speed=t.baseSpeed*1.25;this.float(t,'Vitesse +','note')})}else if(s.type==='buffAttack'){targets.forEach(t=>{t.effects.attack=3;this.float(t,'Attaque +','note')})}else if(s.type==='heal'||s.type==='healAll'){for(const t of targets){const bonus=actor.affinity?.[s.element||'neutral']||0,amount=Math.floor((s.power+actor.attack*.55+bonus*.8)*(s.type==='healAll'?.78:1));t.hp=Math.min(t.maxHp,t.hp+amount);this.float(t,`+${amount}`,'heal')}}else{for(const t of targets)await this.damage(actor,t,s)}this.tickBuffs(actor);this.syncParty();this.render()}
+  tickBuffs(actor){for(const k of ['speed','attack'])if(actor.effects[k]){actor.effects[k]--;if(actor.effects[k]<=0){delete actor.effects[k];if(k==='speed')actor.speed=actor.baseSpeed}}}
+  elementMultiplier(att,def){if(!att||att==='neutral'||!def||def==='neutral')return 1;if(ADVANTAGE[att]===def)return 1.28;if(ADVANTAGE[def]===att)return .78;return 1}
+  async damage(actor,target,s){if(Math.random()*100<target.dodge){this.float(target,'Esquive','note');this.log(`${target.name} esquive.`);return}const aff=actor.affinity?.[s.element]||0,buff=actor.effects.attack?1.22:1,pierce=s.pierce||0,def=target.defense*(1-pierce),mult=this.elementMultiplier(s.element,target.element),crit=Math.random()*100<actor.crit;let dmg=Math.floor((actor.attack*buff+s.power+aff*.62)*(90+Math.random()*20)/100*(100/(100+def*1.7))*mult*(crit?1.65:1));if(target.effects.guard)dmg=Math.floor(dmg*.52);dmg=Math.max(1,dmg);target.hp=Math.max(0,target.hp-dmg);this.float(target,`-${dmg}`,crit?'crit':'');const tel=$(`[data-unit="${target.id}"]`);tel?.classList.add('hit');setTimeout(()=>tel?.classList.remove('hit'),350/this.speed);sound(crit?'hit':'hit');vibrate(crit?[35,30,45]:18);if(mult>1.1)this.float(target,'Efficace !','note');if(mult<.9)this.float(target,'Résiste','note');if(s.status&&Math.random()<.55){if(s.status==='burn')target.effects.burn=3;if(s.status==='slow'){target.speed=target.baseSpeed*.78;target.effects.speed=2}if(s.status==='stun'&&Math.random()<.45)target.effects.stun=1;if(s.status==='counter')actor.effects.guard=1}if(target.effects.counter&&target.hp>0){const back=Math.max(2,Math.floor(dmg*.28));actor.hp=Math.max(0,actor.hp-back);this.float(actor,`-${back}`);delete target.effects.counter}this.log(`${actor.name} utilise ${s.name} : ${dmg} dégâts.`);await this.delay(90)}
+  syncParty(){const hero=this.units.find(u=>u.id==='hero');if(hero){state.player.hp=hero.hp;state.player.mana=hero.mana}for(const u of this.units.filter(x=>x.kind==='companion')){const c=state.companions[u.sourceId];if(c){c.hp=u.hp;c.mana=u.mana}}save()}
+  skillLabel(u,text){const el=$(`[data-unit="${u.id}"]`);if(!el)return;const d=document.createElement('div');d.className='skill-float';d.textContent=text;el.append(d);setTimeout(()=>d.remove(),900/this.speed)}
+  float(u,text,cls=''){const el=$(`[data-unit="${u.id}"]`);if(!el)return;const d=document.createElement('div');d.className=`damage-float ${cls}`;d.textContent=text;d.style.left=`${45+Math.random()*10}%`;el.append(d);setTimeout(()=>d.remove(),1050/this.speed)}
+  log(t){this.logs.unshift(t);this.logs=this.logs.slice(0,5);$('#battle-log').innerHTML=this.logs.map(x=>`<div>${x}</div>`).join('')}
+  positions(){const a=this.alive('ally'),e=this.alive('enemy'),pos={};const spread=(arr,x,start,end)=>arr.forEach((u,i)=>{const y=arr.length===1?50:start+(end-start)*(i/(arr.length-1));pos[u.id]={x,y}});spread(a,20,28,75);spread(e,80,25,76);return pos}
+  render(){if(!this.active)return;const field=$('#battlefield'),pos=this.positions();field.innerHTML=this.units.map(u=>{const p=pos[u.id]||{x:u.side==='ally'?20:80,y:50},hp=100*u.hp/u.maxHp,mp=100*u.mana/u.maxMana;return`<div class="unit ${u===this.current?'active':''} ${u.hp<=0?'dead':''}" data-unit="${u.id}" style="left:${p.x}%;top:${p.y}%"><div class="unit-name">${u.name} <small>Niv.${u.level}</small></div><div class="unit-bars"><span class="unit-bar hp"><i style="width:${hp}%"></i></span><span class="unit-bar mp"><i style="width:${mp}%"></i></span></div><div class="art">${artForUnit(u)}</div></div>`}).join('');$$('.unit',field).forEach(el=>el.onclick=()=>this.unitClick(el.dataset.unit));this.renderTimeline();if(this.current?.side!=='ally'||this.auto)$('#skill-tray').innerHTML='<div style="display:grid;place-items:center;color:#9eb7b2;font-size:12px">Le combat suit son cours…</div>'}
+  renderTimeline(){const list=this.units.filter(u=>u.hp>0).sort((a,b)=>a.next-b.next).slice(0,8);$('#turn-order').innerHTML=list.map((u,i)=>`<div class="turn-chip ${i===0?'current':''}" style="border-color:${u.side==='ally'?'#70dac1':'#ff7b7b'}55"><span class="face">${u.kind==='hero'?CLASSES[state.player.classId].icon:u.kind==='companion'?COMPANIONS[u.sourceId].icon:ELEMENTS[u.element].icon}</span><i>${Math.floor(u.speed)}</i></div>`).join('')}
+  openItems(){if(!this.pending||this.pending.actor.side!=='ally')return toast('Les objets s’utilisent pendant le tour d’un allié.');const pots=Object.entries(state.player.inventory).filter(([id,q])=>q>0&&ITEMS[id]?.type==='consumable');modal('Objets de combat',pots.length?`<div class="inventory-list">${pots.map(([id,q])=>`<button class="item-card" data-bitem="${id}"><span class="item-icon">${ITEMS[id].icon}</span><strong>${ITEMS[id].name}</strong><small>${ITEMS[id].desc}</small><span class="item-qty">×${q}</span></button>`).join('')}</div>`:'<p>Aucun consommable disponible.</p>',{small:true});$$('[data-bitem]').forEach(b=>b.onclick=()=>{const id=b.dataset.bitem,it=ITEMS[id],a=this.pending.actor;if(it.effect.hp){const amount=it.effect.hp;a.hp=Math.min(a.maxHp,a.hp+amount);this.float(a,`+${amount}`,'heal')}if(it.effect.mana){a.mana=Math.min(a.maxMana,a.mana+it.effect.mana);this.float(a,`+${it.effect.mana}`,'mana')}addItem(id,-1);closeModal();const p=this.pending;this.pending=null;p.resolve(null);this.render()})}
+  async finish(win){this.active=false;this.pending?.resolve(null);this.pending=null;this.syncParty();if(win){state.stats.wins++;state.defeated[this.enc.id]=Date.now();let xp=0,jobXp=0,gold=0,loot={};for(const id of this.enc.enemies){const m=MONSTERS[id];xp+=m.xp;jobXp+=m.jobXp;gold+=rand(m.gold[0],m.gold[1]);for(const[l,ch]of m.loot)if(Math.random()<ch)loot[l]=(loot[l]||0)+1}state.player.gold+=gold;for(const[id,q]of Object.entries(loot))addItem(id,q);const levels=gainProgress({xp,jobXp,compXp:Math.floor(xp*.72)});questEvent('win',{zone:this.enc.zone});sound('victory');await this.delay(500);this.showResult(true,{xp,jobXp,gold,loot,levels})}else{state.stats.losses++;state.player.pos={x:1760,y:1320};playerStats(true);for(const[id,c]of Object.entries(state.companions)){const s=companionStats(id);c.hp=s.maxHp;c.mana=s.maxMana}save(true);this.showResult(false,{xp:0,jobXp:0,gold:0,loot:{},levels:[]})}}
+  showResult(win,r){modal(win?'Victoire !':'Défaite',`<div class="result-modal"><div class="result-emblem">${win?'✦':'☾'}</div><h2>${win?'Combat remporté':'Repli à Havreclaire'}</h2><p style="color:#b8cbc7">${win?'Ton équipe ressort grandie de l’affrontement.':'Mira a retrouvé ton équipe et l’a ramenée en sécurité.'}</p>${win?`<div class="reward-row"><span class="reward-pill">+${r.xp} XP</span><span class="reward-pill">+${r.jobXp} XP métier</span><span class="reward-pill" style="color:#f5ca69">+${r.gold} or</span><span class="reward-pill">+${Math.floor(r.xp*.72)} XP compagnons</span></div>${r.levels.map(x=>`<div class="level-banner">NOUVEAU : ${x}</div>`).join('')}<p class="section-title">BUTIN</p><div class="loot-grid">${Object.keys(r.loot).length?Object.entries(r.loot).map(([id,q])=>`<div class="loot"><span style="font-size:27px">${ITEMS[id].icon}</span><b class="rarity-${ITEMS[id].rarity}">${ITEMS[id].name}</b><small>×${q}</small></div>`).join(''):'<span style="color:#8da4a0">Aucun objet cette fois.</span>'}</div>`:''}</div>`,{small:false,footer:'<button id="result-close" class="btn btn-primary">Fermer et retourner au monde</button>'});$('#result-close').onclick=()=>{closeModal();this.auto=false;transition(()=>{showScreen('world-screen');world.start();refreshHud();updateQuestPin()})}}
+}
+const battle=new Battle();
 
-      <!-- Fiche cible (combat uniquement) : remplace visuellement la barre de sorts au survol -->
-      <div id="combat-target-panel" aria-label="Fiche cible (combat)">
-        <div class="combat-target-header">
-          <span id="combat-target-name">-</span>
-        </div>
-        <div class="combat-target-stats-top">
-          <div class="combat-target-stat combat-target-stat-pa">
-            <span class="combat-target-stat-label">PA</span>
-            <span id="combat-target-pa" class="combat-target-stat-value">-</span>
-          </div>
-          <div class="combat-target-stat combat-target-stat-pm">
-            <span class="combat-target-stat-label">PM</span>
-            <span id="combat-target-pm" class="combat-target-stat-value">-</span>
-          </div>
-          <div class="combat-target-stat combat-target-stat-tacle">
-            <span class="combat-target-stat-label">Tac</span>
-            <span id="combat-target-tacle" class="combat-target-stat-value">-</span>
-          </div>
-          <div class="combat-target-stat combat-target-stat-fuite">
-            <span class="combat-target-stat-label">Fui</span>
-            <span id="combat-target-fuite" class="combat-target-stat-value">-</span>
-          </div>
-        </div>
-        <div class="combat-target-hp">
-          <div class="combat-target-hp-bar" aria-hidden="true">
-            <div id="combat-target-hp-fill" class="combat-target-hp-fill"></div>
-            <div id="combat-target-shield-fill" class="combat-target-shield-fill"></div>
-          </div>
-          <div id="combat-target-hp-text" class="combat-target-hp-text">PV : -/-</div>
-        </div>
-        <div class="combat-target-body">
-          <div class="combat-target-avatar" aria-hidden="true">
-            <img id="combat-target-avatar-img" class="combat-target-avatar-img" alt="" />
-            <div id="combat-target-avatar-fallback" class="combat-target-avatar-fallback">?</div>
-          </div>
-        </div>
-        <div class="combat-target-res">
-          <div class="combat-target-stat combat-target-stat-res-terre">
-            <span class="combat-target-stat-label">Res</span>
-            <span id="combat-target-res-terre" class="combat-target-stat-value">-</span>
-          </div>
-          <div class="combat-target-stat combat-target-stat-res-feu">
-            <span class="combat-target-stat-label">Res</span>
-            <span id="combat-target-res-feu" class="combat-target-stat-value">-</span>
-          </div>
-          <div class="combat-target-stat combat-target-stat-res-air">
-            <span class="combat-target-stat-label">Res</span>
-            <span id="combat-target-res-air" class="combat-target-stat-value">-</span>
-          </div>
-          <div class="combat-target-stat combat-target-stat-res-eau">
-            <span class="combat-target-stat-label">Res</span>
-            <span id="combat-target-res-eau" class="combat-target-stat-value">-</span>
-          </div>
-        </div>
-      </div>
-      </section>
-
-      <!-- PA / PM toujours visibles dans le HUD bas -->
-      <div id="hud-ap-mp">
-        <span class="hud-ap-label">PA :</span>
-        <span id="hud-ap-value">6</span>
-        <span class="hud-mp-label">PM :</span>
-        <span id="hud-mp-value">3</span>
-        <span class="hud-hp-label">PV :</span>
-        <span id="hud-hp-value">50</span>
-      </div>
-
-
-    </div>
-
-    <!-- Fenêtre d'inventaire -->
-    <aside id="hud-inventory-panel" aria-label="Inventaire du personnage">
-      <header class="inventory-header">
-        <h2 class="inventory-title">Inventaire</h2>
-        <div class="inventory-filters">
-          <button class="inventory-filter-btn inventory-filter-active" data-filter="all">Tout</button>
-          <button class="inventory-filter-btn" data-filter="equipement">Equip.</button>
-          <button class="inventory-filter-btn" data-filter="consommable">Consom.</button>
-          <button class="inventory-filter-btn" data-filter="ressource">Ress.</button>
-          <button class="inventory-filter-btn" data-filter="quete">Quête</button>
-        </div>
-        <div class="inventory-gold">
-          Or : <span id="inventory-gold-value">0</span>
-        </div>
-      </header>
-
-      <div class="inventory-body">
-        <div class="inventory-left">
-          <div class="inventory-equip">
-            <div class="equip-character"></div>
-            <div class="equip-grid">
-              <div class="equip-slot" data-equip="head"></div>
-              <div class="equip-slot" data-equip="cape"></div>
-              <div class="equip-slot" data-equip="amulet"></div>
-              <div class="equip-slot" data-equip="weapon"></div>
-              <div class="equip-slot" data-equip="ring1"></div>
-              <div class="equip-slot" data-equip="ring2"></div>
-              <div class="equip-slot" data-equip="belt"></div>
-              <div class="equip-slot" data-equip="boots"></div>
-            </div>
-          </div>
-
-          <div class="inventory-detail">
-            <h3 id="inventory-item-name">-</h3>
-            <div id="inventory-item-type"></div>
-            <div id="inventory-item-required"></div>
-            <div id="inventory-item-bonus"></div>
-            <div id="inventory-item-desc"></div>
-          </div>
-        </div>
-
-        <div class="inventory-right">
-          <div class="inventory-grid" id="inventory-grid">
-            <!-- Slots créés dynamiquement -->
-          </div>
-        </div>
-      </div>
-    </aside>
-
-        <!-- Fenetre de statistiques (onglets) -->
-    <aside id="hud-stats-panel" aria-label="Fenetre de statistiques du personnage">
-      <header class="stats-header">
-        <div class="stats-header-top">
-          <h2 class="stats-title">Statistiques</h2>
-          <div class="stats-class-pill" id="stat-player-class">-</div>
-        </div>
-        <div class="stats-header-lines">
-          <div class="stats-line">
-            <span class="stats-label">Nom</span>
-            <span id="stat-player-name">-</span>
-          </div>
-          <div class="stats-line">
-            <span class="stats-label">Classe</span>
-            <span id="stat-player-class-text">-</span>
-          </div>
-        </div>
-        <div class="stats-header-grid">
-          <div class="stats-header-item">
-            <div class="stats-header-label">Niveau</div>
-            <div class="stats-header-value" id="stat-level">1</div>
-          </div>
-          <div class="stats-header-item">
-            <div class="stats-header-label">PV</div>
-            <div class="stats-header-value" id="stat-hp">0/0</div>
-          </div>
-          <div class="stats-header-item">
-            <div class="stats-header-label">Initiative</div>
-            <div class="stats-header-value" id="stat-initiative">0</div>
-          </div>
-        </div>
-        <div class="stats-xp">
-          <div class="stats-xp-top">
-            <span class="stats-xp-label">XP</span>
-            <span class="stats-xp-value">
-              <span id="stat-xp">0</span> / <span id="stat-xp-next">0</span>
-            </span>
-          </div>
-          <div class="stats-xp-bar">
-            <div id="stat-xp-fill" class="stats-xp-fill"></div>
-            <div id="stat-xp-tooltip" class="stats-xp-tooltip">0 / 0</div>
-          </div>
-        </div>
-      </header>
-
-      <nav class="stats-tabs" role="tablist" aria-label="Onglets de statistiques">
-        <button class="stats-tab is-active" type="button" data-tab="carac">Caracs</button>
-        <button class="stats-tab" type="button" data-tab="offense">Offensif</button>
-        <button class="stats-tab" type="button" data-tab="defense">Defense</button>
-        <button class="stats-tab" type="button" data-tab="util">Util</button>
-      </nav>
-
-      <div class="stats-body">
-        <section class="stats-section is-active" data-tab="carac">
-          <h3 class="stats-section-title">Caracteristiques</h3>
-          <ul class="stats-list">
-            <li class="stat-line" data-stat="force">
-              <span class="stat-badge stat-badge-terre" title="Terre"></span>
-              <span class="label">Force</span>
-              <div class="stat-controls">
-                <button type="button" class="stat-btn stat-btn-minus" data-stat="force">-</button>
-                <input type="number" id="stat-force-input" class="stat-input" min="0" step="1" />
-                <button type="button" class="stat-btn stat-btn-plus" data-stat="force">+</button>
-              </div>
-            </li>
-            <li class="stat-line" data-stat="intelligence">
-              <span class="stat-badge stat-badge-feu" title="Feu"></span>
-              <span class="label">Intelligence</span>
-              <div class="stat-controls">
-                <button type="button" class="stat-btn stat-btn-minus" data-stat="intelligence">-</button>
-                <input type="number" id="stat-intelligence-input" class="stat-input" min="0" step="1" />
-                <button type="button" class="stat-btn stat-btn-plus" data-stat="intelligence">+</button>
-              </div>
-            </li>
-            <li class="stat-line" data-stat="agilite">
-              <span class="stat-badge stat-badge-air" title="Air"></span>
-              <span class="label">Agilite</span>
-              <div class="stat-controls">
-                <button type="button" class="stat-btn stat-btn-minus" data-stat="agilite">-</button>
-                <input type="number" id="stat-agilite-input" class="stat-input" min="0" step="1" />
-                <button type="button" class="stat-btn stat-btn-plus" data-stat="agilite">+</button>
-              </div>
-            </li>
-            <li class="stat-line" data-stat="chance">
-              <span class="stat-badge stat-badge-eau" title="Eau"></span>
-              <span class="label">Chance</span>
-              <div class="stat-controls">
-                <button type="button" class="stat-btn stat-btn-minus" data-stat="chance">-</button>
-                <input type="number" id="stat-chance-input" class="stat-input" min="0" step="1" />
-                <button type="button" class="stat-btn stat-btn-plus" data-stat="chance">+</button>
-              </div>
-            </li>
-            <li class="stat-line" data-stat="vitalite">
-              <span class="stat-badge stat-badge-vitalite" title="Vitalite"></span>
-              <span class="label">Vitalite</span>
-              <div class="stat-controls">
-                <button type="button" class="stat-btn stat-btn-minus" data-stat="vitalite">-</button>
-                <input type="number" id="stat-vitalite-input" class="stat-input" min="0" step="1" />
-                <button type="button" class="stat-btn stat-btn-plus" data-stat="vitalite">+</button>
-              </div>
-            </li>
-            <li class="stat-line" data-stat="sagesse">
-              <span class="stat-badge stat-badge-sagesse" title="Sagesse"></span>
-              <span class="label">Sagesse</span>
-              <div class="stat-controls">
-                <button type="button" class="stat-btn stat-btn-minus" data-stat="sagesse">-</button>
-                <input type="number" id="stat-sagesse-input" class="stat-input" min="0" step="1" />
-                <button type="button" class="stat-btn stat-btn-plus" data-stat="sagesse">+</button>
-              </div>
-            </li>
-          </ul>
-          <div class="stats-points-line">
-            Points a repartir :
-            <span id="stat-points-libres">0</span>
-          </div>
-        </section>
-
-        <section class="stats-section" data-tab="offense">
-          <h3 class="stats-section-title">Offensif</h3>
-          <ul class="stats-list stats-list-rows">
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-puissance" title="Puissance"></span>
-              <span class="label">Puissance</span>
-              <span class="value" id="stat-puissance">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Dommages</span>
-              <span class="value" id="stat-dmg">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-feu" title="Feu"></span>
-              <span class="label">Dommages Feu</span>
-              <span class="value" id="stat-dmg-feu">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-eau" title="Eau"></span>
-              <span class="label">Dommages Eau</span>
-              <span class="value" id="stat-dmg-eau">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-air" title="Air"></span>
-              <span class="label">Dommages Air</span>
-              <span class="value" id="stat-dmg-air">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-terre" title="Terre"></span>
-              <span class="label">Dommages Terre</span>
-              <span class="value" id="stat-dmg-terre">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Chance crit</span>
-              <span class="value" id="stat-crit">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Dommages crit</span>
-              <span class="value" id="stat-crit-dmg">0</span>
-            </li>
-          </ul>
-        </section>
-
-        <section class="stats-section" data-tab="defense">
-          <h3 class="stats-section-title">Defense</h3>
-          <ul class="stats-list stats-list-rows">
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-vitalite" title="Vitalite"></span>
-              <span class="label">PV max</span>
-              <span class="value" id="stat-hpMax">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-vitalite" title="Vitalite"></span>
-              <span class="label">Vitalite</span>
-              <span class="value" id="stat-vitalite">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-terre" title="Terre"></span>
-              <span class="label">Resi fixe Terre</span>
-              <span class="value" id="stat-resist-fixe-terre">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-feu" title="Feu"></span>
-              <span class="label">Resi fixe Feu</span>
-              <span class="value" id="stat-resist-fixe-feu">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-air" title="Air"></span>
-              <span class="label">Resi fixe Air</span>
-              <span class="value" id="stat-resist-fixe-air">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-eau" title="Eau"></span>
-              <span class="label">Resi fixe Eau</span>
-              <span class="value" id="stat-resist-fixe-eau">0</span>
-            </li>
-          </ul>
-        </section>
-
-        <section class="stats-section" data-tab="util">
-          <h3 class="stats-section-title">Utilitaire</h3>
-          <ul class="stats-list stats-list-rows">
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">PA</span>
-              <span class="value" id="stat-pa">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">PM</span>
-              <span class="value" id="stat-pm">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-sagesse" title="Sagesse"></span>
-              <span class="label">Sagesse</span>
-              <span class="value" id="stat-sagesse">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Prospection</span>
-              <span class="value" id="stat-prospection">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Pods</span>
-              <span class="value" id="stat-pods">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Soins</span>
-              <span class="value" id="stat-soins">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Initiative</span>
-              <span class="value" id="stat-initiative-util">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Tacle</span>
-              <span class="value" id="stat-tacle">0</span>
-            </li>
-            <li class="stat-row">
-              <span class="stat-badge stat-badge-neutre" title="Neutre"></span>
-              <span class="label">Fuite</span>
-              <span class="value" id="stat-fuite">0</span>
-            </li>
-          </ul>
-        </section>
-      </div>
-    </aside>
-
-    <!-- Fenêtre des métiers -->
-    <aside id="hud-metiers-panel" aria-label="Fenêtre des métiers du personnage">
-      <header class="metiers-header">
-        <h2 class="metiers-title">Métiers</h2>
-      </header>
-
-      <section class="metiers-section">
-        <div class="metier-line">
-          <span class="metier-name">Bûcheron</span>
-          <span class="metier-level">
-            Niv. <span id="metier-bucheron-level">1</span>
-          </span>
-        </div>
-        <div class="metier-xp-line">
-          XP : <span id="metier-bucheron-xp">0</span>
-          / <span id="metier-bucheron-xp-next">100</span>
-        </div>
-      </section>
-    </aside>
-
-    <!-- Fenêtre des sorts de la classe -->
-    <aside id="hud-spells-panel" aria-label="Fenêtre des sorts de la classe">
-      <header class="spells-header">
-        <h2 class="spells-title">Sorts</h2>
-        <div class="spells-class-name">
-          Classe : <span id="spells-class-name">---</span>
-        </div>
-        <div class="spells-tier-bar">
-          <span class="spells-tier-label" data-tier="1">Tier 1</span>
-          <span class="spells-tier-label" data-tier="2">Tier 2</span>
-          <span class="spells-tier-label" data-tier="3">Tier 3</span>
-        </div>
-      </header>
-
-      <section class="spells-section">
-        <ul id="hud-spells-list" class="spells-list">
-          <!-- Rempli dynamiquement -->
-        </ul>
-        <div id="hud-spell-detail" class="spell-detail">
-          <!-- Detail du sort selectionne -->
-        </div>
-      </section>
-    </aside>
-
-    <!-- Fenêtre de carte du monde -->
-    <aside id="hud-map-panel" aria-label="Carte du monde">
-      <header class="map-header">
-        <h2 class="map-title">Carte</h2>
-      </header>
-      <section class="map-body">
-        <div class="map-main">
-          <div class="map-inner"></div>
-        </div>
-      </section>
-    </aside>
-
-    <!-- Fenêtre de dialogue PNJ -->
-    <aside
-      id="npc-dialog-panel"
-      class="npc-dialog-panel"
-      aria-label="Dialogue avec un PNJ"
-      aria-hidden="true"
-    >
-      <header class="npc-dialog-header">
-        <h2 id="npc-dialog-name" class="npc-dialog-name">PNJ</h2>
-        <button
-          id="npc-dialog-close"
-          class="npc-dialog-close-btn"
-          type="button"
-          aria-label="Fermer le dialogue"
-        >
-          ×
-        </button>
-      </header>
-      <section class="npc-dialog-body">
-        <div class="npc-dialog-block npc-dialog-npc-block">
-          <div class="npc-dialog-speaker-line">
-            <span
-              id="npc-dialog-speaker-npc"
-              class="npc-dialog-speaker npc-dialog-speaker-npc"
-              >PNJ</span
-            >
-          </div>
-          <div id="npc-dialog-text" class="npc-dialog-text">
-            Bonjour.
-          </div>
-        </div>
-
-        <div class="npc-dialog-block npc-dialog-player-block">
-          <div class="npc-dialog-speaker-line">
-            <span class="npc-dialog-speaker npc-dialog-speaker-player"
-              >Vous</span
-            >
-          </div>
-          <div class="npc-dialog-choices">
-            <button
-              id="npc-dialog-choice-1"
-              type="button"
-              class="npc-dialog-choice"
-            >
-              Bonjour.
-            </button>
-            <button
-              id="npc-dialog-choice-2"
-              type="button"
-              class="npc-dialog-choice"
-              style="display: none"
-            >
-              Bonjour.
-            </button>
-            <span id="npc-dialog-quest-badge" class="npc-dialog-quest-badge" aria-hidden="true">!</span>
-          </div>
-        </div>
-      </section>
-    </aside>
-
-    <!-- Fenetre des quetes -->
-    <aside id="hud-quests-panel" aria-label="Fenetre des quetes du personnage">
-      <header class="quests-header">
-        <h2 class="quests-title">Quetes</h2>
-      </header>
-      <section class="quests-body">
-        <div class="quests-columns">
-          <div class="quests-column">
-            <h3 class="quests-column-title">Disponibles</h3>
-            <ul id="quests-list-available" class="quests-list"></ul>
-          </div>
-          <div class="quests-column">
-            <h3 class="quests-column-title">En cours</h3>
-            <ul id="quests-list-active" class="quests-list"></ul>
-          </div>
-          <div class="quests-column">
-            <h3 class="quests-column-title">Terminees</h3>
-            <ul id="quests-list-completed" class="quests-list"></ul>
-          </div>
-        </div>
-        <div class="quests-detail">
-          <h3 id="quest-detail-title" class="quest-detail-title"></h3>
-          <p id="quest-detail-desc" class="quest-detail-desc"></p>
-          <p id="quest-detail-progress" class="quest-detail-progress"></p>
-          <p id="quest-detail-rewards" class="quest-detail-rewards"></p>
-        </div>
-      </section>
-    </aside>
-
-    <!-- Fenetre des amis -->
-    <aside id="hud-friends-panel" aria-label="Fenetre des amis">
-      <header class="friends-header">
-        <h2 class="friends-title">Amis</h2>
-        <button type="button" class="friends-close" aria-label="Fermer">X</button>
-      </header>
-      <section class="friends-add">
-        <span class="friends-add-label">Ajouter un ami</span>
-        <input
-          id="friends-add-input"
-          class="friends-add-input"
-          type="text"
-          placeholder="Pseudo"
-          maxlength="32"
-        />
-        <button type="button" class="friends-add-button">Ajouter</button>
-      </section>
-      <nav class="friends-tabs" aria-label="Filtres amis">
-        <button type="button" class="friends-tab is-active" data-tab="friends">Amis</button>
-        <button type="button" class="friends-tab" data-tab="offline">Non connectes</button>
-        <button type="button" class="friends-tab" data-tab="ignored">Ignores</button>
-      </nav>
-      <section class="friends-columns">
-        <div class="friends-column">
-          <div class="friends-column-title">Connectes</div>
-          <div class="friends-list-header">
-            <span>Nom</span>
-            <span>Niveau</span>
-            <span>Accomplissements</span>
-          </div>
-          <div class="friends-list"></div>
-        </div>
-      </section>
-    </aside>
-
-    <!-- Fenetre d'echange -->
-    <aside id="hud-trade-panel" aria-label="Fenetre d'echange">
-      <header class="trade-header">
-        <h2 class="trade-title">Echange</h2>
-        <button type="button" class="trade-close" aria-label="Fermer">X</button>
-      </header>
-      <section class="trade-body">
-        <div class="trade-panel trade-panel-remote" data-side="remote">
-          <div class="trade-panel-top">
-            <span class="trade-player-name" data-role="name">Joueur</span>
-            <div class="trade-gold">
-              Or : <span class="trade-gold-value" data-role="gold">0</span>
-            </div>
-          </div>
-          <div class="trade-grid" data-role="grid"></div>
-          <div class="trade-panel-actions">
-            <span class="trade-status" data-role="status">En attente</span>
-          </div>
-        </div>
-        <div class="trade-panel trade-panel-local" data-side="local">
-          <div class="trade-panel-top">
-            <span class="trade-player-name" data-role="name">Vous</span>
-            <label class="trade-gold">
-              Or :
-              <input
-                class="trade-gold-input"
-                data-role="gold-input"
-                type="number"
-                min="0"
-                max="1000000000"
-                step="1"
-                value="0"
-              />
-              <span class="trade-gold-total" data-role="gold-total">0</span>
-            </label>
-          </div>
-          <div class="trade-grid" data-role="grid"></div>
-          <div class="trade-panel-actions">
-            <span class="trade-status" data-role="status">En attente</span>
-            <button type="button" class="trade-btn trade-btn-cancel">Annuler</button>
-            <button type="button" class="trade-btn trade-btn-validate">Valider</button>
-          </div>
-        </div>
-        <div class="trade-inventory">
-          <div class="trade-inventory-header">
-            <span class="trade-inventory-title">Inventaire</span>
-            <div class="trade-inventory-filters">
-              <button type="button" class="trade-filter-btn is-active" data-filter="all">Tout</button>
-              <button type="button" class="trade-filter-btn" data-filter="equipement">Equip.</button>
-              <button type="button" class="trade-filter-btn" data-filter="consommable">Consom.</button>
-              <button type="button" class="trade-filter-btn" data-filter="ressource">Ress.</button>
-            </div>
-          </div>
-          <div class="trade-inventory-grid" id="trade-inventory-grid"></div>
-        </div>
-      </section>
-    </aside>
-
-    <!-- Fenetre des accomplissements -->
-    <aside id="hud-achievements-panel" aria-label="Fenetre des accomplissements du personnage">
-      <header class="achievements-header">
-        <div class="achievements-header-row">
-          <h2 class="achievements-title">Accomplissements</h2>
-          <div class="achievements-honor" aria-label="Honneur fracturel">
-            Honneur fracturel : <span id="hud-honor-value">0</span>
-          </div>
-        </div>
-      </header>
-      <section class="achievements-body">
-        <div
-          id="achievements-categories"
-          class="achievements-categories"
-          aria-label="Catégories des accomplissements"
-        ></div>
-        <div id="achievements-list" class="achievements-list" aria-label="Liste des accomplissements"></div>
-        <div class="achievements-detail" aria-label="Détail accomplissement">
-          <h3 id="achievement-pack-title" class="achievement-pack-title">-</h3>
-          <p id="achievement-pack-desc" class="achievement-pack-desc"></p>
-          <ul id="achievement-pack-objectives" class="achievement-pack-objectives"></ul>
-
-          <div class="achievement-detail-separator"></div>
-          <h3 id="achievement-detail-title" class="achievement-detail-title">-</h3>
-          <p id="achievement-detail-desc" class="achievement-detail-desc"></p>
-          <ul id="achievement-detail-list" class="achievement-detail-list"></ul>
-          <div id="achievement-detail-rewards" class="achievement-detail-rewards"></div>
-          <div class="achievement-claim-row">
-            <button id="achievement-claim-button" class="achievement-claim-btn" type="button" disabled>
-              Réclamer
-            </button>
-            <span id="achievement-claim-status" class="achievement-claim-status"></span>
-          </div>
-        </div>
-      </section>
-    </aside>
-
-    <!-- Fenetre de reclamation des succes -->
-    <aside id="hud-claim-panel" aria-label="Fenetre des succes a reclamer">
-      <header class="claim-header">
-        <h2 class="claim-title">Succes a reclamer</h2>
-        <button id="hud-claim-close" class="claim-close-btn" type="button">x</button>
-      </header>
-      <section id="hud-claim-list" class="claim-list" aria-label="Liste des succes"></section>
-      <footer class="claim-footer">
-        <button id="hud-claim-all" class="claim-btn" type="button">Reclamer tout</button>
-      </footer>
-    </aside>
-  </div>
-
-  <!-- UI de combat (bouton passer le tour, indicateur) -->
-  <div id="combat-ui-root">
-    <div id="combat-turn-order" aria-label="Ordre des tours">
-      <div id="combat-turn-order-list" role="list"></div>
-      <div id="combat-round-indicator">
-        Tour : <span id="combat-round-value">1</span>
-      </div>
-      <button id="combat-turn-toggle" type="button" aria-expanded="true">+</button>
-    </div>
-    <div id="combat-turn-indicator">
-      Tour : <span id="combat-turn-label">Joueur</span>
-    </div>
-    <button id="combat-end-turn-button" type="button">
-      FIN DU TOUR
-    </button>
-    <button id="combat-ready-button" type="button">
-      PRET
-    </button>
-  </div>
-
-  <!-- Popup de fin de combat -->
-  <div id="combat-result-overlay" class="combat-result-hidden">
-    <div class="combat-result-panel">
-      <h2 id="combat-result-title" class="combat-result-title">Fin du combat</h2>
-      <div class="combat-result-body">
-        <div class="combat-result-section">
-          <h3>Joueur</h3>
-          <p>Niveau : <span id="combat-result-player-level">1</span></p>
-          <p>XP gagnée : <span id="combat-result-xp-gain">0</span></p>
-          <p>XP totale : <span id="combat-result-xp-total">0</span></p>
-          <p>XP prochaine : <span id="combat-result-xp-next">0</span></p>
-        </div>
-        <div class="combat-result-section">
-          <h3>Monstre</h3>
-          <p>Id : <span id="combat-result-monster-name">-</span></p>
-          <p>PV restants : <span id="combat-result-monster-hp">0</span></p>
-        </div>
-        <div class="combat-result-section">
-          <h3>Combat</h3>
-          <p>Durée : <span id="combat-result-duration">0s</span></p>
-          <p>Or : <span id="combat-result-gold">0</span></p>
-        </div>
-        <div class="combat-result-section">
-          <h3>Butin</h3>
-          <div id="combat-result-loot" class="combat-result-loot-list"></div>
-        </div>
-      </div>
-      <div class="combat-result-actions">
-        <button id="combat-result-continue-button" type="button">
-          Continuer
-        </button>
-      </div>
-    </div>
-  </div>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-  <script type="module" src="src/main.js"></script>
+$$('.world-nav [data-panel]').forEach(b=>b.onclick=()=>({hero:openHero,inventory:openInventory,team:openTeam,map:openMap,quests:openQuests}[b.dataset.panel]||(()=>{}))());
+$('#player-card').onclick=openHero;$('#settings-btn').onclick=openSettings;$('#title-settings').onclick=()=>{if(!state)state=newState('Aventurier');openSettings()};$('#new-btn').onclick=openNewGame;$('#continue-btn').onclick=()=>{if(state){if(!state.flags.intro&&(state.player.inventory.scroll||0)>0)openSummon(true);else enterWorld(false)}};
+addEventListener('visibilitychange',()=>{if(document.hidden)save(true)});addEventListener('beforeunload',()=>save(true));
+load();updateTitle();showScreen('title-screen');
+console.info(`Andémia ${VERSION} prêt.`);
+window.ANDEMIA={get state(){return state},save,openPrep,startEncounter:id=>{const e=ENCOUNTERS.find(x=>x.id===id);if(e)openPrep(e)},VERSION};
+</script>
 </body>
 </html>
-
