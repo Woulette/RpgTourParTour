@@ -1,8 +1,0 @@
-{
-  "liveServer.settings.ignoreFiles": [
-    "**/server/data/**",
-    "**/*.db",
-    "**/*.db-*",
-    "**/anti_dup.log"
-  ]
-}
