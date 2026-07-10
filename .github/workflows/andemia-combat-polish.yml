@@ -1,0 +1,56 @@
+name: Polish Andemia combat feedback
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: andemia-combat-polish
+  cancel-in-progress: false
+
+jobs:
+  polish:
+    if: ${{ !contains(github.event.head_commit.message, '[combat-polish]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply combat feedback fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          replacements = [
+              ("const VERSION='2.0.0';", "const VERSION='2.0.1';"),
+              ("this.tickBuffs(actor);this.syncParty();this.render()", "this.tickBuffs(actor);await this.delay(420);this.syncParty();this.render()"),
+              ("for(const k of ['speed','attack'])if(actor.effects[k])", "for(const k of ['speed','attack','guard','counter'])if(actor.effects[k])"),
+              ("if(s.status==='counter')actor.effects.guard=1", "if(s.status==='counter'){actor.effects.guard=1;actor.effects.counter=2}"),
+          ]
+          for old, new in replacements:
+              if old not in s:
+                  raise SystemExit(f'Missing patch target: {old}')
+              s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          scripts = re.findall(r'<script>([\s\S]*?)</script>', s)
+          if not scripts:
+              raise SystemExit('Game script missing')
+          Path('/tmp/andemia.js').write_text(scripts[0], encoding='utf-8')
+          PY
+          node --check /tmp/andemia.js
+          if [ -f sw.js ]; then sed -i 's/andemia-v2.0.0/andemia-v2.0.1/g' sw.js; fi
+          rm -f .github/workflows/andemia-combat-polish.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Polish floating combat feedback and guard duration [combat-polish]"
+          git push origin HEAD:main
